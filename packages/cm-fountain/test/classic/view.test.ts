@@ -3,7 +3,7 @@ import { EditorView } from '@codemirror/view';
 import { elementTemplate, fountainHighlighting } from '@drafter/cm-fountain';
 import { builtins, type Template } from '@drafter/templates';
 import { afterEach, describe, expect, it } from 'vitest';
-import { lineClassOf, roleVariables } from '../../src/classic';
+import { hiddenSpans, lineClassOf, roleVariables } from '../../src/classic';
 import { classicDecorations } from '../../src/classic/view';
 import { classicEditor, keys } from './harness';
 
@@ -70,6 +70,17 @@ describe('the left pane: marks', () => {
     const view = mount('Title: Signal Hill\nAuthor: June Lake\n\nINT. DINER - DAY');
     expect(drawn(view).slice(0, 2)).toEqual(['Title: Signal Hill', 'Author: June Lake']);
     expect(roleClasses(view, 0)).toEqual([]);
+  });
+
+  it('a note on a title-page line keeps its brackets', () => {
+    const view = mount('Title: Signal [[draft]] Hill\nAuthor: June\n\nINT. DINER');
+    expect(drawn(view)[0]).toBe('Title: Signal [[draft]] Hill');
+    expect(hiddenSpans(view.state, view.state.doc.line(1))).toEqual([]);
+  });
+
+  it.each(['@', '!', '~', '#', '=', '>', '.', '# ', '= '])('a lone %j stays visible', (mark) => {
+    const view = mount(`A line.\n\n${mark}\n\nMore.`);
+    expect(drawn(view)[2]).toBe(mark);
   });
 
   it('a scene number stays visible', () => {

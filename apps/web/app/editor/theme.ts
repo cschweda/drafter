@@ -12,11 +12,16 @@ import { EditorView } from '@codemirror/view';
 // `animation` property, in any motion setting.
 const CLASSIC = '&.cm-classic';
 
-/** The line's own 8 px, then the template's indent, as a share of a pane too narrow to hold it. */
-const classicRole = (role: string, share: number) => ({
-  paddingLeft: `calc(8px + min(calc(var(--c-${role}-indent, 0) * 1ch), ${share}%))`,
-  maxWidth: `calc(var(--c-${role}-width, 60) * 1ch)`,
-});
+/**
+ * The line's own 8 px, then the template's indent, as a share of a pane too narrow to hold it. The
+ * width is what padding leaves: lines are `border-box` under the app's reset, and a `max-width`
+ * would take the padding out of the text and shorten the current line's tint (§8.2).
+ */
+const classicRole = (role: string, share: number) => {
+  const left = `calc(8px + min(calc(var(--c-${role}-indent, 0) * 1ch), ${share}%))`;
+  const width = `var(--c-${role}-width, 60) * 1ch`;
+  return { paddingLeft: left, paddingRight: `max(16px, calc(100% - ${left} - ${width}))` };
+};
 
 const HEADING = { fontWeight: '700' };
 
@@ -153,7 +158,10 @@ export const theme = EditorView.theme({
   [`${CLASSIC} .cm-f-section`]: { color: 'var(--text)' },
   [`${CLASSIC} .cm-f-parenthetical`]: { color: 'var(--text)', fontStyle: 'inherit' },
 
-  // Each role, from the template's numbers. A pane under 60 characters takes the share.
+  // A line with no role of its own (a note, a cut, a synopsis) keeps to the page's 60 characters.
+  [`${CLASSIC} .cm-line`]: { paddingRight: 'max(16px, calc(100% - 8px - 60ch))' },
+
+  // Each role, from the template's numbers. A narrow pane takes the share (§8.2).
   [`${CLASSIC} .cm-c-scene_heading`]: {
     ...classicRole('scene_heading', 0),
     ...HEADING,
@@ -174,7 +182,7 @@ export const theme = EditorView.theme({
   },
   [`${CLASSIC} .cm-c-scene_heading_play`]: { ...classicRole('scene_heading_play', 0), ...HEADING },
 
-  [`${CLASSIC} .cm-c-page_break`]: { maxWidth: 'calc(var(--c-action-width, 60) * 1ch)' },
+  [`${CLASSIC} .cm-c-page_break`]: classicRole('action', 0),
 
   // What a role's alignment and style ask for.
   [`${CLASSIC} .cm-c-center`]: { textAlign: 'center' },
@@ -222,9 +230,11 @@ export const theme = EditorView.theme({
   },
   '@media (forced-colors: active)': {
     '.cm-revealed': { outline: '2px solid Highlight' },
-    [`${CLASSIC} .cm-c-note-rule, ${CLASSIC} .cm-c-boneyard-rule`]: {
+    // style-mod doesn't resolve `&` inside an at-rule, so these can't name `.cm-classic`. The
+    // classes are only ever in Classic Mode's DOM.
+    '.cm-content .cm-c-note-rule, .cm-content .cm-c-boneyard-rule': {
       borderLeftColor: 'CanvasText',
     },
-    [`${CLASSIC} .cm-c-page-break::after`]: { borderTopColor: 'CanvasText' },
+    '.cm-content .cm-c-page-break::after': { borderTopColor: 'CanvasText' },
   },
 });

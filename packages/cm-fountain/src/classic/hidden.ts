@@ -82,6 +82,10 @@ function markSpans(line: Line, found: BlockLine, block: Block, regions: readonly
     if (mark.kind !== 'mark') continue;
     const text = line.text.slice(mark.from - line.from, mark.to - line.from);
     const lead = mark.from === first ? leadLength(block, text) : 0;
+    // A mark with nothing after it marks nothing: hidden, the line would look empty.
+    if (lead && block.kind !== 'page_break') {
+      if (!/\S/.test(line.text.slice(mark.from + lead - line.from))) continue;
+    }
     if (lead) {
       // A section's or a synopsis's mark takes its space, which is part of no word.
       const spaced = block.kind === 'section' || block.kind === 'synopsis';
@@ -106,12 +110,15 @@ function delimiters(line: Line, regions: readonly Region[]): HiddenSpan[] {
 }
 
 /**
- * What's hidden on the line: `lineMarks` less scene numbers, title-page lines, and an unclosed
- * region's opener, plus closed regions' delimiters, in order. A section's or synopsis's mark takes
- * its space.
+ * What's hidden on the line: `lineMarks` less scene numbers and a lone lead mark, plus closed
+ * regions' delimiters, in order, and nothing on the title page. A section's or synopsis's mark
+ * takes its space.
  */
 export function hiddenSpans(state: EditorState, line: Line): HiddenSpan[] {
   const doc = state.field(parsedDoc);
+  const { titlePage } = doc;
+  // The title page is shown as it is (§8.3), a note on it too.
+  if (titlePage && line.from >= titlePage.span.from && line.from <= titlePage.span.to) return [];
   const regions = regionsOn(doc.regions, line);
   const block = blockAt(doc, line.from)?.block;
   const found = block ? lineOf(block, line.from) : null;
