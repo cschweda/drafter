@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - **Drafter for Claude** begins: a new package, `drafter-mcp`, with its command line (`--folder`, `--notes`, `--boneyard`, `--words-per-minute`, `--version`, `--help`) and the checks that keep it inside the folders the writer names. Paths start with a folder’s name, `..`, full paths, and links that lead out are refused, folder walks never follow a link to a folder and stop at 6 levels and 500 files, and a test makes sure its code never writes, starts a program, or connects anywhere. Nothing runs yet for the writer.
+- **Drafter for Claude** now runs as an MCP server with its first tool, `list_scripts`: every script, play, and document in the writer’s folders with its kind, title, scene count, date, size, and the drafts and cuts beside it (an HTML or EPUB export is listed without being read, and a title page’s Contact never shows). Every answer starts with the same line saying its text is a story to read, not instructions, holds the writer’s text only inside JSON strings, and stays under 40,000 characters, with a signed cursor for the rest that starts again if a file changes. Each call runs in a reader thread stopped at 10 seconds; parsed files are kept in memory only. It never asks the AI app for folders, and it writes only one line to standard error at start and one per refusal.
 
 ### Changed
 
