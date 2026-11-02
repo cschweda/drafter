@@ -16,6 +16,8 @@
 
 ## Global Constraints
 
+- **Maintainer's rulings on the plan (2026-11-02), which override any text below:** (1) a worked-out pending Character is soft for heading prefixes only: `INT.` (and the other heading prefixes) typed straight after a speech starts a Scene heading, with no `@`; Task 3 pins this, in `shapeOf`. (2) The Beat Board block stays unprotected for this release; Task 15 lists it in docs/DEFERRED.md.
+
 - **Clean room (§17.1):** built from the shared screenwriting convention, the maintainer's words, the Fountain specification, and CodeMirror's documentation and source. No code, screens, or text from any other app, and no other app's source is opened. Reasons in comments and docs are this project's own, never "it's what that app does". Fixtures, samples, and test strings are original. **Signal Hill** is the sample (`apps/web/scripts/ui-shots-script.fountain`), with names such as JUNE and DALE.
 - **Naming:** the UI says "Fountain", "Classic", and "Classic Mode". Never "Final Draft mode": that name appears only as a palette keyword (`final draft`), in the help page's "the way writers of apps like Final Draft expect", and in its trademark line.
 - **The file (§4.1):** what Classic Mode may write is the table in §4.1, plus **my call** a mark's own space (`# `, `## `, `= `) and `!!` (see Spec against the code, 4). Nothing about the mode goes in a file, draft, snapshot, or export. Switching and moving write nothing. Everything uses `state.lineBreak`, so CRLF stays CRLF; a byte-order mark stays.

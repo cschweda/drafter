@@ -666,3 +666,8 @@ Built from the shared screenwriting convention (what comes after what on a page)
 39. **A line in Action stays Action:** Character is reached by Tab or the chooser, never by typing capitals; a cue-only-by-what-follows line gets `!` on the line the writer is on (§4.2).
 40. **Drawing follows the stored element while the cursor is on the line,** and the parser elsewhere; opened files draw what the parser says (§8.2).
 41. **Decided: the metadata block is protected:** selections stop above it, a transaction filter keeps its range as a backstop, undo and app changes pass, and Fountain Mode is unchanged (§8.4).
+
+## Added after planning (maintainer, 2026-11-02)
+
+- A worked-out pending Character is soft for heading prefixes only: `INT.` typed straight after a speech starts a Scene heading.
+- The Beat Board block stays unprotected for this release (in DEFERRED): Select All then Delete removes it, and Undo restores it.
