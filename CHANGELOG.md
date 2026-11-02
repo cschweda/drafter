@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The outline's twenty-thousand-run Markdown property test has a minute to finish, not the default five seconds.
 - The pull-request checks skip the tests with a fixed time limit, which the release gates still run; the tests that compare a script with one 4 or 8 times its size run everywhere.
 - The tests that copy the fonts, dictionaries, and icons into the web app have half a minute each (set with `vi.setConfig`, which the linter accepts).
+- The pull-request checks run the browser tests on macOS, required, and on Linux, shown: the first Linux run found 16 tests that depend on font widths, which DEFERRED tracks. On CI, Playwright also writes an HTML report, kept with a failed run.
 
 - **A second clean-room audit** (1 November 2026, `docs/clean-room-audit-2026-11-01.md`), with an index of every audit, newest first (`docs/AUDITS.md`). What it asked for is done: a film line and a film's names in tests are original now, and the Final Draft settings names say where they come from.
 
