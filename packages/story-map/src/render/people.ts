@@ -138,6 +138,9 @@ function presenceHtml(map: StoryMap, axis: Axis, c: MapCharacter, i: number): st
   );
 }
 
+/** A name longer than this, in characters, is set smaller on its card and cut to three lines. */
+const LONG_NAME = 40;
+
 /** A lead's card (design §2.6). */
 function cardHtml(map: StoryMap, axis: Axis, c: MapCharacter, i: number): string {
   const play = map.kind === 'play';
@@ -146,7 +149,8 @@ function cardHtml(map: StoryMap, axis: Axis, c: MapCharacter, i: number): string
   const head = el(
     'div',
     { class: 'ch' },
-    chip(c, i, { decor: true, big: true }) + el('h3', {}, name),
+    chip(c, i, { decor: true, big: true }) +
+      el('h3', Array.from(c.name).length > LONG_NAME ? { class: 'clamp' } : {}, name),
   );
   const about = [c.age, c.hook].filter((x): x is string => !!x?.trim());
   const hook = about.length > 0 ? el('p', { class: 'hook' }, escapeHtml(about.join(' · '))) : '';
@@ -324,6 +328,7 @@ const RULES = `${CHIP_RULES}
 .ch{display:flex;gap:12px;align-items:center}
 .card h3{font-size:44px;line-height:.9;overflow-wrap:anywhere;min-width:0}
 .card h3 .first{color:var(--c)}
+.card h3.clamp{font-size:28px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .hook{margin:0;color:var(--mute);font-size:15px;line-height:1.4}
 .pres{display:block;overflow:visible}
 .pres .rail{fill:var(--line)}.pres .on{fill:var(--c)}.pres .mute{fill:none;stroke:var(--c);stroke-width:1.2}

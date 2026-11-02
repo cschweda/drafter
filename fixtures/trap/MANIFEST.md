@@ -2,7 +2,7 @@
 
 Generated from `traps.ts` by `harness.test.ts` (run `pnpm vitest run --project trap -u` after changing a trap). Each row is one file; each entry point it goes through has the outcome it must give. See README.md for the entry points.
 
-258 traps: fountain 39, markdown 31, text 20, fdx 30, highland 42, fadein 11, html 31, epub 18, files 13, modules 9, cuts 8, draft 6.
+262 traps: fountain 43, markdown 31, text 20, fdx 30, highland 42, fadein 11, html 31, epub 18, files 13, modules 9, cuts 8, draft 6.
 
 ## fountain
 
@@ -46,6 +46,10 @@ Generated from `traps.ts` by `harness.test.ts` (run `pnpm vitest run --project t
 | `fountain-is-highland` | `packed.fountain` | A Highland zip named .fountain is named a packed file, by its first bytes. | **web-open**: refused: “a Word, OpenDocument, or other packed file”<br>**desktop-open**: refused: “a Word, OpenDocument, or other packed file”<br>**cli-build**: opens |
 | `fountain-is-rtf` | `rich.fountain` | An RTF document named .fountain is named an RTF document. | **web-open**: refused: “an RTF document”<br>**desktop-open**: refused: “an RTF document”<br>**cli-build**: opens |
 | `fountain-is-ole` | `older.fountain` | An OLE compound file (an older Office or Final Draft file) named .fountain is named so. | **web-open**: refused: “an older Office or Final Draft file”<br>**desktop-open**: refused: “an older Office or Final Draft file”<br>**cli-build**: opens |
+| `fountain-story-map-hostile` | `story-map-hostile.fountain` | Markup, `]]>`, `</style>`, `</title>`, bidi overrides, U+2028, and a 5,000-character name in the title, names, places, summaries, a marked line, hooks, and threads stay text in the story map. | **web-open**: opens, 6444 characters, exactly<br>**desktop-open**: opens, 6444 characters, exactly<br>**cli-build**: opens<br>**package**: opens |
+| `fountain-story-map-huge-name` | `huge-name.fountain` | A leading character with a 100,000-character name is drawn in the story map in time, whole and escaped. | **web-open**: opens, 600517 characters, exactly<br>**desktop-open**: opens, 600517 characters, exactly<br>**cli-build**: opens<br>**package**: opens |
+| `fountain-story-map-long-line` | `long-line.fountain` | A 10,000-character speech marked [[Quote]] is weighed as a line of dialogue in time, and left out. | **web-open**: opens, 10111 characters, exactly<br>**desktop-open**: opens, 10111 characters, exactly<br>**cli-build**: opens<br>**package**: opens |
+| `fountain-story-map-said-often` | `said-often.fountain` | One name said 50,000 times in a paragraph, and speaking 1,000 times, makes a story map in linear time. | **web-open**: opens, 292038 characters, exactly<br>**desktop-open**: opens, 292038 characters, exactly<br>**cli-build**: opens<br>**package**: opens |
 | `fountain-is-export` | `export.fountain` | A Drafter HTML export named .fountain is reopened by its content: the script inside opens. | **web-open**: opens, 63 characters, exactly<br>**desktop-open**: opens, 63 characters, exactly<br>**cli-build**: opens<br>**package**: opens |
 
 ## markdown

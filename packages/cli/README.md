@@ -1,10 +1,11 @@
 # @drafter/cli
 
-The [Drafter](https://github.com/cschweda/drafter) command line: lays out a Fountain script and writes it as a PDF, an HTML page, fixed-width text, or JSON, or checks it for problems; and converts Final Draft, Highland, and Fade In files to Fountain, many at once.
+The [Drafter](https://github.com/cschweda/drafter) command line: lays out a Fountain script and writes it as a PDF, an HTML page, a story map, fixed-width text, or JSON, or checks it for problems; and converts Final Draft, Highland, and Fade In files to Fountain, many at once.
 
 ```sh
 drafter build script.fountain                       # writes script.pdf
 drafter build script.fountain --html script.html   # one page to open anywhere, offline
+drafter build script.fountain --story-map map.html # a picture of the script, to send to anyone
 drafter build script.fountain --pdf draft.pdf --txt draft.txt --json draft.json
 drafter build play.fountain --template stage-play-standard --txt -
 drafter check script.fountain                       # exits 1 if anything is an error
@@ -23,6 +24,8 @@ In this repository, run it from the root as `pnpm drafter …` after `pnpm -r bu
 | `--pdf <file>` | Write a PDF, with Courier Prime embedded. With no output named, `script.fountain` becomes `script.pdf`. |
 | `--html <file>` | Write one self-contained HTML page: the printed pages and a reading view, dark by default with a light switch, Courier Prime embedded, no network needed. The running time in its header is a page a minute, since the command line has no per-script rate. Notes are left out (there is no notes option here; the app's Export as HTML can include them). |
 | `--reopenable` | With `--html`: let Drafter reopen the page. It carries the full script, notes and all, exactly as the file has it, so `drafter convert` or the app's Open can get it back. Off unless you ask: leave it off for a page you send to someone. A script that isn't UTF-8 text is refused, since it couldn't come back as it is. |
+| `--story-map <file>` | Write a **story map**: one picture-first HTML page of the script so far, for someone who has never read a script. It shows the story's shape, its people, every scene in order with a one-line summary and a few lines of dialogue, and what is still to write. It is dark, made for a phone, and holds no script and needs no network. Notes are left out, and so is your contact. The planned length and any edited hooks come from the file's metadata block (`storyMap.plannedPages`, `storyMap.hooks`), and the logline from the title page's `Logline:`. A Drafter draft file shows its draft's number and ID; any other file is Draft 01, with the SHA-256 of its text. The running time is a page a minute. `--reopenable` doesn't apply: a story map never carries the script. |
+| `--status <in-progress\|finished>` | With `--story-map`: call the script a work in progress, or finished (which leaves out the planned scenes and what is still to write). Without it, the story map decides from what is left to write. |
 | `--txt <file>` | Write fixed-width text: each page the full width and height of its grid, margins included, pages separated by form feeds. |
 | `--json <file>` | Write the parsed script as JSON (`toJSON` from `@drafter/fountain`). |
 | `--template <id\|file>` | A built-in template (`us-screenplay`, `stage-play-standard`) or a template JSON file. |
@@ -31,6 +34,8 @@ In this repository, run it from the root as `pnpm drafter …` after `pnpm -r bu
 An output of `-` goes to standard output; only one output can. Errors and warnings print to standard error as the script builds, and a summary line follows. `build` still writes its outputs when the script has errors, since an unclosed boneyard, say, still lays out; `check` is the command that fails.
 
 The input (and a template JSON file) must be a regular file of at most 5 MB, the app's own limit for a script: a folder, a named pipe, or a device such as `/dev/zero` is refused at once, without waiting or reading on. Its text is read as UTF-8, a byte that isn't UTF-8 read as U+FFFD (`--reopenable` refuses such a file, since it couldn't carry it exactly).
+
+Each output is written in place, replacing a file that is already there; none is ever written over the input.
 
 ### `drafter check <input> [--template <id|file>]`
 

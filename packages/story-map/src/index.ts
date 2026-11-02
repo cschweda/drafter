@@ -15,6 +15,7 @@ export {
   signatureLines,
 } from './lines';
 export { mailtoOf } from './mailto';
+export { type StoryMapMeta, storyMapMeta } from './meta';
 export { actTitle, buildStoryMap, type MapInput, STORY_MAP_LIMITS } from './model';
 export {
   type RenderInput,

@@ -5,7 +5,7 @@ one outcome every way in must give it. A trap either **opens** with specific tex
 warning** (a note count, a notice), or is **refused** with a specific plain message. It never
 crashes or hangs, never runs anything, never fetches anything, and never uses unbounded memory.
 
-[MANIFEST.md](MANIFEST.md) lists every trap, generated from [`traps.ts`](traps.ts): 258 of them,
+[MANIFEST.md](MANIFEST.md) lists every trap, generated from [`traps.ts`](traps.ts): 262 of them,
 across Fountain, Markdown, plain text, Final Draft (`.fdx`), Highland, Fade In, HTML and EPUB
 reopening, special files (pipes, links, folders), the desktop app's modules folder, and the
 drafts and cuts files read back from beside a work.
@@ -58,7 +58,7 @@ Every way a file comes into Drafter, and the harness that runs each one
 | `desktop-open` | The desktop app's files named by the system: the command line, a second launch, macOS's open-file event, a dropped file with a path. Each goes through the arguments' sorting, the grant (a script by where it leads), the main process's read (a regular file, at most 64 MB), then the same `openFile`, through `desktopFiles`. The Open dialog's choice takes the same read. | `apps/desktop/src/open-files.ts` → `file-handlers.ts` (`grantScript`) → `files.ts` (`readFileAt`) → `apps/web/app/storage/desktop-files.ts` → `open.ts` (`openPath`) | `apps/web/test/trap-open.test.ts` (the real code on real temp files, only Electron's IPC left out), `apps/desktop/e2e/trap.spec.ts` (Electron) |
 | `cli-convert` | `drafter convert`: Final Draft, Highland, and Fade In files, and Drafter HTML and EPUB exports, to Fountain. | `packages/cli/src/convert.ts` | `harness.test.ts`, in process, and the built `drafter` for special files |
 | `cli-build` | `drafter build` and `drafter check`: a Fountain file read, parsed, and laid out, and a `--template` JSON file. | `packages/cli/src/cli.ts` (`readInput`, `load`) | `harness.test.ts` |
-| `package` | Each format's reader on its own: `parse`, `parseMarkdown`, `fromFdx`, `fromHighland`, `fromFadeIn`, `embeddedSource`; and Drafter's HTML export of a hostile script, which must hold nothing live. | `packages/fountain`, `markdown`, `fdx`, `archive`, `render-html-file` | `harness.test.ts` |
+| `package` | Each format's reader on its own: `parse`, `parseMarkdown`, `fromFdx`, `fromHighland`, `fromFadeIn`, `embeddedSource`; and Drafter's HTML export and story map of a hostile script, which must hold nothing live. | `packages/fountain`, `markdown`, `fdx`, `archive`, `render-html-file`, `story-map` | `harness.test.ts` |
 | `desktop-modules` | The desktop app's modules folder: each `module.json`, read once at start. | `apps/desktop/src/module-folder.ts` | `harness.test.ts` |
 | `beside-read` | Drafts and cuts read back from beside the work when it opens: the cuts file (`Boca.fountain.cuts.md`), each entry checked by its ID and merged, and draft files (`Boca drafts/Boca – Draft 03.fountain`), each ID checked against its text. Untrusted: they may have been edited anywhere. | `apps/web/app/beside/read.ts` → `@drafter/history` | `harness.test.ts` |
 
@@ -82,7 +82,8 @@ Not entry points, so no trap goes through them, but part of the survey:
    `.epub`), `build` (for `.fountain`), and the format's reader are added for you, with the same
    outcome; give one of them its own when it differs (a message in the command line's words).
 3. Set `inert: true` if the text is hostile markup: it is then written into Drafter's HTML export
-   and checked for anything live.
+   and its story map (by the reader and by `drafter build --story-map`), and both are checked for
+   anything live.
 4. Run `pnpm vitest run --project trap -u` to rewrite MANIFEST.md, then both harnesses.
 5. If Drafter gets it wrong, that is a bug: fix it with the trap as its test, or, when the fix is
    large or a judgement call, give the trap today's outcome and add the question to

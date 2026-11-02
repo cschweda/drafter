@@ -22,6 +22,7 @@ import { mergeCuts } from '@drafter/history';
 import { paginate } from '@drafter/layout';
 import { NestedTooDeeply, parseMarkdown } from '@drafter/markdown';
 import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
+import { buildStoryMap, renderStoryMap, type StoryMapFonts } from '@drafter/story-map';
 import { builtins, type Template } from '@drafter/templates';
 import { currentWriter, readModulesFolder } from '../../../apps/desktop/src/module-folder';
 import { readCutsBytes, readDraftBytes, skippedLine } from '../../../apps/web/app/beside/read';
@@ -47,6 +48,8 @@ export interface Answer {
   cli?: { code: number; out: string; err: string };
   /** Drafter's HTML export of the opened text, for an inert trap; null when the export refuses it. */
   html?: string | null;
+  /** The opened text's story map, for an inert trap. */
+  storyMap?: string;
   ms: number;
   kept: number;
 }
@@ -181,6 +184,40 @@ function exported(text: string, markdown: boolean): string | null {
   }
 }
 
+/** Stand-ins that start as WOFF2 does, each face its own: the story map checks only the kind. */
+const MAP_FONTS: StoryMapFonts = {
+  anton: new Uint8Array([0x77, 0x4f, 0x46, 0x32, 1]),
+  archivo: new Uint8Array([0x77, 0x4f, 0x46, 0x32, 2]),
+  archivoSemiBold: new Uint8Array([0x77, 0x4f, 0x46, 0x32, 3]),
+  courier: new Uint8Array([0x77, 0x4f, 0x46, 0x32, 4]),
+};
+
+/** The opened text's story map, with the dialog's defaults, as a writer would make it. */
+function storyMapOf(text: string): string {
+  const doc = parse(text);
+  const template = builtins['us-screenplay'] as Template;
+  const map = buildStoryMap({
+    doc,
+    template,
+    layout: paginate(doc, template),
+    options: {
+      status: null,
+      plannedPages: null,
+      logline: null,
+      greeting: "What I'm writing",
+      explain: null,
+      include: { summaries: true, lines: true, threads: true, contact: false },
+      contact: null,
+      hooks: {},
+      rates: { minutesPerPage: 1, wordsPerMinute: 150 },
+      draft: { number: 1, id: '0123456789abcdef' },
+      updated: null,
+      title: 'Trap',
+    },
+  });
+  return renderStoryMap({ map, fonts: MAP_FONTS, lang: 'en', generator: 'Drafter traps' });
+}
+
 async function drafter(cwd: string, args: string[]) {
   const out: string[] = [];
   const err: string[] = [];
@@ -225,7 +262,8 @@ async function work(job: Job): Promise<Omit<Answer, 'ms' | 'kept'>> {
   if (job.kind === 'package') {
     const happened = await readPackage(job.format, job.bytes);
     if (!job.inert || happened.kind !== 'opened') return { happened };
-    return { happened, html: exported(happened.text, job.format === 'markdown') };
+    const html = exported(happened.text, job.format === 'markdown');
+    return { happened, html, storyMap: storyMapOf(happened.text) };
   }
   if (job.kind === 'cli') {
     const cli = await drafter(job.cwd, job.args);

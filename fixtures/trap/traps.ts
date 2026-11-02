@@ -289,6 +289,19 @@ const FLOOD = `Title: Z${'\u0301'.repeat(200_000)}\n\nINT. HALL - DAY\n\nA${'\u0
 const LONG = `INT. ${'VERY '.repeat(40_000)}LONG HALL - DAY\n\n${'W'.repeat(200_000)}\nA lever waits.\n`;
 const ZW = '\u200b\u200d\ufeff';
 
+// For the story map (Task 7): sizes a story map must draw in time, with every name escaped.
+/** A speaker with a 100,000-character name, introduced in capitals and speaking in three scenes. */
+const HUGE_NAME = (() => {
+  const name = `QUILL${'LONGNAME'.repeat(12_500)}`;
+  const scene = (n: number) =>
+    `INT. LAMP ROOM ${n} - NIGHT\n\n${name} (40s), a keeper, climbs the stairs.\n\n${name}\nSomebody has to keep the lamp lit all night.\n\nPIM\nThen let it be somebody else for once.\n\n`;
+  return `Title: The Long Name\n\n${scene(1)}${scene(2)}${scene(3)}`;
+})();
+/** A marked speech of 10,000 characters: a line of dialogue far past the length rule. */
+const LONG_SPEECH = `Title: The Long Speech\n\nINT. HALL - DAY\n\nA lever waits.\n\nWREN\n${'ring '.repeat(1_999)}ring!\n[[Quote]]\n\nPIM\nThen ring it once more for luck.\n`;
+/** One name said 50,000 times in one paragraph, and speaking a thousand times. */
+const SAID_OFTEN = `Title: Echo\n\nINT. HALL - DAY\n\n${'WREN '.repeat(50_000)}waits.\n\n${'WREN\nAgain and again, the same old bell.\n\n'.repeat(1_000)}`;
+
 /** The traps every text format shares, for one of them. */
 function textTraps({ ext, format, name }: TextKind): Trap[] {
   const id = (s: string) => `${ext}-${s}`;
@@ -662,6 +675,46 @@ const FOUNTAIN_TRAPS: Trap[] = [
       'An OLE compound file (an older Office or Final Draft file) named .fountain is named so.',
     bytes: () => concat([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1], new Uint8Array(504)),
     expect: { 'web-open': refused(SAYS.ole) },
+  },
+  {
+    id: 'fountain-story-map-hostile',
+    format: 'fountain',
+    name: 'story-map-hostile.fountain',
+    tests:
+      'Markup, `]]>`, `</style>`, `</title>`, bidi overrides, U+2028, and a 5,000-character name in the title, names, places, summaries, a marked line, hooks, and threads stay text in the story map.',
+    bytes: file('fountain/story-map-hostile.fountain'),
+    expect: { 'web-open': opens(text('fountain/story-map-hostile.fountain')) },
+    inert: true,
+  },
+  {
+    id: 'fountain-story-map-huge-name',
+    format: 'fountain',
+    name: 'huge-name.fountain',
+    tests:
+      'A leading character with a 100,000-character name is drawn in the story map in time, whole and escaped.',
+    bytes: () => enc(HUGE_NAME),
+    expect: { 'web-open': opens(HUGE_NAME) },
+    inert: true,
+  },
+  {
+    id: 'fountain-story-map-long-line',
+    format: 'fountain',
+    name: 'long-line.fountain',
+    tests:
+      'A 10,000-character speech marked [[Quote]] is weighed as a line of dialogue in time, and left out.',
+    bytes: () => enc(LONG_SPEECH),
+    expect: { 'web-open': opens(LONG_SPEECH) },
+    inert: true,
+  },
+  {
+    id: 'fountain-story-map-said-often',
+    format: 'fountain',
+    name: 'said-often.fountain',
+    tests:
+      'One name said 50,000 times in a paragraph, and speaking 1,000 times, makes a story map in linear time.',
+    bytes: () => enc(SAID_OFTEN),
+    expect: { 'web-open': opens(SAID_OFTEN) },
+    inert: true,
   },
   {
     id: 'fountain-is-export',

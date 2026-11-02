@@ -1,12 +1,23 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { readFile, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, extname, resolve } from 'node:path';
 import { MAX_SCRIPT_BYTES } from '@drafter/archive';
 import { type Doc, parse, toJSON } from '@drafter/fountain';
 import { type Layout, paginate, UnsupportedTemplateError } from '@drafter/layout';
+import { DEFAULT_WORDS_PER_MINUTE } from '@drafter/outline';
 import { type FontStyle, kindLine, renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
 import { FONT_FILES, type FontSet, renderPdf } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
+import {
+  buildStoryMap,
+  type MapStatus,
+  renderStoryMap,
+  STORY_MAP_FONT_FILES,
+  type StoryMapFace,
+  type StoryMapFonts,
+  storyMapMeta,
+} from '@drafter/story-map';
 import { builtins, loadTemplate, type Template, TemplateError } from '@drafter/templates';
 import { Command, CommanderError } from 'commander';
 import pkg from '../package.json' with { type: 'json' };
@@ -58,6 +69,8 @@ interface BuildOptions {
   txt?: string;
   json?: string;
   html?: string;
+  storyMap?: string;
+  status?: string;
   template?: string;
   sceneNumbers?: boolean;
   reopenable?: boolean;
@@ -96,7 +109,7 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 
   const program = new Command('drafter')
     .description(
-      'Lays out Fountain screenplays and stage plays, and writes them as PDF, HTML, text, or JSON; converts Final Draft, Highland, and Fade In files to Fountain.',
+      'Lays out Fountain screenplays and stage plays, and writes them as PDF, HTML, a story map, text, or JSON; converts Final Draft, Highland, and Fade In files to Fountain.',
     )
     .version(pkg.version)
     .exitOverride()
@@ -105,7 +118,9 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 
   program
     .command('build')
-    .description('Lay out a script and write it as PDF, HTML, fixed-width text, or JSON.')
+    .description(
+      'Lay out a script and write it as PDF, HTML, a story map (a picture of the script for anyone), fixed-width text, or JSON.',
+    )
     .argument('<input>', 'the .fountain file')
     .option('--pdf <file>', "write a PDF (with no output named, the input's name ending in .pdf)")
     .option('--txt <file>', 'write fixed-width text, page by page')
@@ -117,6 +132,14 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
     .option(
       '--reopenable',
       'let Drafter reopen the HTML page: it carries the full script, notes and all',
+    )
+    .option(
+      '--story-map <file>',
+      'write a story map: one picture-first HTML page of the script so far, to send to anyone (notes left out)',
+    )
+    .option(
+      '--status <in-progress|finished>',
+      "the story map's status (without it, finished when nothing is left to write)",
     )
     .option('--template <id|file>', templateHelp)
     .option('--scene-numbers', 'print scene numbers')
@@ -159,14 +182,15 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 }
 
 async function build(input: string, options: BuildOptions, io: IO): Promise<number> {
-  const outputs: Array<['pdf' | 'txt' | 'json' | 'html', string]> = [];
-  for (const kind of ['pdf', 'html', 'txt', 'json'] as const) {
+  const outputs: Array<['pdf' | 'txt' | 'json' | 'html' | 'storyMap', string]> = [];
+  for (const kind of ['pdf', 'html', 'storyMap', 'txt', 'json'] as const) {
     const target = options[kind];
     if (target !== undefined) outputs.push([kind, target]);
   }
   if (options.reopenable && options.html === undefined) {
     throw new CliError('--reopenable needs --html: only the HTML page can carry the script');
   }
+  const status = statusOf(options.status);
   if (outputs.length === 0) outputs.push(['pdf', defaultPdf(input)]);
   if (outputs.filter(([, target]) => target === '-').length > 1) {
     throw new CliError('only one output can go to standard output (-)');
@@ -198,9 +222,11 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
         ? await renderPdf(layout, template, { fonts: await loadFonts() })
         : kind === 'html'
           ? await scriptHtml(input, doc, template, layout, options.reopenable ? text : undefined)
-          : kind === 'txt'
-            ? renderText(layout, template)
-            : `${JSON.stringify(toJSON(doc), null, 2)}\n`;
+          : kind === 'storyMap'
+            ? await storyMapHtml(input, doc, template, layout, text, status, io)
+            : kind === 'txt'
+              ? renderText(layout, template)
+              : `${JSON.stringify(toJSON(doc), null, 2)}\n`;
     await emit(target, data, io);
   }
   const written = outputs.map(([, target]) => (target === '-' ? 'standard output' : target));
@@ -225,11 +251,7 @@ async function scriptHtml(
   const used = Object.fromEntries(
     [...stylesUsed(layout)].map((style) => [style, fonts[style]] as const),
   ) as Partial<Record<FontStyle, Uint8Array>>;
-  const title = doc.titlePage?.fields.find((f) => f.key.trim().toLowerCase() === 'title');
-  const named = title?.runs
-    .map((runs) => runs.map((run) => run.text).join(''))
-    .join(' ')
-    .trim();
+  const named = titleField(doc, 'title');
   return renderScriptHtml({
     doc,
     layout,
@@ -241,6 +263,95 @@ async function scriptHtml(
     generator: `Drafter ${pkg.version}`,
     kindLine: kindLine(layout, template, 1),
     ...(source === undefined ? {} : { source }),
+  });
+}
+
+/** A title-page field's text, its lines joined by spaces; empty when there is none. */
+function titleField(doc: Doc, key: string): string {
+  const field = doc.titlePage?.fields.find((f) => f.key.trim().toLowerCase() === key);
+  return (
+    field?.runs
+      .map((runs) => runs.map((run) => run.text).join(''))
+      .join(' ')
+      .trim() ?? ''
+  );
+}
+
+/** `--status`: in progress or finished, else none (the story map's own default). */
+function statusOf(status: string | undefined): MapStatus | null {
+  if (status === undefined) return null;
+  if (status === 'in-progress' || status === 'finished') return status;
+  throw new CliError(`--status is in-progress or finished, not "${status}"`);
+}
+
+const DRAFT_ID = /^[0-9a-f]{64}$/;
+
+/**
+ * The draft a file is: a Drafter draft file's number and ID, from its metadata block (read
+ * strictly), else Draft 01 and the SHA-256 of the file's text.
+ */
+function draftOf(doc: Doc, text: string): { number: number; id: string } {
+  const number = doc.meta?.draft;
+  const id = doc.meta?.id;
+  if (
+    typeof number === 'number' &&
+    Number.isSafeInteger(number) &&
+    number >= 1 &&
+    typeof id === 'string' &&
+    DRAFT_ID.test(id)
+  ) {
+    return { number, id };
+  }
+  return { number: 1, id: createHash('sha256').update(text).digest('hex') };
+}
+
+/**
+ * The story map (story-map design §10.1): the dialog's defaults (summaries, lines, and threads in;
+ * contact off), the planned length and edited hooks from the metadata block, the logline from the
+ * title page, a page a minute, and "updated" the file's last change. It never carries the script.
+ */
+async function storyMapHtml(
+  input: string,
+  doc: Doc,
+  template: Template,
+  layout: Layout,
+  text: string,
+  status: MapStatus | null,
+  io: IO,
+): Promise<string> {
+  const { plannedPages, hooks } = storyMapMeta(doc.meta);
+  let updated: number | null = null;
+  try {
+    updated = (await stat(resolve(io.cwd, input))).mtimeMs;
+  } catch {
+    // Gone since it was read: no date.
+  }
+  const logline = titleField(doc, 'logline');
+  const map = buildStoryMap({
+    doc,
+    template,
+    layout,
+    options: {
+      status,
+      plannedPages,
+      logline: logline === '' ? null : logline,
+      greeting: "What I'm writing",
+      explain:
+        'A picture of my script: its shape, its people, and every scene in order. Just scroll.',
+      include: { summaries: true, lines: true, threads: true, contact: false },
+      contact: null,
+      hooks,
+      rates: { minutesPerPage: 1, wordsPerMinute: DEFAULT_WORDS_PER_MINUTE },
+      draft: draftOf(doc, text),
+      updated,
+      title: titleField(doc, 'title') || basename(input, extname(input)),
+    },
+  });
+  return renderStoryMap({
+    map,
+    fonts: await loadStoryMapFonts(),
+    lang: 'en',
+    generator: `Drafter ${pkg.version}`,
   });
 }
 
@@ -348,6 +459,19 @@ async function loadFonts(): Promise<FontSet> {
   return Object.fromEntries(
     styles.map((style, k) => [style, new Uint8Array(files[k] as Buffer)]),
   ) as unknown as FontSet;
+}
+
+/** Anton, Archivo, and Courier Prime, from `@drafter/story-map`'s `fonts/` folder. */
+async function loadStoryMapFonts(): Promise<StoryMapFonts> {
+  const faces = Object.keys(STORY_MAP_FONT_FILES) as StoryMapFace[];
+  const files = await Promise.all(
+    faces.map((face) =>
+      readFile(require.resolve(`@drafter/story-map/fonts/${STORY_MAP_FONT_FILES[face]}`)),
+    ),
+  );
+  return Object.fromEntries(
+    faces.map((face, k) => [face, new Uint8Array(files[k] as Buffer)]),
+  ) as StoryMapFonts;
 }
 
 async function emit(target: string, data: string | Uint8Array, io: IO) {

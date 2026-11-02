@@ -209,6 +209,40 @@ function expectInert(trap: Trap, html: string) {
   }
 }
 
+/**
+ * Reads a story map of a hostile text back (worker/run.ts, and `drafter build --story-map`): it
+ * has no script at all, nothing that loads or embeds, no event handler or style attribute, no
+ * link but to its own parts or a `mailto:`, and one `h1`.
+ */
+function expectInertStoryMap(trap: Trap, html: string) {
+  const { document } = new JSDOM(html).window;
+  for (const tag of [
+    'script',
+    'iframe',
+    'object',
+    'embed',
+    'img',
+    'form',
+    'base',
+    'link',
+    'foreignObject',
+  ]) {
+    expect(document.getElementsByTagName(tag).length, `${trap.id}: story map <${tag}>`).toBe(0);
+  }
+  expect(document.querySelectorAll('meta[http-equiv="refresh" i]').length, trap.id).toBe(0);
+  for (const el of document.querySelectorAll('*')) {
+    for (const attr of el.getAttributeNames()) {
+      expect(/^on/i.test(attr), `${trap.id}: story map ${el.tagName} ${attr}`).toBe(false);
+      expect(attr.toLowerCase(), `${trap.id}: story map ${el.tagName}`).not.toBe('style');
+      if (attr === 'href' || attr === 'xlink:href') {
+        const value = el.getAttribute(attr) ?? '';
+        expect(/^(?:#|mailto:)/.test(value), `${trap.id}: story map ${attr}=${value}`).toBe(true);
+      }
+    }
+  }
+  expect(document.querySelectorAll('h1').length, `${trap.id}: story map h1`).toBe(1);
+}
+
 // The `package` entry point decodes the bytes with the worker's own `decoded()`, a copy of Open's
 // rules, so each reader is tried on its own; the app's real decoding and routing are what
 // `web-open` and `desktop-open` run (apps/web/test/trap-open.test.ts).
@@ -222,6 +256,10 @@ describe('package: each format’s reader on its own', () => {
     // The reader for HTML and EPUB returns no words; the app's are compared for those.
     checkOutcome(trap, outcome, answer.happened, 'package');
     if (answer.html) expectInert(trap, answer.html);
+    if (trap.inert && answer.happened.kind === 'opened') {
+      expect(answer.storyMap, `${trap.id}: a story map`).toBeTypeOf('string');
+      expectInertStoryMap(trap, answer.storyMap as string);
+    }
   });
 });
 
@@ -303,10 +341,15 @@ describe('cli-build: drafter build', () => {
       const path = onDisk(trap, 'build');
       const dir = join(path, '..');
       const name = path.slice(dir.length + 1);
-      const args = ['build', '--txt', join(tmp, `${trap.id}.txt`), '--', name];
+      // A hostile text's story map is written too, and read back for anything live.
+      const map = trap.inert ? join(tmp, `${trap.id}.map.html`) : null;
+      const args = ['build', '--txt', join(tmp, `${trap.id}.txt`)];
+      if (map) args.push('--story-map', map);
+      args.push('--', name);
       const { code, err } = await drafter(trap, dir, args, 'cli-build');
       const outcome = trap.expect['cli-build'];
       if (!outcome) throw new Error('no outcome');
+      if (map && code === 0) expectInertStoryMap(trap, readFileSync(map, 'utf8'));
       // `build` lays the script out rather than showing its text: whether it was built is compared.
       if (outcome.kind === 'refused') {
         expect(code, `${trap.id} at cli-build: should be refused`).not.toBe(0);

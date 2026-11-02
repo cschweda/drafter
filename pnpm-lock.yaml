@@ -225,6 +225,9 @@ importers:
       '@drafter/layout':
         specifier: workspace:*
         version: link:../layout
+      '@drafter/outline':
+        specifier: workspace:*
+        version: link:../outline
       '@drafter/render-html-file':
         specifier: workspace:*
         version: link:../render-html-file

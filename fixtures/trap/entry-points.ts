@@ -49,8 +49,8 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
   },
   {
     id: 'package',
-    what: 'Each format’s reader on its own, as every entry point above uses it: `parse` (Fountain), `parseMarkdown`, `fromFdx`, `fromHighland`, `fromFadeIn`, `embeddedSource` (HTML and EPUB reopen); and the HTML exports a hostile script is written into, which must stay inert.',
-    code: 'packages/fountain, markdown, fdx, archive, render-html-file',
+    what: 'Each format’s reader on its own, as every entry point above uses it: `parse` (Fountain), `parseMarkdown`, `fromFdx`, `fromHighland`, `fromFadeIn`, `embeddedSource` (HTML and EPUB reopen); and the HTML exports and the story map a hostile script is written into, which must stay inert.',
+    code: 'packages/fountain, markdown, fdx, archive, render-html-file, story-map',
     harness: 'fixtures/trap/harness.test.ts',
   },
   {
