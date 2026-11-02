@@ -18,6 +18,16 @@ export function isInside(real: string, root: string, platform: NodeJS.Platform):
 }
 
 /**
+ * Whether a real path inside `root` has a part below it that starts with `.` (a link may lead to
+ * `.hidden/x.fountain` though its own name has no dot): hidden, never read, as a written dot part.
+ */
+export function hiddenBelow(real: string, root: string, platform: NodeJS.Platform): boolean {
+  const { sep } = platform === 'win32' ? win32 : posix;
+  const below = real.slice(root.length);
+  return below.split(sep).some((part) => part.startsWith('.'));
+}
+
+/**
  * Each folder's real path, checked to be a folder and not a whole drive. A folder that is, or is
  * inside, another one given is the same root, so it is dropped: every file has one name. Names are
  * the folder's own; when two are alike (in any case), the second is "Scripts (2)", the third

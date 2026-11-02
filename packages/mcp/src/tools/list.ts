@@ -25,11 +25,12 @@ import {
   NotRead,
   readInside,
 } from '../inside';
-import { answerBudget, itemCost } from '../paging';
+import { answerBudget, clipMessage, clipText, itemCost } from '../paging';
 import { resolvePath } from '../paths';
 import { type Found, WALK_LIMITS, walk } from '../walk';
 import type { ToolContext, ToolDef } from './index';
 import { cursor, format, path } from './schemas';
+import { TEXT_LIMITS } from './script';
 
 /** The most bytes one call reads to find titles and scene counts (and count cuts). */
 export const LIST_READ_LIMIT = 100 * 1024 * 1024;
@@ -67,6 +68,8 @@ const listed = z.object({
   format,
   kind: z.enum(['screenplay', 'stage play', 'markdown']).nullable(),
   title: z.string().nullable(),
+  /** The title was longer than TEXT_LIMITS.heading, and is its start. */
+  title_cut: z.literal(true).optional(),
   scenes: z.number().int().min(0).nullable(),
   modified: z.string(),
   bytes: z.number().int().min(0),
@@ -76,7 +79,7 @@ const listed = z.object({
   content: z.enum(CONTENTS),
   /** Whether that is what the file's name says; null when it wasn't read. */
   matches_name: z.boolean().nullable(),
-  /** Open's words, when Drafter won't read the file. */
+  /** Open's words, when Drafter won't read the file (clipped to MAX_REFUSAL_CHARS). */
   refused: z.string().nullable(),
 });
 type Listed = z.infer<typeof listed>;
@@ -367,6 +370,8 @@ async function describe(
   }
   const content: ListedContent = summary?.content ?? 'not read';
   const read = summary && 'kind' in summary ? summary : undefined;
+  // A title or a refusal may be as long as the file: each is clipped, so every entry is small.
+  const title = read?.title == null ? null : clipText(read.title, TEXT_LIMITS.heading);
   // An export's drafts and cuts belong to the script it was made from.
   const exported = content === 'html export' || content === 'epub export';
   const nameIsExport = file.format === 'html' || file.format === 'epub';
@@ -376,7 +381,8 @@ async function describe(
     path: file.shown,
     format: file.format,
     kind: read?.kind ?? null,
-    title: read?.title ?? null,
+    title: title?.text ?? null,
+    ...(title?.cut ? { title_cut: true as const } : {}),
     scenes: read?.scenes ?? null,
     modified,
     bytes: file.size,
@@ -384,7 +390,7 @@ async function describe(
     cuts: beside ? await countCuts(file, workKind, ctx, spend) : null,
     content,
     matches_name: content === 'not read' ? null : content === NAMED[file.format],
-    refused: summary && 'refused' in summary ? summary.refused : null,
+    refused: summary && 'refused' in summary ? clipMessage(summary.refused) : null,
   };
 }
 

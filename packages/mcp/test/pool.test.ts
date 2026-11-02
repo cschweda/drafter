@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   CALL_LIMIT_MS,
   callLimitMs,
+  READER_HEAP_MB,
   ReaderPool,
   STOPPED,
   TOO_LONG,
@@ -51,6 +52,23 @@ describe('the reader pool', () => {
     pool = new ReaderPool(SPIN, DATA);
     const answers = await Promise.all([pool.run(job('thread')), pool.run(job('thread'))]);
     expect(answers.every((answer) => 'ok' in answer)).toBe(true);
+  });
+
+  it('the reader’s heap is capped, so running out of memory stops only the reader', async () => {
+    pool = new ReaderPool(SPIN, DATA);
+    const got = (await pool.run(job('limits'))) as {
+      ok: { resourceLimits: { maxOldGenerationSizeMb?: number } };
+    };
+    expect(READER_HEAP_MB).toBe(512);
+    expect(got.ok.resourceLimits.maxOldGenerationSizeMb).toBe(READER_HEAP_MB);
+  });
+
+  it('a reader that stops mid-call is refused, and the next call gets a new worker', async () => {
+    pool = new ReaderPool(SPIN, DATA);
+    const first = (await pool.run(job('thread'))) as { ok: { threadId: number } };
+    expect(await pool.run(job('exit'))).toEqual({ refused: STOPPED });
+    const next = (await pool.run(job('thread'))) as { ok: { threadId: number } };
+    expect(next.ok.threadId).not.toBe(first.ok.threadId);
   });
 
   it('the limit is ten seconds', async () => {

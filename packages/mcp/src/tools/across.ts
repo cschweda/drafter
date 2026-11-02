@@ -12,9 +12,10 @@ import { hooksOf, type StoryMap } from '@drafter/story-map';
 import * as z from 'zod/v4';
 import { argsHash, type CursorAt, makeCursor, readCursor } from '../cursor';
 import { ABOUT, type Include, type LeftOut } from '../envelope';
+import { CANT_OPEN, cantRead } from '../inside';
 import { type Loaded, load, mapOf } from '../load';
 import { neighbours, readLimits, SEARCH_LIMITS, SERIES_MAX } from '../names';
-import { answerBudget, clipText, fitting, itemCost } from '../paging';
+import { answerBudget, clipMessage, clipText, fitting, itemCost } from '../paging';
 import { type Checked, Refusal, resolvePath } from '../paths';
 import { visibleIn, visibleMarkdownIn } from '../visible';
 import { walk } from '../walk';
@@ -861,12 +862,12 @@ async function planSeries(args: SeriesInput, ctx: ToolContext): Promise<Planned[
   return planned;
 }
 
-/** Why a script couldn't be read, in the reader's words (never a path). */
+/** Why a script couldn't be read, as every tool says it (never a path), within MAX_REFUSAL_CHARS. */
 function whyNot(error: unknown): string {
   // The reader's own words: a fixed phrase, or a file's name with what Drafter reads (never a path).
-  if (error instanceof Refused) return error.message;
-  if (error instanceof Refusal) return error.message;
-  return 'Drafter couldn’t read it.';
+  if (error instanceof Refused) return clipMessage(cantRead(error.message));
+  if (error instanceof Refusal) return clipMessage(error.message);
+  return CANT_OPEN;
 }
 
 async function series(args: SeriesInput, ctx: ToolContext): Promise<SeriesOutput> {

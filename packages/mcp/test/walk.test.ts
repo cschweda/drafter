@@ -111,6 +111,17 @@ describe('walk', () => {
     ]);
   });
 
+  it.skipIf(skipLinks)('skips a link to a hidden file inside the folder', async () => {
+    const { t, root } = scripts();
+    put(join(t, 'Scripts', '.private', 'diary.fountain'));
+    put(join(t, 'Scripts', 'open.fountain'));
+    symlinkSync(
+      join(t, 'Scripts', '.private', 'diary.fountain'),
+      join(t, 'Scripts', 'diary.fountain'),
+    );
+    expect(shown(await walk(root, true))).toEqual(['Scripts/open.fountain']);
+  });
+
   it.skipIf(skipLinks)('skips pipes and other things that are not files', async () => {
     const { t, root } = scripts();
     execFileSync('mkfifo', [join(t, 'Scripts', 'pipe.fountain')]);

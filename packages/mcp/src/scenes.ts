@@ -2,9 +2,18 @@
 // its written scene number (`7A`, from `#7A#`), or by words from its heading. Order comes first,
 // then written numbers, then heading words. A Markdown document's sections are its scenes.
 import type { Loaded } from './load';
+import { clipText } from './paging';
 import { Refusal } from './paths';
+import { TEXT_LIMITS } from './tools/script';
 
-export type SceneFound = { scene: number } | { matches: Array<{ scene: number; heading: string }> };
+/** A scene a reference could mean: its place, and its heading clipped to TEXT_LIMITS.heading. */
+export interface SceneMatch {
+  scene: number;
+  heading: string;
+  heading_cut?: true;
+}
+
+export type SceneFound = { scene: number } | { matches: SceneMatch[] };
 
 /** The most scenes a reference that matches several gives back. */
 export const MAX_MATCHES = 20;
@@ -52,13 +61,20 @@ export function findScene(loaded: Loaded, ref: string): SceneFound {
 
   const wanted = wordsOf(given);
   if (wanted.length > 0) {
-    const matches: Array<{ scene: number; heading: string }> = [];
+    const matches: SceneMatch[] = [];
     let found = 0;
     scenes.forEach((scene, i) => {
       const have = new Set(wordsOf(scene.heading));
       if (!wanted.every((word) => have.has(word))) return;
       found++;
-      if (matches.length < MAX_MATCHES) matches.push({ scene: i + 1, heading: scene.heading });
+      if (matches.length >= MAX_MATCHES) return;
+      // A heading can be as long as a line: each is clipped, so 20 of them fit in a refusal.
+      const heading = clipText(scene.heading, TEXT_LIMITS.heading);
+      matches.push({
+        scene: i + 1,
+        heading: heading.text,
+        ...(heading.cut ? { heading_cut: true as const } : {}),
+      });
     });
     if (found === 1) return { scene: (matches[0] as { scene: number }).scene };
     if (found > 1) return { matches };
@@ -72,7 +88,7 @@ export function oneScene(loaded: Loaded, ref: string): number {
   const found = findScene(loaded, ref);
   if ('scene' in found) return found.scene;
   const refusal = new Refusal(
-    `More than one scene matches “${ref.trim()}”. Name one by its number.`,
+    `More than one scene matches “${clipText(ref.trim(), 200).text}”. Name one by its number.`,
   );
   refusal.matches = found.matches;
   throw refusal;

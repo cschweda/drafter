@@ -1,6 +1,6 @@
 // Answers of a size an AI app can hold (§7.3): a list comes a page at a time, whole items while
 // the answer's JSON stays under the budget, and one item too large for a page comes in parts.
-import { MAX_ANSWER_CHARS } from './envelope';
+import { MAX_ANSWER_CHARS, MAX_REFUSAL_CHARS } from './envelope';
 
 /** A page of items, and where the next page starts (null: this was the last). */
 export interface Page<T> {
@@ -133,4 +133,10 @@ export function fitting<T>(items: readonly T[], room: number): T[] {
     used += cost;
   }
   return kept;
+}
+
+/** A refusal's message within MAX_REFUSAL_CHARS: cut between code points, and ending `…` if cut. */
+export function clipMessage(text: string): string {
+  const clipped = clipText(text, MAX_REFUSAL_CHARS - 1);
+  return clipped.cut ? `${clipped.text}…` : text;
 }

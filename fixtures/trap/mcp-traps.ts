@@ -10,6 +10,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { ToolName } from '../../packages/mcp/src/tools/index';
+import { trapZip } from './zip';
 
 export interface McpTrap {
   id: string;
@@ -511,6 +512,64 @@ export const MCP_SIZE_TRAPS: readonly McpTrap[] = [
       },
     },
     limitMs: 30_000,
+  },
+  {
+    id: 'mcp-huge-title',
+    tests:
+      'A title page whose Title is 120,000 characters is listed under the cap, its title clipped to 1,000 and said to be cut.',
+    setup: (dir) => {
+      put(
+        at(dir, 'tall.fountain'),
+        `Title: ${'T'.repeat(120_000)}\n\nINT. HALL - DAY\n\nA keeper stands.\n`,
+      );
+      return { path: FOLDER };
+    },
+    tool: 'list_scripts',
+    args: (path) => ({ folder: path }),
+    expect: {
+      ok: (result) => {
+        const files = (result as { files: Array<{ title: string; title_cut?: true }> }).files;
+        strictEqual(files.length, 1);
+        ok((files[0]?.title.length ?? 0) <= 1_000);
+        strictEqual(files[0]?.title_cut, true);
+      },
+    },
+  },
+  {
+    id: 'mcp-huge-ambiguous-heading',
+    tests:
+      'A scene reference that matches 25 headings of 50,000 characters each is refused under the cap, its matches’ headings clipped.',
+    setup: (dir) => {
+      const scenes = Array.from(
+        { length: 25 },
+        (_, i) => `INT. ROOM ${i + 1} ${'W'.repeat(50_000)} - NIGHT\n\nA keeper waits.\n`,
+      );
+      put(at(dir, 'wide.fountain'), scenes.join('\n'));
+      return { path: `${FOLDER}/wide.fountain` };
+    },
+    tool: 'read_scene',
+    args: (path) => ({ script: path, scene: 'room' }),
+    expect: { refused: /^More than one scene matches “room”\. Name one by its number\.$/ },
+  },
+  {
+    id: 'mcp-fadein-long-names',
+    tests:
+      'A Fade In file of six scripts whose entry names are 30,000 characters each is refused under the cap, its message clipped.',
+    setup: (dir) => {
+      const entries = Array.from({ length: 6 }, (_, i) => ({
+        name: `${String(i).repeat(30_000)}.xml`,
+        data: '<x/>',
+        method: 0,
+      }));
+      mkdirSync(folderIn(dir), { recursive: true });
+      writeFileSync(at(dir, 'many.fadein'), trapZip(entries));
+      return { path: `${FOLDER}/many.fadein` };
+    },
+    tool: 'script_overview',
+    args: (path) => ({ script: path }),
+    expect: {
+      refused: /^This isn’t a Fade In file Drafter can read: it holds more than one script \(0+…$/,
+    },
   },
 ];
 

@@ -12,6 +12,12 @@ export const INSTRUCTIONS =
 /** The most characters of text in one answer, about 10,000 tokens (§7.3). */
 export const MAX_ANSWER_CHARS = 40_000;
 
+/**
+ * The most characters a refusal's message may take (JSON-escaped), so a refusal that repeats the
+ * writer's words (an archive's entry names, say) can't fill an answer.
+ */
+export const MAX_REFUSAL_CHARS = 2_000;
+
 /** What a call asks to see that is left out by default (§6). */
 export type Include = ReadonlyArray<'notes' | 'boneyard'>;
 

@@ -3,7 +3,7 @@
 // code runs here. It never asks the AI app for roots: the folders come from --folder alone.
 import { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
-import { ABOUT, INSTRUCTIONS, ok, refused } from './envelope';
+import { ABOUT, INSTRUCTIONS, MAX_ANSWER_CHARS, ok, refused } from './envelope';
 import type { Options } from './options';
 import type { ReaderPool } from './pool';
 import { registerPrompts } from './prompts';
@@ -19,9 +19,16 @@ export interface ServerConfig {
   log?: (line: string) => void;
 }
 
+/** The most characters a line for standard error may take. */
+export const LOG_LINE_CHARS = 2_000;
+
+/** The refusal sent in place of any answer or refusal over MAX_ANSWER_CHARS. */
+export const TOO_LONG = 'That answer was too long. Ask for less at once.';
+
 /**
  * A line for standard error with every control character (C0, DEL, C1, and the line and
- * paragraph separators) written as `\u{…}`, so nothing in a message can start a line of its own.
+ * paragraph separators) written as `\u{…}`, so nothing in a message can start a line of its own;
+ * at most LOG_LINE_CHARS long, ending `…` if cut.
  */
 export function logLine(text: string): string {
   let line = '';
@@ -29,7 +36,9 @@ export function logLine(text: string): string {
     const code = c.codePointAt(0) as number;
     const control =
       code < 0x20 || (code >= 0x7f && code <= 0x9f) || code === 0x2028 || code === 0x2029;
-    line += control ? `\\u{${code.toString(16)}}` : c;
+    const next = control ? `\\u{${code.toString(16)}}` : c;
+    if (line.length + next.length > LOG_LINE_CHARS - 1) return `${line}…`;
+    line += next;
   }
   return line;
 }
@@ -59,10 +68,20 @@ export function createServer(config: ServerConfig): McpServer {
       },
       async (args: unknown) => {
         const result = await config.pool.run({ tool: tool.name, args });
-        if ('ok' in result) return ok(result.ok);
+        const sent = 'ok' in result ? ok(result.ok) : refused(result.refused, result.extra);
+        // The cap holds on the way out, whatever a tool returned: past it, a short refusal, and
+        // only the length is logged.
+        const length = (sent.content[0] as { text: string }).text.length;
+        if (length > MAX_ANSWER_CHARS) {
+          config.log?.(
+            logLine(`drafter-mcp: refused ${tool.name}: an answer of ${length} characters`),
+          );
+          return refused(TOO_LONG);
+        }
         // The message only: never a file's text.
-        config.log?.(logLine(`drafter-mcp: refused ${tool.name}: ${result.refused}`));
-        return refused(result.refused, result.extra);
+        if ('refused' in result)
+          config.log?.(logLine(`drafter-mcp: refused ${tool.name}: ${result.refused}`));
+        return sent;
       },
     );
   }

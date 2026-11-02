@@ -167,6 +167,27 @@ describe('pathProblem and resolvePath', () => {
     expect(pathProblem('Scripts/Signal Hill/v1.2.fountain', 'linux')).toBeNull();
   });
 
+  it.skipIf(skipLinks)(
+    'a link to a hidden file or folder inside the folder is refused',
+    async () => {
+      const { t, roots } = setUp();
+      put(join(t, 'Scripts', '.private', 'diary.fountain'));
+      symlinkSync(
+        join(t, 'Scripts', '.private', 'diary.fountain'),
+        join(t, 'Scripts', 'diary.fountain'),
+      );
+      symlinkSync(join(t, 'Scripts', '.private'), join(t, 'Scripts', 'Private'));
+      const hidden = 'Drafter for Claude doesn’t read hidden files or folders.';
+      expect(await refusal(resolvePath('Scripts/diary.fountain', roots, platform, 'file'))).toBe(
+        hidden,
+      );
+      expect(
+        await refusal(resolvePath('Scripts/Private/diary.fountain', roots, platform, 'file')),
+      ).toBe(hidden);
+      expect(await refusal(resolvePath('Scripts/Private', roots, platform, 'folder'))).toBe(hidden);
+    },
+  );
+
   it.skipIf(skipLinks)('a link out of the folder is refused with the outside message', async () => {
     const { t, roots } = setUp();
     put(join(t, 'Private', 'diary.fountain'));

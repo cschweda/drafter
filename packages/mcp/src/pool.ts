@@ -37,6 +37,12 @@ export function callLimitMs(env: Readonly<Record<string, string | undefined>>): 
   const ms = Number(wanted);
   return ms <= CALL_LIMIT_MS ? ms : CALL_LIMIT_MS;
 }
+/**
+ * The reader's heap, in MB: a file that makes a reader use more stops that reader alone (refused
+ * with STOPPED, and replaced on the next call), at the same point on every machine.
+ */
+export const READER_HEAP_MB = 512;
+
 /** How long a new reader may take to start, apart from the call's own limit. */
 const START_LIMIT_MS = 10_000;
 
@@ -147,6 +153,7 @@ export class ReaderPool {
     const worker = new Worker(spec.url, {
       execArgv: [...spec.execArgv],
       workerData: { drafterReader: this.#data },
+      resourceLimits: { maxOldGenerationSizeMb: READER_HEAP_MB },
     });
     this.#worker = worker;
     const mine = () => this.#worker === worker;

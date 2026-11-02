@@ -156,11 +156,12 @@ describe('series_overview', () => {
     expect(got.skipped.map((s) => s.path)).toEqual(
       expect.arrayContaining(['Broken/B too big.fountain', 'Broken/C wide.fountain']),
     );
+    // In the words every other tool uses for a file it won't read.
     expect(got.skipped.find((s) => s.path === 'Broken/B too big.fountain')?.why).toBe(
-      'it is larger than 5 MB',
+      'Can’t read that file: it is larger than 5 MB.',
     );
     expect(got.skipped.find((s) => s.path === 'Broken/C wide.fountain')?.why).toBe(
-      'it isn’t UTF-8 text',
+      'Can’t read that file: it isn’t UTF-8 text.',
     );
     for (const skipped of got.skipped) {
       expect(skipped.why).not.toContain(dir);

@@ -640,12 +640,17 @@ test.describe('without JavaScript', () => {
       'Not in a browser: claude.ai can’t start a program on your computer; Claude Desktop is the same account.',
       'It isn’t made by or connected with Anthropic.',
       'Each npm release is the same file as the one on the GitHub Release; you can check its SHA-256.',
+      'except the setup and payoff names a story map shows',
     ]) {
       expect(text, phrase).toContain(phrase);
     }
     // The text reads and selects without a script; a button that couldn't work isn't shown.
     await expect(page.locator('main pre')).toHaveCount(6);
     await expect(page.getByRole('button', { name: /^Copy/ })).toHaveCount(0);
+    // Each status line is in the page from the start, empty, so a screen reader hears a copy.
+    await expect(page.locator('main [role="status"]')).toHaveCount(6);
+    for (const status of await page.locator('main [role="status"]').all())
+      await expect(status).toHaveText('');
     // Privacy links back with the table of what each tool returns.
     await page.goto('/docs/privacy');
     await expect(page.locator('#drafter-for-claude')).toBeVisible();

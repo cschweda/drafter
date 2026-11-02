@@ -5,7 +5,7 @@ import type { BigIntStats } from 'node:fs';
 import { lstat, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { reason, windowsNameProblem, windowsPathProblem } from '@drafter/archive/node';
-import { isInside, type Root } from './roots';
+import { hiddenBelow, isInside, type Root } from './roots';
 
 export type Want = 'file' | 'folder';
 
@@ -26,7 +26,7 @@ export interface Checked {
 /** A path, file, or request that is refused. The message is shown to the AI app. */
 export class Refusal extends Error {
   /** Scenes a reference could mean, when it means more than one. */
-  matches?: Array<{ scene: number; heading: string }>;
+  matches?: Array<{ scene: number; heading: string; heading_cut?: true }>;
   /** Anything else the refusal carries beside its message (the names nearest a name, say). */
   extra?: Record<string, unknown>;
 }
@@ -115,6 +115,8 @@ export async function resolvePath(
     throw new Refusal(`Can’t read ${shown}: ${reason(error)}.`);
   }
   if (!isInside(real, root.real, platform)) throw new Refusal(OUTSIDE);
+  // Where it really leads, as well as how it is written: a link to a hidden file is hidden.
+  if (hiddenBelow(real, root.real, platform)) throw new Refusal(HIDDEN);
 
   let info: BigIntStats;
   try {

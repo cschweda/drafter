@@ -90,12 +90,14 @@ export function answerOf<T = Record<string, unknown>>(result: CallToolResult): T
   return parsed as T;
 }
 
-/** A refusal's body: `{ about, error, …extra }`. */
+/** A refusal's body: `{ about, error, …extra }`, checked to be under the cap. */
 export function refusalOf(result: CallToolResult): {
   about: string;
   error: string;
   [key: string]: unknown;
 } {
   if (!result.isError) throw new Error('not refused');
-  return JSON.parse((result.content[0] as { text: string }).text);
+  const text = (result.content[0] as { text: string }).text;
+  if (text.length > MAX_ANSWER_CHARS) throw new Error(`refusal of ${text.length} characters`);
+  return JSON.parse(text);
 }

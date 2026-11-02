@@ -7,7 +7,7 @@ import { reason } from '@drafter/archive/node';
 import { besideNames } from '@drafter/history';
 import { type Format, formatOf } from './formats';
 import { type Checked, Refusal } from './paths';
-import { isInside, type Root } from './roots';
+import { hiddenBelow, isInside, type Root } from './roots';
 
 export const WALK_LIMITS = { depth: 6, files: 500 } as const;
 
@@ -29,7 +29,8 @@ const CUTS = /\.cuts\.md$/i;
 
 /**
  * The scripts under `start` (a root, or a folder resolvePath checked), in code-unit name order,
- * folders' contents where the folder's name falls. Skipped: names starting with `.`, kinds Drafter
+ * folders' contents where the folder's name falls. Skipped: names starting with `.` (and links
+ * whose real path below the root has such a part), kinds Drafter
  * doesn't read, anything but files and folders, links to folders, any file or folder whose real
  * path is outside the start's root (checked for every one, links or not), and the drafts folders
  * and cuts files beside a work (list_drafts and list_cuts read those). `truncated` is true when
@@ -63,7 +64,8 @@ export async function walk(
     let entries: Dirent[];
     try {
       real = await realpath(dir);
-      if (!isInside(real, root.real, platform)) return true;
+      if (!isInside(real, root.real, platform) || hiddenBelow(real, root.real, platform))
+        return true;
       entries = await readdir(real, { withFileTypes: true });
     } catch (error) {
       if (depth === 0) throw new Refusal(`Can’t read ${shown}: ${reason(error)}.`);
@@ -103,7 +105,9 @@ export async function walk(
         // Every file is resolved, not only links: the listing may be stale, and only a real path
         // inside the root is listed.
         const target = await realpath(path);
-        if (!isInside(target, root.real, platform)) continue;
+        // A link that leads to a hidden file or folder in the root (`.drafts/x.fountain`) is hidden.
+        if (!isInside(target, root.real, platform) || hiddenBelow(target, root.real, platform))
+          continue;
         const info = await lstat(target, { bigint: true });
         // A link to a folder is never followed; pipes, devices, and sockets are not scripts.
         if (!info.isFile()) continue;

@@ -29,8 +29,10 @@ async function copy() {
   <div class="docs-copy">
     <!-- Wider than a phone, it scrolls sideways, so a keyboard can reach it too. -->
     <pre role="group" tabindex="0" :aria-label="props.label"><code>{{ props.text }}</code></pre>
-    <div v-if="ready" class="docs-copy-bar">
-      <DButton :aria-label="`Copy ${props.label}`" @click="copy">Copy</DButton>
+    <!-- The status line is always in the page, empty until a copy, so a screen reader is
+         listening before it changes; the button appears once the script runs. -->
+    <div class="docs-copy-bar">
+      <DButton v-if="ready" :aria-label="`Copy ${props.label}`" @click="copy">Copy</DButton>
       <span role="status" class="docs-copy-said">{{ said }}</span>
     </div>
   </div>

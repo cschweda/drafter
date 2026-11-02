@@ -510,6 +510,7 @@ function expectAnswer(result: McpResult, label: string): Record<string, unknown>
  */
 function refusalMessage(result: McpResult, label: string, sdk: boolean): string {
   expect(result.isError, `${label}: should be refused`).toBe(true);
+  expect(result.text.length, `${label}: refusal length`).toBeLessThanOrEqual(MAX_ANSWER_CHARS);
   let body: Record<string, unknown> | undefined;
   try {
     body = JSON.parse(result.text);

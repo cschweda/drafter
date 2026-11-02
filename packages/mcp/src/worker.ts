@@ -6,6 +6,7 @@ import { LoadCache } from './cache';
 import type { Include } from './envelope';
 import { cantRead } from './inside';
 import type { Loaded } from './load';
+import { clipMessage } from './paging';
 import { Refusal } from './paths';
 import type { Job, JobResult, WorkerData } from './pool';
 import { TOOLS, type ToolContext } from './tools/index';
@@ -40,8 +41,16 @@ export function makeContext(data: WorkerData): ToolContext {
   };
 }
 
-/** Runs one call: its tool's `run`, with a refusal (a Refusal, or a file refused) as its words. */
+/**
+ * Runs one call: its tool's `run`, with a refusal (a Refusal, or a file refused) as its words,
+ * clipped to MAX_REFUSAL_CHARS (a refusal may repeat the writer's words: entry names, say).
+ */
 export async function handle(job: Job, data: WorkerData): Promise<JobResult> {
+  const result = await answer(job, data);
+  return 'refused' in result ? { ...result, refused: clipMessage(result.refused) } : result;
+}
+
+async function answer(job: Job, data: WorkerData): Promise<JobResult> {
   const tool = TOOLS.find((each) => each.name === job.tool);
   if (!tool) return { refused: `There’s no tool called ${String(job.tool)}.` };
   // The server checked the arguments already; checked again here, where they are used.
