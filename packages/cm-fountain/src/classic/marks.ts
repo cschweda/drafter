@@ -3,7 +3,7 @@ import {
   EditorState,
   type Extension,
   type Line,
-  type Transaction,
+  Transaction,
   type TransactionSpec,
 } from '@codemirror/state';
 import { type Block, blockAt, type Doc, parse, reparse, type Span } from '@drafter/fountain';
@@ -204,7 +204,8 @@ function shapeWith(
   return withFirstLine(state, line, text).titlePage ? 'title_page' : null;
 }
 
-const NO_LINE: Omit<StoredLine, 'from' | 'kind' | 'arrivedAs'> = {
+/** A stored line with nothing to remember. */
+export const NO_LINE: Omit<StoredLine, 'from' | 'kind' | 'arrivedAs'> = {
   soft: false,
   chosen: false,
   added: [],
@@ -368,6 +369,27 @@ function typedOnLine(tr: Transaction): { line: Line; at: number; from: number; t
   const line = doc.lineAt(first);
   return last > line.to ? null : { line, at: first, from: start, to: end };
 }
+
+/**
+ * Takes away the empty line or `()` this stay made, in the transaction that leaves it (§4.4). It
+ * stands back for what isn't the writer's own move: a change the app makes, a replace-all, undo and
+ * redo. An empty line at the end of the file is no trouble to anyone, so it stays.
+ */
+export const tidyLeft: Extension = EditorState.transactionFilter.of((tr) => {
+  const held = tr.startState.field(classicLine, false);
+  if (!held?.made || tr.annotation(appChange)) return tr;
+  const event = tr.annotation(Transaction.userEvent);
+  if (!event || /^(?:input\.replace|undo|redo)/.test(event)) return tr;
+  const from = tr.changes.mapPos(held.from, -1);
+  if (tr.newDoc.lineAt(tr.newSelection.main.head).from === tr.newDoc.lineAt(from).from) return tr;
+  const made = mapSpan(held.made, tr.changes);
+  if (!made) return tr;
+  const line = tr.newDoc.lineAt(from);
+  const empty = isBlank(line.text) && line.number < tr.newDoc.lines;
+  return empty || line.text.trim() === '()'
+    ? [tr, { changes: { from: made.from, to: made.to }, sequential: true }]
+    : tr;
+});
 
 const kindsOf = (kind: ClassicKind) => ({ kind, arrivedAs: kind });
 

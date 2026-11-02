@@ -5,7 +5,7 @@ import { classicEditor, keys, render } from './harness';
 
 describe('the Classic harness', () => {
   it('presses the keys it names, and types the rest', () => {
-    expect(render(keys(classicEditor(''), 'JUNE', 'Tab', 'Enter'))).toBe('@JUNE\n|');
+    expect(render(keys(classicEditor(''), 'JUNE', 'Tab', 'Enter'))).toBe('JUNE\n\n|');
   });
 
   it('carries the template it is given', () => {

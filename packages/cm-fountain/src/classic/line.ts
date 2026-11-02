@@ -101,6 +101,32 @@ export const NEXT = {
   pendingDialogue: { enter: 'chooser', tab: 'parenthetical' } satisfies NextPlace,
 } as const;
 
+/**
+ * What the keys write on the way to an element (§6.1), beside `NEXT`, as what's written follows
+ * from where the key goes: a new element gets a blank line, and what's still the speech one break.
+ */
+export const WRITES = {
+  by: {
+    act: 'blank',
+    scene_heading: 'blank',
+    action: 'blank',
+    character: 'blank',
+    dialogue: 'break',
+    parenthetical: 'parens',
+    transition: 'blank',
+    centered: 'blank',
+    lyric: 'break',
+    section: 'blank',
+    synopsis: 'blank',
+    page_break: 'blank',
+  } satisfies Record<ClassicKind, 'blank' | 'break' | 'parens'>,
+  /** What each key goes to that the writer chose, which can't be worked out from the text. */
+  firm: {
+    enter: ['act', 'scene_heading', 'lyric'],
+    tab: ['act', 'scene_heading', 'lyric', 'character'],
+  } satisfies Record<string, ClassicKind[]>,
+} as const;
+
 /** What `nextFrom` needs to know about the place. */
 interface Place {
   /** Whether the template has headings, which picks the row. */
