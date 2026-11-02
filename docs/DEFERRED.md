@@ -274,11 +274,27 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **A second computer's draft numbers.** Two computers starting a draft at once each take the next number; both are kept (the other as `(2)`), never renumbered. A way to put them in one order is for when it happens.
 - **Testing with real synced folders.** Two computers sharing Dropbox, Google Drive, and OneDrive folders were simulated in the desktop e2e (another computer's files written beside the script) and in unit tests, not run on the services themselves.
 
+## Story map
+
+- **Not in this release (Story map design §9):**
+  - **Markdown documents and novels** (chapters as acts, sections as scenes), once Novel exists. Export → Story map says "Only a screenplay or a stage play makes a story map."
+  - **A spoiler cutoff**, an advanced option, off by default, if writers ask for it. The page shows everything written so far.
+  - **Images or cover art**, a **light theme** on screen (print is already light), a **PDF or image** of the page, and **translations** of the page's own words.
+- **Use in story map on the web app's right-click menu.** The two items are on the desktop app's right-click menu and Edit menu, and in the palette everywhere; the web app leaves the browser's own right-click menu alone.
+- **Who's on stage gives each character one span per scene**, from their first arrival to their last exit, so someone who leaves and comes back in the same scene reads as there throughout. Spans come from verbs in English ("enters", "leaves", "Exeunt"); a play in another language shows everyone from their first speech or capitals mention to the end of the scene.
+- **Hooks need an introduction in capitals.** A script with no capitals (Japanese, Arabic) or that never introduces its characters that way gets no hooks; the writer can type them in the dialog.
+- **Going back to a found hook.** An edited hook is kept in the metadata block; typing the found one again clears the edit, and an empty field keeps an empty hook. A small "use the one Drafter found" button would be clearer.
+- **The command line's rates** are a page a minute and the default words a minute, since a script's own rates live in the app (Stats), not in the file. Putting the rates in the metadata block would let `--story-map` match the app.
+- **Courier Prime has no ĸ, ŉ, or ſ** in the subset; those letters fall back to the next monospace font. Anton and Archivo cover all of Latin Extended-A.
+- **The strip's per-scene hover titles** cost about 12.5 KB at 200 scenes (about 4% of the page). They are kept, as the only per-scene hover on the main chart; the pace table lists every scene for anyone who needs it.
+- **`]]>` can't be tested in a note label** (`]]` closes the note); the hostile trap puts it in names and places instead.
+
 ## Flaky tests seen in CI
 
 - **Desktop, Linux: `a11y.spec.ts:78` (the modules folder's settings, light)** failed twice in one run on the v0.22.2 tag (Done didn't close Settings within 10 s, just after the "Broken code couldn't start" alert), while the same commit passed on main and on a re-run. Look at whether the alert or a module's start steals the click before Done.
 - **Web: `markdown.spec.ts:197` ("says calmly when a document is nested too deeply to preview")** fails now and then under the whole suite's load (fresh look, from Task 10 on) and passes alone every time. Not yet looked into.
 - Firefox palette: Enter sometimes doesn't run the highlighted command (also with Take snapshot…, older than drafts); drafts.spec retries.
+- **Under heavy load on one machine** (the Story map plan, 2026-11-01, load average near 50): `@drafter/history`'s scaling test, `@drafter/outline`'s `markdown.properties`, and `@drafter/render-html-file`'s `document.properties` each timed out once in a whole-repo run and passed alone.
 
 ## Trap documents
 

@@ -7,7 +7,7 @@ definePageMeta({ layout: 'docs' });
 useDocsHead({
   title: 'Help',
   description:
-    'Help for Drafter: what it is, why Drafter, a Fountain cheat sheet, saving and your browser, drafts and cuts, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
+    'Help for Drafter: what it is, why Drafter, a Fountain cheat sheet, saving and your browser, drafts and cuts, the story map, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
   path: '/docs',
 });
 
@@ -22,6 +22,8 @@ const about: Record<string, string> = {
     'What Save does in each browser, keeping scripts in a synced folder, the recovery copy, and installing Drafter as an app.',
   'help-drafts-and-cuts':
     'Numbered drafts you can read, compare, and restore, and everything you cut, kept for ideas.',
+  'help-story-map':
+    'A picture of your script or play to send to anyone who asks what you are writing: making one, what goes in, and what never does.',
   'help-shortcuts': 'Every command and its keys, for a Mac and for Windows and Linux.',
   'help-privacy': 'No account, no analytics, no telemetry: your script never leaves your device.',
   'help-open-formats':
@@ -38,7 +40,7 @@ const about: Record<string, string> = {
   <article>
     <h1>Help</h1>
     <p class="docs-lead">
-      Eleven short pages: what Drafter is, writing in Fountain, how Drafter works, and what’s new.
+      Twelve short pages: what Drafter is, writing in Fountain, how Drafter works, and what’s new.
     </p>
     <ul>
       <li v-for="page in HELP_PAGES" :key="page.id">

@@ -316,46 +316,49 @@ function make() {
 
       <details ref="checking" class="check-picks">
         <summary>Check the lines and hooks</summary>
-        <p v-if="picks === null" class="hint" role="status">Finding the lines…</p>
-        <p v-else-if="picks === 'failed'" class="hint" role="status">
-          Couldn’t find the lines just now. The page still picks them itself.
-        </p>
-        <template v-else>
-          <h3 class="sub">Lines of dialogue</h3>
-          <p v-if="quotes.length === 0" class="hint">
-            No lines yet: a line needs 3 to 18 words and a full stop.
+        <!-- Only while open: a closed dialog keeps no status region in the page. -->
+        <template v-if="storyMapOpen">
+          <p v-if="picks === null" class="hint" role="status">Finding the lines…</p>
+          <p v-else-if="picks === 'failed'" class="hint" role="status">
+            Couldn’t find the lines just now. The page still picks them itself.
           </p>
-          <ul v-else class="picks">
-            <li v-for="(quote, row) in quotes" :key="quote.cue" class="pick">
-              <label class="check">
-                <input v-model="rows[row]!.on" type="checkbox" />
-                <span>
-                  <span class="speaker">{{ quote.choices[rows[row]!.shown]?.speaker }}</span>
-                  “{{ quote.choices[rows[row]!.shown]?.text }}”
-                </span>
-              </label>
-              <DButton
-                v-if="quote.choices.length > 1"
-                variant="borderless"
-                :aria-label="`Pick another line in this scene, instead of ${quote.choices[rows[row]!.shown]?.speaker}’s`"
-                @click="pickAnother(row)"
-              >
-                Pick another
-              </DButton>
-            </li>
-          </ul>
-          <h3 class="sub">Characters</h3>
-          <p v-if="leads.length === 0" class="hint">No characters yet.</p>
-          <div v-for="(lead, k) in leads" :key="lead.key" class="field">
-            <label :for="`story-map-hook-${k}`">{{ lead.name }}</label>
-            <input
-              :id="`story-map-hook-${k}`"
-              v-model="hooks[lead.key]"
-              type="text"
-              maxlength="200"
-              placeholder="A few words about them"
-            />
-          </div>
+          <template v-else>
+            <h3 class="sub">Lines of dialogue</h3>
+            <p v-if="quotes.length === 0" class="hint">
+              No lines yet: a line needs 3 to 18 words and a full stop.
+            </p>
+            <ul v-else class="picks">
+              <li v-for="(quote, row) in quotes" :key="quote.cue" class="pick">
+                <label class="check">
+                  <input v-model="rows[row]!.on" type="checkbox" />
+                  <span>
+                    <span class="speaker">{{ quote.choices[rows[row]!.shown]?.speaker }}</span>
+                    “{{ quote.choices[rows[row]!.shown]?.text }}”
+                  </span>
+                </label>
+                <DButton
+                  v-if="quote.choices.length > 1"
+                  variant="borderless"
+                  :aria-label="`Pick another line in this scene, instead of ${quote.choices[rows[row]!.shown]?.speaker}’s`"
+                  @click="pickAnother(row)"
+                >
+                  Pick another
+                </DButton>
+              </li>
+            </ul>
+            <h3 class="sub">Characters</h3>
+            <p v-if="leads.length === 0" class="hint">No characters yet.</p>
+            <div v-for="(lead, k) in leads" :key="lead.key" class="field">
+              <label :for="`story-map-hook-${k}`">{{ lead.name }}</label>
+              <input
+                :id="`story-map-hook-${k}`"
+                v-model="hooks[lead.key]"
+                type="text"
+                maxlength="200"
+                placeholder="A few words about them"
+              />
+            </div>
+          </template>
         </template>
       </details>
 

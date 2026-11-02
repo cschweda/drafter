@@ -29,6 +29,8 @@ The lists of presences are frozen and shared (`figures.get(key).scenes` is that 
 
 **A place** comes from a scene heading: inside (`INT.`), outside (`EXT.`, `EST.`), both (`INT./EXT.`, `EXT./INT.`, `I/E`), or none; the time of day when the last part after a spaced dash is one of `TIMES_OF_DAY`; and the location, the rest, keyed in capitals with its spaces and dashes folded, so `INT.` and `EXT.` of one place are one location. A stage play's scene names a place only when its heading is written as a screenplay's is. `insideOf` and `dayOrNight` are the Stats tab's split of the headings.
 
+**Shares** (`shares`) round each character's part of the talking to whole percents that add up to 100, for the Stats tab, Scaffold, and the story map alike.
+
 See the [seeing-the-script design](../../docs/drafter-seeing-the-script-design.md), §3.
 
 ## License

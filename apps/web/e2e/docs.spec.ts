@@ -756,7 +756,8 @@ test.describe('from the app', () => {
       await start(page);
       await page.keyboard.press('ControlOrMeta+k');
       await expect(palette(page)).toBeVisible();
-      await page.keyboard.type(title);
+      // The command's own words: "Story map" alone finds Export as Story map… first.
+      await page.keyboard.type(`Open the page: ${title}`);
       // The page is the first match, and the highlighted one.
       await expect(palette(page).getByRole('option').first()).toContainText(
         `Open the page: ${title}`,

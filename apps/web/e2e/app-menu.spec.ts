@@ -319,6 +319,7 @@ test.describe('the Help menu', () => {
       /^Fountain cheat sheet/,
       /^Saving and your browser/,
       /^Drafts and cuts/,
+      /^Story map/,
       /^Keyboard shortcuts/,
       /^Privacy/,
       /^Open formats/,

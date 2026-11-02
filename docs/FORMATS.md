@@ -28,6 +28,7 @@ The file you open is never changed. Text that Fountain has no element for (hidde
 | **A Markdown document's PDF** | A typeset document: headings, lists, links you can click, and footnotes at the foot of the page. |
 | **HTML** (`.html`) | One web page that opens in any browser with no connection: a script's printed pages and a reading view, or a Markdown document as the Preview draws it. |
 | **EPUB** (`.epub`) | An e-book for an e-reader or a tablet, reflowed to its screen: a script's reading view, one chapter per act, or a Markdown document, one chapter per `#` heading, with its footnotes. |
+| **Story map** (`.html`) | One dark, picture-first page of a screenplay or stage play for someone who doesn't read scripts: its shape, its people, every scene so far with a line or two of dialogue, and what is still to write. No JavaScript, no network, no notes; it never carries the script, so Drafter can't reopen it. Its choices are in its own dialog, not in Export options. See the [Story map help page](https://drafter.dev/docs/story-map/). |
 
 Export options, per script, set the scene numbers (none, as written, or every scene), how much of the title page prints, and whether a Markdown, HTML, or EPUB export carries your notes. Drafter doesn't write Highland or Fade In files: Highland opens Fountain directly, and Fade In opens Final Draft.
 
@@ -41,6 +42,7 @@ The same code runs in a terminal ([Developing Drafter](DEVELOPMENT.md#developmen
 drafter build script.fountain --pdf script.pdf     # a PDF; --txt for plain text
 drafter build script.fountain --html script.html   # one HTML page, pages and reading view, to open anywhere
 drafter build script.fountain --html script.html --reopenable   # with the script inside, for Drafter to reopen
+drafter build script.fountain --story-map map.html  # a story map; --status finished or in-progress
 drafter convert script.html                        # the script back out of a reopenable export
 drafter convert MyScript.fdx                      # MyScript.fountain, beside it
 drafter convert ~/Scripts                         # every .fdx, .highland, and .fadein in the folder

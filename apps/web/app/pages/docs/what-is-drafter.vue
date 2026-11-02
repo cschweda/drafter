@@ -181,8 +181,9 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
         </li>
         <li>
           <strong>The features that matter.</strong> Industry-standard pages, stage plays, an
-          outline and index cards, notes, version history and Compare, character and scene stats,
-          offline spellcheck, focus mode, goals and sprints, and a dark theme.
+          outline and index cards, notes, version history and Compare, numbered drafts, character
+          and scene stats, a story map to send to anyone, offline spellcheck, focus mode, goals and
+          sprints, and a dark theme.
         </li>
       </ul>
 
@@ -237,13 +238,16 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           plain files, on the desktop and in Chrome or Edge.
           <a :href="help('help-drafts-and-cuts')">Drafts and cuts</a>
         </li>
+        <li>
+          <strong>A story map to send to anyone.</strong> One page that shows someone who doesn’t
+          read scripts the whole story so far: its shape, its people, and every scene in order, with
+          a few lines of dialogue and what is still to write. It opens on a phone, has no code,
+          fetches nothing, and never includes your notes.
+          <a :href="help('help-story-map')">Story map</a>
+        </li>
       </ul>
       <h3 id="coming-soon">Coming soon</h3>
       <ul>
-        <li>
-          <strong>Story map</strong> (v0.24.1): a visual page of your script or play, to send to
-          anyone.
-        </li>
         <li>
           <strong>Production, free</strong> (v0.27.0): colored revision sets with marks in the
           margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send

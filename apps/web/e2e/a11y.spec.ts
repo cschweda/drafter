@@ -600,6 +600,7 @@ for (const theme of THEMES) {
       '/docs/download/',
       '/docs/fountain/',
       '/docs/saving/',
+      '/docs/story-map/',
       '/docs/privacy/',
       '/docs/shortcuts/',
       '/docs/technical/',

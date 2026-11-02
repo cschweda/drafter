@@ -29,6 +29,7 @@ export const HELP_MENU_ICONS: Record<string, string> = {
   'help-fountain': 'i-lucide-book-open',
   'help-saving': 'i-lucide-save',
   'help-drafts-and-cuts': 'i-lucide-git-commit-vertical',
+  'help-story-map': 'i-lucide-map',
   'help-shortcuts': 'i-lucide-keyboard',
   'help-privacy': 'i-lucide-shield-check',
   'help-open-formats': 'i-lucide-lock-open',

@@ -51,9 +51,7 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
     kind: 'New',
     title: 'Story map: a picture of your script to send to anyone',
     text: 'Export → Story map… makes one page that shows a non-writer your story’s shape, its people, and every scene so far, with a few lines of dialogue. It works on a phone and holds no notes.',
-    // The help page comes with the release (the Story map plan's Task 9), which adds the link
-    // `{ href: '/docs/story-map/', label: 'Story map' }` here: a link to a page not built yet
-    // fails the prerender.
+    link: { href: '/docs/story-map/', label: 'Story map' },
     banner: true,
   },
 

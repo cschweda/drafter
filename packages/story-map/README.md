@@ -18,7 +18,7 @@ map.facts; // { pages, minutes, scenes, characters, places }
 
 **Plain words.** The page never says slugline, INT., EXT., V.O., or eighths. `INT.` is "Inside", `EXT.` "Outside", and `INT./EXT.` "Inside and out"; a place is the heading's location in title case, its parts joined with commas, a locked scene number dropped; `LATER` and `CONTINUOUS` show no time and take the scene before's colour; lengths are minutes ("2 min", "about 1 hr 50 min").
 
-**Acts** are the top-level sections. A scene before the first act (a cold open) is Act 1's. An act's title loses a leading "Act One:" label. A script with no sections has no acts, and its scenes are one run.
+**Acts only as the writer marks them.** The acts are the `#` sections; with none, the headings that start with the word "Act" at the shallowest level used; otherwise there are none, and the scenes are one run. Nothing is guessed from lengths. A scene before the first act (a cold open) is Act 1's. An act's title loses a leading "Act One:" label. The page draws acts (a band, colours, act cards) only with two or more and past an early draft (`STORY_MAP_LIMITS.earlyPages` 10, `earlyScenes` 6).
 
 **People.** The eight characters with the most screen time lead, and get a colour in that order; a lead who is only ever heard (every cue `V.O.` or `O.S.`) is a white ring instead. A character who never says a word and is in fewer than two scenes is left out. A character's share of the talking is in whole percents that add up to 100 (`@drafter/cast`'s `shares`).
 
@@ -26,4 +26,22 @@ map.facts; // { pages, minutes, scenes, characters, places }
 
 **Summaries and hooks.** A scene's line is its first synopsis, else its first action sentence, at most 12 words, speakers' names in title case; an act's mood is its first synopsis. A character's hook and age come from the first action paragraph that names them in capitals (`ODILE VANCE (60s), a ferry pilot, …`). Threads join each `[[Setup: …]]` label's scene to its first payoff's.
 
-The design is `docs/drafter-story-map-design.md`.
+**Gaps** (`gaps.ts`): an act with no scenes, a planned scene (a heading with no action or dialogue: it adds no pages), a scene with an open to-do note (the mark only, never its text), and, with `storyMap.plannedPages`, the pages still to write. `defaultStatus` is In progress when any is found; `finishedMap` takes the planned scenes out and lays the rest end to end. The sentence never says more than the counts.
+
+**Stage plays** (`stage.ts`): settings from the heading, the `##` title, or a short first sentence ("The same" carries over); one interval between Acts 1 and 2 with two acts or more, moved by `[[Interval]]` and turned off by `[[No interval]]`; who's on stage, one span per character per scene from their first speech, capitals mention, or "enters", to "exits", "leaves", or "Exeunt"; and the pairs who share the stage longest.
+
+**The page.**
+
+```ts
+import { renderStoryMap, STORY_MAP_FONT_FILES } from '@drafter/story-map';
+
+const html = renderStoryMap({ map, fonts, lang: 'en', generator: 'Drafter 0.24.1' });
+```
+
+`renderStoryMap` returns one HTML string: the greeting, the facts, the shape (strip, donuts, pace), the characters, the scenes, the places, and the threads, each chart a hand-built SVG with `role="img"`, a `<title>`, and **Show as a table**. It has no `<script>`, no `on…` attribute, no `style` attribute, and no URL but `#…`, `data:`, and one checked `mailto:` when contact is on, under a content security policy with no `script-src`. Everything the writer wrote is escaped with `@drafter/render-html-file`'s `escapeHtml`. Dark on screen, light in print; under 400 KB for 120 pages, never over 1 MB.
+
+**Fonts.** `fonts/` holds Anton, Archivo (400 and 600), and Courier Prime Regular, subsetted to Latin, Latin-1, and Latin Extended-A as WOFF2 (66,860 bytes), each with its SIL Open Font License; `fonts/README.md` has the sources, the commands, and the checksums. Pass their bytes as `fonts` (`STORY_MAP_FONT_FILES` names them; `@drafter/story-map/fonts/*` resolves them).
+
+**The metadata block.** `storyMapMeta(doc.meta)` reads `storyMap.plannedPages` (1–999) and `storyMap.hooks` (strings of 200 characters at most) strictly, for the app and the command line alike.
+
+The command line: `drafter build script.fountain --story-map map.html [--status in-progress|finished]`. The design is `docs/drafter-story-map-design.md`; the choices as built are in `docs/DECISIONS.md`.

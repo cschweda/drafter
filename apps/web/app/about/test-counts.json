@@ -1,24 +1,24 @@
 {
   "version": "0.24.0",
-  "date": "2026-11-01",
+  "date": "2026-11-02",
   "unit": {
-    "packages": 2613,
-    "packageCount": 19,
-    "web": 2254,
-    "desktop": 437,
+    "packages": 2883,
+    "packageCount": 20,
+    "web": 2284,
+    "desktop": 446,
     "modules": 58,
-    "trapHarness": 400,
-    "total": 5762
+    "trapHarness": 408,
+    "total": 6079
   },
   "e2e": {
-    "web": 1250,
+    "web": 1265,
     "webProjects": ["chromium", "firefox", "webkit", "phone", "phone-webkit"],
-    "webRuns": 6250,
-    "desktop": 135
+    "webRuns": 6325,
+    "desktop": 137
   },
   "trap": {
     "traps": 262,
-    "checks": 848,
+    "checks": 864,
     "byFormat": {
       "fountain": 43,
       "markdown": 31,

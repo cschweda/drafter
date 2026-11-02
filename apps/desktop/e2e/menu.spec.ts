@@ -294,6 +294,7 @@ test('opens a help page in its own window', async ({ desktop }) => {
   for (const [label, path] of [
     ['Saving', '/docs/saving/'],
     ['Drafts and Cuts', '/docs/drafts-and-cuts/'],
+    ['Story Map', '/docs/story-map/'],
     ['Privacy', '/docs/privacy/'],
   ] as const) {
     const next = app.waitForEvent('window');

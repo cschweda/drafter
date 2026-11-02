@@ -37,6 +37,7 @@ const COMMANDS: MenuCommand[] = [
   cmd('help-shortcuts', 'Help', 'Open the page: Keyboard shortcuts'),
   cmd('help-saving', 'Help', 'Open the page: Saving and your browser'),
   cmd('help-drafts-and-cuts', 'Help', 'Open the page: Drafts and cuts'),
+  cmd('help-story-map', 'Help', 'Open the page: Story map'),
   cmd('help-privacy', 'Help', 'Open the page: Privacy'),
   cmd('help-licences', 'Help', 'Open the page: Third-party licences'),
   cmd('go-to-scene', 'Go', 'Go to scene…'),
@@ -240,6 +241,7 @@ describe('menuTemplate', () => {
       'help-shortcuts',
       'help-saving',
       'help-drafts-and-cuts',
+      'help-story-map',
       'help-privacy',
       'help-licences',
       'take-the-tour',
@@ -287,6 +289,7 @@ describe('menuTemplate', () => {
     expect(named(t, 'help-shortcuts')?.label).toBe('Keyboard Shortcuts');
     expect(named(t, 'help-saving')?.label).toBe('Saving');
     expect(named(t, 'help-drafts-and-cuts')?.label).toBe('Drafts and Cuts');
+    expect(named(t, 'help-story-map')?.label).toBe('Story Map');
     expect(named(t, 'help-privacy')?.label).toBe('Privacy');
     expect(named(t, 'help-licences')?.label).toBe('Third-party Licences');
   });
@@ -545,6 +548,7 @@ describe('Help’s About, sample scripts, and Check for updates', () => {
       'help-shortcuts',
       'help-saving',
       'help-drafts-and-cuts',
+      'help-story-map',
       'help-privacy',
       'help-licences',
       'take-the-tour',
