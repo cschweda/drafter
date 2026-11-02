@@ -115,6 +115,27 @@ describe('a line with text', () => {
     expect(lineKindAt(cursorTo(state, 0), name)).toBe('action');
   });
 
+  test('a lone name the cursor returns to reads as Action', () => {
+    expect(element(classicEditor('\nJUNE|\n'))).toMatchObject({ kind: 'action', pending: false });
+  });
+
+  test('a chosen Dialogue under plain action leaves the action as it is', () => {
+    const state = classicEditor('She waits.\n|').update({
+      effects: setStored.of({ kind: 'dialogue', chosen: true }),
+    }).state;
+    expect(element(state).kind).toBe('dialogue');
+    expect(lineKindAt(state, state.doc.line(1))).toBe('action');
+  });
+
+  test('a note and a title page typed on a stored line draw as neither', () => {
+    const note = type(classicEditor('She waits.\n\n|'), '[[hi]]');
+    expect(note.field(classicLine)).not.toBeNull();
+    expect(lineKindAt(note, note.doc.line(3))).toBeNull();
+    const title = type(classicEditor('|'), 'Title: x');
+    expect(title.field(classicLine)).not.toBeNull();
+    expect(lineKindAt(title, title.doc.line(1))).toBeNull();
+  });
+
   test('a line under a chosen element is not read as a lone name', () => {
     const state = classicEditor('\nBANG\n|').update({
       effects: setStored.of({ kind: 'action', chosen: true }),
@@ -310,9 +331,38 @@ describe('the stored line', () => {
     expect(type(dismissed, 'H').field(classicLine)?.dismissed).toBe(false);
   });
 
-  test('a line left blank by a cursor arriving in a note or on the title page stores nothing', () => {
-    const boneyard = classicEditor('Hello.\n\n/* one\n\n| two */\n');
-    expect(boneyard.field(classicLine)).toBeNull();
+  test('a cursor arriving in a note, a boneyard, or on the title page stores nothing', () => {
+    // A blank line ends a note and a title page, so only a boneyard can hold one.
+    expect(classicEditor('Hello.\n\n/* one\n|\n two */\n').field(classicLine)).toBeNull();
+    expect(classicEditor('Hello.\n\n/* one| */\n').field(classicLine)).toBeNull();
+    expect(classicEditor('Hello.\n\n[[a note|]]\n').field(classicLine)).toBeNull();
+    expect(classicEditor('Hello.\n\n[[a note\n| that runs on]]\n').field(classicLine)).toBeNull();
+    expect(classicEditor('Title: One|\nAuthor: Me\n\nINT. X\n').field(classicLine)).toBeNull();
+  });
+
+  test('a firm line deleted to empty counts as soft, as a click on an empty line does', () => {
+    const typed = type(classicEditor('She waits.\n\n|'), 'He');
+    const end = typed.doc.length;
+    const back = cursorTo(cursorTo(typed, 0), end);
+    expect(element(back)).toMatchObject({ pending: false, soft: false });
+    const emptied = back.update({
+      changes: { from: end - 2, to: end },
+      userEvent: 'delete.backward',
+    }).state;
+    expect(element(emptied)).toMatchObject({ kind: 'action', pending: true, soft: true });
+  });
+
+  test('classicEdit keeps the line with no user event, and appChange beats it', () => {
+    const typed = type(classicEditor('She waits.\n\n|'), 'He');
+    const changes = { from: 0, insert: 'x' };
+    expect(
+      typed.update({ changes, annotations: classicEdit.of(true) }).state.field(classicLine),
+    ).not.toBeNull();
+    expect(
+      typed
+        .update({ changes, annotations: [classicEdit.of(true), appChange.of(true)] })
+        .state.field(classicLine),
+    ).toBeNull();
   });
 });
 
@@ -356,6 +406,7 @@ describe('elementAt', () => {
     expect(next('JUNE|\nHello.\n')).toEqual(['dialogue', 'dialogue']);
     expect(next('JUNE\n(quietly)|\nHello.\n')).toEqual(['dialogue', 'dialogue']);
     expect(next('JUNE\nHello.|\n')).toEqual(['character', 'parenthetical']);
+    expect(next('JUNE\nHello| there.\n')).toEqual(['dialogue', 'parenthetical']);
     expect(next('JUNE\nHello.|\nAgain.\n')).toEqual(['dialogue', 'parenthetical']);
     expect(next('JUNE\nHello.|\n(quietly)\nAgain.\n')).toEqual(['dialogue', 'parenthetical']);
     expect(next('CUT TO:|\n')).toEqual(['action', 'action']);

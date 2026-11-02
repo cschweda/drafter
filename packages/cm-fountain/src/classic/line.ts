@@ -102,7 +102,7 @@ interface Place {
   /** Whether the template has headings, which picks the row. */
   headings: boolean;
   empty: boolean;
-  /** No more of the speech under this line. */
+  /** The cursor at the line's end, with no more of the speech under it. */
   lastOfSpeech: boolean;
   /** Under a name or a line of speech. */
   inSpeech: boolean;
@@ -190,11 +190,11 @@ const stored = (state: EditorState) => state.field(classicLine, false) ?? null;
  */
 export function lineKindAt(state: EditorState, line: Line): ClassicKind | null {
   const here = cursorLine(state);
+  if (blocked(state, line.from)) return null;
   if (line.from === here.from) {
     const own = stored(state);
     if (own) return own.kind;
   }
-  if (blocked(state, line.from)) return null;
   const found = blockAt(state.field(parsedDoc), line.from);
   if (!found) return null;
   if (
@@ -202,7 +202,8 @@ export function lineKindAt(state: EditorState, line: Line): ClassicKind | null {
     line.number === here.number - 1 &&
     oneCursor(state) &&
     stored(state)?.kind === 'dialogue' &&
-    isEmpty(state, here)
+    isEmpty(state, here) &&
+    underSpeech(state, here.from)
   ) {
     return 'character';
   }
@@ -232,7 +233,7 @@ export function elementAt(state: EditorState): ClassicElement | null {
   const { enter, tab } = nextFrom(kind, {
     headings,
     empty,
-    lastOfSpeech: !below || isBlank(below.text),
+    lastOfSpeech: state.selection.main.head === line.to && (!below || isBlank(below.text)),
     inSpeech: underSpeech(state, line.from),
   });
   return { kind, pending: empty, soft: own?.soft ?? false, enter, tab };
@@ -286,9 +287,10 @@ function staysOnLine(tr: Transaction): boolean {
  * the writer's delete inside the line, so a typo fixed in a name is still a name.
  */
 const keepsLine = (tr: Transaction) =>
-  tr.annotation(classicEdit) === true ||
-  (!tr.annotation(appChange) &&
-    (tr.isUserEvent('input.type') || (tr.isUserEvent('delete') && staysOnLine(tr))));
+  !tr.annotation(appChange) &&
+  (tr.annotation(classicEdit) === true ||
+    tr.isUserEvent('input.type') ||
+    (tr.isUserEvent('delete') && staysOnLine(tr)));
 
 /** What the effects of a transaction make of the line, in the positions of the new text. */
 function applyEffects(line: StoredLine | null, tr: Transaction): StoredLine | null {
