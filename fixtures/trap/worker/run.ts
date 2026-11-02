@@ -4,6 +4,7 @@
 // one entry point; the answer is what happened, how long it took, and what it kept once garbage
 // is collected.
 
+import { createRequire, syncBuiltinESMExports } from 'node:module';
 import { setFlagsFromString } from 'node:v8';
 import { runInNewContext } from 'node:vm';
 import { parentPort } from 'node:worker_threads';
@@ -30,6 +31,7 @@ import {
 } from '@drafter/story-map';
 import { builtins, type Template } from '@drafter/templates';
 import { currentWriter, readModulesFolder } from '../../../apps/desktop/src/module-folder';
+import type { ToolName } from '../../../packages/mcp/src/tools/index';
 import type { Happened } from '../check';
 
 setFlagsFromString('--expose-gc');
@@ -44,7 +46,61 @@ export type Job =
   | { kind: 'package'; format: string; bytes: Uint8Array; inert: boolean }
   | { kind: 'cli'; cwd: string; args: string[] }
   | { kind: 'modules'; dir: string }
-  | { kind: 'beside'; format: string; bytes: Uint8Array };
+  | { kind: 'beside'; format: string; bytes: Uint8Array }
+  | McpJob;
+
+/**
+ * One trap through Drafter for Claude: a real server (packages/mcp) given `folders`, connected
+ * through the SDK's in-memory transport, its reader inline in this worker (which is stopped from
+ * outside at the trap's limit), and `tool` called with `args`.
+ */
+export interface McpJob {
+  kind: 'mcp';
+  /** The trap's own folder, holding the writer's folder and anything outside it. */
+  dir: string;
+  /** The path the tool is given. */
+  path: string;
+  tool: ToolName;
+  args: object;
+  folders: string[];
+  /** Each call's arguments in turn, in place of `args`. */
+  calls?: object[];
+  /** Follow each answer's `next` until there is none. */
+  pages?: boolean;
+  /** A call made first, whose `next` is the cursor of the call that is checked. */
+  cursorFrom?: { tool: ToolName; args: object };
+  /** An mcp trap whose `swap` runs once its path is checked and before it is read. */
+  swap?: string;
+  /** The guard's own check: after the calls, try each kind of call it must stop, through ESM imports. */
+  probe?: boolean;
+}
+
+/** Tries a fetch, a socket, a name lookup, and a program run, each as an ESM import sees it. */
+async function probe(): Promise<void> {
+  const attempts: Array<() => unknown> = [
+    () => fetch('http://example.invalid/'),
+    async () => (await import('node:net')).createConnection({ port: 9 }),
+    async () => (await import('node:dns')).lookup('example.invalid', () => {}),
+    async () => (await import('node:child_process')).execFileSync('true'),
+  ];
+  for (const attempt of attempts) {
+    try {
+      await attempt();
+    } catch {
+      // Each one throws: what was tried is in `tried`.
+    }
+  }
+}
+
+/** One tool call's result, as the AI app gets it. */
+export interface McpResult {
+  isError: boolean;
+  /** `content[0].text`. */
+  text: string;
+  structured?: Record<string, unknown>;
+  /** The client threw rather than returning a result. */
+  threw?: true;
+}
 
 export interface Answer {
   happened: Happened;
@@ -54,6 +110,8 @@ export interface Answer {
   html?: string | null;
   /** The opened text's story map, for an inert trap. */
   storyMap?: string;
+  /** For `mcp`: every call's result, and every network or process call that was tried (none). */
+  mcp?: { results: McpResult[]; calls: string[] };
   ms: number;
   kept: number;
 }
@@ -272,7 +330,137 @@ async function readBeside(format: string, bytes: Uint8Array): Promise<Happened> 
   };
 }
 
+// ---- Drafter for Claude ------------------------------------------------------------------------
+
+/** Every network, process, or socket call tried since the guard went in: each one also throws. */
+const tried: string[] = [];
+let guarded = false;
+
+/**
+ * Replaces `fetch`, `WebSocket`, and every function of Node's network and process modules with
+ * one that records the call and throws, so nothing in the server can fetch, listen, look a name
+ * up, or run a program unseen. `syncBuiltinESMExports` makes the ESM imports see the same.
+ * Installed before the server is first imported, and kept for the worker's life.
+ */
+function guardNetwork(): void {
+  if (guarded) return;
+  guarded = true;
+  const trip = (name: string) =>
+    function tripped() {
+      tried.push(name);
+      throw new Error(`${name} was called`);
+    };
+  const g = globalThis as Record<string, unknown>;
+  g.fetch = trip('fetch');
+  g.WebSocket = trip('WebSocket');
+  const require = createRequire(import.meta.url);
+  for (const id of [
+    'node:net',
+    'node:tls',
+    'node:http',
+    'node:https',
+    'node:http2',
+    'node:dgram',
+    'node:dns',
+    'node:child_process',
+  ]) {
+    const mod = require(id) as Record<string, unknown>;
+    for (const key of Object.keys(mod)) {
+      if (typeof mod[key] !== 'function') continue;
+      try {
+        mod[key] = trip(`${id}.${key}`);
+      } catch {
+        tried.push(`${id}.${key} couldn’t be replaced`);
+      }
+    }
+  }
+  syncBuiltinESMExports();
+}
+
+type Kit = {
+  connect: typeof import('../../../packages/mcp/test/connect').connect;
+  afterCheck: typeof import('../../../packages/mcp/src/load').__afterCheckForTests;
+  traps: typeof import('../mcp-traps').MCP_TRAPS;
+};
+let kit: Promise<Kit> | undefined;
+
+/** The server and its client, imported once the guard is in. */
+function mcpKit(): Promise<Kit> {
+  guardNetwork();
+  kit ??= Promise.all([
+    import('../../../packages/mcp/test/connect'),
+    import('../../../packages/mcp/src/load'),
+    import('../mcp-traps'),
+  ]).then(([connected, load, traps]) => ({
+    connect: connected.connect,
+    afterCheck: load.__afterCheckForTests,
+    traps: traps.MCP_TRAPS,
+  }));
+  return kit;
+}
+
+async function runMcp(job: McpJob): Promise<Omit<Answer, 'ms' | 'kept'>> {
+  const { connect, afterCheck, traps } = await mcpKit();
+  tried.length = 0;
+  if (job.swap) {
+    // The trap's setup is made again (the same files) for its swap, which runs here, once.
+    let swap = traps.find((trap) => trap.id === job.swap)?.setup(job.dir).swap;
+    if (!swap) throw new Error(`no swap for ${job.swap}`);
+    afterCheck(() => {
+      const once = swap;
+      swap = undefined;
+      once?.();
+    });
+  }
+  const server = await connect({ folders: job.folders });
+  const call = async (tool: ToolName, args: object): Promise<McpResult> => {
+    try {
+      const result = await server.call(tool, args);
+      const first = result.content[0] as { text?: string } | undefined;
+      return {
+        isError: result.isError === true,
+        text: first?.text ?? '',
+        ...(result.structuredContent
+          ? { structured: result.structuredContent as Record<string, unknown> }
+          : {}),
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        text: error instanceof Error ? error.message : String(error),
+        threw: true,
+      };
+    }
+  };
+  try {
+    let args = job.args;
+    if (job.cursorFrom) {
+      const first = await call(job.cursorFrom.tool, job.cursorFrom.args);
+      const next = first.structured?.next;
+      if (typeof next !== 'string') throw new Error('the first call gave no cursor');
+      args = { ...args, cursor: next };
+    }
+    const results: McpResult[] = [];
+    for (const each of job.calls ?? [args]) {
+      let result = await call(job.tool, each);
+      results.push(result);
+      for (let page = 0; job.pages && page < 1_000; page++) {
+        const next = result.structured?.next;
+        if (result.isError || typeof next !== 'string') break;
+        result = await call(job.tool, { ...each, cursor: next });
+        results.push(result);
+      }
+    }
+    if (job.probe) await probe();
+    return { happened: { kind: 'refused', message: '' }, mcp: { results, calls: [...tried] } };
+  } finally {
+    afterCheck(undefined);
+    await server.close();
+  }
+}
+
 async function work(job: Job): Promise<Omit<Answer, 'ms' | 'kept'>> {
+  if (job.kind === 'mcp') return runMcp(job);
   if (job.kind === 'beside') return { happened: await readBeside(job.format, job.bytes) };
   if (job.kind === 'package') {
     const happened = await readPackage(job.format, job.bytes);

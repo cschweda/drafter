@@ -120,6 +120,9 @@ export const SAYS = {
   cliTooBig: 'it is larger than 5 MB',
   cliNotAFile: 'it isn’t a file',
   cliCantRead: 'can’t read it',
+  /** Drafter for Claude's words for the caps (Open's are above; a script over 5 MB, the CLI's). */
+  mcpImportTooBig: 'the script in it is larger than 5 MB',
+  mcpUnreadable: 'it is larger than 32 MB',
   /** Nothing opens and nothing is said: a command line's flag, not a file. */
   silent: '',
 } as const;
@@ -500,9 +503,9 @@ function textTraps({ ext, format, name }: TextKind): Trap[] {
       id: id('pdf'),
       format,
       name: n('printed'),
-      tests: `A PDF renamed .${ext} is named a PDF, by its first bytes.`,
+      tests: `A PDF renamed .${ext} is named a PDF, by its first bytes. Drafter for Claude reads it as the text it is, as \`drafter build\` does, and finds no scene in it: naming a PDF is Open’s.`,
       bytes: PDF,
-      expect: { 'web-open': refused(SAYS.pdf) },
+      expect: { 'web-open': refused(SAYS.pdf), mcp: opens() },
     },
   ];
 }
@@ -655,26 +658,28 @@ const FOUNTAIN_TRAPS: Trap[] = [
     id: 'fountain-is-highland',
     format: 'fountain',
     name: 'packed.fountain',
-    tests: 'A Highland zip named .fountain is named a packed file, by its first bytes.',
+    tests:
+      'A Highland zip named .fountain is named a packed file, by its first bytes. Drafter for Claude, which reads a .fountain file only as text, refuses it as more than text.',
     bytes: highland([TEXT_ENTRY]),
-    expect: { 'web-open': refused(SAYS.packed) },
+    expect: { 'web-open': refused(SAYS.packed), mcp: refused(SAYS.binary) },
   },
   {
     id: 'fountain-is-rtf',
     format: 'fountain',
     name: 'rich.fountain',
-    tests: 'An RTF document named .fountain is named an RTF document.',
+    tests:
+      'An RTF document named .fountain is named an RTF document. Drafter for Claude reads it as the text it is, as `drafter build` does: naming an RTF document is Open’s.',
     bytes: () => enc('{\\rtf1\\ansi INT. HALL - DAY\\par A lever waits.}'),
-    expect: { 'web-open': refused(SAYS.rtf) },
+    expect: { 'web-open': refused(SAYS.rtf), mcp: opens() },
   },
   {
     id: 'fountain-is-ole',
     format: 'fountain',
     name: 'older.fountain',
     tests:
-      'An OLE compound file (an older Office or Final Draft file) named .fountain is named so.',
+      'An OLE compound file (an older Office or Final Draft file) named .fountain is named so. Drafter for Claude, which reads a .fountain file only as text, refuses it as more than text.',
     bytes: () => concat([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1], new Uint8Array(504)),
-    expect: { 'web-open': refused(SAYS.ole) },
+    expect: { 'web-open': refused(SAYS.ole), mcp: refused(SAYS.binary) },
   },
   {
     id: 'fountain-story-map-hostile',
@@ -839,9 +844,10 @@ const MARKDOWN_TRAPS: Trap[] = [
     id: 'md-is-epub',
     format: 'markdown',
     name: 'book.md',
-    tests: 'An EPUB named .md is named an e-book by its content, whatever its name.',
+    tests:
+      'An EPUB named .md is named an e-book by its content, whatever its name. Drafter for Claude, which goes by the name, reads a .md file only as text and refuses it as more than text.',
     bytes: epub([]),
-    expect: { 'web-open': refused(SAYS.eBook) },
+    expect: { 'web-open': refused(SAYS.eBook), mcp: refused(SAYS.binary) },
   },
 ];
 
@@ -2588,6 +2594,18 @@ const BESIDE_TRAPS: Trap[] = [
   },
 ];
 
+/** The formats Drafter for Claude reads (packages/mcp/src/formats.ts). */
+export const MCP_FORMATS: ReadonlySet<Format> = new Set([
+  'fountain',
+  'text',
+  'markdown',
+  'fdx',
+  'highland',
+  'fadein',
+  'html',
+  'epub',
+]);
+
 export const TRAPS: readonly Trap[] = [
   ...TEXT_KINDS.flatMap(textTraps),
   ...FOUNTAIN_TRAPS,
@@ -2619,6 +2637,7 @@ function withDefaults(trap: Trap): Trap {
       const outcome = packageOutcome(trap, web);
       if (outcome) expect.package = outcome;
     }
+    if (MCP_FORMATS.has(trap.format)) expect.mcp ??= mcpOutcome(web);
   }
   return { ...trap, expect };
 }
@@ -2631,6 +2650,20 @@ function withDefaults(trap: Trap): Trap {
 function buildOutcome(web: Outcome): Outcome {
   if (web.kind === 'refused' && web.says === SAYS.tooBig) return refused(SAYS.cliTooBig);
   return opens();
+}
+
+/**
+ * Drafter for Claude's outcome for a file the app opens or refuses: opened (its text isn't
+ * compared: the tools give parts of it), or refused in the server's words.
+ */
+function mcpOutcome(web: Outcome): Outcome {
+  if (web.kind !== 'refused') return opens();
+  const words: Partial<Record<string, string>> = {
+    [SAYS.tooBig]: SAYS.cliTooBig,
+    [SAYS.importTooBig]: SAYS.mcpImportTooBig,
+    [SAYS.unreadable]: SAYS.mcpUnreadable,
+  };
+  return refused(words[web.says] ?? web.says);
 }
 
 /** A format's reader on its own: an import's outcome is its reader's; text always parses. */

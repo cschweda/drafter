@@ -5,16 +5,33 @@
 // special files (pipes, devices, links) go to the built `drafter`, killed after 10 seconds. The
 // web app's Open and the desktop app's open run in apps/web/test/trap-open.test.ts.
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { ABOUT, MAX_ANSWER_CHARS } from '../../packages/mcp/src/envelope';
+import { pathProblem } from '../../packages/mcp/src/paths';
+import type { ToolName } from '../../packages/mcp/src/tools/index';
 import { checkOutcome, checkRan, type Happened, PEAK_BOUND } from './check';
 import { ENTRY_POINTS } from './entry-points';
+import { FOLDER, folderIn, MCP_PATH_TRAPS, MCP_SIZE_TRAPS, type McpTrap } from './mcp-traps';
 import { TrapRunner } from './pool';
-import { LIMIT_MS, type Outcome, TRAPS, type Trap, trapsFor, via } from './traps';
+import { LIMIT_MS, MCP_FORMATS, type Outcome, TRAPS, type Trap, trapsFor, via } from './traps';
+import type { Answer, McpJob, McpResult } from './worker/run';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const CLI = join(ROOT, 'packages/cli/dist/index.js');
@@ -417,5 +434,193 @@ describe('beside-read: drafts and cuts beside the work', () => {
     const job = { kind: 'beside', format: trap.format, bytes } as const;
     const answer = checkRan(trap, bytes.length, await ran(trap, job), 'beside-read');
     checkOutcome(trap, trap.expect['beside-read'] as Outcome, answer.happened, 'beside-read');
+  });
+});
+
+// ---- Drafter for Claude ------------------------------------------------------------------------
+
+/**
+ * Every file, folder, and link under `dir`, each with its kind and its SHA-256 (or a link's
+ * target), in order: what the server may never change. A pipe or a socket is never opened.
+ */
+function snapshot(dir: string): string[] {
+  const out: string[] = [];
+  const visit = (path: string, shown: string) => {
+    const info = lstatSync(path);
+    if (info.isSymbolicLink()) out.push(`${shown} → ${readlinkSync(path)}`);
+    else if (info.isFile())
+      out.push(`${shown} ${createHash('sha256').update(readFileSync(path)).digest('hex')}`);
+    else if (info.isDirectory()) {
+      out.push(`${shown}/`);
+      for (const name of readdirSync(path).sort()) visit(join(path, name), `${shown}/${name}`);
+    } else out.push(`${shown} (special)`);
+  };
+  visit(dir, '.');
+  return out;
+}
+
+/** What a result may never hold: a full path of the trap's, or a stack. */
+function expectNothingLeaked(text: string, dir: string, label: string) {
+  for (const path of new Set([dir, realpathSync(dir), tmp, realpathSync(tmp)]))
+    expect(text.includes(path), `${label}: holds a full path`).toBe(false);
+  expect(/\n\s+at \S/.test(text), `${label}: holds a stack`).toBe(false);
+}
+
+/** A successful answer, checked: `about` first, its text the same JSON, under the cap. */
+function expectAnswer(result: McpResult, label: string): Record<string, unknown> {
+  expect(result.isError, `${label}: refused: ${result.text.slice(0, 300)}`).toBe(false);
+  expect(result.text.length, `${label}: answer length`).toBeLessThanOrEqual(MAX_ANSWER_CHARS);
+  const parsed = JSON.parse(result.text) as Record<string, unknown>;
+  expect(Object.keys(parsed)[0], label).toBe('about');
+  expect(parsed.about, label).toBe(ABOUT);
+  expect(parsed, label).toEqual(result.structured);
+  return parsed;
+}
+
+/**
+ * A refusal's message: the envelope's `error` (`about` first), or, when `sdk` allows it, the
+ * SDK's own plain words for arguments its schema refuses.
+ */
+function refusalMessage(result: McpResult, label: string, sdk = false): string {
+  expect(result.isError, `${label}: should be refused`).toBe(true);
+  let body: Record<string, unknown> | undefined;
+  try {
+    body = JSON.parse(result.text);
+  } catch {
+    body = undefined;
+  }
+  if (body === undefined || result.threw) {
+    expect(sdk, `${label}: not Drafter’s refusal: ${result.text.slice(0, 300)}`).toBe(true);
+    return result.text;
+  }
+  expect(Object.keys(body)[0], label).toBe('about');
+  expect(body.about, label).toBe(ABOUT);
+  expect(typeof body.error, label).toBe('string');
+  return body.error as string;
+}
+
+const mcpJob = (dir: string, path: string, tool: ToolName, args: object): McpJob => ({
+  kind: 'mcp',
+  dir,
+  path,
+  tool,
+  args,
+  folders: [folderIn(dir)],
+});
+
+/** What every `mcp` job must leave as it was: the folder, and the network and processes, untouched. */
+function expectUntouched(answer: Answer, before: string[] | null, dir: string, label: string) {
+  expect(answer.mcp?.calls, `${label}: a network or process call`).toEqual([]);
+  if (before) expect(snapshot(dir), `${label}: the folder changed`).toEqual(before);
+}
+
+describe('mcp: every trap through Drafter for Claude', () => {
+  test('the guard records and stops a fetch, a socket, a name lookup, and a program run', async () => {
+    const dir = join(tmp, 'mcp-guard');
+    mkdirSync(folderIn(dir), { recursive: true });
+    writeFileSync(join(folderIn(dir), 'lamp.fountain'), 'INT. LAMP ROOM - NIGHT\n');
+    const job = { ...mcpJob(dir, 'Scripts/lamp.fountain', 'list_scripts', {}), probe: true };
+    const answer = (await runner.run(job, 5_000, PEAK_BOUND)).answer as Answer;
+    expect(answer.mcp?.calls).toEqual([
+      'fetch',
+      'node:net.createConnection',
+      'node:dns.lookup',
+      'node:child_process.execFileSync',
+    ]);
+  });
+
+  test('every trap of a format the server reads goes through it', () => {
+    const read = TRAPS.filter((t) => MCP_FORMATS.has(t.format));
+    expect(read.length).toBeGreaterThan(200);
+    for (const trap of read) expect(trap.expect.mcp, trap.id).toBeDefined();
+  });
+
+  test.for(trapsFor('mcp').map((t) => [t.id, t] as const))('%s', async ([, trap], { skip }) => {
+    if (trap.place && !posix) skip('a special file of POSIX’s');
+    const dir = join(tmp, `${trap.id}-mcp`);
+    const folder = folderIn(dir);
+    mkdirSync(folder, { recursive: true });
+    const file = trap.place ? trap.place(folder) : join(folder, trap.name);
+    if (!trap.place) writeFileSync(file, trap.bytes?.() ?? new Uint8Array());
+    const path = `${FOLDER}/${file.slice(folder.length + 1)}`;
+    const outcome = trap.expect.mcp as Outcome;
+    const size = sizeOf(trap);
+    for (const [tool, args] of [
+      ['read_scene', { script: path, scene: '1' }],
+      ['script_overview', { script: path }],
+      ['search_scripts', { words: 'the', script: path }],
+    ] as const) {
+      const label = `${trap.id} at mcp ${tool}`;
+      const before = snapshot(dir);
+      const answer = checkRan(trap, size, await ran(trap, mcpJob(dir, path, tool, args)), label);
+      expectUntouched(answer, before, dir, label);
+      const [result] = answer.mcp?.results ?? [];
+      if (!result) throw new Error(`${label}: no result`);
+      expectNothingLeaked(result.text, dir, label);
+      if (outcome.kind === 'refused') {
+        expect(refusalMessage(result, label), label).toContain(outcome.says);
+      } else if (tool === 'read_scene' && result.isError) {
+        // A script or document with no scenes has no scene 1, and says so.
+        expect(refusalMessage(result, label), label).toMatch(/^There’s no scene 1\. /);
+      } else expectAnswer(result, label);
+    }
+  });
+});
+
+/** A trap of the entry point's own, as `checkRan` measures one. */
+const measuredAs = (trap: McpTrap): Trap => ({
+  id: trap.id,
+  format: 'fountain',
+  name: trap.id,
+  tests: trap.tests,
+  expect: {},
+  ...(trap.limitMs === undefined ? {} : { limitMs: trap.limitMs }),
+});
+
+/** Runs one of the entry point's own traps and checks it, every page and call. */
+async function runMcpTrap(trap: McpTrap) {
+  const dir = join(tmp, trap.id);
+  mkdirSync(folderIn(dir), { recursive: true });
+  const { path, swap } = trap.setup(dir);
+  if (trap.windows) expect(pathProblem(path, 'win32'), trap.id).toMatch(trap.windows);
+  const job: McpJob = {
+    ...mcpJob(dir, path, trap.tool, trap.args(path)),
+    ...(trap.calls ? { calls: trap.calls(path) } : {}),
+    ...(trap.pages ? { pages: true } : {}),
+    ...(trap.cursorFrom ? { cursorFrom: trap.cursorFrom(path) } : {}),
+    ...(swap ? { swap: trap.id } : {}),
+  };
+  const asTrap = measuredAs(trap);
+  // The swap changes the folder itself (as the test does, not the server): its snapshot is skipped.
+  const before = swap ? null : snapshot(dir);
+  const answer = checkRan(asTrap, 0, await ran(asTrap, job), 'mcp');
+  expectUntouched(answer, before, dir, trap.id);
+  const results = answer.mcp?.results ?? [];
+  expect(results.length, trap.id).toBeGreaterThan(0);
+  for (const result of results) {
+    expectNothingLeaked(result.text, dir, trap.id);
+    expect(result.text.includes('OUTSIDE-THE-FOLDER-MARKER'), `${trap.id}: read outside`).toBe(
+      false,
+    );
+  }
+  if ('refused' in trap.expect) {
+    for (const result of results)
+      expect(refusalMessage(result, trap.id, true), trap.id).toMatch(trap.expect.refused);
+    return;
+  }
+  const pages = results.map((result) => expectAnswer(result, trap.id));
+  trap.expect.ok(trap.pages ? { pages } : (pages.at(-1) as object));
+}
+
+describe('mcp: paths a tool is given', () => {
+  test.for(MCP_PATH_TRAPS.map((t) => [t.id, t] as const))('%s', async ([, trap], { skip }) => {
+    if (trap.posix && !posix) skip('a link, a pipe, a socket, or a device of POSIX’s');
+    await runMcpTrap(trap);
+  });
+});
+
+describe('mcp: sizes that come back in pages', () => {
+  test.for(MCP_SIZE_TRAPS.map((t) => [t.id, t] as const))('%s', async ([, trap]) => {
+    await runMcpTrap(trap);
   });
 });

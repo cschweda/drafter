@@ -8,7 +8,8 @@ export type Entry =
   | 'cli-build'
   | 'package'
   | 'desktop-modules'
-  | 'beside-read';
+  | 'beside-read'
+  | 'mcp';
 
 export interface EntryPoint {
   id: Entry;
@@ -64,6 +65,13 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
     what: 'Drafts and cuts read back from beside the work when it opens: the cuts file (`Boca.fountain.cuts.md`), its entries checked by their IDs and merged, and draft files (`Boca drafts/Boca – Draft 03.fountain`), their IDs checked against their text. They may have been edited anywhere (another computer, a text editor), so they are untrusted.',
     code: '@drafter/history (`readCutsBytes`, `readDraftBytes`; `readCutsFile`, `verifyCuts`, `mergeCuts`, `readDraftFile`)',
     harness: 'fixtures/trap/harness.test.ts',
+  },
+  {
+    id: 'mcp',
+    what: 'Drafter for Claude: each tool’s read of a file in a configured folder, and every path a tool is given.',
+    code: 'packages/mcp/src (paths.ts, load.ts, tools/) → @drafter/archive/node (readCapped, readScriptFile) and each format’s reader',
+    harness:
+      'fixtures/trap/harness.test.ts (in the trap worker, through the SDK’s in-memory transport)',
   },
 ];
 

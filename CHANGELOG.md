@@ -25,7 +25,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- **Drafter for Claude**’s prompts type-check again (their arguments are typed as the SDK gives them).
 - On Linux, text is drawn at its true widths (the element bar kept Transition folded at 1280, and a Script page at 100% was 8.85 inches wide); the Inspector's header could fold and unfold for ever at some widths, and close its ⋯ panel by itself; Escape from History could leave focus in the editor; and the Drafter and Open menus could shift under a click or the keyboard just after opening.
+
+### Security
+
+- The trap documents gain an entry point, `mcp`: every hostile and edge-case file of a kind Drafter for Claude reads goes through `read_scene`, `script_overview`, and `search_scripts` on the real server, opening with a valid answer under the size cap or refused in the server’s words, never with a stack or a full path. Twenty path traps (`..` anywhere, full paths, links out to a file, a folder, and `/dev/zero`, a loop of links, a pipe, a socket, a file swapped for a link between the check and the read, Windows streams, trailing dots, drive-relative and UNC paths, a NUL, a 10,000-character name, and borrowed or forged cursors) are each refused or start again, and five size traps (a 300-scene script read whole, a speech of 100,000 words, a search that matches every word, 2,000 files eight levels deep) come back in pages under the cap. In the trap worker, `fetch`, `WebSocket`, and every function of Node’s network and process modules are replaced with ones that record and fail, and none is ever called; the folder’s files are hashed before and after every call, and never change.
 
 ## [0.24.1] - 2026-11-01
 

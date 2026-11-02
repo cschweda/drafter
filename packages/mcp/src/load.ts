@@ -54,6 +54,16 @@ export function __parsesForTests(): number {
   return parses;
 }
 
+let afterCheck: (() => void) | undefined;
+
+/**
+ * For tests only (the trap suite's swap): `hook` runs once a path is checked and before the file
+ * is read, so a test can put a link in the file's place between the two. Never set in the program.
+ */
+export function __afterCheckForTests(hook: (() => void) | undefined): void {
+  afterCheck = hook;
+}
+
 /** A title-page field's text, its lines joined by spaces; empty when there is none. */
 export function titleField(doc: Doc, key: string): string {
   const field = doc.titlePage?.fields.find((f) => f.key.trim().toLowerCase() === key);
@@ -194,6 +204,7 @@ export async function load(path: string, ctx: ToolContext): Promise<Loaded> {
   const cached = ctx.cache.get(file.real, file.size, file.mtimeMs) as Loaded | undefined;
   if (cached) return { ...cached, file };
 
+  afterCheck?.();
   const read = { noFollow: true, expect: { dev: file.dev, ino: file.ino } };
   let loaded: Loaded;
   try {

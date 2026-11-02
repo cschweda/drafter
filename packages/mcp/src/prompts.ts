@@ -242,9 +242,16 @@ export function registerPrompts(server: McpServer): void {
     server.registerPrompt(
       prompt.name,
       { title: prompt.title, description: prompt.description, argsSchema: prompt.args },
-      (args: Record<string, string | undefined>) => ({
+      // The SDK checked the arguments against `prompt.args`: every one is a string, or absent.
+      (args: Record<string, unknown>) => ({
         messages: [
-          { role: 'user' as const, content: { type: 'text' as const, text: prompt.text(args) } },
+          {
+            role: 'user' as const,
+            content: {
+              type: 'text' as const,
+              text: prompt.text(args as Record<string, string | undefined>),
+            },
+          },
         ],
       }),
     );
