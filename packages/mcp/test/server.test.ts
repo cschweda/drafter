@@ -58,6 +58,23 @@ describe('the server', () => {
     }
   });
 
+  it('lists the ten tools', async () => {
+    const { client } = await library();
+    const { tools } = await client.listTools();
+    expect(tools.map((tool) => tool.name)).toEqual([
+      'list_scripts',
+      'script_overview',
+      'read_scene',
+      'character_lines',
+      'list_drafts',
+      'compare_drafts',
+      'list_cuts',
+      'search_scripts',
+      'story_map',
+      'series_overview',
+    ]);
+  });
+
   it('the instructions are Drafter’s', async () => {
     const { client } = await library();
     expect(client.getInstructions()).toBe(INSTRUCTIONS);

@@ -17,6 +17,8 @@ export interface CursorAt {
   at: number;
   /** The part of that item, for one too large for a page. */
   part?: number;
+  /** How many items the pages before gave (a search's hits so far, for its limit in all). */
+  seen?: number;
 }
 
 /** JSON with every object's keys in code-unit order, so equal arguments give equal text. */
@@ -53,6 +55,7 @@ export function makeCursor(key: Uint8Array, at: CursorAt): string {
     args: at.args,
     at: at.at,
     ...(at.part === undefined ? {} : { part: at.part }),
+    ...(at.seen === undefined ? {} : { seen: at.seen }),
   });
   return `${Buffer.from(json, 'utf8').toString('base64url')}.${mac(key, json).toString('base64url')}`;
 }
@@ -68,8 +71,8 @@ const BASE64URL = /^[A-Za-z0-9_-]+$/;
 export function readCursor(
   key: Uint8Array,
   cursor: string,
-  now: Omit<CursorAt, 'at' | 'part'>,
-): { at: number; part?: number } | 'restart' {
+  now: Omit<CursorAt, 'at' | 'part' | 'seen'>,
+): { at: number; part?: number; seen?: number } | 'restart' {
   const pieces = cursor.split('.');
   if (pieces.length !== 2) return 'restart';
   const [body, signature] = pieces as [string, string];
@@ -93,8 +96,13 @@ export function readCursor(
     at.size !== now.size ||
     at.args !== now.args ||
     !isPosition(at.at) ||
-    (at.part !== undefined && !isPosition(at.part))
+    (at.part !== undefined && !isPosition(at.part)) ||
+    (at.seen !== undefined && !isPosition(at.seen))
   )
     return 'restart';
-  return at.part === undefined ? { at: at.at } : { at: at.at, part: at.part };
+  return {
+    at: at.at,
+    ...(at.part === undefined ? {} : { part: at.part }),
+    ...(at.seen === undefined ? {} : { seen: at.seen }),
+  };
 }

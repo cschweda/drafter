@@ -102,27 +102,24 @@ const stemOf = (shown: string) => {
   return dot > 0 ? name.slice(0, dot) : name;
 };
 
-function loadScript(
-  file: Checked,
-  format: Format,
-  text: string,
-  importNotes: number,
+/**
+ * The story map of a script as Story map builds it, with no contact: `status` null for the one
+ * its gaps give, else the writer's choice (Finished leaves the planned scenes out).
+ */
+export function mapOf(
+  script: { doc: Doc; template: Template; layout: Layout; file: Checked; text: string },
+  status: StoryMap['status'] | null,
   wordsPerMinute: number,
-): Loaded {
-  const doc = parse(text);
-  const template = templateFor(doc);
-  const layout = paginate(doc, template);
-  const index = sceneIndex(doc, template, layout);
-  // As the story map: only capitals count, as with no dictionary.
-  const cast = castOf(index, doc, template, linesPerPage(layout), () => undefined);
+): StoryMap {
+  const { doc, template, layout, file, text } = script;
   const { plannedPages, hooks } = storyMapMeta(doc.meta);
   const logline = titleField(doc, 'logline');
-  const map = buildStoryMap({
+  return buildStoryMap({
     doc,
     template,
     layout,
     options: {
-      status: null,
+      status,
       plannedPages,
       logline: logline === '' ? null : logline,
       greeting: "What I'm writing",
@@ -136,6 +133,22 @@ function loadScript(
       title: titleField(doc, 'title') || stemOf(file.shown),
     },
   });
+}
+
+function loadScript(
+  file: Checked,
+  format: Format,
+  text: string,
+  importNotes: number,
+  wordsPerMinute: number,
+): Loaded {
+  const doc = parse(text);
+  const template = templateFor(doc);
+  const layout = paginate(doc, template);
+  const index = sceneIndex(doc, template, layout);
+  // As the story map: only capitals count, as with no dictionary.
+  const cast = castOf(index, doc, template, linesPerPage(layout), () => undefined);
+  const map = mapOf({ doc, template, layout, file, text }, null, wordsPerMinute);
   return {
     kind: 'script',
     file,

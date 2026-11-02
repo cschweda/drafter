@@ -129,47 +129,100 @@ export function visible(
   to: number,
   include: Include,
 ): { text: string; leftOut: LeftOut } {
+  return visibleIn(doc, include)(from, to);
+}
+
+/**
+ * `visible` for many ranges of one file: what to cut is found once, and each range then costs
+ * only its own length and the cuts in it (a search reads every block of a file this way).
+ */
+export function visibleIn(
+  doc: Doc,
+  include: Include,
+): (from: number, to: number) => { text: string; leftOut: LeftOut } {
   const { source } = doc;
-  const end = Math.min(to, scriptEnd(doc));
-  const start = Math.min(Math.max(0, from), end);
-  const leftOut: LeftOut = { notes: 0, boneyard: 0 };
+  const stop = scriptEnd(doc);
   // Cut whatever the call asks for: Contact, and Drafter's own blocks. What lies wholly inside
   // them isn't counted as left out.
   const always: Cut[] = [...contactCuts(doc), ...drafterBlocks(source)].sort((a, b) => a[0] - b[0]);
   const inside = (from: number, to: number) => {
     // The last cut starting at or before `from`, by halving; the cuts don't overlap.
-    let lo = 0;
-    let hi = always.length - 1;
-    let found = -1;
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1;
-      if ((always[mid] as Cut)[0] <= from) {
-        found = mid;
-        lo = mid + 1;
-      } else hi = mid - 1;
-    }
+    const found = lastAtOrBefore(always, from);
     return found >= 0 && to <= (always[found] as Cut)[1];
   };
-  const cuts: Cut[] = [...always];
+  /** The regions left out, in source order, and the furthest any of them up to each one reaches. */
+  const left: Array<{ from: number; to: number; note: boolean }> = [];
   for (const region of doc.regions) {
-    if (region.span.to <= start || region.span.from >= end) continue;
     if (include.includes(region.kind === 'note' ? 'notes' : 'boneyard')) continue;
     if (inside(region.span.from, region.span.to)) continue;
-    cuts.push([region.span.from, region.span.to]);
-    if (region.kind === 'note') leftOut.notes++;
-    else leftOut.boneyard++;
+    left.push({ from: region.span.from, to: region.span.to, note: region.kind === 'note' });
   }
-  cuts.sort((a, b) => a[0] - b[0]);
-  let text = '';
-  let at = start;
-  for (const [cutFrom, cutTo] of cuts) {
-    if (cutTo <= at) continue;
-    if (cutFrom >= end) break;
-    if (cutFrom > at) text += source.slice(at, cutFrom);
-    at = Math.max(at, cutTo);
+  left.sort((a, b) => a.from - b.from);
+  const reach: number[] = [];
+  for (const region of left) reach.push(Math.max(reach.at(-1) ?? 0, region.to));
+  // Every cut, as one sorted list of ranges that don't overlap.
+  const merged: Cut[] = [];
+  for (const [cutFrom, cutTo] of [...always, ...left.map((r): Cut => [r.from, r.to])].sort(
+    (a, b) => a[0] - b[0],
+  )) {
+    const last = merged.at(-1);
+    if (last && cutFrom <= last[1]) last[1] = Math.max(last[1], cutTo);
+    else merged.push([cutFrom, cutTo]);
   }
-  if (at < end) text += source.slice(at, end);
-  return { text, leftOut };
+
+  return (from: number, to: number) => {
+    const end = Math.min(to, stop);
+    const start = Math.min(Math.max(0, from), end);
+    const leftOut: LeftOut = { notes: 0, boneyard: 0 };
+    // The regions that reach into the range: starting before its end and ending after its start.
+    let i = firstAtOrAfter(left, end) - 1;
+    for (; i >= 0 && (reach[i] as number) > start; i--) {
+      const region = left[i] as (typeof left)[number];
+      if (region.to <= start) continue;
+      if (region.note) leftOut.notes++;
+      else leftOut.boneyard++;
+    }
+    let text = '';
+    let at = start;
+    // The first cut that ends after `start`: the merged cuts end in order too.
+    let c = lastAtOrBefore(merged, start);
+    if (c < 0 || (merged[c] as Cut)[1] <= start) c++;
+    for (; c < merged.length; c++) {
+      const [cutFrom, cutTo] = merged[c] as Cut;
+      if (cutFrom >= end) break;
+      if (cutFrom > at) text += source.slice(at, cutFrom);
+      at = Math.max(at, cutTo);
+    }
+    if (at < end) text += source.slice(at, end);
+    return { text, leftOut };
+  };
+}
+
+/** The index of the last range starting at or before `at` (-1 for none), by halving. */
+function lastAtOrBefore(ranges: readonly Cut[], at: number): number {
+  let lo = 0;
+  let hi = ranges.length - 1;
+  let found = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if ((ranges[mid] as Cut)[0] <= at) {
+      found = mid;
+      lo = mid + 1;
+    } else hi = mid - 1;
+  }
+  return found;
+}
+
+/** The index of the first region starting at or after `at` (the length for none), by halving. */
+function firstAtOrAfter(regions: ReadonlyArray<{ from: number }>, at: number): number {
+  let lo = 0;
+  let hi = regions.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((regions[mid] as { from: number }).from < at) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
 }
 
 const MD_META_OPENER = '<!-- drafter ';
@@ -200,16 +253,28 @@ export function drafterComments(text: string): Cut[] {
  * before it) cut, and every other Drafter comment in the range cut too.
  */
 export function visibleMarkdown(text: string, from: number, to: number): string {
+  return visibleMarkdownIn(text)(from, to);
+}
+
+/** `visibleMarkdown` for many ranges of one document: what to cut is found once. */
+export function visibleMarkdownIn(text: string): (from: number, to: number) => string {
   const meta = findMarkdownMeta(text);
-  const end = meta ? Math.min(to, backOverSpace(text, meta.from)) : to;
-  let at = Math.min(Math.max(0, from), end);
-  let out = '';
-  for (const [cutFrom, cutTo] of drafterComments(text)) {
-    if (cutTo <= at) continue;
-    if (cutFrom >= end) break;
-    if (cutFrom > at) out += text.slice(at, cutFrom);
-    at = Math.max(at, cutTo);
-  }
-  if (at < end) out += text.slice(at, end);
-  return out;
+  const stop = meta ? backOverSpace(text, meta.from) : text.length;
+  const cuts = drafterComments(text);
+  return (from: number, to: number) => {
+    const end = Math.min(to, stop);
+    let at = Math.min(Math.max(0, from), end);
+    let out = '';
+    let c = lastAtOrBefore(cuts, at);
+    if (c < 0 || (cuts[c] as Cut)[1] <= at) c++;
+    for (; c < cuts.length; c++) {
+      const [cutFrom, cutTo] = cuts[c] as Cut;
+      if (cutTo <= at) continue;
+      if (cutFrom >= end) break;
+      if (cutFrom > at) out += text.slice(at, cutFrom);
+      at = Math.max(at, cutTo);
+    }
+    if (at < end) out += text.slice(at, end);
+    return out;
+  };
 }

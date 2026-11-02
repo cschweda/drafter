@@ -185,8 +185,8 @@ async function countCuts(
 }
 
 /** The files under the folder asked for (or every folder), at most WALK_LIMITS.files. */
-async function filesOf(
-  args: Input,
+export async function filesOf(
+  args: { folder?: string; recursive?: boolean },
   ctx: ToolContext,
 ): Promise<{ found: Found[]; truncated: boolean }> {
   const { roots, platform } = ctx.data;
