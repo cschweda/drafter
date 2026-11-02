@@ -408,6 +408,10 @@ export const classicLine: StateField<StoredLine | null> = StateField.define<Stor
     line = applyEffects(line, tr);
     // A line that had text is deleted to nothing: it's an empty line now, as a click would find it.
     if (line && !line.beganEmpty && tr.isUserEvent('delete') && isEmptied(line, tr)) line = null;
+    // Typed and deleted to nothing, the line is what it arrived as: a shape it took has gone.
+    if (line?.beganEmpty && tr.isUserEvent('delete') && isEmptied(line, tr)) {
+      line = { ...line, kind: line.arrivedAs };
+    }
     if (line && line.from > tr.newDoc.length) line = null;
     if (
       line &&

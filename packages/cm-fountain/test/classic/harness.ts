@@ -1,3 +1,4 @@
+import { standardKeymap } from '@codemirror/commands';
 import { type EditorState, type Extension, Prec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import {
@@ -33,8 +34,12 @@ export function classicEditor(
   return editor(marked, extensions);
 }
 
-/** The bindings of a state, those it has first, then Fountain's, in the order a key tries them. */
-const bindingsOf = (state: EditorState) => [...state.facet(keymap).flat(), ...fountainKeymap];
+/** The bindings of a state, those it has first, then Fountain's, then CodeMirror's deletes, in the order a key tries them. */
+const bindingsOf = (state: EditorState) => [
+  ...state.facet(keymap).flat(),
+  ...fountainKeymap,
+  ...standardKeymap.filter(({ key }) => key === 'Backspace' || key === 'Delete'),
+];
 
 /** The state after a key: each binding runs until one takes it, as it does in the editor. */
 function pressKey(state: EditorState, key: string): EditorState {

@@ -11,6 +11,7 @@ import type { Span } from '@drafter/fountain';
 import { blocked, elementStructure, isBlank, underSpeech } from '../elements';
 import { BOM, command } from '../keymap';
 import { insideRegion, parsedDoc, regionAt } from '../state';
+import { visibleEnd, visibleStart } from './hidden';
 import {
   BLANK_SPEECH,
   type ClassicElement,
@@ -36,7 +37,7 @@ export const classicMove: AnnotationType<true> = Annotation.define<true>();
 type Key = 'enter' | 'tab';
 
 /** What every key reads about the cursor's line. */
-interface Here {
+export interface Here {
   state: EditorState;
   element: ClassicElement;
   line: Line;
@@ -44,7 +45,7 @@ interface Here {
 }
 
 /** The one cursor's place, or null where no key acts: a selection, several cursors, a blocked place, a note inside a line. */
-function hereIn(state: EditorState): Here | null {
+export function hereIn(state: EditorState): Here | null {
   const element = elementAt(state);
   if (!element || element.tab === null) return null;
   const { head } = state.selection.main;
@@ -53,7 +54,7 @@ function hereIn(state: EditorState): Here | null {
 }
 
 /** A command that's Classic Mode's own, and says so when all it does is move the cursor. */
-const key = (spec: (state: EditorState) => TransactionSpec | null): StateCommand =>
+export const key = (spec: (state: EditorState) => TransactionSpec | null): StateCommand =>
   command((state) => {
     const found = spec(state);
     if (!found) return null;
@@ -67,29 +68,7 @@ const key = (spec: (state: EditorState) => TransactionSpec | null): StateCommand
 /** Whether a template has soft Action: a stage direction is always firm (§4.2). */
 const softAction = (state: EditorState) => state.facet(elementStructure)().headings;
 
-/** Where the words of a line end: before Centered's hidden `<`. Task 5's `visibleEnd` replaces this. */
-function visibleEnd({ from, to, text }: Line): number {
-  const trimmed = text.trimEnd();
-  return trimmed.trimStart().startsWith('>') && trimmed.endsWith('<')
-    ? from + trimmed.slice(0, -1).trimEnd().length
-    : to;
-}
-
-/** The elements with no mark of their own: a line's first character there is one of its words. */
-const UNMARKED: ReadonlySet<ClassicKind> = new Set<ClassicKind>(['dialogue', 'parenthetical']);
-
-/** A mark at the start of a line, after any spaces. */
-const LINE_MARK = /^\s*(?:[!@~>]\s*|\.(?=[\p{L}\p{N}])|#+\s*|=\s*)/u;
-
-/** Where the words of a line of `kind` start: after a byte-order mark and a hidden mark. */
-export function visibleStart({ from, text }: Line, kind: ClassicKind): number {
-  const bom = text.startsWith(BOM) ? 1 : 0;
-  const body = text.slice(bom);
-  const lead = UNMARKED.has(kind) ? null : LINE_MARK.exec(body);
-  return from + bom + (lead ? lead[0].length : body.length - body.trimStart().length);
-}
-
-const isEmptyParens = ({ element, line }: Here) =>
+export const isEmptyParens = ({ element, line }: Here) =>
   element.kind === 'parenthetical' && line.text.trim() === '()';
 
 /** Whether text stands straight under a line. */
@@ -101,7 +80,7 @@ function textUnder({ doc }: EditorState, line: Line): boolean {
  * Takes an empty `()` away, keeping its line: pending Dialogue. What made the line stays made, and
  * with a speech under it the line is made here, so leaving it can't cut the speech.
  */
-function removeParens({ state, line }: Here): TransactionSpec {
+export function removeParens({ state, line }: Here): TransactionSpec {
   const from = line.from + line.text.indexOf('(');
   const made = state.field(classicLine)?.made;
   const kept = made && made.to - 2 > made.from ? { from: made.from, to: made.to - 2 } : null;
@@ -289,7 +268,7 @@ function pushDown({ state, element, line }: Here): TransactionSpec {
   const from = line.from + (line.text.startsWith(BOM) ? 1 : 0);
   return {
     changes: { from, insert: state.lineBreak },
-    selection: { anchor: visibleStart(line, kind) + 1 },
+    selection: { anchor: visibleStart(state, line) + 1 },
   };
 }
 
@@ -305,10 +284,10 @@ export const classicEnter: StateCommand = key((state) => {
   // Task 9 opens the chooser here.
   if (element.pending || element.enter === null || element.enter === 'chooser') return {};
   const { kind } = element;
-  if (kind === 'parenthetical' || kind === 'page_break' || head >= visibleEnd(line)) {
+  if (kind === 'parenthetical' || kind === 'page_break' || head >= visibleEnd(state, line)) {
     return onward(here, element.enter, 'enter');
   }
-  if (head <= visibleStart(line, kind as ClassicKind)) return pushDown(here);
+  if (head <= visibleStart(state, line)) return pushDown(here);
   return split(here);
 });
 
@@ -372,7 +351,7 @@ export const classicShiftTab: StateCommand = key((state) => {
   }
   const above = elementAbove(state, line);
   // At the top it stays: Fountain's Shift+Tab would turn a name into action.
-  return above ? { selection: { anchor: visibleEnd(above) } } : {};
+  return above ? { selection: { anchor: visibleEnd(state, above) } } : {};
 });
 
 /** A break inside Action, with the `!` the line above it needs once a line follows (§4.2). */
@@ -411,7 +390,7 @@ const breakInside: StateCommand = key((state) => {
       effects: setStored.of({ kind: 'dialogue', made: null }),
     };
   }
-  if (head <= visibleStart(line, element.kind as ClassicKind)) return null;
+  if (head <= visibleStart(state, line)) return null;
   if (element.kind === 'action') return actionBreak(here);
   if (element.kind !== 'dialogue' || head < line.to || textUnder(state, line)) return null;
   return {

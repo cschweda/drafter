@@ -18,7 +18,7 @@ import { classicEditor, type } from './harness';
 const PLAY = builtins['stage-play-standard'] as Template;
 
 const cursorTo = (state: EditorState, pos: number) =>
-  state.update({ selection: { anchor: pos }, userEvent: 'select' }).state;
+  state.update({ selection: { anchor: pos }, userEvent: 'select.pointer' }).state;
 
 const element = (state: EditorState) => elementAt(state) as ClassicElement;
 

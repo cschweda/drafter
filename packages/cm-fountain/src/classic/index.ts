@@ -1,9 +1,29 @@
 import { type Extension, Prec } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
+import {
+  classicArrows,
+  classicBackspace,
+  classicCaret,
+  classicDelete,
+  classicEnd,
+  classicHome,
+  keepHiddenMarks,
+} from './caret';
 import { classicEnter, classicShiftEnter, classicShiftTab, classicTab } from './keys';
 import { classicLine, keepLineInHistory } from './line';
 import { classicMarks, tidyLeft } from './marks';
 
+export {
+  classicArrows,
+  classicBackspace,
+  classicCaret,
+  classicDelete,
+  classicEnd,
+  classicHome,
+  keepHiddenMarks,
+  passedOver,
+} from './caret';
+export { type HiddenSpan, hiddenSpans, visibleEnd, visibleStart } from './hidden';
 export {
   choosePending,
   classicEnter,
@@ -37,6 +57,14 @@ const classicKeys = Prec.highest(
     { key: 'Tab', run: classicTab },
     { key: 'Shift-Tab', run: classicShiftTab },
     { key: 'Shift-Enter', run: classicShiftEnter },
+    { key: 'ArrowUp', run: classicArrows[0] },
+    { key: 'ArrowDown', run: classicArrows[1] },
+    { key: 'Backspace', run: classicBackspace, shift: classicBackspace },
+    { key: 'Delete', run: classicDelete },
+    { key: 'Home', mac: 'Cmd-ArrowLeft', run: classicHome },
+    { mac: 'Ctrl-a', run: classicHome },
+    { key: 'End', mac: 'Cmd-ArrowRight', run: classicEnd },
+    { mac: 'Ctrl-e', run: classicEnd },
   ]),
 );
 
@@ -47,5 +75,14 @@ export interface ClassicOptions {
 
 /** Classic Mode: Enter and Tab typing over plain Fountain. Each part is added here as it is built. */
 export function classic(_options: ClassicOptions = {}): Extension {
-  return [classicKeys, classicMarks, tidyLeft, classicLine, keepLineInHistory];
+  // Filters run last to first, and the caret reads what tidying left.
+  return [
+    classicKeys,
+    classicCaret,
+    keepHiddenMarks,
+    classicMarks,
+    tidyLeft,
+    classicLine,
+    keepLineInHistory,
+  ];
 }

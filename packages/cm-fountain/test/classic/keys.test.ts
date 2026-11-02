@@ -3,6 +3,7 @@ import { EditorSelection, EditorState } from '@codemirror/state';
 import { makeElement, parsedDoc } from '@drafter/cm-fountain';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
+import { visibleStart } from '../../src/classic/hidden';
 import {
   choosePending,
   classicEnter,
@@ -10,7 +11,6 @@ import {
   classicShiftEnter,
   classicShiftTab,
   classicTab,
-  visibleStart,
 } from '../../src/classic/keys';
 import { type ClassicKind, classicEdit, elementAt, setStored } from '../../src/classic/line';
 import { apply, BOM, run } from '../helpers';
@@ -871,10 +871,11 @@ describe('what a key leaves reads right', () => {
     ]);
 
     test('dialogue has no mark: a leading . is its words', () => {
-      expect(visibleStart(classicEditor('x').doc.line(1), 'dialogue')).toBe(0);
-      const line = classicEditor('.5 cal').doc.line(1);
-      expect(visibleStart(line, 'dialogue')).toBe(0);
-      expect(visibleStart(line, 'scene_heading')).toBe(1);
+      const speech = classicEditor('JUNE\n.5 cal');
+      const line = speech.doc.line(2);
+      expect(visibleStart(speech, line)).toBe(line.from);
+      const heading = classicEditor('.5 cal');
+      expect(visibleStart(heading, heading.doc.line(1))).toBe(1);
     });
 
     test('a byte-order mark comes before the mark', () => {

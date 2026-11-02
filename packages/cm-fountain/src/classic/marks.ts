@@ -1,4 +1,6 @@
 import {
+  Annotation,
+  type AnnotationType,
   ChangeSet,
   EditorState,
   type Extension,
@@ -20,6 +22,7 @@ import { appChange, parsedDoc } from '../state';
 import {
   BLANK_SPEECH,
   type ClassicKind,
+  classicEdit,
   classicLine,
   lineKindAt,
   mapSpan,
@@ -332,6 +335,9 @@ export function settleLine(
   }
 }
 
+/** On a move that took a made line with it, so the place it lands is read from the new text. */
+export const classicTidied: AnnotationType<true> = Annotation.define<true>();
+
 /** The one change that turns `from` into `to`, in a text where they start at `at`. */
 function difference(from: string, to: string, at: number) {
   const most = Math.min(from.length, to.length);
@@ -392,7 +398,14 @@ export const tidyLeft: Extension = EditorState.transactionFilter.of((tr) => {
   const mark = held.madeMark && mapSpan(held.madeMark, tr.changes);
   // The line goes whole, with anything but words left on it.
   const whole = { from: made.from, to: Math.max(made.to, line.to) };
-  return [tr, { changes: [whole, ...(mark ? [mark] : [])], sequential: true }];
+  return [
+    tr,
+    {
+      changes: [whole, ...(mark ? [mark] : [])],
+      annotations: classicTidied.of(true),
+      sequential: true,
+    },
+  ];
 });
 
 const kindsOf = (kind: ClassicKind) => ({ kind, arrivedAs: kind });
@@ -417,6 +430,12 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
   if (!typed || head < typed.line.from || head > typed.line.to) return tr;
   const { line } = typed;
   if (blocked(state, line.from)) return tr;
+  // A `)` typed against the `)` that's there goes past it (§6.4).
+  if (typed.from === head && tr.newDoc.sliceString(typed.from, typed.to) === ')') {
+    if (state.sliceDoc(head, head + 1) === ')' && state.selection.main.empty) {
+      return { selection: { anchor: head + 1 }, annotations: classicEdit.of(true) };
+    }
+  }
 
   const held = state.field(classicLine, false);
   const own: StoredLine =
