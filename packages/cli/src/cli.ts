@@ -3,6 +3,7 @@ import { readFile, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, extname, resolve } from 'node:path';
 import { MAX_SCRIPT_BYTES } from '@drafter/archive';
+import { Refused, readCapped, reason } from '@drafter/archive/node';
 import { type Doc, parse, toJSON } from '@drafter/fountain';
 import { type Layout, paginate, UnsupportedTemplateError } from '@drafter/layout';
 import { DEFAULT_WORDS_PER_MINUTE } from '@drafter/outline';
@@ -21,7 +22,7 @@ import {
 import { builtins, loadTemplate, type Template, TemplateError } from '@drafter/templates';
 import { Command, CommanderError } from 'commander';
 import pkg from '../package.json' with { type: 'json' };
-import { ConvertError, type ConvertOptions, convert, Refused, readCapped, reason } from './convert';
+import { ConvertError, type ConvertOptions, convert } from './convert';
 
 /** Where the CLI reads and writes: the process's own streams, or a test's. */
 export interface IO {

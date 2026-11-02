@@ -16,7 +16,7 @@ function file(url) {
 }
 
 export async function resolve(specifier, context, next) {
-  const own = /^@drafter\/([a-z-]+)(?:\/(notes|words))?$/.exec(specifier);
+  const own = /^@drafter\/([a-z-]+)(?:\/(notes|words|node))?$/.exec(specifier);
   if (own) {
     const url = new URL(`${own[1]}/src/${own[2] ?? entry(own[1])}.ts`, PACKAGES);
     if (existsSync(fileURLToPath(url))) return { url: url.href, shortCircuit: true };

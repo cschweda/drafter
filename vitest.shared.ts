@@ -44,6 +44,11 @@ export default defineConfig({
         find: /^@drafter\/markdown\/(notes|words)$/,
         replacement: fileURLToPath(new URL('./packages/markdown/src/$1.ts', import.meta.url)),
       },
+      // The archive's Node-only subpath, from source.
+      {
+        find: /^@drafter\/archive\/node$/,
+        replacement: fileURLToPath(new URL('./packages/archive/src/node.ts', import.meta.url)),
+      },
       ...packages.map((name) => ({
         find: new RegExp(`^@drafter/${name}$`),
         replacement: fileURLToPath(

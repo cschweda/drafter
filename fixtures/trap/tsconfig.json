@@ -8,6 +8,7 @@
     "baseUrl": ".",
     "paths": {
       "@drafter/cli": ["../../packages/cli/src/cli.ts"],
+      "@drafter/archive/node": ["../../packages/archive/src/node.ts"],
       "@drafter/*": ["../../packages/*/src/index.ts"]
     }
   },

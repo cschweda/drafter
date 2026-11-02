@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- The command line's hardened file reader and the desktop app's Windows path rules now live in `@drafter/archive/node`, a Node-only part of the archive package, so Drafter for Claude can share them. The reader can also refuse a link in the last part of a path and a file swapped after it was checked. Nothing the CLI prints changes.
 - The design for **Drafter for Claude** (`docs/drafter-for-claude-design.md`) is approved, to be built for v0.24.2.
 - DEFERRED's list of flaky CI tests notes the Linux AppImage self-update test, which failed once on the v0.24.1 tag and passed on its rerun.
 - Every pull request's browser tests are now required, on macOS and Linux, split across four runners each (about 15 minutes, from 55); each test that missed on GitHub's runners was traced to its cause and fixed.
