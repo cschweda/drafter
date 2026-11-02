@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- The design for **Drafter for Claude** (`docs/drafter-for-claude-design.md`) is approved, to be built for v0.24.2.
 - DEFERRED's list of flaky CI tests notes the Linux AppImage self-update test, which failed once on the v0.24.1 tag and passed on its rerun.
 - Every pull request's browser tests are now required, on macOS and Linux, split across four runners each (about 15 minutes, from 55); each test that missed on GitHub's runners was traced to its cause and fixed.
 

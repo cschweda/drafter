@@ -1,6 +1,6 @@
 # Drafter for Claude — Design
 
-**Status:** designed 2026-11-01, not yet built. Planned for **v0.24.2**, after Story map (v0.24.1) and before Classic Mode (v0.25.0). The roadmap entry is in [ROADMAP.md](ROADMAP.md) and the README's Roadmap. The maintainer reviewed two samples, both local and not committed: a storyboard of one scene, and a session showing a writer using Claude with Drafter for Claude on an invented script. They are described in words here, so this document stands alone.
+**Status:** designed 2026-11-01; approved by the maintainer 2026-11-02 ("sample session looks great"), with the calls in §11 as written. Publishing to npm waits on the maintainer's npm account and the `@drafter` scope; until then the bundle ships on the GitHub Release. Planned for **v0.24.2**, after Story map (v0.24.1) and before Classic Mode (v0.25.0). The roadmap entry is in [ROADMAP.md](ROADMAP.md) and the README's Roadmap. The maintainer reviewed two samples, both local and not committed: a storyboard of one scene, and a session showing a writer using Claude with Drafter for Claude on an invented script. They are described in words here, so this document stands alone.
 
 **Asked for (maintainer, 2026-11-01), in their words:**
 - "is it worth creating an mcp server for this that can be used in Claude or other LLMs to look at the exported files and, say, create a story board or give additional analysis that the app itself doesn't give? Or give insights across a series of files?"
