@@ -39,6 +39,7 @@ const NUL = 'That path has a character no file name can hold.';
 const ABSOLUTE = 'Give a path that starts with one of your folders, not a full path.';
 const BACKSLASH = 'Use / between the parts of a path, not \\.';
 const BAD_PART = 'A path can’t have an empty part, “.”, or “..”.';
+const HIDDEN = 'Drafter for Claude doesn’t read hidden files or folders.';
 
 /** `/x`, `\x`, `//server`, `\\server`, `C:`, `C:\`, `C:x`: anything not relative to a folder. */
 const ABSOLUTE_PATH = /^([\\/]|[A-Za-z]:)/;
@@ -57,6 +58,8 @@ export function pathProblem(rel: string, platform: NodeJS.Platform): string | nu
   if (platform !== 'win32' && rel.includes('\\')) return BACKSLASH;
   const parts = partsOf(rel, platform);
   if (parts.some((part) => part === '' || part === '.' || part === '..')) return BAD_PART;
+  // As walk skips them: a name starting with "." (.git, .hidden) is hidden, never read.
+  if (parts.some((part) => part.startsWith('.'))) return HIDDEN;
   if (platform === 'win32') {
     for (const part of parts) {
       const problem = windowsNameProblem(part);

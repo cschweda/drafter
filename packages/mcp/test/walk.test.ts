@@ -1,11 +1,14 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, symlinkSync } from 'node:fs';
+import { type Dirent, mkdirSync, symlinkSync } from 'node:fs';
+import * as fsPromises from 'node:fs/promises';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { resolvePath } from '../src/paths';
 import type { Root } from '../src/roots';
 import { WALK_LIMITS, walk } from '../src/walk';
 import { put, tempFolder } from './temp';
+
+vi.mock('node:fs/promises', { spy: true });
 
 const platform = process.platform;
 const skipLinks = platform === 'win32';
@@ -166,4 +169,38 @@ describe('walk', () => {
       'Scripts/Signal Hill – 101.fountain',
     ]);
   });
+
+  it.skipIf(skipLinks)(
+    'a file or folder that leads outside is dropped even when listed as no link',
+    async () => {
+      // As if a subfolder and a file were swapped for links after their folder was listed: the
+      // listing says "folder" and "file", but each really leads out of the root.
+      const { t, root } = scripts();
+      const s = join(t, 'Scripts');
+      put(join(s, 'kept.fountain'));
+      put(join(t, 'Elsewhere', 'secret.fountain'));
+      symlinkSync(join(t, 'Elsewhere'), join(s, 'Sub'));
+      symlinkSync(join(t, 'Elsewhere', 'secret.fountain'), join(s, 'swapped.fountain'));
+      const stale = (name: string, kind: 'folder' | 'file') =>
+        ({
+          name,
+          parentPath: s,
+          isDirectory: () => kind === 'folder',
+          isFile: () => kind === 'file',
+          isSymbolicLink: () => false,
+        }) as unknown as Dirent;
+      vi.mocked(fsPromises.readdir).mockImplementationOnce((async () => [
+        stale('kept.fountain', 'file'),
+        stale('Sub', 'folder'),
+        stale('swapped.fountain', 'file'),
+      ]) as unknown as typeof fsPromises.readdir);
+      vi.mocked(fsPromises.readdir).mockClear();
+      const { found } = await walk(root, true, platform);
+      expect(found.map((f) => [f.shown, f.real])).toEqual([
+        ['Scripts/kept.fountain', join(s, 'kept.fountain')],
+      ]);
+      // The folder outside is never even listed.
+      expect(vi.mocked(fsPromises.readdir).mock.calls.map(([dir]) => String(dir))).toEqual([s]);
+    },
+  );
 });

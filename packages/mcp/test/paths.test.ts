@@ -124,6 +124,30 @@ describe('pathProblem and resolvePath', () => {
     );
     expect(fsPromises.realpath).not.toHaveBeenCalled();
     expect(fsPromises.lstat).not.toHaveBeenCalled();
+    // The spy does see a path that is checked on disk.
+    await resolvePath('Scripts/Signal Hill/101.fountain', roots, platform, 'file');
+    expect(fsPromises.realpath).toHaveBeenCalledTimes(1);
+    expect(fsPromises.lstat).toHaveBeenCalledTimes(1);
+  });
+
+  it('a hidden file or folder is refused', async () => {
+    const { t, roots } = setUp();
+    put(join(t, 'Scripts', '.hidden', 'x.fountain'));
+    put(join(t, 'Scripts', '.git', 'config'));
+    const hidden = 'Drafter for Claude doesn’t read hidden files or folders.';
+    for (const path of [
+      'Scripts/.git/config',
+      'Scripts/.hidden/x.fountain',
+      'Scripts/.x.fountain',
+      '.Scripts/a',
+    ]) {
+      for (const system of ['linux', 'darwin', 'win32'] as const)
+        expect(pathProblem(path, system), `${path} on ${system}`).toBe(hidden);
+      expect(await refusal(resolvePath(path, roots, platform, 'file'))).toBe(hidden);
+    }
+    expect(pathProblem('Scripts\\.git\\config', 'win32')).toBe(hidden);
+    // A dot inside a name is ordinary.
+    expect(pathProblem('Scripts/Signal Hill/v1.2.fountain', 'linux')).toBeNull();
   });
 
   it.skipIf(skipLinks)('a link out of the folder is refused with the outside message', async () => {
