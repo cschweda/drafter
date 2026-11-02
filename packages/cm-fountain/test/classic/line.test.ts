@@ -199,6 +199,46 @@ describe('the stored line', () => {
     });
   });
 
+  test('a delete inside the line keeps it, and one across a break drops it', () => {
+    const chosen = type(
+      classicEditor('She waits.\n\n|').update({
+        effects: setStored.of({ kind: 'character', chosen: true }),
+      }).state,
+      'JU',
+    );
+    const end = chosen.doc.length;
+    const remove = (from: number, to: number, userEvent: string) =>
+      chosen.update({ changes: { from, to }, userEvent }).state;
+
+    // Backspace and Delete, and a word or a selection, down to an empty line.
+    for (const userEvent of ['delete.backward', 'delete.forward', 'delete.selection']) {
+      expect(remove(end - 1, end, userEvent).field(classicLine)).toMatchObject({
+        kind: 'character',
+        chosen: true,
+      });
+    }
+    const emptied = remove(end - 2, end, 'delete.backward');
+    expect(element(emptied)).toMatchObject({ kind: 'character', pending: true });
+
+    expect(
+      cursorTo(chosen, end - 2)
+        .update({
+          changes: { from: end - 3, to: end - 2 },
+          userEvent: 'delete.backward',
+        })
+        .state.field(classicLine),
+    ).toBeNull();
+    expect(
+      chosen
+        .update({
+          changes: { from: end - 1, to: end },
+          annotations: appChange.of(true),
+          userEvent: 'delete.backward',
+        })
+        .state.field(classicLine),
+    ).toBeNull();
+  });
+
   test('a stored mark or made line that is deleted goes', () => {
     const start = classicEditor('She waits.\n\n|').update({
       effects: setStored.of({

@@ -272,10 +272,23 @@ function mapLine(line: StoredLine, changes: ChangeDesc): StoredLine {
   };
 }
 
-/** Whether a change is the writer's typing or Classic Mode's own, which the stored line outlives. */
+/** Whether every change stays within one line, so the line it's on is still that line. */
+function staysOnLine(tr: Transaction): boolean {
+  let stays = true;
+  tr.changes.iterChanges((from, to, _fromB, _toB, inserted) => {
+    if (inserted.lines > 1 || tr.startState.doc.lineAt(from).to < to) stays = false;
+  });
+  return stays;
+}
+
+/**
+ * Whether a change is one the stored line outlives: Classic Mode's own, the writer's typing, or
+ * the writer's delete inside the line, so a typo fixed in a name is still a name.
+ */
 const keepsLine = (tr: Transaction) =>
   tr.annotation(classicEdit) === true ||
-  (!tr.annotation(appChange) && tr.isUserEvent('input.type'));
+  (!tr.annotation(appChange) &&
+    (tr.isUserEvent('input.type') || (tr.isUserEvent('delete') && staysOnLine(tr))));
 
 /** What the effects of a transaction make of the line, in the positions of the new text. */
 function applyEffects(line: StoredLine | null, tr: Transaction): StoredLine | null {
