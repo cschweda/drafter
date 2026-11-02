@@ -117,6 +117,33 @@ function mapOf(names: ReadonlySet<string>): { list: string[]; map: NameMap } {
 }
 
 /** Each name `map` finds in `text`: where it starts, and just past its last word. */
+/** The longest written name checked against the text as a whole (a real name is far shorter). */
+const WRITTEN_MAX = 80;
+
+/** Whether `text` holds `upper` (in capitals) at `at`, ignoring case: one character at a time. */
+function heldAt(text: string, at: number, upper: string): boolean {
+  if (at + upper.length > text.length) return false;
+  for (let k = 0; k < upper.length; k++) {
+    const c = text[at + k] as string;
+    if (c !== upper[k] && c.toUpperCase() !== upper[k]) return false;
+  }
+  return true;
+}
+
+/** Per list of names, worked out once: each in capitals (none past WRITTEN_MAX) and its words. */
+const NAMES_INFO = new WeakMap<readonly string[], { upper: string[]; lengths: number[] }>();
+function namesInfo(names: readonly string[]): { upper: string[]; lengths: number[] } {
+  let info = NAMES_INFO.get(names);
+  if (!info) {
+    info = {
+      upper: names.map((n) => (n.length <= WRITTEN_MAX ? n.toUpperCase() : '')),
+      lengths: names.map((n) => Math.max(1, tokens(n).length)),
+    };
+    NAMES_INFO.set(names, info);
+  }
+  return info;
+}
+
 function nameRuns(
   text: string,
   map: NameMap,
@@ -125,20 +152,18 @@ function nameRuns(
   const words = tokens(text);
   const out: Array<{ character: number; from: number; to: number }> = [];
   let w = 0;
+  const { upper, lengths } = namesInfo(names);
   matchNames(text, map, (character, at) => {
     while (w < words.length && (words[w] as { at: number }).at < at) w++;
-    const length = Math.max(1, tokens(names[character] ?? '').length);
+    const length = lengths[character] ?? 1;
     const last = words[w + length - 1] ?? words[w];
     let to = last ? last.at + last.word.length : at;
     // The name as written, marks and all (`NELL <THE KEEPER>`): when the text holds it whole at
-    // the match, the mention runs to its end, so no part of the name is read as the hook.
-    const written = names[character] ?? '';
-    if (
-      written.length > to - at &&
-      text.slice(at, at + written.length).toUpperCase() === written.toUpperCase()
-    ) {
-      to = at + written.length;
-    }
+    // the match, the mention runs to its end, so no part of the name is read as the hook. Compared
+    // a character at a time, stopping at the first difference, and only for names of at most
+    // WRITTEN_MAX characters, so a long padded name said many times stays linear.
+    const written = upper[character] ?? '';
+    if (written.length > to - at && heldAt(text, at, written)) to = at + written.length;
     out.push({ character, from: at, to });
   });
   return out;

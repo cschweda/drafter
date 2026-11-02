@@ -292,8 +292,15 @@ function quotesOf(
     const at = byKey.get(quoteKey(c.text));
     return at !== undefined && quotes[at]?.cue !== c.cue;
   };
+  // Each speaker's candidates, grouped once.
+  const bySpeaker = new Map<string, typeof candidates>();
+  for (const c of candidates) {
+    const list = bySpeaker.get(c.character);
+    if (list) list.push(c);
+    else bySpeaker.set(c.character, [c]);
+  }
   for (const character of characters) {
-    const mine = candidates.filter((c) => c.character === character.key);
+    const mine = bySpeaker.get(character.key) ?? [];
     const line = signatureLines(mine, elsewhere).get(character.key);
     if (!line) continue;
     const key = quoteKey(line.text);
