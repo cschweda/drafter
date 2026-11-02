@@ -141,13 +141,13 @@ jobs:
             tar -tzf "npm-mcp/drafter-mcp-$version.tgz"
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: drafter-mcp
           retention-days: 14
           if-no-files-found: error
           path: release-mcp/*
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: drafter-mcp-npm
           retention-days: 14
@@ -171,7 +171,7 @@ jobs:
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
           cat latest-linux.yml
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: desktop-linux
           retention-days: 14
@@ -279,7 +279,7 @@ jobs:
         env:
           DRAFTER_E2E_REUSE_WEB: "1"
         run: xvfb-run -a -s "$XVFB_SCREEN" pnpm --filter @drafter/desktop e2e
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: desktop-test-results
@@ -370,7 +370,7 @@ jobs:
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
           cat latest.yml
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: desktop-windows
           retention-days: 14
@@ -423,7 +423,7 @@ jobs:
         env:
           DRAFTER_E2E_REUSE_WEB: "1"
         run: pnpm --filter @drafter/desktop e2e
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: desktop-test-results-windows
@@ -484,7 +484,7 @@ jobs:
         env:
           DRAFTER_E2E_REUSE_WEB: "1"
         run: pnpm --filter @drafter/desktop e2e
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: desktop-test-results-mac
