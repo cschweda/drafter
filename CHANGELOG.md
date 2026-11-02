@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.24.2] - 2026-11-02
+
+**Drafter for Claude.** A local, read-only MCP server, `drafter-mcp`, lets Claude Desktop, Claude Code, or any app that speaks MCP read the scripts, drafts, and cuts in folders you choose: ten tools and seven prompts (storyboard, shot list, reader’s notes, character arc, ideas from cuts, continuity, previously on). It only reads, judges every file by what is inside it as Open does, leaves notes and the boneyard out unless asked, and keeps every answer under 40,000 characters; Drafter itself never calls an AI. Get it with `npx -y drafter-mcp@0.24.2 --folder …`, or the file on this release with its SHA-256. Also: a click on a note shows it in the Source, Check for updates shows that it is working, and drafter.dev (the website only) measures visits with Plausible.
+
 ### Added
 
 - **Drafter for Claude**: a local, read-only MCP server, so Claude Desktop, Claude Code, or any other app that speaks MCP can read the scripts, drafts, and cuts in folders you choose, for storyboards, reader’s notes, and insights across a series. Ten tools (`list_scripts`, `script_overview`, `read_scene`, `character_lines`, `list_drafts`, `compare_drafts`, `list_cuts`, `search_scripts`, `story_map`, and `series_overview`) and seven prompts (`storyboard`, `shot_list`, `readers_notes`, `character_arc`, `ideas_from_cuts`, `continuity`, and `previously_on`). It only reads, and only the folders named with `--folder`; notes and the boneyard are left out unless you ask, and Drafter itself still never calls an AI. Get it with `npx -y drafter-mcp@0.24.2` in your AI app’s settings, or download `drafter-mcp-0.24.2.js` from the GitHub Release and check it against its SHA-256. The new help page, **Drafter for Claude**, says how in plain words, with Copy buttons for each configuration; it is in Help, the help index, and the desktop app’s Help menu.
@@ -1185,7 +1189,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.24.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.24.2...HEAD
+[0.24.2]: https://github.com/cschweda/drafter/compare/v0.24.1...v0.24.2
 [0.24.1]: https://github.com/cschweda/drafter/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/cschweda/drafter/compare/v0.23.3...v0.24.0
 [0.23.3]: https://github.com/cschweda/drafter/compare/v0.23.2...v0.23.3

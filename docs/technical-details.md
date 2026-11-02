@@ -194,7 +194,7 @@ The desktop app is the same Drafter, in a window of its own, with a menu bar and
 
 ## Security
 
-Drafter never runs anything in a file it opens. A script is read as text, and your words are shown as words, never as web code. There is no account, no server that keeps your scripts, no cookies, no analytics, and no tracking: your files stay on your device. Every file is checked against size limits before anything in it is unpacked, and a file Drafter can’t read is refused with a plain message, never half-opened.
+Drafter never runs anything in a file it opens. A script is read as text, and your words are shown as words, never as web code. There is no account, no server that keeps your scripts, no cookies, and no tracking of you: your files stay on your device (drafter.dev measures visits with Plausible, cookie-free analytics; the desktop app sends nothing). Every file is checked against size limits before anything in it is unpacked, and a file Drafter can’t read is refused with a plain message, never half-opened.
 
 Drafter is tested against a set of deliberately broken and hostile files, the trap documents: 262 of them, for every format it opens, each with the one outcome it must have. A problem with Drafter’s security is reported privately, through GitHub (SECURITY.md says how).
 

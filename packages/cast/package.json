@@ -1,6 +1,6 @@
 {
   "name": "@drafter/cast",
-  "version": "0.24.1",
+  "version": "0.24.2",
   "description": "Who is in each scene of a Drafter script, where each scene is, and each character's and each location's figures.",
   "license": "MIT",
   "type": "module",

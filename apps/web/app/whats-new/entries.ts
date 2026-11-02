@@ -52,7 +52,24 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
     title: 'Drafter for Claude: let your AI app read your scripts',
     text: 'Drafter for Claude lets Claude Desktop, Claude Code, or another AI app read the scripts, drafts, and cuts in folders you choose, for storyboards, reader’s notes, and insights across a series. It only reads, and Drafter itself never calls an AI.',
     link: { href: '/docs/drafter-for-claude/', label: 'Drafter for Claude' },
-    banner: false,
+    banner: true,
+  },
+  {
+    id: 'v0.24.2-plausible',
+    date: '2026-11-02',
+    version: '0.24.2',
+    kind: 'New',
+    title: 'drafter.dev measures visits with Plausible',
+    text: 'The website now counts visits with Plausible, privacy-focused analytics with no cookies and nothing that identifies you; it never sees your script. The downloaded desktop app has no analytics at all.',
+    link: { href: '/docs/privacy/#analytics', label: 'Privacy' },
+  },
+  {
+    id: 'v0.24.2-note-click',
+    date: '2026-11-02',
+    version: '0.24.2',
+    kind: 'Improved',
+    title: 'A click on a note shows where it is',
+    text: 'Clicking a note in the Notes list scrolls the Source to its line and marks it for a moment, with line numbers on or off. Check for updates also shows that it’s working, and says when a new version is downloading.',
   },
 
   {
