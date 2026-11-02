@@ -130,7 +130,7 @@ Everything uses `state.lineBreak`, so a file with CRLF stays CRLF, and a byte-or
 
 ### 4.2 Forcing marks
 
-Each line in Classic Mode has an element (§5). After every keystroke on the line, in the **same transaction**, Classic Mode asks: would the parser read this text as this element? If yes, no mark. If no, it adds the mark, which is hidden. So the file is right at every moment, including at an autosave, the Script pane never disagrees for a moment, and one undo takes the letter and its mark together.
+Each line in Classic Mode has an element (§5). After every keystroke on the line, in the **same transaction**, Classic Mode asks: would the parser read this text as this element? If yes, no mark. If no, it adds the mark, which is hidden. So the file is right at every moment, including at an autosave, the Script pane never disagrees for a moment, and one undo takes the letter and its mark together. **One exception (maintainer, 2026-11-02):** a line made by Enter or Tab inside a speech, while the cursor is on it. Until a letter is typed there, the text under it reads as Action. The first letter heals that, as the line then continues the speech with one break, and leaving takes the line away (§4.4). The mode switch and the save paths should tidy such a line too (Tasks 10 and 12).
 
 | The writer is in | And types | The parser alone reads | Written |
 |---|---|---|---|

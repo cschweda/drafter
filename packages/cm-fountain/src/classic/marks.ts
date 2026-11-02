@@ -18,9 +18,9 @@ import { inNote, upperFix } from '../input';
 import { BOM } from '../keymap';
 import { appChange, parsedDoc } from '../state';
 import {
+  BLANK_SPEECH,
   type ClassicKind,
   classicLine,
-  HOLD,
   lineKindAt,
   mapSpan,
   pendingAt,
@@ -387,7 +387,7 @@ export const tidyLeft: Extension = EditorState.transactionFilter.of((tr) => {
   if (!made) return tr;
   const line = tr.newDoc.lineAt(from);
   const empty = isBlank(line.text) && line.number < tr.newDoc.lines;
-  if (!empty && line.text !== HOLD && line.text.trim() !== '()') return tr;
+  if (!empty && line.text.trim() !== '()') return tr;
   const mark = held.madeMark && mapSpan(held.madeMark, tr.changes);
   return [tr, { changes: [made, ...(mark ? [mark] : [])], sequential: true }];
 });
@@ -424,13 +424,17 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
           from: line.from,
           ...kindsOf(lineKindAt(state, line) ?? pendingAt(state, line.from)),
         };
-  const added = own.added.flatMap((span) => mapSpan(span, tr.changes) ?? []);
-
   // The capitals, on the typed text alone, then the mark for the text they make.
   const rawText = tr.newDoc.sliceString(
     line.from,
     line.to + tr.changes.newLength - tr.changes.length,
   );
+  // Words typed on a blank speech line take its place, wherever the caret stood in the two spaces.
+  const spaces =
+    line.text === BLANK_SPEECH && rawText.trim()
+      ? [line.from, line.from + 1].map((from) => ({ from, to: from + 1 }))
+      : own.added;
+  const added = spaces.flatMap((span) => mapSpan(span, tr.changes) ?? []);
   const bare = without(rawText, line.from, added);
   const element = headingOrTransition(state, line, bare, own) ?? own.arrivedAs;
   const fix =

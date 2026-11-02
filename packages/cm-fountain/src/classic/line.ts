@@ -143,7 +143,7 @@ interface Place {
 /** Where Enter and Tab go from `kind` at a place. An element off the row joins it at its start. */
 export function nextFrom(kind: ClassicKind, place: Place): NextPlace {
   if (place.empty) {
-    if (kind === 'dialogue') return NEXT.pendingDialogue;
+    if (kind === 'dialogue' || (kind === 'lyric' && place.inSpeech)) return NEXT.pendingDialogue;
     const row: readonly ClassicKind[] = place.headings ? NEXT.row.screenplay : NEXT.row.play;
     return { enter: 'chooser', tab: row[(row.indexOf(kind) + 1) % row.length] as ClassicKind };
   }
@@ -182,11 +182,8 @@ export function pendingAt(state: EditorState, pos: number): ClassicKind {
   return above >= 0 && cueIndex(doc.blocks, above) >= 0 ? 'character' : 'action';
 }
 
-/**
- * Two spaces hold a speech together (§4.1), so a key that opens a line inside a speech writes them
- * and counts them in `added`: the first letter takes them, and until then the line is empty.
- */
-export const HOLD = '  ';
+/** A deliberate blank line of a speech (§4.1): Fountain's two spaces, made with Shift+Enter. */
+export const BLANK_SPEECH = '  ';
 
 /** Whether nothing on a line says what it is, so it has a pending element. */
 function isEmpty(state: EditorState, line: Line): boolean {
@@ -262,8 +259,8 @@ export function elementAt(state: EditorState): ClassicElement | null {
           (blockAt(doc, line.from)?.block.kind === 'note' ? 'note' : 'boneyard'));
     return { kind, pending: false, soft: false, enter: null, tab: null };
   }
+  const empty = isEmpty(state, line);
   const own = stored(state);
-  const empty = isEmpty(state, line) || (!!own?.made && line.text === HOLD);
   const found = blockAt(doc, line.from);
   const kind = own?.kind ?? (found ? readKind(state, found.block) : pendingAt(state, line.from));
   const below = line.number < state.doc.lines ? state.doc.line(line.number + 1) : null;

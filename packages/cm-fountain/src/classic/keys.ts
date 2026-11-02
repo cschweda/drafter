@@ -12,12 +12,12 @@ import { blocked, elementStructure, isBlank, underSpeech } from '../elements';
 import { BOM, command } from '../keymap';
 import { insideRegion, parsedDoc, regionAt } from '../state';
 import {
+  BLANK_SPEECH,
   type ClassicElement,
   type ClassicKind,
   classicEdit,
   classicLine,
   elementAt,
-  HOLD,
   lineKindAt,
   NEXT,
   setStored,
@@ -71,7 +71,7 @@ const softAction = (state: EditorState) => state.facet(elementStructure)().headi
 function visibleEnd({ from, to, text }: Line): number {
   const trimmed = text.trimEnd();
   return trimmed.trimStart().startsWith('>') && trimmed.endsWith('<')
-    ? from + trimmed.length - 1
+    ? from + trimmed.slice(0, -1).trimEnd().length
     : to;
 }
 
@@ -79,7 +79,7 @@ function visibleEnd({ from, to, text }: Line): number {
 const UNMARKED: ReadonlySet<ClassicKind> = new Set<ClassicKind>(['dialogue', 'parenthetical']);
 
 /** A mark at the start of a line, after any spaces. */
-const LINE_MARK = /^\s*(?:[!@~>]|\.(?=[\p{L}\p{N}])|#+\s*|=\s*)/u;
+const LINE_MARK = /^\s*(?:[!@~>]\s*|\.(?=[\p{L}\p{N}])|#+\s*|=\s*)/u;
 
 /** Where the words of a line of `kind` start: after a byte-order mark and a hidden mark. */
 export function visibleStart({ from, text }: Line, kind: ClassicKind): number {
@@ -97,38 +97,15 @@ function textUnder({ doc }: EditorState, line: Line): boolean {
   return line.number < doc.lines && !isBlank(doc.line(line.number + 1).text);
 }
 
-/** A line opened at `at` in a speech: a break and two spaces, so what's under stays the speech. */
-function heldLine(at: number, state: EditorState, kind: ClassicKind, chosen: boolean) {
-  const insert = state.lineBreak + HOLD;
-  return {
-    changes: { from: at, insert },
-    selection: { anchor: at + 3 },
-    effects: setStored.of({
-      kind,
-      chosen,
-      made: { from: at, to: at + 3 },
-      added: [{ from: at + 1, to: at + 3 }],
-    }),
-  };
-}
-
-/** Takes an empty `()` away, keeping its line: pending Dialogue. What made the line stays made. */
+/**
+ * Takes an empty `()` away, keeping its line: pending Dialogue. What made the line stays made, and
+ * with a speech under it the line is made here, so leaving it can't cut the speech.
+ */
 function removeParens({ state, line }: Here): TransactionSpec {
   const from = line.from + line.text.indexOf('(');
   const made = state.field(classicLine)?.made;
-  // A speech under it stays one: the line is held, and goes with its break if it's left.
-  if (textUnder(state, line)) {
-    return {
-      changes: { from: line.from, to: line.to, insert: HOLD },
-      selection: { anchor: line.from + 2 },
-      effects: setStored.of({
-        kind: 'dialogue',
-        made: { from: made?.from ?? line.from - 1, to: line.from + 2 },
-        added: [{ from: line.from, to: line.from + 2 }],
-      }),
-    };
-  }
-  const left = made && made.to - 2 > made.from ? { from: made.from, to: made.to - 2 } : null;
+  const kept = made && made.to - 2 > made.from ? { from: made.from, to: made.to - 2 } : null;
+  const left = textUnder(state, line) ? { from: made?.from ?? line.from - 1, to: from } : kept;
   return {
     changes: { from, to: from + 2 },
     selection: { anchor: from },
@@ -136,19 +113,13 @@ function removeParens({ state, line }: Here): TransactionSpec {
   };
 }
 
-/** Writes `()` on the cursor's empty line, the cursor inside, in place of any two spaces there. */
-function writeParens({ state, line, head }: Here): TransactionSpec {
-  const start = line.text === HOLD ? line.from : head;
-  const to = line.text === HOLD ? line.to : head;
-  const from = state.field(classicLine)?.made?.from ?? start;
+/** Writes `()` on the cursor's empty line, the cursor inside. */
+function writeParens({ state, head }: Here): TransactionSpec {
+  const from = state.field(classicLine)?.made?.from ?? head;
   return {
-    changes: { from: start, to, insert: '()' },
-    selection: { anchor: start + 1 },
-    effects: setStored.of({
-      kind: 'parenthetical',
-      made: { from, to: start + 2 },
-      added: [],
-    }),
+    changes: { from: head, insert: '()' },
+    selection: { anchor: head + 1 },
+    effects: setStored.of({ kind: 'parenthetical', made: { from, to: head + 2 } }),
   };
 }
 
@@ -174,11 +145,31 @@ function arriving(state: EditorState, kind: ClassicKind, by: Key, made: Span | n
 const isFirm = (kind: ClassicKind, by: Key) =>
   (WRITES.firm[by] as readonly ClassicKind[]).includes(kind);
 
-/** Whether a line is all note or boneyard. Under a name the parser keeps it in the speech's block. */
+/** Whether a line is all notes or boneyard. Under a name the parser keeps them in the speech's block. */
 function isAllNote(state: EditorState, line: Line): boolean {
-  const start = line.from + line.text.length - line.text.trimStart().length;
-  const region = regionAt(state.field(parsedDoc), start + 1);
-  return !!region && region.span.to >= line.from + line.text.trimEnd().length;
+  const doc = state.field(parsedDoc);
+  const end = line.from + line.text.trimEnd().length;
+  let at = line.from + line.text.length - line.text.trimStart().length;
+  while (at < end) {
+    // A region counts as holding `pos` only past its opening.
+    const region = regionAt(doc, at + 1);
+    if (!region) return false;
+    at = region.span.to;
+    while (at < end && /\s/.test(state.sliceDoc(at, at + 1))) at++;
+  }
+  return true;
+}
+
+/**
+ * One break at `at`, and the cursor on the line it makes. Inside a speech that line cuts the speech
+ * until a letter is typed on it, and leaving takes it away (§4.2's one exception).
+ */
+function openLine(state: EditorState, at: number, kind: ClassicKind, by: Key): TransactionSpec {
+  return {
+    changes: { from: at, insert: state.lineBreak },
+    selection: { anchor: at + 1 },
+    effects: arriving(state, kind, by, { from: at, to: at + 1 }),
+  };
 }
 
 /**
@@ -218,15 +209,7 @@ function onward(here: Here, kind: ClassicKind, by: Key): TransactionSpec {
     };
   }
   if (writes === 'break') {
-    // An empty line here would cut the speech under it, even for a moment.
-    if (textUnder(state, line) && underSpeech(state, doc.line(line.number + 1).from)) {
-      return heldLine(line.to, state, kind, isFirm(kind, by));
-    }
-    return {
-      changes: { from: line.to, insert: lineBreak },
-      selection: { anchor: line.to + 1 },
-      effects: arriving(state, kind, by, { from: line.to, to: line.to + 1 }),
-    };
+    return openLine(state, line.to, kind, by);
   }
   // One blank line above and below the new one, and never a second: blank lines there already count.
   const { blanks, text } = blanksBelow(state, line);
@@ -302,7 +285,7 @@ function split({ state, element, line, head }: Here): TransactionSpec | null {
 function pushDown({ state, element, line }: Here): TransactionSpec {
   const kind = element.kind as ClassicKind;
   const speech = (kind === 'dialogue' || kind === 'lyric') && underSpeech(state, line.from);
-  if (speech) return heldLine(line.from - 1, state, 'dialogue', false);
+  if (speech) return openLine(state, line.from - 1, 'dialogue', 'enter');
   const from = line.from + (line.text.startsWith(BOM) ? 1 : 0);
   return {
     changes: { from, insert: state.lineBreak },
@@ -382,7 +365,7 @@ export const classicShiftTab: StateCommand = key((state) => {
   const { element, line } = here;
   if (isEmptyParens(here)) return removeParens(here);
   if (element.pending) {
-    if (element.kind === 'dialogue' && underSpeech(state, line.from)) return backOut(here);
+    if (element.tab === 'parenthetical' && underSpeech(state, line.from)) return backOut(here);
     return {
       effects: setStored.of({ kind: rowBefore(state, element.kind as ClassicKind), chosen: true }),
     };
@@ -423,7 +406,7 @@ const breakInside: StateCommand = key((state) => {
     // Text straight under would join the speech.
     if (textUnder(state, line)) return null;
     return {
-      changes: { from: line.from, to: line.to, insert: HOLD },
+      changes: { from: line.from, to: line.to, insert: BLANK_SPEECH },
       selection: { anchor: line.from + 2 },
       effects: setStored.of({ kind: 'dialogue', made: null }),
     };

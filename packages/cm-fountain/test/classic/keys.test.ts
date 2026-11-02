@@ -78,7 +78,7 @@ describe('§6.1, a line with text, cursor at its end', () => {
       'Dialogue, an earlier line: Enter gives a new line of the speech',
       'JUNE\nHello.|\nAgain.',
       'Enter',
-      'JUNE\nHello.\n  |\nAgain.',
+      'JUNE\nHello.\n|\nAgain.',
     ],
     [
       'Dialogue, an earlier line: Tab gives a Parenthetical',
@@ -694,52 +694,51 @@ describe('what a key leaves reads right', () => {
         'Enter at the start of a speech line opens a line above it',
         'JUNE\n|Hello.',
         'Enter',
-        'JUNE\n  |\nHello.',
+        'JUNE\n|\nHello.',
       ],
-      ['Shift+Enter there too', 'JUNE\n|Hello.', 'Shift-Enter', 'JUNE\n  |\nHello.'],
-      ['Enter at the start of a lyric in a speech', 'JUNE\n~|La', 'Enter', 'JUNE\n  |\n~La'],
+      ['Shift+Enter there too', 'JUNE\n|Hello.', 'Shift-Enter', 'JUNE\n|\nHello.'],
+      ['Enter at the start of a lyric in a speech', 'JUNE\n~|La', 'Enter', 'JUNE\n|\n~La'],
       [
         'Enter on a Parenthetical with speech below',
         'JUNE\n(soft|ly)\nHello.',
         'Enter',
-        'JUNE\n(softly)\n  |\nHello.',
+        'JUNE\n(softly)\n|\nHello.',
       ],
       [
         'Tab on a Parenthetical with speech below',
         'JUNE\n(soft|ly)\nHello.',
         'Tab',
-        'JUNE\n(softly)\n  |\nHello.',
+        'JUNE\n(softly)\n|\nHello.',
       ],
-      ['Enter on a lyric with speech below', 'JUNE\n~La|\nHi.', 'Enter', 'JUNE\n~La\n  |\nHi.'],
+      ['Enter on a lyric with speech below', 'JUNE\n~La|\nHi.', 'Enter', 'JUNE\n~La\n|\nHi.'],
       [
         'Shift+Enter at the end of dialogue with speech below',
         'JUNE\nHi.|\nAgain.',
         'Shift-Enter',
-        'JUNE\nHi.\n  |\nAgain.',
+        'JUNE\nHi.\n|\nAgain.',
       ],
-      ['Enter in an empty () with speech under', 'JUNE\n(|)\nHello.', 'Enter', 'JUNE\n  |\nHello.'],
-      ['Tab in an empty () with speech under', 'JUNE\n(|)\nHello.', 'Tab', 'JUNE\n  |\nHello.'],
+      ['Enter in an empty () with speech under', 'JUNE\n(|)\nHello.', 'Enter', 'JUNE\n|\nHello.'],
+      ['Tab in an empty () with speech under', 'JUNE\n(|)\nHello.', 'Tab', 'JUNE\n|\nHello.'],
       [
         'Shift+Tab in an empty () with speech under',
         'JUNE\n(|)\nHello.',
         'Shift-Tab',
-        'JUNE\n  |\nHello.',
+        'JUNE\n|\nHello.',
       ],
-      ['Tab on the held line writes ()', 'JUNE\nHi.|\nAgain.', 'Tab', 'JUNE\nHi.\n(|)\nAgain.'],
     ]);
 
     test.each([
-      ['JUNE\n(soft|ly)\nHello.', 'Enter'],
-      ['JUNE\nHi.|\nAgain.', 'Enter'],
-      ['JUNE\n|Hello.', 'Enter'],
-      ['JUNE\n(|)\nHello.', 'Enter'],
-    ])('%s with %s reads as a speech at once', (marked, press) => {
-      const after = kinds(keys(classicEditor(marked), press));
+      ['JUNE\n(soft|ly)\nHello.'],
+      ['JUNE\nHi.|\nAgain.'],
+      ['JUNE\n|Hello.'],
+      ['JUNE\n(|)\nHello.'],
+    ])('the first letter on the line %s opens heals the speech', (marked) => {
+      const after = kinds(keys(classicEditor(marked), 'Enter', 'x'));
       expect(after).not.toContain('action');
       expect(after[0]).toBe('character');
     });
 
-    test('the held line is pending Dialogue', () => {
+    test('the new line is pending Dialogue', () => {
       const state = keys(classicEditor('JUNE\nHi.|\nAgain.'), 'Enter');
       expect(elementAt(state)).toMatchObject({
         kind: 'dialogue',
@@ -748,12 +747,73 @@ describe('what a key leaves reads right', () => {
       });
     });
 
-    test('the first letter takes the two spaces, in its own transaction', () => {
+    test('the first letter continues the speech with one break', () => {
       const state = keys(classicEditor('JUNE\nHi.|\nAgain.'), 'Enter', 'S');
       expect(render(state)).toBe('JUNE\nHi.\nS|\nAgain.');
     });
 
-    test('a lyric held in a speech gets its ~ with the first letter', () => {
+    const left = (state: EditorState, anchor = 0, userEvent = 'select.pointer') =>
+      state.update({ selection: { anchor }, userEvent }).state;
+    const SPEECH = 'JUNE\nHi.|\nAgain.';
+    const ORIGINAL = 'JUNE\nHi.\nAgain.';
+
+    test('Enter, a letter, Backspace, and leaving give the text back', () => {
+      const typed = keys(classicEditor(SPEECH), 'Enter', 'x');
+      const { head } = typed.selection.main;
+      const gone = typed.update({
+        changes: { from: head - 1, to: head },
+        userEvent: 'delete.backward',
+      }).state;
+      expect(left(gone).sliceDoc()).toBe(ORIGINAL);
+    });
+
+    test('Enter and leaving give the text back', () => {
+      expect(left(keys(classicEditor(SPEECH), 'Enter')).sliceDoc()).toBe(ORIGINAL);
+    });
+
+    test('Enter, ArrowLeft, and typing lose nothing', () => {
+      const state = keys(classicEditor(SPEECH), 'Enter');
+      const moved = left(state, state.selection.main.head - 1, 'select');
+      expect(render(type(moved, 'x'))).toBe('JUNE\nHi.x|\nAgain.');
+    });
+
+    test('a lyric’s new line, Tab, and a letter write no mark into the speech', () => {
+      const state = keys(classicEditor('JUNE\n~La|\nHi.'), 'Enter', 'Tab', 'x');
+      expect(render(state)).toBe('JUNE\n~La\n(x|)\nHi.');
+    });
+
+    test('Shift+Tab off a lyric’s new line goes back, with the line', () => {
+      const state = keys(classicEditor('JUNE\n~La|\nHi.'), 'Enter', 'Shift-Tab');
+      expect(render(state)).toBe('JUNE\n~La|\nHi.');
+    });
+
+    test('Shift+Enter twice, then a letter, replaces the spaces', () => {
+      const state = keys(classicEditor('JUNE\nHi.|'), 'Shift-Enter', 'Shift-Enter', 'x');
+      expect(render(state)).toBe('JUNE\nHi.\nx|');
+    });
+
+    test('a letter between the two spaces is kept, and they go', () => {
+      const state = keys(classicEditor('JUNE\n|'), 'Shift-Enter');
+      const between = state.update({ selection: { anchor: state.doc.length - 1 } }).state;
+      expect(render(type(between, 'x'))).toBe('JUNE\nx|');
+    });
+
+    test('two spaces in a file are replaced the same way', () => {
+      expect(render(type(classicEditor('JUNE\nHi.\n  |\nAgain.'), 'x'))).toBe(
+        'JUNE\nHi.\nx|\nAgain.',
+      );
+    });
+
+    test('a space typed on them keeps them', () => {
+      expect(type(classicEditor('JUNE\n  |'), ' ').sliceDoc()).toBe('JUNE\n   ');
+    });
+
+    test('a deliberate blank speech line stays when it’s left', () => {
+      const state = keys(classicEditor('JUNE\n|'), 'Shift-Enter');
+      expect(left(state).sliceDoc()).toBe('JUNE\n  ');
+    });
+
+    test('a lyric’s new line in a speech gets its ~ with the first letter', () => {
       const state = keys(classicEditor('JUNE\n~La|\nHi.'), 'Enter', 'oh');
       expect(render(state)).toBe('JUNE\n~La\n~oh|\nHi.');
     });
@@ -764,7 +824,13 @@ describe('what a key leaves reads right', () => {
       expect(left.sliceDoc()).toBe('JUNE\nHello.');
     });
 
-    test('a held line left is gone, and Shift+Tab leaves it too', () => {
+    test('Tab on the new line writes ()', () => {
+      expect(render(keys(classicEditor('JUNE\nHi.|\nAgain.'), 'Enter', 'Tab'))).toBe(
+        'JUNE\nHi.\n(|)\nAgain.',
+      );
+    });
+
+    test('a new line left is gone, and Shift+Tab leaves it too', () => {
       const state = keys(classicEditor('JUNE\nHi.|\nAgain.'), 'Enter');
       const left = state.update({ selection: { anchor: 0 }, userEvent: 'select.pointer' }).state;
       expect(left.sliceDoc()).toBe('JUNE\nHi.\nAgain.');
@@ -792,6 +858,11 @@ describe('what a key leaves reads right', () => {
       ['>|THE END<', '>|THE END<', 'Enter', '\n>|THE END<'],
       ['~|La', '~|La', 'Enter', '\n~|La'],
       ['before the mark', '|@JUNE\nHi.', 'Enter', '\n@|JUNE\nHi.'],
+      ['> |THE END <', '> |THE END <', 'Enter', '\n> |THE END <'],
+      ['> THE END| <', '> THE END| <', 'Enter', '> THE END <\n\n|'],
+      ['@ |JUNE', '@ |JUNE\nHi.', 'Enter', '\n@ |JUNE\nHi.'],
+      ['~ |La', '~ |La', 'Enter', '\n~ |La'],
+      ['! |BANG', 'A.\n\n! |BANG', 'Enter', 'A.\n\n\n! |BANG'],
       ['Shift+Enter, !|BANG', '!|BANG', 'Shift-Enter', '\n!|BANG'],
     ]);
 
