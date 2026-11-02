@@ -5,6 +5,7 @@ import {
   editor,
   openSettings,
   palette,
+  pasteText,
   runCommand,
   setText,
   settingsDialog,
@@ -105,6 +106,30 @@ const SHORT =
 async function cursorOn(page: Page, line: string) {
   await editor(page).locator('.cm-line', { hasText: line }).first().click();
   await page.keyboard.press('Home');
+}
+
+/** Where the Source and the Script pane are scrolled to. */
+const scrollTops = (page: Page) =>
+  page.evaluate(() =>
+    ['.cm-scroller', '.script-host'].map((s) => document.querySelector(s)?.scrollTop ?? null),
+  );
+
+/**
+ * Waits for the Source and the Script pane to come to rest: Ctrl+Home scrolls the Source, and the
+ * Script pane follows once its layout has drawn (sync scrolling), which on a slow machine is a
+ * while later. At rest is the same place three times running, 150 ms apart.
+ */
+async function panesAtRest(page: Page) {
+  const seen: string[] = [];
+  await expect
+    .poll(
+      async () => {
+        seen.push(JSON.stringify(await scrollTops(page)));
+        return seen.length >= 3 && new Set(seen.slice(-3)).size === 1;
+      },
+      { intervals: [150] },
+    )
+    .toBe(true);
 }
 
 /** Scrolls `selector` with the mouse wheel, as a reader does. */
@@ -285,8 +310,9 @@ test.describe('going there, and where you are', () => {
       requestAnimationFrame(frame);
     });
     await start(page);
-    // A long script, so its layout takes a moment after the load.
-    await setText(page, longScript(200));
+    // A long script, so its layout takes a moment after the load; pasted, as typing 200 scenes in
+    // takes most of a minute on a shared runner.
+    await pasteText(page, longScript(200));
     await paged(page);
     await expect(strip(page).getByRole('button')).toHaveCount(200);
     await page.waitForTimeout(1500);
@@ -332,10 +358,8 @@ test.describe('going there, and where you are', () => {
     await page.keyboard.press('ControlOrMeta+Home');
     await expect(tabStop(page)).toHaveCount(1);
     await expect(tabStop(page)).toHaveAccessibleName(/^Scene 1/);
-    const scrolls = () =>
-      page.evaluate(() =>
-        ['.cm-scroller', '.script-host'].map((s) => document.querySelector(s)?.scrollTop ?? null),
-      );
+    const scrolls = () => scrollTops(page);
+    await panesAtRest(page);
     const before = await scrolls();
     await tabStop(page).focus();
     expect(await focusedName(page)).toMatch(/^Scene 1, INT\. KITCHEN/);
@@ -427,6 +451,8 @@ test.describe('going there, and where you are', () => {
     await expect(marker).toBeVisible();
     await expect(marker).toHaveAttribute('aria-hidden', 'true');
     const left = () => marker.evaluate((el) => el.getBoundingClientRect().left);
+    // From the top: the Script pane has followed Ctrl+Home there.
+    await panesAtRest(page);
     const before = await left();
     await wheel(page, '.script-host', 4000);
     await expect.poll(left).toBeGreaterThan(before + 20);

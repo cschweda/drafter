@@ -14,7 +14,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { fileNameFor } from '../app/storage/text';
 import { openExported } from './exported';
 import { bytesOf, cancelNextPick, failWrites, picks, removePickers, stubPickers } from './fs-stub';
-import { chooseExport, setText } from './modules';
+import { chooseExport, pasteText, setText } from './modules';
 
 const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 // pdf-lib and pdfjs are render-pdf's, so they are found from there.
@@ -378,7 +378,13 @@ test.describe('a Markdown document’s PDF', () => {
     );
   });
 
-  test('exports a 100-page document in the worker', async ({ page, browserName, isMobile }) => {
+  // Named for its limit: a fixed time limit is the release gate's, not a shared runner's (DECISIONS,
+  // 2026-11-01 and 2026-11-02), and "within" keeps it off the pull-request run.
+  test('exports a 100-page document in the worker, within 20 seconds', async ({
+    page,
+    browserName,
+    isMobile,
+  }) => {
     test.skip(browserName !== 'chromium' || !!isMobile, 'the budget is measured in Chromium');
     // The export itself fails only past 20 s (a hang guard; the budget is 3 s on the maintainer's
     // machine, Markdown PDF design §8); the rest of the test has time for the paste.
@@ -386,9 +392,8 @@ test.describe('a Markdown document’s PDF', () => {
     await start(page);
     await runCommand(page, 'New Markdown document');
     await expect(editor(page)).toContainText('# Untitled');
-    await editor(page).click();
-    await page.keyboard.press('ControlOrMeta+A');
-    await page.keyboard.insertText(longDocument());
+    // Pasted, as a writer brings in a long document: typing it in isn't what is measured here.
+    await pasteText(page, longDocument());
     // The editor draws only what is on screen; the window's title is the first heading.
     await expect(page).toHaveTitle(/The Long Document — Drafter$/);
     await exportButton(page).click();
@@ -422,9 +427,7 @@ test.describe('a Markdown document’s PDF', () => {
     await start(page);
     // The sample, with its body forty times over: some 60 pages.
     const body = SAMPLE.slice(SAMPLE.indexOf('# Act One'));
-    await editor(page).click();
-    await page.keyboard.press('ControlOrMeta+A');
-    await page.keyboard.insertText(`${SAMPLE}\n${`${body}\n`.repeat(40)}`);
+    await pasteText(page, `${SAMPLE}\n${`${body}\n`.repeat(40)}`);
     // The fonts come slowly, as on a slow connection: the export's first stage can't say how far
     // it is, and lasts long enough to watch.
     await page.route('**/fonts/courier-prime/*.ttf', async (route) => {

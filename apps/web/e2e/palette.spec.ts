@@ -357,6 +357,9 @@ test.describe('the command palette', () => {
       expect(await violations(page), 'with a query').toEqual([]);
       await query(page).fill('zzzz');
       await expect(palette(page)).toContainText('Nothing matches');
+      // Nothing is highlighted once the list has emptied: for a moment after, the input still names
+      // the option that was (Reka's listbox clears it a tick later), which axe reads as invalid.
+      await expect(query(page)).not.toHaveAttribute('aria-activedescendant', /./);
       expect(await violations(page), 'with nothing found').toEqual([]);
     });
   }

@@ -59,7 +59,9 @@ describe('pnpm drafter, from the repository root', () => {
     expect(pnpmDrafter('check', 'samples/stage-play.fountain').stdout).toContain(
       '(stage-play-standard)',
     );
-  });
+    // Seven runs of `pnpm drafter`, each a new Node process: about 4.3 s on a shared runner, too
+    // near Vitest's 5 s default (it timed out there). This is not a timing test.
+  }, 30_000);
 
   it('converts a Final Draft file and a Highland file to Fountain', () => {
     const fdx = join(dir(), 'Call.fdx');

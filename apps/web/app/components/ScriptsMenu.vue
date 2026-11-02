@@ -48,6 +48,10 @@ async function show(from: HTMLElement | null) {
     scripts.value = [];
   }
   await nextTick();
+  // Focus goes to the first item, unless the writer has already moved into the menu while its
+  // scripts were being read (on a slow machine, a moment): an item they reached keeps it.
+  const panel = root.value?.querySelector('#scripts-menu');
+  if (!open.value || panel?.contains(document.activeElement)) return;
   root.value?.querySelector<HTMLElement>('[data-first]')?.focus();
 }
 

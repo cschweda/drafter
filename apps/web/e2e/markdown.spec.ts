@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { files, nextFileName, picks, putFile, removePickers, stubPickers, textOf } from './fs-stub';
-import { showView } from './modules';
+import { pasteText, showView } from './modules';
 
 // Markdown is a document kind beside Fountain (Plan 4 Task 6). The accessibility test the plan
 // names is in a11y.spec.ts.
@@ -207,10 +207,9 @@ test.describe('a Markdown document', () => {
     await start(page);
     await newMarkdown(page);
     await showTab(page, 'Source');
-    await editor(page).click();
-    await page.keyboard.press('ControlOrMeta+A');
-    // A quote inside a quote, five thousand deep.
-    await page.keyboard.insertText(`${'>'.repeat(5_000)} x`);
+    // A quote inside a quote, five thousand deep. Pasted: typed in, the browser writes the line into
+    // the editable page itself first, which on a shared runner can take most of the time allowed.
+    await pasteText(page, `${'>'.repeat(5_000)} x`);
     await expect(editor(page)).not.toContainText('Untitled');
     await showTab(page, 'Preview');
     // Deeper than a document may nest (MAX_NESTING), it isn't parsed: every browser says so at once.
@@ -223,9 +222,7 @@ test.describe('a Markdown document', () => {
     // A document that can be drawn is drawn again. (Focused, not clicked: the editor finds a
     // click's place slowly on a line of five thousand marks.)
     await showTab(page, 'Source');
-    await editor(page).focus();
-    await page.keyboard.press('ControlOrMeta+A');
-    await page.keyboard.insertText('# Shallow again\n');
+    await pasteText(page, '# Shallow again\n');
     await showTab(page, 'Preview');
     await expect(preview(page).getByRole('heading', { name: 'Shallow again' })).toBeVisible({
       timeout: 30_000,

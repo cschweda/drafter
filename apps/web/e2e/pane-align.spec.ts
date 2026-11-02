@@ -162,8 +162,14 @@ test.describe('a first visit', () => {
         const line = document.querySelector('.cm-line') as HTMLElement;
         return Math.round(line.getBoundingClientRect().top - scroller.getBoundingClientRect().top);
       });
-    await expect.poll(below).toBeLessThanOrEqual(16);
-    expect(await below()).toBeGreaterThanOrEqual(0);
+    // The first visit opened at the first scene heading, so Ctrl+Home scrolls up to the top: wait
+    // for the line to be in that band, not merely above its bottom (it starts far above it).
+    await expect
+      .poll(async () => {
+        const top = await below();
+        return top >= 0 && top <= 16 ? 'in the padding' : top;
+      })
+      .toBe('in the padding');
     const script = page.locator('.script-host');
     if (await script.isVisible()) {
       await expect.poll(() => script.evaluate((el) => el.scrollTop)).toBe(0);

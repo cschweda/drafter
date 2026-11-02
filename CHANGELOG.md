@@ -9,6 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - DEFERRED's list of flaky CI tests notes the Linux AppImage self-update test, which failed once on the v0.24.1 tag and passed on its rerun.
+- Every pull request's browser tests are now required, on macOS and Linux, split across four runners each (about 15 minutes, from 55); each test that missed on GitHub's runners was traced to its cause and fixed.
+
+### Fixed
+
+- On Linux, text is drawn at its true widths (the element bar kept Transition folded at 1280, and a Script page at 100% was 8.85 inches wide); the Inspector's header could fold and unfold for ever at some widths, and close its ⋯ panel by itself; Escape from History could leave focus in the editor; and the Drafter and Open menus could shift under a click or the keyboard just after opening.
 
 ## [0.24.1] - 2026-11-01
 

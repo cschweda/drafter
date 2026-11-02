@@ -295,9 +295,22 @@ function applyFold() {
  * narrower than this later lost a tool, not a label, so the fitting starts over.
  */
 let compactWidth = -1;
+/**
+ * Marks the tools box `data-fitting` while a fitting is under way: it takes a frame or more (the
+ * labels back, then icon-only, then folds), and a tool drawn in between may yet fold. The browser
+ * tests wait for it to go before they look for a tool.
+ */
+let fittingNow = false;
+function fitting(on: boolean) {
+  fittingNow = on;
+  toolsBox.value?.toggleAttribute('data-fitting', on);
+  // The panel "⋯" opened closes once nothing is folded, as the fitting ends: not while it is under
+  // way, when every tool comes back for a frame to be measured, or a fitting would close it.
+  if (!on && !toolsFolded.value) toolsOpen.value = false;
+}
 function measure() {
   const header = head.value;
-  if (!inspector.value || !header) return;
+  if (!inspector.value || !header) return fitting(false);
   compactWidth = -1;
   const style = getComputedStyle(header);
   const room =
@@ -330,6 +343,7 @@ function measure() {
     foldedTools.value = 0;
     fit.value = Number.POSITIVE_INFINITY;
     applyFold();
+    fitting(true);
     void nextTick(measureSoon);
     return;
   }
@@ -356,12 +370,20 @@ function measure() {
     fit.value = n;
   }
   applyFold();
-  if (toolsCompact.value) compactWidth = toolsBox.value?.getBoundingClientRect().width ?? -1;
+  // Measured once drawn: "⋯" comes with the first fold, in the next render, and takes its room
+  // from the box when the header is full. Measured before it, the box would at once look narrower
+  // than this, as if a tool had gone, and the fitting would start over and fold again, frame after
+  // frame, for as long as the header stayed that width (seen on a shared macOS runner).
+  void nextTick(() => {
+    if (toolsCompact.value) compactWidth = toolsBox.value?.getBoundingClientRect().width ?? -1;
+    fitting(false);
+  });
 }
 
 let observer: ResizeObserver | undefined;
 let frame = 0;
 function measureSoon() {
+  fitting(true);
   cancelAnimationFrame(frame);
   frame = requestAnimationFrame(measure);
 }
@@ -375,6 +397,7 @@ function refit() {
   foldedTools.value = 0;
   fit.value = Number.POSITIVE_INFINITY;
   applyFold();
+  fitting(true);
   void nextTick(measureSoon);
 }
 let headWidth = -1;
@@ -386,8 +409,10 @@ onMounted(() => {
   observer = new ResizeObserver((entries) => {
     const header = entries.find((entry) => entry.target === head.value);
     const box = entries.find((entry) => entry.target === toolsBox.value);
-    if (header && Math.round(header.contentRect.width) !== headWidth) {
-      headWidth = Math.round(header.contentRect.width);
+    // A pixel or more: at a fractional width the header can move by a fraction as its tools fold,
+    // and rounding that (633.4 one frame, 633.6 the next) started the fitting over each time.
+    if (header && Math.abs(header.contentRect.width - headWidth) >= 1) {
+      headWidth = header.contentRect.width;
       refit();
     } else if (
       box &&
@@ -461,7 +486,7 @@ watch(toolsOpen, (open) => {
   }
 });
 watch(toolsFolded, (now) => {
-  if (!now) toolsOpen.value = false;
+  if (!now && !fittingNow) toolsOpen.value = false;
 });
 // The panel going while focus is in it (the header grew, and the tools came back out): focus goes
 // to the same tool in the header, else to "⋯", never to the page's body.

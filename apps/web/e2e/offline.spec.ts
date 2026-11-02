@@ -85,9 +85,13 @@ async function mark(page: Page) {
 }
 const reloaded = (page: Page) =>
   expect
-    .poll(() =>
-      // While the page is going away its context is gone: that is the reload under way.
-      page.evaluate(() => window.__marker).catch(() => undefined),
+    .poll(
+      () =>
+        // While the page is going away its context is gone: that is the reload under way.
+        page.evaluate(() => window.__marker).catch(() => undefined),
+      // Reload saves first and waits for the new version to take over the page: on a shared runner
+      // that took more than the default 5 seconds.
+      { timeout: 15_000 },
     )
     .toBe(undefined);
 const notReloaded = async (page: Page) => {

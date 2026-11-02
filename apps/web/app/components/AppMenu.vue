@@ -126,14 +126,23 @@ const items = computed<DropdownMenuItem[][]>(() => [
   [...entry('show-stats', 'i-lucide-chart-column'), ...entry('settings', 'i-lucide-settings')],
 ]);
 
-async function onOpen(open: boolean) {
-  if (!open) return;
+async function readRecent() {
   try {
     recent.value = (await script.scripts()).slice(0, RECENT);
   } catch {
     recent.value = [];
   }
 }
+async function onOpen(open: boolean) {
+  if (open) await readRecent();
+}
+// Read again whenever another script opens, not only as the menu opens: else the menu opens on the
+// list as it was when it last opened, and the read that follows moves its rows a moment later,
+// under a click on its way to one.
+watch(
+  () => script.project.value?.id,
+  () => void readRecent(),
+);
 </script>
 
 <template>

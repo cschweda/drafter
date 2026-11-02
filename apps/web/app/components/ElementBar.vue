@@ -349,7 +349,11 @@ const hereNames = computed(() => {
 });
 let canvas: CanvasRenderingContext2D | null | undefined;
 function textWidth(text: string, font: string): number {
-  if (canvas === undefined) canvas = document.createElement('canvas').getContext('2d');
+  if (canvas === undefined) {
+    canvas = document.createElement('canvas').getContext('2d');
+    // As the page draws its text (main.css): at true widths, not each letter on a whole pixel.
+    if (canvas && 'textRendering' in canvas) canvas.textRendering = 'geometricPrecision';
+  }
   if (!canvas) return 0;
   canvas.font = font;
   return canvas.measureText(text).width;
@@ -375,6 +379,8 @@ function followEdges() {
 function measure() {
   const el = toolbar.value;
   if (!el) return;
+  // Measured: the browser tests wait for this before they look at what folded.
+  el.removeAttribute('data-fitting');
   followEdges();
   if (!folds.value) {
     fold.value = 0;
@@ -449,6 +455,7 @@ let observer: ResizeObserver | undefined;
 let frame = 0;
 /** Measured in the next frame: never inside the observer's own callback (WebKit calls that a loop). */
 function measureSoon() {
+  toolbar.value?.setAttribute('data-fitting', '');
   cancelAnimationFrame(frame);
   frame = requestAnimationFrame(measure);
 }

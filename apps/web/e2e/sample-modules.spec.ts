@@ -256,7 +256,9 @@ test.describe('sample modules', () => {
     await editor(page).focus();
     await page.keyboard.press('ControlOrMeta+z');
     await expect.poll(() => textOf(page)).toBe(SCRIPT);
-    await page.keyboard.press('ControlOrMeta+Shift+z');
+    // Redo by the key's code, so Shift gives "Z" as a keyboard does: Playwright's 'Shift+z' sends a
+    // lowercase "z" with Shift held, which CodeMirror off a Mac reads as Ctrl+Z, Undo.
+    await page.keyboard.press('ControlOrMeta+Shift+KeyZ');
     await expect.poll(() => textOf(page)).toBe(expected);
   });
 

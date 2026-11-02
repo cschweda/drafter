@@ -91,6 +91,13 @@ const labelInput = ref<HTMLInputElement>();
 const label = ref('');
 /** Where focus was when History opened, given back when it closes. */
 let opener: HTMLElement | null = null;
+/**
+ * History is open, and its closing not yet handled. Escape can close it twice over: the browser's
+ * own close, and `close()` from the watch below once `historyOpen` is cleared by the cancel, when
+ * that runs first; each fires `close`. Only the first gives focus back, or the second, with the
+ * opener already let go, would send it to the editor (seen on a slow machine).
+ */
+let shown = false;
 
 watch(historyOpen, async (open) => {
   await nextTick();
@@ -109,6 +116,7 @@ watch(historyOpen, async (open) => {
     label.value = '';
     readWhy();
     el.showModal();
+    shown = true;
     el.focus();
     void draftsSession.load();
     await load();
@@ -151,6 +159,9 @@ function onCancel() {
 /** Set when focus goes elsewhere on closing (Restore puts it in the script). */
 let keepFocus = false;
 function onClose() {
+  // A close already handled, or one that comes late, after History opened again.
+  if (!shown || dialog.value?.open) return;
+  shown = false;
   historyOpen.value = null;
   menuFor.value = null;
   picking.value = null;

@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { longScript } from './long-script';
-import { editor, runCommand, setText, start, viewTool } from './modules';
+import { editor, runCommand, setText, start, stored, viewTool } from './modules';
 
 // The Stats tab's Character by scene (seeing-the-script design §4.4): a row per character and a
 // column per scene, each cell the character's speeches there, a dot where they are there and
@@ -242,7 +242,9 @@ test.describe('Character by scene', () => {
       'WREN: in 3 scenes. Speaks in 1, 3. Silent in 2.',
       'ODO: in 2 scenes. Speaks in 1, 2.',
     ]);
-    // Kept on this device: the next visit's Stats tab shows the List.
+    // Kept on this device: the next visit's Stats tab shows the List (once it is stored; the
+    // settings are written a moment after a change).
+    await expect.poll(async () => (await stored(page)).gridAsList).toBe(true);
     await page.reload();
     await expect(editor(page)).toBeAttached();
     await runCommand(page, 'Show stats');

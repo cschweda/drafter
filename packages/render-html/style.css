@@ -15,6 +15,9 @@
   font:
     12pt / 1 "Courier Prime",
     monospace;
+  /* The column is the font's 0.6em (9.6px at 12pt), not a whole pixel: Chromium on Linux otherwise
+     rounds each letter's advance, and 1ch with it, to 10px, and the page grows by a twenty-fifth. */
+  text-rendering: geometricPrecision;
 }
 
 .drafter-page {

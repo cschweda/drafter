@@ -772,7 +772,7 @@ test.describe('the accessibility tree', () => {
     await openCountsPanel(page);
     await countsPanel(page).getByRole('button', { name: '15 minutes', exact: true }).click();
     await expect(countsPanel(page)).toBeHidden();
-    await page.clock.runFor(15 * 60_000 + 1000);
+    await page.clock.fastForward(15 * 60_000 + 1000);
     await expect(page.locator('[data-sprint-notice]').getByRole('status')).toHaveText(/\S/);
   });
 });

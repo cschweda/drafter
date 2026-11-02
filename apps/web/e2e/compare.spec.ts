@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
+  clickViewTool,
   editor,
   expectTypingLeavesScript,
   runCommand,
@@ -73,14 +74,10 @@ async function onRow(page: Page, row: number, key: string) {
 
 /** Chooses the Pages view on Compare's slim bar. */
 async function showPages(page: Page) {
-  await (
-    await viewTool(
-      page,
-      comparePaneOf(page)
-        .getByRole('group', { name: 'View' })
-        .getByRole('button', { name: 'Pages' }),
-    )
-  ).click();
+  await clickViewTool(
+    page,
+    comparePaneOf(page).getByRole('group', { name: 'View' }).getByRole('button', { name: 'Pages' }),
+  );
 }
 
 /** A script at `before`, snapshotted, then changed to `after`, compared with now, as pages. */
@@ -93,6 +90,9 @@ async function compareWithNow(page: Page, before: string, after: string) {
   await onRow(page, 0, 'Enter');
   await expect(history(page)).toBeHidden();
   await expect(shownCompareTab(page)).toBeVisible();
+  // Compare takes focus once it is drawn (a moment later on a slow machine); a menu opened before
+  // would close as focus leaves it.
+  await expect(panel(page)).toBeFocused();
   await showPages(page);
   await expect(pages(page).first()).toBeVisible();
 }
@@ -247,6 +247,7 @@ test.describe('Compare', () => {
     await expect(choices.getByRole('button')).toHaveText(['Now', /, Taken by you$/, 'Cancel']);
     await choices.getByRole('button').nth(1).click();
     await expect(history(page)).toBeHidden();
+    await expect(panel(page)).toBeFocused();
     await showPages(page);
     await expect(pages(page).first()).toBeVisible();
     await expect(panel(page).locator('.compare-mark')).toHaveText(['added, A dog barks.']);

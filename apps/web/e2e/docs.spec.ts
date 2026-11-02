@@ -752,12 +752,13 @@ test.describe('from the app', () => {
   });
 
   test('lists the pages in the command palette', async ({ page }) => {
+    // Loaded once: the palette is opened again in the same tab for each page, as a writer would.
+    await start(page);
     for (const { title, path } of HELP_PAGES) {
-      await start(page);
       await page.keyboard.press('ControlOrMeta+k');
       await expect(palette(page)).toBeVisible();
       // The command's own words: "Story map" alone finds Export as Story map… first.
-      await page.keyboard.type(`Open the page: ${title}`);
+      await page.keyboard.insertText(`Open the page: ${title}`);
       // The page is the first match, and the highlighted one.
       await expect(palette(page).getByRole('option').first()).toContainText(
         `Open the page: ${title}`,

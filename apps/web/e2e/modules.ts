@@ -169,6 +169,33 @@ export async function setText(page: Page, text: string) {
 }
 
 /**
+ * Replaces the script with `text` as a writer's paste does: a `paste` event with the text on its
+ * clipboard, which CodeMirror reads and puts in with one change. For a long script: `insertText`
+ * has Chromium put the text into the editable page itself, line by line, before CodeMirror reads
+ * it back, which for 60 pages takes 6 seconds on a fast computer and a minute on a shared runner.
+ */
+export async function pasteText(page: Page, text: string) {
+  await showSource(page);
+  // Focused, not clicked: on a very long line the editor finds a click's place slowly.
+  await editor(page).focus();
+  await page.keyboard.press('ControlOrMeta+A');
+  await editor(page).evaluate((el, pasted) => {
+    const data = new DataTransfer();
+    data.setData('text/plain', pasted);
+    el.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
+    );
+  }, text);
+  // Firefox gives a made-up paste event an empty clipboard, so the paste only emptied the script:
+  // the text is typed into it instead.
+  if ((await wholeText(page)) !== text) {
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.insertText(text);
+  }
+  await expect.poll(() => wholeText(page)).toBe(text);
+}
+
+/**
  * Clicks `target`, a line of the Source or something in one, as a writer's click lands: scrolled
  * into view first, then two frames, then the click. Playwright's own click on a line off screen
  * scrolls and presses in the same frame, before the scroll event; CodeMirror's focus handler then
@@ -368,10 +395,13 @@ export async function viewTool(
   tool: Locator,
   { optional = false }: { optional?: boolean } = {},
 ): Promise<Locator> {
-  // The header is measured a frame after a view shows.
+  // The header is measured a frame after a view shows, and fitting it can take a few frames more
+  // (labels back, icon-only, then folds), while a tool drawn in between may yet fold: the tools box
+  // is `data-fitting` until it is done.
   await page.evaluate(
     () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
   );
+  await expect(page.locator('#inspector-tools[data-fitting]')).toHaveCount(0);
   if (await tool.isVisible()) return tool;
   const fold = page.getByRole('button', { name: 'More tools' });
   if ((await fold.isVisible()) && (await fold.getAttribute('aria-expanded')) !== 'true') {
@@ -379,6 +409,17 @@ export async function viewTool(
   }
   if (!optional) await expect(tool).toBeVisible();
   return tool;
+}
+
+/**
+ * Clicks `tool`, one of the Inspector's view tools, opening "⋯" first where it is folded there. The
+ * header can fit itself again a moment after a view shows (on a slow runner, after the tool was
+ * found), so the tool is found and clicked again until the click lands.
+ */
+export async function clickViewTool(page: Page, tool: Locator) {
+  await expect(async () => {
+    await (await viewTool(page, tool)).click({ timeout: 2_000 });
+  }).toPass();
 }
 
 /**

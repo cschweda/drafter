@@ -5,6 +5,7 @@ import {
   openSettings,
   setText,
   settingsDialog,
+  settled,
   showSource,
   start,
   stored,
@@ -563,10 +564,19 @@ test.describe('in the editor’s header', () => {
     await page.getByRole('menuitem', { name: /^Scene\b/ }).click();
     await expect(editor(page)).toBeFocused();
     expect(await textOf(page)).toBe('She waits.\n\nINT. KITCHEN - NIGHT');
+    // The menu gone (it fades out, and gives focus back to the editor as it goes), so that focus
+    // doesn't come back to the editor after the divider has it.
+    await expect(page.getByRole('menu')).toHaveCount(0);
     // Given room again, every button comes back out of More.
     const divider = page.getByRole('separator', { name: 'Resize panes' });
-    await divider.focus();
-    await page.keyboard.press('End');
+    // End on the divider gives the editor's pane its widest. Focus can still come back to the editor
+    // a moment after the menu's choice (its command puts it there), and End then goes to the text:
+    // the divider is focused again until it has moved.
+    await expect(async () => {
+      await divider.focus();
+      await page.keyboard.press('End');
+      await expect(divider).toHaveAttribute('aria-valuenow', '75', { timeout: 1000 });
+    }).toPass();
     await page.setViewportSize({ width: 1440, height: 800 });
     await editor(page).focus();
     await expect
@@ -754,6 +764,9 @@ test.describe('in the editor’s header', () => {
     const last = page.getByRole('banner').getByRole('button').last();
     await last.focus();
     await expect.poll(() => away(page)).toBe(true);
+    // Measured for 1024 (a frame or more after the resize; the bar is `data-fitting` until then).
+    await settled(page);
+    await expect(bar(page)).not.toHaveAttribute('data-fitting');
     const unseen = await drawn(bar(page));
     expect(unseen.length, 'something folds at 1024, while unseen too').toBeLessThan(8);
     let reached = false;

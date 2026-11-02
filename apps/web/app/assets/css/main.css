@@ -16,6 +16,16 @@
 body {
   background: var(--bg);
   color: var(--text);
+  /* Text at its true widths on every system. Chromium on Linux puts each letter on a whole pixel
+     (hinted, with no subpixel positioning), which made 12px Inter Tight about a tenth wider and
+     Courier Prime's 9.6px column 10px: the element bar and the Inspector's tools folded at widths
+     they fit on macOS and Windows, and a page at 100% was 8.85 inches wide, not 8.5. */
+  text-rendering: geometricPrecision;
+}
+
+/* The browser's own style sets form controls back to `auto`, and the bars are mostly buttons. */
+:where(button, input, select, textarea) {
+  text-rendering: inherit;
 }
 
 /* Tailwind's reset gives every element `margin: 0`, which takes from a modal <dialog> the automatic

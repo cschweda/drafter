@@ -40,6 +40,16 @@ test.describe('the toolbar at 320px', () => {
   test('keeps every button on the screen, in a 24px target, with the page unscrolled', async ({
     page,
   }) => {
+    // The top bar folds what doesn't fit a frame or more after it is drawn (later on a slow
+    // machine): measured once it has.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const bar = document.querySelector('header.toolbar') as HTMLElement;
+          return bar.scrollWidth - bar.clientWidth;
+        }),
+      )
+      .toBeLessThanOrEqual(0);
     const layout = await page.evaluate(() => {
       const bar = document.querySelector('header.toolbar') as HTMLElement;
       return {

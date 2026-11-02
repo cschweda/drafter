@@ -512,6 +512,8 @@ test.describe('Scene details', () => {
     await dialog.getByRole('textbox', { name: 'Goal' }).fill('Something else.');
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(dialog).toBeHidden();
+    // Focus back on the row (as after Escape) before its menu is opened again from it.
+    await expect(hall(page)).toBeFocused();
     expect(await textOf(page)).toBe(filled);
     dialog = await openDetails(page, hall(page), 'INT. HALL - DAY');
     await expect(dialog.getByRole('combobox', { name: 'Color' })).toHaveValue('teal');

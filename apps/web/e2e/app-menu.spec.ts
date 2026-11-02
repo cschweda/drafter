@@ -142,6 +142,7 @@ test.describe('the app menu', () => {
     // The recent scripts are in it, newest first; choosing one opens it.
     await openMenu(page);
     await expect(menu(page).getByText('Recent scripts')).toBeVisible();
+    await expect(item(page, /^Untitled Play \(open now\)/)).toBeVisible();
     await item(page, /^Untitled Screenplay/).click();
     await expect.poll(() => text(page)).toContain('Title: Untitled Screenplay');
 
