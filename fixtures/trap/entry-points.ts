@@ -62,7 +62,7 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
   {
     id: 'beside-read',
     what: 'Drafts and cuts read back from beside the work when it opens: the cuts file (`Boca.fountain.cuts.md`), its entries checked by their IDs and merged, and draft files (`Boca drafts/Boca – Draft 03.fountain`), their IDs checked against their text. They may have been edited anywhere (another computer, a text editor), so they are untrusted.',
-    code: 'apps/web/app/beside/read.ts (`readCutsBytes`, `readDraftBytes`) → @drafter/history (`readCutsFile`, `verifyCuts`, `mergeCuts`, `readDraftFile`)',
+    code: '@drafter/history (`readCutsBytes`, `readDraftBytes`; `readCutsFile`, `verifyCuts`, `mergeCuts`, `readDraftFile`)',
     harness: 'fixtures/trap/harness.test.ts',
   },
 ];

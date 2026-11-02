@@ -18,7 +18,7 @@ import {
 import { run } from '@drafter/cli';
 import { FdxError, fromFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
-import { mergeCuts } from '@drafter/history';
+import { mergeCuts, readCutsBytes, readDraftBytes, skippedLine } from '@drafter/history';
 import { paginate } from '@drafter/layout';
 import { NestedTooDeeply, parseMarkdown } from '@drafter/markdown';
 import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
@@ -30,7 +30,6 @@ import {
 } from '@drafter/story-map';
 import { builtins, type Template } from '@drafter/templates';
 import { currentWriter, readModulesFolder } from '../../../apps/desktop/src/module-folder';
-import { readCutsBytes, readDraftBytes, skippedLine } from '../../../apps/web/app/beside/read';
 import type { Happened } from '../check';
 
 setFlagsFromString('--expose-gc');
@@ -249,7 +248,7 @@ async function drafter(cwd: string, args: string[]) {
 const BESIDE_NOW = new Date('2026-11-01T12:00:00.000Z');
 
 /**
- * The app's reading of a file beside the work (apps/web/app/beside/read.ts): a cuts file's entries
+ * The app's reading of a file beside the work (packages/history/src/beside-read.ts): a cuts file's entries
  * checked and merged into none, given as their titles, one a line, with what the lists say was
  * left out; a draft file's text, with "changed outside Drafter" when its ID no longer holds.
  */

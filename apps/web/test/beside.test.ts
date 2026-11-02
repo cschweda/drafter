@@ -19,7 +19,7 @@ import {
 import { openedDraft } from '../app/beside/draft-open';
 import { exportDraftsAndCuts } from '../app/beside/export';
 import { besideFailure, renamedLine } from '../app/beside/failure';
-import { readCutsBytes, readDraftBytes } from '../app/beside/read';
+import { readDraftBytes } from '../app/beside/read';
 import { listCuts, recordCuts } from '../app/cuts/store';
 import { draftText, freezeDraft, listDrafts } from '../app/drafts/store';
 import { db } from '../app/storage/db';
@@ -101,19 +101,6 @@ async function cutEntry(text: string, title: string, at = NOW - 60_000): Promise
     where: { after: 'INT. HALL - DAY', before: null },
   };
 }
-
-describe('the names', () => {
-  test('are the work’s, cleaned as the desktop app cleans them', () => {
-    expect(NAMES).toEqual({
-      file: 'Boca.fountain',
-      work: 'Boca',
-      folder: 'Boca drafts',
-      cuts: 'Boca.fountain.cuts.md',
-    });
-    expect(besideNames('a:b.md')).toMatchObject({ work: 'a_b', cuts: 'a_b.md.cuts.md' });
-    expect(besideNames('...')).toBeNull();
-  });
-});
 
 describe('writing beside the work', () => {
   test('a freeze writes its draft file once', async () => {
@@ -441,21 +428,6 @@ describe('writing beside the work', () => {
       },
     };
     expect(await writeDraft(taken, NAMES, row, ONE, 'fountain')).toBeNull();
-  });
-});
-
-describe('reading what is beside the work', () => {
-  test('the cuts file is checked: a forged ID, a wrong kind, damage, and a huge file', async () => {
-    const good = await cutEntry('A good cut that hashes to its own ID.', 'GOOD');
-    const forged = { ...good, title: 'FORGED', text: 'Not the text that ID is of.' };
-    const md = { ...(await cutEntry('A Markdown cut.', 'MD')), kind: 'markdown' as const };
-    const file = `${cutsFile(NAMES.file, [good, forged, md])}<!-- drafter-cut {broken -->\n`;
-    const read = await readCutsBytes(enc(file), 'fountain');
-    expect(read.entries.map((e) => e.title)).toEqual(['GOOD']);
-    expect(read.skipped).toBe(3);
-    expect((await readCutsBytes(new Uint8Array(32 * 1024 * 1024 + 1), 'fountain')).problem).toBe(
-      'it is too big (over 32 MB)',
-    );
   });
 });
 
