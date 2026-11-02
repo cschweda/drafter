@@ -7,7 +7,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 /** What a cursor holds. */
 export interface CursorAt {
   tool: string;
-  /** The file (or folder) paged through, as the tool shows it. */
+  /** The file (or folder) paged through, as the tool shows it (the cursor holds its SHA-256). */
   path: string;
   mtimeMs: number;
   size: number;
@@ -38,13 +38,16 @@ export function argsHash(args: unknown): string {
   return createHash('sha256').update(canonical(args), 'utf8').digest('hex');
 }
 
+/** A path as a cursor keeps it: its SHA-256, so a long path can't make the cursor too long. */
+const pathKey = (path: string) => createHash('sha256').update(path, 'utf8').digest('base64url');
+
 const mac = (key: Uint8Array, body: string) => createHmac('sha256', key).update(body).digest();
 
 /** base64url(JSON) "." base64url(HMAC-SHA256(key, JSON)). */
 export function makeCursor(key: Uint8Array, at: CursorAt): string {
   const json = JSON.stringify({
     tool: at.tool,
-    path: at.path,
+    path: pathKey(at.path),
     mtimeMs: at.mtimeMs,
     size: at.size,
     args: at.args,
@@ -85,7 +88,7 @@ export function readCursor(
     at === null ||
     typeof at !== 'object' ||
     at.tool !== now.tool ||
-    at.path !== now.path ||
+    at.path !== pathKey(now.path) ||
     at.mtimeMs !== now.mtimeMs ||
     at.size !== now.size ||
     at.args !== now.args ||

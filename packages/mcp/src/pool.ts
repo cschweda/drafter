@@ -45,6 +45,9 @@ export class ReaderPool {
   #ready: Promise<Worker> | undefined;
   /** The call waiting on the worker, if any: there is only ever one. */
   #waiting: { id: number; done: (result: JobResult) => void } | undefined;
+  #closed = false;
+  /** Fails the start under way, if any. */
+  #failStart: (() => void) | undefined;
   #queue: Promise<unknown> = Promise.resolve();
   #nextId = 0;
 
@@ -61,14 +64,20 @@ export class ReaderPool {
     return result;
   }
 
+  /** Stops the reader; a call still waiting on it, on its start, or in line is refused with STOPPED. */
   async close(): Promise<void> {
+    this.#closed = true;
     const worker = this.#worker;
     this.#worker = undefined;
     this.#ready = undefined;
+    this.#failStart?.();
+    this.#failStart = undefined;
+    this.#waiting?.done({ refused: STOPPED });
     await worker?.terminate();
   }
 
   async #runOne(job: Job): Promise<JobResult> {
+    if (this.#closed) return { refused: STOPPED };
     if (this.#spec === 'inline') return handle(job, this.#data);
     try {
       return await this.#call(job);
@@ -99,6 +108,7 @@ export class ReaderPool {
     } finally {
       clearTimeout(startTimer);
     }
+    if (this.#closed) return { refused: STOPPED };
     worker.ref();
     return new Promise<JobResult>((resolve) => {
       const id = ++this.#nextId;
@@ -130,10 +140,13 @@ export class ReaderPool {
     this.#worker = worker;
     const mine = () => this.#worker === worker;
     this.#ready = new Promise<Worker>((resolve, reject) => {
+      this.#failStart = () => reject(new Error('the reader was stopped'));
       worker.on('message', (message: Message) => {
         if (!mine()) return;
-        if ('ready' in message) resolve(worker);
-        else if (this.#waiting?.id === message.id) this.#waiting.done(message.result);
+        if ('ready' in message) {
+          this.#failStart = undefined;
+          resolve(worker);
+        } else if (this.#waiting?.id === message.id) this.#waiting.done(message.result);
       });
       const gone = () => {
         if (!mine()) return;

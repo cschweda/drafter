@@ -111,6 +111,23 @@ describe('pathProblem and resolvePath', () => {
     expect(pathProblem('Scripts/Signal Hill/101.fountain', 'win32')).toBeNull();
   });
 
+  it('a line break or another control character in a path is refused', () => {
+    for (const bad of [
+      'Scripts/a\nb.fountain',
+      'Scripts/a\rb',
+      'Scripts/\tx',
+      'Scripts/a\u007f',
+      'Scripts/a\u2028b',
+      'Scripts/a\u2029b',
+      'Scripts/\u001b[31m',
+    ])
+      for (const platform of ['darwin', 'linux', 'win32'] as const)
+        expect(pathProblem(bad, platform)).toBe(
+          'That path has a line break or another control character in it.',
+        );
+    expect(pathProblem('Scripts/Élodie – 雪.fountain', 'darwin')).toBeNull();
+  });
+
   it('a 10,000-character path is refused before any disk access', async () => {
     const { roots } = setUp();
     const long = `Scripts/${'a'.repeat(9_992)}`;

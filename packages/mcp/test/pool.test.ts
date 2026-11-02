@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ReaderPool, TOO_LONG, type WorkerData } from '../src/pool';
+import { ReaderPool, STOPPED, TOO_LONG, type WorkerData } from '../src/pool';
 import type { ToolName } from '../src/tools/index';
 
 const SPIN = {
@@ -81,5 +81,24 @@ describe('the reader pool, in a program of its own', () => {
     expect(ran.signal).toBeNull();
     expect(ran.status).toBe(0);
     expect(JSON.parse(ran.stdout).ok.threadId).toBeGreaterThan(0);
+  });
+});
+
+describe('closing the reader pool', () => {
+  it('a call still running when the pool closes is refused, not left waiting', async () => {
+    const closing = new ReaderPool(SPIN, DATA, 60_000);
+    // Started once, so the next call is the one in flight.
+    await closing.run(job('thread'));
+    const spinning = closing.run(job('spin'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await closing.close();
+    expect(await spinning).toEqual({ refused: STOPPED });
+  });
+
+  it('a call waiting for the reader to start is refused too', async () => {
+    const closing = new ReaderPool(SPIN, DATA, 60_000);
+    const first = closing.run(job('thread'));
+    await closing.close();
+    expect(await first).toEqual({ refused: STOPPED });
   });
 });

@@ -13,9 +13,16 @@ if (isMainThread) {
       url: new URL(import.meta.url),
       execArgv: [],
     },
-  ).then((code) => {
-    process.exitCode = code;
-  });
+  ).then(
+    (code) => {
+      process.exitCode = code;
+    },
+    () => {
+      // Never the error itself: its stack and message may hold paths on disk.
+      console.error('drafter-mcp: couldn’t start.');
+      process.exitCode = 1;
+    },
+  );
 } else {
   runWorker();
 }

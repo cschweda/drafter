@@ -36,6 +36,14 @@ export const MAX_PATH_CHARS = 1_024;
 const EMPTY = 'Give a path that starts with one of your folders.';
 const TOO_LONG = 'That path is too long.';
 const NUL = 'That path has a character no file name can hold.';
+const CONTROL = 'That path has a line break or another control character in it.';
+/** C0 controls, DEL, and the line and paragraph separators: never in a tool's path. */
+const isControl = (code: number) =>
+  code < 0x20 || code === 0x7f || code === 0x2028 || code === 0x2029;
+const hasControl = (text: string) => {
+  for (let i = 0; i < text.length; i++) if (isControl(text.charCodeAt(i))) return true;
+  return false;
+};
 const ABSOLUTE = 'Give a path that starts with one of your folders, not a full path.';
 const BACKSLASH = 'Use / between the parts of a path, not \\.';
 const BAD_PART = 'A path can’t have an empty part, “.”, or “..”.';
@@ -54,6 +62,7 @@ export function pathProblem(rel: string, platform: NodeJS.Platform): string | nu
   if (rel === '') return EMPTY;
   if (rel.length > MAX_PATH_CHARS) return TOO_LONG;
   if (rel.includes('\0')) return NUL;
+  if (hasControl(rel)) return CONTROL;
   if (ABSOLUTE_PATH.test(rel)) return ABSOLUTE;
   if (platform !== 'win32' && rel.includes('\\')) return BACKSLASH;
   const parts = partsOf(rel, platform);

@@ -25,15 +25,21 @@ export { windowsNameProblem, windowsPathProblem } from './windows-paths';
 /** A file that isn't read (or converted), and why, in words. */
 export class Refused extends Error {}
 
-/** Why a file or folder couldn't be read or written, in words. */
+/**
+ * Why a file or folder couldn't be read or written, in words. Never the error's own message,
+ * which holds the full path on disk: an unknown error is named by its code only.
+ */
 export function reason(error: unknown): string {
-  const code = (error as { code?: string }).code;
+  const code = (error as { code?: unknown } | null)?.code;
   if (code === 'ENOENT') return 'no such file';
   if (code === 'EISDIR') return "it's a folder";
   if (code === 'EACCES' || code === 'EPERM') return 'permission denied';
   if (code === 'ENOTDIR') return "part of its path isn't a folder";
   if (code === 'ENOSPC') return 'the disk is full';
-  return (error as Error).message;
+  if (code === 'ENAMETOOLONG') return 'its name is too long';
+  if (code === 'ELOOP') return 'it is a loop of links';
+  if (typeof code === 'string' && /^E[A-Z0-9]{1,30}$/.test(code)) return `the system said ${code}`;
+  return 'something went wrong';
 }
 
 export interface ReadCappedOptions {

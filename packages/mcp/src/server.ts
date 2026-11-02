@@ -18,6 +18,21 @@ export interface ServerConfig {
   log?: (line: string) => void;
 }
 
+/**
+ * A line for standard error with every control character (C0, DEL, C1, and the line and
+ * paragraph separators) written as `\u{…}`, so nothing in a message can start a line of its own.
+ */
+export function logLine(text: string): string {
+  let line = '';
+  for (const c of text) {
+    const code = c.codePointAt(0) as number;
+    const control =
+      code < 0x20 || (code >= 0x7f && code <= 0x9f) || code === 0x2028 || code === 0x2029;
+    line += control ? `\\u{${code.toString(16)}}` : c;
+  }
+  return line;
+}
+
 /** Every tool only reads, and only the writer's folders (a hint for the app; §7 is the protection). */
 const ANNOTATIONS = {
   readOnlyHint: true,
@@ -45,7 +60,7 @@ export function createServer(config: ServerConfig): McpServer {
         const result = await config.pool.run({ tool: tool.name, args });
         if ('ok' in result) return ok(result.ok);
         // The message only: never a file's text.
-        config.log?.(`drafter-mcp: refused ${tool.name}: ${result.refused}`);
+        config.log?.(logLine(`drafter-mcp: refused ${tool.name}: ${result.refused}`));
         return refused(result.refused, result.extra);
       },
     );

@@ -104,7 +104,19 @@ describe('readCapped', () => {
 describe('reason', () => {
   test('puts codes in words', () => {
     expect(reason({ code: 'ENOENT' })).toBe('no such file');
-    expect(reason(new Error('odd'))).toBe('odd');
+  });
+
+  test('never says the error’s own message, which holds the path', () => {
+    const error = Object.assign(new Error("ENAMETOOLONG: name too long, open '/Users/sam/x'"), {
+      code: 'ENAMETOOLONG',
+    });
+    expect(reason(error)).toBe('its name is too long');
+    expect(reason(Object.assign(new Error('EIO: /Users/sam/x'), { code: 'EIO' }))).toBe(
+      'the system said EIO',
+    );
+    expect(reason(new Error('odd /Users/sam/x'))).toBe('something went wrong');
+    expect(reason({ code: '/Users/sam/x' })).toBe('something went wrong');
+    expect(reason(null)).toBe('something went wrong');
   });
 });
 

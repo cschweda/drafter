@@ -1,4 +1,5 @@
 import { statSync, utimesSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ABOUT, MAX_ANSWER_CHARS } from '../src/envelope';
@@ -217,5 +218,28 @@ describe('list_scripts', () => {
     // A cursor for other arguments, or a made-up one, starts again too.
     expect((await list({ cursor: first.next, recursive: false })).restarted).toBe(true);
     expect((await list({ cursor: 'made.up' })).restarted).toBe(true);
+  });
+});
+
+describe('list_scripts never shows where the folders are on disk', () => {
+  it('a ~1,000-character folder path is refused without the real path', async () => {
+    const dir = tempFolder();
+    const { scripts, plays } = makeLibrary(dir);
+    await start([scripts, plays]);
+    for (const folder of [
+      `Scripts/${'a'.repeat(1_000)}`,
+      `Scripts/${Array.from({ length: 4 }, () => 'b'.repeat(240)).join('/')}`,
+    ]) {
+      const result = await (open as Connected).call('list_scripts', { folder });
+      expect(result.isError).toBe(true);
+      const text = (result.content[0] as { text: string }).text;
+      expect(text).not.toContain(dir);
+      expect(text).not.toContain(tmpdir());
+      expect(JSON.parse(text).error).not.toMatch(/\/(private|var|tmp|Users|home)\//);
+    }
+    for (const line of (open as Connected).logged) {
+      expect(line).not.toContain(dir);
+      expect(line).not.toContain(tmpdir());
+    }
   });
 });

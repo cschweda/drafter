@@ -64,3 +64,15 @@ describe('cursors', () => {
     expect(readCursor(key, makeCursor(key, { ...file, at: 1, part: -2 }), file)).toBe('restart');
   });
 });
+
+describe('a cursor for a long path', () => {
+  it('a ~1,000-character path of 3-byte characters still pages', () => {
+    const path = `Scripts/${'雪'.repeat(1_000)}`;
+    const now = { ...file, path };
+    const cursor = makeCursor(key, { ...now, at: 499, part: 12 });
+    // Well under the 2,048 characters a cursor may have.
+    expect(cursor.length).toBeLessThan(600);
+    expect(readCursor(key, cursor, now)).toEqual({ at: 499, part: 12 });
+    expect(readCursor(key, cursor, { ...now, path: `${path}x` })).toBe('restart');
+  });
+});

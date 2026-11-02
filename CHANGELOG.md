@@ -13,7 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
-- The command line's hardened file reader and the desktop app's Windows path rules now live in `@drafter/archive/node`, a Node-only part of the archive package, so Drafter for Claude can share them. The reader can also refuse a link in the last part of a path and a file swapped after it was checked. Nothing the CLI prints changes.
+- The command line's hardened file reader and the desktop app's Windows path rules now live in `@drafter/archive/node`, a Node-only part of the archive package, so Drafter for Claude can share them. The reader can also refuse a link in the last part of a path and a file swapped after it was checked. Nothing the CLI prints changes, except that an unusual system error is now named by its code (“the system said EIO”) instead of a message holding the file’s full path.
 - The readers for the drafts and cuts files found beside a work, and their file names, moved from the web app into `@drafter/history`, so Drafter for Claude can share them. Nothing changes for the writer.
 - The design for **Drafter for Claude** (`docs/drafter-for-claude-design.md`) is approved, to be built for v0.24.2.
 - DEFERRED's list of flaky CI tests notes the Linux AppImage self-update test, which failed once on the v0.24.1 tag and passed on its rerun.

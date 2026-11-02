@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ABOUT, INSTRUCTIONS } from '../src/envelope';
+import { logLine } from '../src/server';
 import { type Connected, connect } from './connect';
 import { makeLibrary } from './library';
 import { tempFolder } from './temp';
@@ -96,5 +97,22 @@ describe('the server', () => {
     const body = JSON.parse((result.content[0] as { text: string }).text);
     expect(body.about).toBe(ABOUT);
     expect(logged).toEqual([`drafter-mcp: refused list_scripts: ${body.error}`]);
+  });
+});
+
+describe('the log line', () => {
+  it('control characters in a refusal can’t start a line of their own', () => {
+    expect(logLine('drafter-mcp: refused x: a\nb\r c\u0085d\u001b[31m')).toBe(
+      'drafter-mcp: refused x: a\\u{a}b\\u{d}\\u{2028}c\\u{85}d\\u{1b}[31m',
+    );
+  });
+
+  it('a path with a line break is refused without one in the log', async () => {
+    const { call, logged } = await library();
+    const result = await call('list_scripts', { folder: 'Scripts\ndrafter-mcp: forged' });
+    expect(result.isError).toBe(true);
+    expect(logged).toHaveLength(1);
+    expect(logged[0]).not.toContain('\n');
+    expect(logged[0]).not.toContain('forged');
   });
 });
