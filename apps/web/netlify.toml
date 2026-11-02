@@ -9,3 +9,6 @@
 # overrides the Node version chosen in Netlify's site settings.
 [build.environment]
   NODE_VERSION = "22"
+  # drafter.dev counts visits with Plausible (no cookies, nothing about the
+  # visitor or their script). Only this build sets it: nuxt.config.ts.
+  DRAFTER_ANALYTICS = "plausible"

@@ -25,7 +25,7 @@ const about: Record<string, string> = {
   'help-story-map':
     'A picture of your script or play to send to anyone who asks what you are writing: making one, what goes in, and what never does.',
   'help-shortcuts': 'Every command and its keys, for a Mac and for Windows and Linux.',
-  'help-privacy': 'No account, no analytics, no telemetry: your script never leaves your device.',
+  'help-privacy': 'No account, no cookies, no telemetry: your script never leaves your device.',
   'help-open-formats':
     'Every file Drafter writes is an open format you can read without it, including the open specification of the .drafter package.',
   'help-licences':

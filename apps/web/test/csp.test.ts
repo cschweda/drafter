@@ -45,6 +45,31 @@ describe('contentSecurityPolicy', () => {
   });
 });
 
+describe('Plausible, on drafter.dev only', () => {
+  test('is allowed for scripts and requests only when asked', () => {
+    expect(contentSecurityPolicy(["'sha256-a'"])).not.toContain('plausible.io');
+    const csp = contentSecurityPolicy(["'sha256-a'"], { plausible: true });
+    expect(csp).toContain("script-src 'self' https://plausible.io 'sha256-a';");
+    expect(csp).toContain("connect-src 'self' https://plausible.io;");
+    expect(csp).toContain("default-src 'self';");
+  });
+
+  test('a build whose pages load Plausible allows it, and one that doesn’t, doesn’t', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'drafter-csp-'));
+    await writeFile(join(root, 'index.html'), '<script>alert(1)</script>');
+    await writeHeaders(root);
+    expect(await readFile(join(root, '_headers'), 'utf8')).not.toContain('plausible.io');
+    await writeFile(
+      join(root, 'index.html'),
+      '<script src="https://plausible.io/js/pa-x.js" async></script><script>alert(1)</script>',
+    );
+    const hashes = await writeHeaders(root);
+    expect(await readFile(join(root, '_headers'), 'utf8')).toBe(
+      headersFile(hashes, { plausible: true }),
+    );
+  });
+});
+
 describe('headersFile', () => {
   test('sends the policy and the other headers for every path, and caches the build assets', () => {
     expect(headersFile(["'sha256-a'"])).toBe(

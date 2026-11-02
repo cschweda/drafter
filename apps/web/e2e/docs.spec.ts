@@ -349,8 +349,10 @@ test.describe('without JavaScript', () => {
     const text = (await mainText(page)).toLowerCase();
     for (const phrase of [
       'no account',
-      'no analytics',
+      'no cookies',
       'no telemetry',
+      'plausible',
+      'google analytics',
       'never leaves',
       'service worker',
       'recovery copy',

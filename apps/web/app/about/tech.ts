@@ -502,7 +502,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     plain: [
       {
         kind: 'p',
-        text: 'Drafter never runs anything in a file it opens. A script is read as text, and your words are shown as words, never as web code. There is no account, no server that keeps your scripts, no cookies, no analytics, and no tracking: your files stay on your device. Every file is checked against size limits before anything in it is unpacked, and a file Drafter can’t read is refused with a plain message, never half-opened.',
+        text: 'Drafter never runs anything in a file it opens. A script is read as text, and your words are shown as words, never as web code. There is no account, no server that keeps your scripts, no cookies, and no tracking of you: your files stay on your device (drafter.dev measures visits with Plausible, cookie-free analytics; the desktop app sends nothing). Every file is checked against size limits before anything in it is unpacked, and a file Drafter can’t read is refused with a plain message, never half-opened.',
       },
       {
         kind: 'p',

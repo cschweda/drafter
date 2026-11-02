@@ -8,7 +8,7 @@ if (!page) throw new Error('The Privacy page is not in the list of help pages.')
 useDocsHead({
   ...page,
   description:
-    'Drafter never sends your script anywhere: no account, no analytics, no telemetry. Your scripts stay in this browser and in the files you choose.',
+    'Your script never leaves your device: no account, no cookies, no telemetry. drafter.dev measures visits with Plausible, privacy-focused analytics.',
 });
 </script>
 
@@ -16,14 +16,16 @@ useDocsHead({
   <article>
     <h1>{{ page.title }}</h1>
     <p class="docs-lead">
-      Your script never leaves your device. Drafter has no account, no analytics, and no telemetry,
-      and it doesn’t send what you write to anyone, ours included.
+      Your script never leaves your device. Drafter has no account, no cookies, and no telemetry,
+      and it doesn’t send what you write to anyone, ours included. drafter.dev measures visitor
+      traffic with Plausible, privacy-focused analytics with no cookies; the desktop app sends
+      nothing.
     </p>
 
     <h2 id="what-drafter-doesnt-do">What Drafter doesn’t do</h2>
     <ul>
       <li><strong>No account.</strong> There is nothing to sign up for or sign in to.</li>
-      <li><strong>No analytics.</strong> Drafter doesn’t count visits, clicks, or keystrokes, and it has no tracking of any kind.</li>
+      <li><strong>No cookies, and no tracking of you.</strong> Drafter never follows you from site to site and never records your keystrokes. drafter.dev measures visitor traffic with Plausible, privacy-focused analytics with no cookies (<a href="#analytics">below</a>); the desktop app sends nothing.</li>
       <li><strong>No telemetry.</strong> It doesn’t report errors, usage, or the state of your browser back to anyone.</li>
       <li><strong>No uploads.</strong> A script, its title, its word count, and your settings never leave the device. Drafter has no server that could receive them.</li>
       <li><strong>No outside services.</strong> The fonts and icons are part of Drafter and come from drafter.dev itself, not from Google or a content network.</li>
@@ -32,6 +34,35 @@ useDocsHead({
       Like every website, the server that sends Drafter to your browser knows that a browser asked
       for the page. It never sees anything you write, because that never leaves your browser.
     </p>
+
+    <h2 id="analytics">Analytics on drafter.dev: Plausible</h2>
+    <p>
+      <strong>Only the website, drafter.dev, has analytics. The downloaded desktop app has none:</strong>
+      it doesn’t load Plausible or anything like it, and it sends nothing about you or your use of
+      it to anyone.
+    </p>
+    <p>
+      drafter.dev uses <a href="https://plausible.io/privacy-focused-web-analytics">Plausible</a>
+      to measure visitor traffic, so the maintainer can see roughly how many people use Drafter and
+      which help pages they read. Plausible is analytics built for privacy, and it was chosen over
+      Google Analytics for that reason:
+    </p>
+    <ul>
+      <li><strong>No cookies.</strong> Nothing is stored in your browser, so there is no cookie banner to click through.</li>
+      <li><strong>Nothing that identifies you.</strong> Plausible keeps no IP address and builds no profile of you. To count a visitor once a day, it uses a scrambled code that changes every 24 hours, so a visit can’t be tied to you, or to your visit the next day.</li>
+      <li><strong>No following you around the web.</strong> Google Analytics links what you do across the many sites that use it, and Google uses that data for advertising. Plausible tracks nothing across sites, and sells and shares nothing.</li>
+      <li><strong>Open and small.</strong> Plausible is open-source software, hosted in the European Union, and its script is a few kilobytes, so drafter.dev stays fast.</li>
+    </ul>
+    <p>
+      What it records for each page you open: the page’s address (<code>drafter.dev/</code> or a
+      help page), the site that sent you there if your browser says, the kind of device and browser,
+      and the country. It never sees your script, its title, anything you type, or which files you
+      open or save, because none of that leaves your browser.
+    </p>
+    <ul>
+      <li><strong>Only on the website.</strong> Analytics runs only when you use Drafter at drafter.dev in a browser. The downloaded desktop app for Windows, Linux, or Mac, and a copy you host yourself, have no analytics at all. Drafter running offline sends nothing either.</li>
+      <li><strong>Easy to block.</strong> A content blocker, or blocking plausible.io, stops it, and Drafter works just the same.</li>
+    </ul>
 
     <h2 id="where-your-work-lives">Where your work lives</h2>
     <ul>

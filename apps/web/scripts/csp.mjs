@@ -33,18 +33,23 @@ export function inlineHashes(html) {
   return { scripts, styles };
 }
 
+/** Plausible, which drafter.dev's own build loads to count visits (nuxt.config.ts). */
+export const PLAUSIBLE = 'https://plausible.io';
+
 /**
  * @param {string[]} scriptHashes
+ * @param {{ plausible?: boolean }} [options] allow Plausible's script and its event requests
  * @returns {string}
  */
-export function contentSecurityPolicy(scriptHashes) {
+export function contentSecurityPolicy(scriptHashes, { plausible = false } = {}) {
+  const extra = plausible ? [PLAUSIBLE] : [];
   return [
     "default-src 'self'",
-    ["script-src 'self'", ...scriptHashes].join(' '),
+    ["script-src 'self'", ...extra, ...scriptHashes].join(' '),
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    "connect-src 'self'",
+    ["connect-src 'self'", ...extra].join(' '),
     "worker-src 'self'",
     "manifest-src 'self'",
     "object-src 'none'",
@@ -59,12 +64,13 @@ export function contentSecurityPolicy(scriptHashes) {
  * path, long caching for the fingerprinted build assets and the fonts, the dictionaries' type
  * (text, so Netlify compresses them), and no caching for the service worker and the manifest.
  * @param {string[]} scriptHashes
+ * @param {{ plausible?: boolean }} [options]
  * @returns {string}
  */
-export function headersFile(scriptHashes) {
+export function headersFile(scriptHashes, options = {}) {
   return [
     '/*',
-    `  Content-Security-Policy: ${contentSecurityPolicy(scriptHashes)}`,
+    `  Content-Security-Policy: ${contentSecurityPolicy(scriptHashes, options)}`,
     '  X-Content-Type-Options: nosniff',
     '  Referrer-Policy: no-referrer',
     '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()',
@@ -107,11 +113,14 @@ async function htmlFiles(dir) {
  */
 export async function writeHeaders(publicDir) {
   const hashes = new Set();
+  let plausible = false;
   for (const file of await htmlFiles(publicDir)) {
-    for (const h of inlineHashes(await readFile(file, 'utf8')).scripts) hashes.add(h);
+    const html = await readFile(file, 'utf8');
+    for (const h of inlineHashes(html).scripts) hashes.add(h);
+    if (html.includes(`src="${PLAUSIBLE}/js/`)) plausible = true;
   }
   const sorted = [...hashes].sort();
-  await writeFile(join(publicDir, '_headers'), headersFile(sorted));
+  await writeFile(join(publicDir, '_headers'), headersFile(sorted, { plausible }));
   return sorted;
 }
 

@@ -212,7 +212,7 @@ function parts(cell: string): Part[] {
         never lock you out of your own work.
       </li>
       <li>
-        <strong>Private.</strong> No cookies, no analytics, no tracking, and no telemetry. Your script
+        <strong>Private.</strong> No cookies, no tracking of you, and no telemetry. Your script
         never leaves your device: Drafter has no server that could receive it. See
         <a href="/docs/privacy/">Privacy</a>.
       </li>

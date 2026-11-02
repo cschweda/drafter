@@ -25,7 +25,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 - **Free, with no catch.** No price, no trial, no subscription, no locked "free tier", and no ads. Drafter isn't a business: one writer makes it, for writers, and gives it away. There is no paid version, and there won't be one.
 - **No login, ever.** No sign-up, no sign-in, no licence key, no activation. Close it, open it tomorrow, and you're back in your script.
-- **Private.** No cookies, no analytics, no tracking, no telemetry. Drafter has no server that could receive your script, so it never leaves your device. See [Privacy](https://drafter.dev/docs/privacy/).
+- **Private.** No cookies, no tracking of you, no telemetry. Drafter has no server that could receive your script, so it never leaves your device. The website, drafter.dev, measures visitor traffic with [Plausible](https://plausible.io/privacy-focused-web-analytics), privacy-focused analytics with no cookies, nothing that identifies you, and no tracking across sites (chosen over Google Analytics for that). **The downloaded desktop app has no analytics at all.** See [Privacy](https://drafter.dev/docs/privacy/#analytics).
 - **Open.** The code is MIT-licensed. Your script is a plain `.fountain` text file you own, which any app can open and which will still open in fifty years. A lapsed licence can never lock you out of your own work.
 - **Instant, and offline.** No installer or setup is needed to begin. Once it has loaded, Drafter runs with no connection, on a plane or a train.
 - **No forced updates.** The web app updates when you reload, or the next time you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
@@ -98,7 +98,7 @@ Drafter is built to open files from anyone without putting you at risk.
 
 - **Drafter never runs anything in a file it opens.** A script is read as text, and your words are shown as words, never as web code.
 - **A strict content security policy.** The web app tells your browser to run only Drafter's own scripts, so nothing slipped into a page or a file can run there.
-- **No accounts, no server keeping your scripts, no cookies, no analytics, no tracking.** Your files stay on your device.
+- **No accounts, no server keeping your scripts, no cookies, no tracking of you.** Your files stay on your device; drafter.dev's only analytics is Plausible, which uses no cookies.
 - **Size limits are checked before anything is unpacked.** A Highland, Fade In, or EPUB file's entries can't point outside their archive. A Final Draft file never makes Drafter fetch or read anything else: the outside references XML allows are refused.
 - **The desktop app** never loads an opened file into a window. It reads the bytes of only the files you chose, and hands them to the editor.
 - **Reopening an HTML or EPUB file** reads only the script Drafter embedded in it, as text. A browser opening an HTML file outside Drafter is outside Drafter's control, so treat one someone sent you like any downloaded page (see [Open formats](https://drafter.dev/docs/open-formats/)).

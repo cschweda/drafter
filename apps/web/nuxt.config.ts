@@ -32,6 +32,14 @@ const TEST_MODULES = process.env.DRAFTER_TEST_MODULES === '1';
 // updates come from its own updater), and `__DRAFTER_DESKTOP__` true, so `app/desktop.ts` honours
 // the desktop app's bridge. drafter.dev's build is unchanged.
 const DESKTOP = process.env.DRAFTER_DESKTOP === '1';
+// drafter.dev counts visits with Plausible (the maintainer, 2026-11-02): no cookies, nothing about
+// the visitor or their script. Only the site's own build turns it on (`DRAFTER_ANALYTICS=plausible`
+// in netlify.toml): never the desktop app, a local or test build, or a self-hosted copy.
+// scripts/csp.mjs allows plausible.io in the policy only when a page loads it.
+const PLAUSIBLE = process.env.DRAFTER_ANALYTICS === 'plausible' && !DESKTOP;
+const PLAUSIBLE_SRC = 'https://plausible.io/js/pa--lKXZsV2-N7mag-Pl4BV9.js';
+const PLAUSIBLE_INIT =
+  'window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()';
 const moduleIcons = await moduleIconNames(MODULES);
 // About Drafter (Help): the version (the desktop app's, which Electron reports there too) and the
 // commit being built, when git can say (scripts/version.mjs).
@@ -251,6 +259,7 @@ export default defineNuxtConfig({
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
         ...(DESKTOP ? [] : [{ rel: 'manifest' as const, href: '/manifest.webmanifest' }]),
       ],
+      script: PLAUSIBLE ? [{ src: PLAUSIBLE_SRC, async: true }, { innerHTML: PLAUSIBLE_INIT }] : [],
     },
   },
 });

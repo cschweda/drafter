@@ -163,7 +163,7 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
         </li>
         <li>
           <strong>Offline and private.</strong> Once it has loaded, Drafter runs with no connection.
-          No cookies, no analytics, no tracking: your script never leaves your device.
+          No cookies, no tracking of you: your script never leaves your device.
         </li>
         <li>
           <strong>Your files are plain text you own.</strong> A <code>.fountain</code> file opens in
@@ -267,7 +267,7 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           save and in a recovery copy in your browser.
         </li>
         <li>
-          <strong>No cookies, no analytics, no tracking, no telemetry.</strong> See
+          <strong>No cookies, no tracking of you, no telemetry.</strong> The website, drafter.dev, measures visitor traffic with Plausible, privacy-focused analytics with no cookies; the downloaded desktop app has no analytics at all. See
           <a :href="help('help-privacy')">Privacy</a>.
         </li>
         <li><strong>Works offline</strong>, once it has loaded.</li>
