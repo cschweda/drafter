@@ -124,12 +124,41 @@ jobs:
           path: apps/web/playwright-report
           retention-days: 7
 
+  # The self-hosted image (Dockerfile, compose.yaml): it builds, starts as compose starts it, and
+  # serves the app with drafter.dev's headers and no analytics.
+  docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Build and start the container
+        run: docker compose up -d --build --wait --wait-timeout 60 || { docker compose logs; exit 1; }
+      - name: It serves the app, its help, and its headers
+        run: |
+          set -e -o pipefail
+          curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://localhost:8080/ -o index.html
+          grep -q '<title>' index.html
+          if grep -q plausible index.html; then exit 1; fi
+          curl -fsS http://localhost:8080/docs/privacy/ -o /dev/null
+          curl -fsS http://localhost:8080/docs/privacy -o /dev/null -L
+          curl -fsSI http://localhost:8080/ | tee headers.txt
+          grep -qi '^content-security-policy: default-src' headers.txt
+          if grep -qi plausible headers.txt; then exit 1; fi
+          curl -fsSI http://localhost:8080/sw.js | grep -qi '^cache-control: no-cache'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/_headers)" = 404
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/no-such-page)" = 404
+      - name: The container's log, if it failed
+        if: failure()
+        run: docker compose logs
+
   # One check over the checks job and the eight shards, to require by name. Each must have succeeded:
   # one skipped, cancelled, or failed fails it.
   e2e-all:
     name: e2e
     if: always()
-    needs: [checks, e2e]
+    needs: [checks, e2e, docker]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -137,3 +166,4 @@ jobs:
         run: |
           test "${{ needs.checks.result }}" = success
           test "${{ needs.e2e.result }}" = success
+          test "${{ needs.docker.result }}" = success

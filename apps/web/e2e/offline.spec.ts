@@ -266,7 +266,9 @@ test.describe('offline', () => {
       '/licenses/dictionary-en-gb.txt',
       '/licenses/dictionary-en.txt',
       '/licenses/is-buffer.txt',
+      '/licenses/modelcontextprotocol-server.txt',
       '/licenses/nspell.txt',
+      '/licenses/zod.txt',
     ]);
     for (const href of hrefs) {
       const text = await page.evaluate(async (url) => (await fetch(url)).text(), href);

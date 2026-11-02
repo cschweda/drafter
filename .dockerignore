@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/.output
+**/.nuxt
+**/test-results
+**/playwright-report
+.git
+.github
+.superpowers
+.env
+.env.*
+!.env.example
+!.env.sample

@@ -370,7 +370,8 @@ describe('script_overview', () => {
       pages++;
     } while (cursor && pages < 200);
     expect(total).toBe(200);
-  });
+    // A script this size takes over five seconds on a shared runner.
+  }, 60_000);
 
   it('a stage play’s scenes and acts', async () => {
     const { plays } = makeLibrary(tempFolder());

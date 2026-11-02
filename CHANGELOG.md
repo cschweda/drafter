@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Self-hosting:** a `Dockerfile` and `compose.yaml` serve the web app from your own computer or server: `docker compose up -d`, then `http://localhost:8080`. A small Caddy server, read-only, unprivileged, on this computer only, with no analytics and nothing that stores scripts. Its headers are generated from the same `_headers` drafter.dev serves, and a new pull-request check builds and tests the image. A help page, Self-hosting, says how.
+
+### Changed
+
+- `publish.sh` asks npm to approve the publish in a browser (a link that opens on any device), so a release can be published away from the Mac; npm still asks for its code itself on accounts that need it. The dry run is unchanged. It stops first, with nothing published, if it isn't in a terminal, since npm can only show its link in one.
+- Two tests caught by the pull-request checks: the licences page's list has the MCP SDK and zod, and the largest overview test allows for a slow runner.
+- The README's Self-hosted section gives the Docker steps, the downsides, and why the desktop app may suit you better.
+- `pnpm install` sets the Git hooks only in a Git work tree, so it runs where Git isn't installed; a real failure to set them still stops it.
+
 ## [0.24.2] - 2026-11-02
 
 **Drafter for Claude.** A local, read-only MCP server, `drafter-mcp`, lets Claude Desktop, Claude Code, or any app that speaks MCP read the scripts, drafts, and cuts in folders you choose: ten tools and seven prompts (storyboard, shot list, reader’s notes, character arc, ideas from cuts, continuity, previously on). It only reads, judges every file by what is inside it as Open does, leaves notes and the boneyard out unless asked, and keeps every answer under 40,000 characters; Drafter itself never calls an AI. Get it with `npx -y drafter-mcp@0.24.2 --folder …`, or the file on this release with its SHA-256. Also: a click on a note shows it in the Source, Check for updates shows that it is working, and drafter.dev (the website only) measures visits with Plausible.

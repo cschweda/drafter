@@ -13,8 +13,8 @@ set -euo pipefail
 # CHANGELOG.md section, merge, and push the tag (vX.Y.Z). The desktop workflow builds and tests,
 # and puts drafter-mcp-<version>.js and its .sha256 on the tag's GitHub Release. Then, from main:
 # ./publish.sh --dry-run, then ./publish.sh. There is no version argument and no bump: the version
-# is the release's. A publish asks for npm's 6-digit two-factor code last, just before it
-# publishes: a code lasts about 30 seconds, and the checks take minutes.
+# is the release's. A publish asks for npm's approval last, just before it publishes: a link to
+# open in a browser on any device, or npm's code on some accounts.
 #
 # Works in Git Bash on Windows as well as on macOS and Linux.
 #
@@ -31,7 +31,7 @@ set -euo pipefail
 #   - the package holds package.json, README.md, LICENSE, and drafter-mcp.js and nothing else, with
 #     no dependencies or scripts, and the packed tarball installs and runs.
 # It then shows the commits in the release, asks for the version to be typed, and then for npm's
-# two-factor code. What it publishes is the tarball it installed and ran. It never commits, tags,
+# approval. What it publishes is the tarball it installed and ran. It never commits, tags,
 # or pushes: the release did those.
 
 PACKAGE_NAME="drafter-mcp"
@@ -352,14 +352,13 @@ read -r -p "To publish it, type the version ($VERSION): " REPLY || REPLY=""
 
 # ─── Publish ────────────────────────────────────────────────────────
 
-# npm asks every publish for a fresh two-factor code, and a code lasts about 30 seconds, so it's
-# asked for now, after every check and the typed version.
-read -r -p "npm's 6-digit two-factor code: " OTP || OTP=""
-[[ "$OTP" =~ ^[0-9]{6}$ ]] ||
-  die "That isn't a 6-digit code, so nothing was published. Run ./publish.sh again, and type npm's code when it asks."
-
+# npm approves every publish itself, after every check and the typed version: it prints a link to
+# open in a browser on any device (or, for some accounts, asks for its code here), and waits.
+[[ -t 0 && -t 1 ]] ||
+  die "npm can only show its approval link in a terminal, so nothing was published. Run ./publish.sh in a terminal (in Git Bash on Windows, under winpty or in Windows Terminal)."
+info "npm will now ask you to approve this: open its link, or type its code."
 # The tarball that was installed and run above, not a new one packed from the folder.
-npm publish "$TARBALL" --access public --ignore-scripts --otp "$OTP" ${NPM_TAG[@]+"${NPM_TAG[@]}"}
+npm publish "$TARBALL" --access public --ignore-scripts --auth-type=web ${NPM_TAG[@]+"${NPM_TAG[@]}"}
 
 # npm publish exited 0, so the release is published (a failed publish stopped the script above).
 # The registry can take 5 to 10 minutes to list a new version: ask every 20 seconds for up to 15
