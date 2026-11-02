@@ -1,6 +1,6 @@
 # Classic Mode — Design
 
-**Status:** designed 2026-11-02, for **v0.25.0**, and waiting for the maintainer's review. The flow in §6 is the one the maintainer agreed to ("yes that's it"); the rest are the designer's calls. It comes after Self-hosting (v0.24.3) and before Novel (v0.26.0) and Production (v0.27.0). The roadmap entry is in [ROADMAP.md](ROADMAP.md), and the first decision is in [DECISIONS](DECISIONS.md), "Classic Mode".
+**Status:** designed 2026-11-02, the maintainer's five decisions in, planned for v0.25.0. The flow below is the one the maintainer agreed to ("yes that's it"). It comes after Self-hosting (v0.24.3) and before Novel (v0.26.0) and Production (v0.27.0). The roadmap entry is in [ROADMAP.md](ROADMAP.md), and the first decision is in [DECISIONS](DECISIONS.md), "Classic Mode".
 
 **Asked for (maintainer), in their words:**
 - 2026-11-01: "is it worth adding a final draft mode (instead of a fountain mode) for people who might be used to final draft? There's still source on the left, rendered script on the right -- but the way to type the script it would be more familiar for people who don't know fountain marks but are used to final draft."
@@ -19,9 +19,17 @@
 
 Headings and names capitalise themselves. The left side looks like a script, no Fountain marks showing. The file stays plain Fountain underneath. Autofill lists names and places already in the script, most recent first.
 
+**Decided by the maintainer, 2026-11-02 ("go with your recommendations"):**
+
+1. The mode is one app-wide setting (§3.1).
+2. Tab on a name with no match goes to Dialogue; Enter after a Transition goes to Action; Tab on an empty line walks Action, Character, Transition, Scene heading (§6).
+3. Notes stay in place on the left, brackets hidden, with a thin rule at each end (§8.3).
+4. Names are all capitals in Classic Mode for v0.25.0; a mixed-case name is typed once in Fountain Mode, then autofill offers it (§17.2).
+5. The hidden metadata block is protected in Classic Mode: Select All then Delete leaves it in place (§8.4).
+
 **Promises this design must keep:** the file is plain Fountain, and switching never changes it. Fountain Mode is the default and doesn't change. No accounts, no server, no tracking, no network. A strong clean room. WCAG 2.2 AA. Typing stays fast at 120 pages. Plain language. Dark by default. Everything free.
 
-Each choice open to the designer is marked **Call:**. They are all listed in §18.
+Each choice made by the designer is marked **Call:**, and each the maintainer settled says **Decided**. They are all listed in §18.
 
 ## 1. Intent
 
@@ -56,7 +64,7 @@ What's new: an idea of the element the cursor is in on an **empty** line (§5), 
 
 A new setting, `writingMode: 'fountain' | 'classic'`, in `settings.ts`, with `'fountain'` in `DEFAULT_SETTINGS`, so a first visit is Fountain Mode.
 
-**Call: the mode belongs to the app, not to each script.** It's a habit of the writer's hands, not a fact about a script. A per-script mode would have to live somewhere: in the metadata block it would change the file, which breaks the first promise, and in the browser's project row it wouldn't travel with the file, so the same script would open differently on two computers. A writer who changes mode for one script can change it back with one click.
+**Decided (maintainer, 2026-11-02): the mode belongs to the app, not to each script.** It's a habit of the writer's hands, not a fact about a script. A per-script mode would have to live somewhere: in the metadata block it would change the file, which breaks the first promise, and in the browser's project row it wouldn't travel with the file, so the same script would open differently on two computers. A writer who changes mode for one script can change it back with one click.
 
 The setting isn't stored in the file, in a draft, in a snapshot, or in an export.
 
@@ -188,7 +196,7 @@ A state field, `classicLine`, holds only what can't be worked out: the element o
 
 **Where a scene heading comes from.** Enter never gives a pending Scene heading. A writer types `INT.` on an Action line, or picks it in the chooser. **Call:** the agreed flow starts with "type INT.", and with a firm pending heading after a transition or at the top of a script, a writer who starts with a line of action would get it in capitals.
 
-**A new script** starts on a soft pending Action. So does the line after a Transition.
+**A new script** starts on a soft pending Action. So does the line after a Transition, **decided** (maintainer, 2026-11-02).
 
 **The session** gains `element`, the current element including a pending one, which the announcer, the bar, the status bar, and the phone's Next button read (`session.ts`).
 
@@ -215,6 +223,8 @@ Every row below is one transaction, one undo step, with the user event `input`, 
 | Lyric | Lyric | Dialogue in a speech, Action outside | one break |
 | Section, Synopsis | Action | Action | a blank line |
 
+**Decided (maintainer, 2026-11-02):** with no match to accept, Tab on a name goes to Dialogue, and Enter or Tab after a Transition goes to Action.
+
 **Stage play.** The same, with Stage direction for Action, and:
 
 | Element | Enter | Tab | Writes |
@@ -233,7 +243,7 @@ Every row below is one transaction, one undo step, with the user event `input`, 
 | Dialogue | Opens the chooser | Parenthetical: writes `()`, the cursor inside | Back to the end of the name, removing the empty line |
 | An empty Parenthetical `()` | Removes `()`, back to pending Dialogue | The same | The same |
 
-In a play the row is Stage direction → Character → Act → Scene → Stage direction. **Call: Tab walks a row of elements on an empty line.** It writes nothing, the element shows in the chip, and it's a quick way to reach Transition without opening the chooser.
+In a play the row is Stage direction → Character → Act → Scene → Stage direction. **Decided (maintainer, 2026-11-02): Tab walks a row of elements on an empty line.** It writes nothing, the element shows in the chip, and it's a quick way to reach Transition without opening the chooser.
 
 ### 6.3 The cursor mid-line, and selections
 
@@ -353,11 +363,11 @@ CodeMirror already gives the list `role="listbox"`, and the editor `aria-autocom
 | Item | In Classic Mode | Enter and Tab there |
 |---|---|---|
 | **Title page** | Shown as it is, `Title: Signal Hill`, with its keys in `--title`. It's a form of keys, and there's nothing to hide | Fountain's Enter; Tab moves focus. The chip says "Title page" |
-| **Note** `[[ ]]` | Brackets hidden. The words stay in place in `--note` italics with a thin rule at each end, so a reader can see where it starts and stops. **Call:** kept inline, not moved to a margin, so nothing about the page's position is invented | The note is the writer's own: Enter is a plain break, Tab moves focus |
+| **Note** `[[ ]]` | Brackets hidden. The words stay in place in `--note` italics with a thin rule at each end, so a reader can see where it starts and stops. **Decided (maintainer, 2026-11-02):** kept inline, not moved to a margin, so nothing about the page's position is invented | The note is the writer's own: Enter is a plain break, Tab moves focus |
 | **Setup and payoff** `[[Setup: x]]` | The same; `Setup:` stays visible, since it's the note's words | The same |
 | **Boneyard** `/* */` | Delimiters hidden, struck through, as now | The same as a note |
 | **Unclosed boneyard** | The opening `/*` stays visible (§8.1) | The same |
-| **Metadata block** `/* drafter … */` | Not shown at all, through its `StateField` (§8.1). The cursor stops before it. It's the app's data, and a Classic writer has no use for it | Not reachable. **Call:** the writer's new text always lands above it, so the block stays last, which `readMeta` needs |
+| **Metadata block** `/* drafter … */` | Not shown at all, through its `StateField` (§8.1). The cursor stops before it. It's the app's data, and a Classic writer has no use for it | Not reachable, and protected (§8.4). The writer's new text always lands above it, so the block stays last, which `readMeta` needs |
 | **Section** `#` | `#` hidden; depth shown by size and weight | Chooser's second group; Enter goes to Action |
 | **Synopsis** `=` | `=` hidden, `--muted` italics | Chooser's second group; Enter goes to Action |
 | **Page break** `===` | A thin rule with the words "Page break". Atomic, so one Backspace removes it | |
@@ -368,6 +378,24 @@ CodeMirror already gives the list `role="listbox"`, and the editor `aria-autocom
 | **Emphasis** `**`, `*`, `_` | Marks hidden; bold, italics, underline shown. The bar and palette add them | |
 | **Escapes** `\*` | The backslash hidden | |
 | **Typed marks** | **Call:** in-line marks aren't refused. A writer who types `[[a note]]`, `/*`, or `*word*` gets what Fountain makes of them. Only marks at the start of a line (§4.2) are made safe. Classic Mode doesn't add `\` escapes; a lone `*` shows, and two may read as italics, as the help page says | |
+
+### 8.4 Protecting the metadata block
+
+**Decided (maintainer, 2026-11-02): Select All then Delete leaves the block in place.** A writer who can't see the block can't be expected to know it holds the script's template and settings, and losing it would turn a stage play into a screenplay. The protected range runs from the line breaks just before the block to the block's end, for the block `parse` reads as `doc.meta`. `existingBlock` in `meta.ts` already finds it, and gets exported. A damaged block isn't `doc.meta`, so it shows as an ordinary boneyard and isn't protected. There are two layers, and both are in `classic()`, so Fountain Mode doesn't change:
+
+- **The selection stops above it.** `classicCaret` also clamps both ends of every selection to the start of the protected range. **Call:** this does most of the work, since Select All, Shift+`Mod+End`, and a drag then never hold the block, and an input method never needs its text rewritten.
+- **A filter keeps the range, as a backstop.** `keepMetadata`, a transaction filter, cuts any writer's change that overlaps the range back to the part above it, keeping what it inserts, the selection, and the user event. It stands back for `undo`, `redo`, `appChange`, transactions with no user event, and `input.type.compose`, as a composition must not be rewritten (§10). So `setMeta`, a template change, Revert to Saved, and a module's change all still work.
+
+| Writer does | Result |
+|---|---|
+| Select All, Delete | The script's text goes; the block stays, with an empty line above it for the cursor. The template holds |
+| Undo after that | One step brings the text back, byte for byte. The block was never touched |
+| Select All, Cut | The clipboard has the text without the block, and the text goes; the block stays |
+| Select All, Copy | The text without the block. To carry a whole file, Save As does that (§11, Copy) |
+| Select All, paste | The pasted text replaces the text; the block stays below it, with the paste's blank line |
+| Paste over all of text that ends in its own metadata block | Paste is what was copied, so it goes in; the kept block stays last and wins, and the pasted one shows as a boneyard the writer can delete. **Call:** rare, and nothing is lost |
+| Select All, type | The first letter replaces the text, above the block |
+| Switch to Fountain Mode | The block shows as it always has, and there it can be selected and deleted |
 
 ## 9. The chooser, the element bar, and teaching
 
@@ -422,7 +450,7 @@ This is the riskiest part of the design and is tested on a real Android phone (�
 
 - **Paste is what was copied.** Text goes in verbatim, with no capitals added, as `upperCaseTyping` leaves a paste alone. **Call: the parser reads a multi-line paste, and Classic Mode adds no marks to it.** A Fountain script pasted in comes out as Fountain, in the right elements, with its own marks. A one-line paste into a line takes that line's element, and gets a mark only if the line needs one, as in §4.2: pasted `june` on a Character line is `@june`.
 - **A paste gets the blank lines it needs,** around it, as the rule in §6.1 gives new text, so it can't run into a neighbour.
-- **Copy and Cut give the true text,** marks and all, so a selection pasted into Fountain Mode, or another Drafter tab, is the same script. **Call:** a selection copied to another program keeps its marks too. A "copy as plain script" is for later.
+- **Copy and Cut give the true text,** marks and all, and only the metadata block stays out, as a selection can't hold it (§8.4), so a selection pasted into Fountain Mode, or another Drafter tab, is the same script. **Call:** a selection copied to another program keeps its marks too. A "copy as plain script" is for later.
 - **Drag and drop of text:** as paste. A dropped file opens, as it does today.
 - **Opening a script:** §4.5. Every entry point is unchanged. FDX, Highland, and Fade In import to Fountain text as before.
 - **Find and Replace:** a replacement is `input.replace`, which Classic Mode's filters leave alone. A replacement can leave a line that reads differently, as it can in Fountain Mode.
@@ -502,6 +530,7 @@ No new dependency. `@codemirror/autocomplete` and `@codemirror/view` are already
 - **Undo.** The history groups a run of typing, so a step may hold several letters. **A letter and its mark are never split:** no undo or redo stops between them, or leaves a mark with no letter. Enter, Tab, and an accepted suggestion are a step each, and undoing one gives back the exact text before it, as does a test that types with spaced time, so that each letter is its own step. Undo across a switch works.
 - **Action stays Action.** Words in capitals on Action never become a cue, by any key sequence, and a line that the parser would read as a cue only because of the line below always has its `!`.
 - **Tidying.** An empty line or `()` made and left is gone; one that was in the file stays.
+- **The metadata block stays.** Any key sequence on a script with a block, in Classic Mode, Select All with Delete, Cut, paste, and typing included: the block's bytes are the same and it is still the last block, so `doc.meta` is equal. Undo after each gives back the text before it. `setMeta`, undo, and a change with `appChange` still pass the filter. With Classic Mode off, Select All then Delete removes the block, as it does today, which proves Fountain Mode didn't move. A damaged block isn't protected.
 - **Marks kept.** A script with a mark on every line, edited on one line, keeps every other line's bytes. Line endings: CRLF files stay CRLF. A byte-order mark stays.
 - **What Fountain Mode does.** The whole existing `cm-fountain` suite runs unchanged, with Classic Mode off, and proves Fountain Mode didn't move.
 
@@ -530,6 +559,7 @@ A new entry point, **`classic`**, in `fixtures/trap/entry-points.ts`: "A hostile
 - Settings, palette, and key all switch; the file doesn't change.
 - Esc, Tab and Esc, Shift+Tab leave the editor; with a list open, one Esc doesn't and Esc, Esc, Tab does; in focus mode Esc also leaves focus mode; Ctrl+M; F6.
 - `JU` and Tab typed with no wait gives `JUNE` and Dialogue, with Enter too; a name with no match moves on; `JO` after Escape stays `JO`.
+- Select All, Delete, on a stage play with a metadata block: the template holds, and Undo restores the text. Cut and paste over all, the same.
 - `int.` becomes `INT.`; `BANG` on Action stays at the Action indent, and Enter gives a new Action.
 - Added to `a11y.spec.ts`: axe with Classic Mode on, in dark and light, with the list, chooser, and hint open.
 - Added to `keyboard.spec.ts`: no trap, walked by Tab.
@@ -581,7 +611,7 @@ Built from the shared screenwriting convention (what comes after what on a page)
 
 ### 17.2 Not in this release
 
-- **Mixed-case names by typing.** A name typed in Classic Mode is all capitals. To get `McGRAW`, type it once in Fountain Mode as `@McGRAW`; after that autofill offers it. **Call:** a rule for guessing would be wrong as often as right.
+- **Mixed-case names by typing.** **Decided (maintainer, 2026-11-02):** a name typed in Classic Mode is all capitals for v0.25.0. To get `McGRAW`, type it once in Fountain Mode as `@McGRAW`; after that autofill offers it. A rule for guessing would be wrong as often as right.
 - **Ways to change the Enter and Tab tables.** No custom key settings. A writer may ask; the tables stay data so it could come later.
 - **Cycling the most likely speaker,** a key or a suggestion that guesses the other person in a two-hander. Agreed flow says most recent first, and that's what ships.
 - **A paper look** for the left pane, and page breaks drawn in it.
@@ -595,7 +625,7 @@ Built from the shared screenwriting convention (what comes after what on a page)
 
 ## 18. The calls
 
-1. **Mode:** an app-wide setting, `writingMode`, default `fountain`; never in the file (§3.1).
+1. **Decided: mode** is one app-wide setting, `writingMode`, default `fountain`; never in the file (§3.1).
 2. **Switch's place:** right after the title and save state, before Open; never folds (§3.2).
 3. **Markdown:** the switch is hidden, not greyed (§3.2).
 4. **Key:** `Mod+Alt+0`, with palette commands and a Settings row (§3.3).
@@ -607,7 +637,7 @@ Built from the shared screenwriting convention (what comes after what on a page)
 10. **The pending element is worked out;** only exceptions are stored (§5).
 11. **A heading is never pending by flow:** type `INT.` or use the chooser; a new script and the line after a Transition start on soft Action (§5).
 12. **Classic's keys at `Prec.highest`,** ahead of `language` (§6).
-13. **Tab walks a row of elements** on an empty line (§6.2).
+13. **Decided: Tab walks a row of elements** on an empty line; Tab on a name with no match goes to Dialogue; Enter after a Transition goes to Action (§6).
 14. **Tab never splits a line** (§6.3).
 15. **Shift+Enter is a break inside the element,** with two spaces on an empty speech line (§6.4).
 16. **One Backspace joins** two elements, with the blank line and hidden mark (§6.4).
@@ -621,7 +651,7 @@ Built from the shared screenwriting convention (what comes after what on a page)
 24. **Search left as it is** for this release (§8.1).
 25. **Indents from the template,** shrinking in narrow panes; matching the page promised only at 60 characters or wider (§8.2).
 26. **No colour per element** (§8.2).
-27. **Notes stay inline,** with brackets hidden and a rule at each end; the metadata block is hidden and the cursor stops above it (§8.3).
+27. **Decided: notes stay inline,** with brackets hidden and a rule at each end; the metadata block is hidden and the cursor stops above it (§8.3).
 28. **In-line marks typed by hand work as Fountain;** only marks at a line's start are made safe (§8.3).
 29. **The chooser is a list of its own,** with an underlined letter for each item, and writes nothing (§9.1).
 30. **Tooltips lose their marks** in Classic Mode (§9.2).
@@ -632,6 +662,7 @@ Built from the shared screenwriting convention (what comes after what on a page)
 35. **Problems' wording unchanged** for this release (§11).
 36. **The logic lives in `cm-fountain`,** as pure commands where it can (§14).
 37. **The cards' sample has a mark in it,** so the two modes look different (§16).
-38. **Mixed-case names aren't typed in Classic Mode** this release (§17.2).
+38. **Decided: names are all capitals** in Classic Mode for v0.25.0; a mixed-case name is typed once in Fountain Mode (§17.2).
 39. **A line in Action stays Action:** Character is reached by Tab or the chooser, never by typing capitals; a cue-only-by-what-follows line gets `!` on the line the writer is on (§4.2).
 40. **Drawing follows the stored element while the cursor is on the line,** and the parser elsewhere; opened files draw what the parser says (§8.2).
+41. **Decided: the metadata block is protected:** selections stop above it, a transaction filter keeps its range as a backstop, undo and app changes pass, and Fountain Mode is unchanged (§8.4).
