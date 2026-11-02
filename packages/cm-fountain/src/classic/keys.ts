@@ -11,7 +11,7 @@ import type { Span } from '@drafter/fountain';
 import { blocked, elementStructure, isBlank, underSpeech } from '../elements';
 import { BOM, command } from '../keymap';
 import { insideRegion, parsedDoc, regionAt } from '../state';
-import { visibleEnd, visibleStart } from './hidden';
+import { isBlankScript, visibleEnd, visibleStart } from './hidden';
 import {
   BLANK_SPEECH,
   type ClassicElement,
@@ -294,7 +294,9 @@ export const classicEnter: StateCommand = key((state) => {
 /** Tab (§6): what comes next, from anywhere on the line, and it never splits it. */
 export const classicTab: StateCommand = key((state) => {
   const { main } = state.selection;
-  if (state.selection.ranges.length > 1 || blocked(state, main.head)) return null;
+  if (state.selection.ranges.length > 1) return null;
+  const onBlank = isBlankScript(state, state.doc.lineAt(main.head));
+  if (blocked(state, main.head) && !onBlank) return null;
   if (insideRegion(state.field(parsedDoc), main.head)) return null;
   if (!main.empty) return { selection: { anchor: main.to } };
   const here = hereIn(state);

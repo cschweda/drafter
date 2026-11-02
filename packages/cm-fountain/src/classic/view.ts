@@ -7,7 +7,7 @@ import {
   type ViewUpdate,
   WidgetType,
 } from '@codemirror/view';
-import { type Block, blockAt, parse } from '@drafter/fountain';
+import { type Block, blockAt, metadataSpan, parse } from '@drafter/fountain';
 import { resolveRole, type Template } from '@drafter/templates';
 import { elementStructure, elementTemplate } from '../elements';
 import { wholeLines } from '../highlight';
@@ -180,6 +180,7 @@ type Stretch = { from: number; to: number };
  */
 export function classicDecorations(state: EditorState, ranges: readonly Stretch[]) {
   const { doc } = state;
+  const block = metadataSpan(state.field(parsedDoc));
   const hidden: Range<Decoration>[] = [];
   const lines: Range<Decoration>[] = [];
   for (const { from, to } of wholeLines(doc, ranges)) {
@@ -187,7 +188,11 @@ export function classicDecorations(state: EditorState, ranges: readonly Stretch[
       const line = doc.lineAt(pos);
       const name = lineClassOf(state, line);
       if (name) lines.push(lineDecoration(name).range(line.from));
-      const seen = ranges.filter((range) => range.from <= line.to && range.to >= line.from);
+      // The block's lines are `metadataHidden`'s, whole, and a mark inside would break its replace.
+      const own = block && line.to >= block.from && line.from <= block.to;
+      const seen = own
+        ? []
+        : ranges.filter((range) => range.from <= line.to && range.to >= line.from);
       for (const span of hiddenSpans(state, line)) {
         if (seen.some((range) => span.from >= range.from && span.to <= range.to)) {
           hidden.push(hiding(state, span).range(span.from, span.to));

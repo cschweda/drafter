@@ -7,6 +7,7 @@ import {
   type Extension,
   findClusterBreak,
   type Line,
+  type SelectionRange,
   type StateCommand,
   Transaction,
   type TransactionSpec,
@@ -20,6 +21,7 @@ import {
   endAmong,
   type HiddenSpan,
   hiddenSpans,
+  isBlankScript,
   pairsOn,
   pastLead,
   startAmong,
@@ -30,6 +32,7 @@ import {
 import { hereIn, isEmptyParens, key, removeParens } from './keys';
 import { BLANK_SPEECH, classicEdit, classicLine } from './line';
 import { classicTidied } from './marks';
+import { protectedRange } from './metadata';
 
 // Where the cursor may stand in Classic Mode, and what a delete takes (design §6.4). The writer
 // sees the page and not the marks, so a hidden mark is never a place to stand or a thing to delete,
@@ -56,25 +59,30 @@ interface Travel {
   pointer: boolean;
   /** A key's move, not a click or the app's. */
   key: boolean;
+  /** Where the protected metadata block starts, which no cursor passes, or null with none. */
+  limit: number | null;
 }
 
 /** Whether nothing but blank lines stands between the line and the end, far from where it started. */
 function pastTheLastElement(
   state: EditorState,
   pos: number,
-  { from, key: byKey }: Travel,
+  { from, key: byKey, limit }: Travel,
 ): boolean {
   const { doc } = state;
   const line = doc.lineAt(pos);
-  if (!byKey || pos !== doc.length || !isBlank(line.text) || line.number === 1) return false;
+  if (!byKey || pos !== (limit ?? doc.length) || !isBlank(line.text) || line.number === 1) {
+    return false;
+  }
   const held = state.field(classicLine, false);
   if (held?.made && held.from === line.from) return false;
-  return doc.lineAt(from).number < line.number - 1;
+  // A blank last line with no block is a line to step on to; one above a block is the block's space.
+  return limit === null ? doc.lineAt(from).number < line.number - 1 : from !== pos;
 }
 
-/** The end of the last line with text, or null with none. */
-function lastElementEnd(state: EditorState): number | null {
-  for (let n = state.doc.lines; n >= 1; n--) {
+/** The end of the last line with text at or above `pos`, or null with none. */
+function lastElementEnd(state: EditorState, pos: number): number | null {
+  for (let n = state.doc.lineAt(pos).number; n >= 1; n--) {
     const line = state.doc.line(n);
     if (!isBlank(line.text)) return visibleEnd(state, line);
   }
@@ -89,17 +97,19 @@ const closesRegion = (state: EditorState, { kind, from, to }: HiddenSpan) =>
   (kind === 'note' || kind === 'boneyard') && /^(?:\]\]|\*\/)$/.test(state.sliceDoc(from, to));
 
 /** The place for a cursor sent to `pos`: it's `pos` unless that's no place to stand. */
-function place(state: EditorState, pos: number, travel: Travel): number {
+function place(state: EditorState, sent: number, travel: Travel): number {
   const { doc } = state;
-  const { from, forward, pointer } = travel;
+  const { from, forward, pointer, limit } = travel;
+  const pos = limit === null ? sent : Math.min(sent, limit);
   const line = doc.lineAt(pos);
+  if (isBlankScript(state, line)) return pos;
   if (passedOver(state, pos)) {
     const above = doc.line(line.number - 1);
     return forward && !pointer
       ? place(state, doc.line(line.number + 1).from, travel)
       : visibleEnd(state, above);
   }
-  if (pastTheLastElement(state, pos, travel)) return lastElementEnd(state) ?? pos;
+  if (pastTheLastElement(state, pos, travel)) return lastElementEnd(state, pos) ?? pos;
 
   const spans = hiddenSpans(state, line);
   const start = startAmong(line, spans);
@@ -127,23 +137,48 @@ function place(state: EditorState, pos: number, travel: Travel): number {
   return pos;
 }
 
-/** A lone cursor, moved off a hidden mark or a passed-over line (§6.4). The one rule for every move. */
+/** A range with both ends at or above `limit`. */
+function stopAt(range: SelectionRange, limit: number): SelectionRange {
+  if (range.anchor <= limit && range.head <= limit) return range;
+  const anchor = Math.min(range.anchor, limit);
+  const head = Math.min(range.head, limit);
+  return EditorSelection.range(anchor, head, range.goalColumn, range.bidiLevel ?? undefined);
+}
+
+/** The selection a transaction makes, stopped above the protected block (§8.4). */
+function stoppedAbove({ ranges, mainIndex }: EditorSelection, limit: number | null) {
+  if (limit === null || ranges.every(({ to }) => to <= limit)) return null;
+  return EditorSelection.create(
+    ranges.map((range) => stopAt(range, limit)),
+    mainIndex,
+  );
+}
+
+/**
+ * Where the cursor may stand, moved off a hidden mark or a passed-over line (§6.4), and no selection
+ * past the metadata block (§8.4). The one rule for every move. A change's own place for the cursor
+ * is `keepMetadata`'s to stop.
+ */
 export const classicCaret: Extension = EditorState.transactionFilter.of((tr) => {
-  if (!tr.selection || tr.annotation(classicEdit)) return tr;
+  if (!tr.selection) return tr;
   const tidied = tr.annotation(classicTidied) === true;
-  if (tr.docChanged && !tidied) return tr;
-  const { ranges, main } = tr.newSelection;
-  if (ranges.length > 1 || !main.empty) return tr;
+  if (tr.docChanged && (!tidied || tr.annotation(classicEdit))) return tr;
   // A tidied line is gone in the new text, and what's a place to stand is read from that.
   const state = tidied ? tr.state : tr.startState;
+  const limit = protectedRange(state)?.from ?? null;
+  const stopped = stoppedAbove(tr.newSelection, limit);
+  const { ranges, main } = stopped ?? tr.newSelection;
+  const moved = () => (stopped ? [tr, { selection: stopped, sequential: true }] : tr);
+  if (tr.annotation(classicEdit) || ranges.length > 1 || !main.empty) return moved();
   const from = tr.changes.mapPos(tr.startState.selection.main.head, -1);
   const pos = place(state, main.head, {
     from,
     forward: main.head >= from,
     pointer: tr.isUserEvent('select.pointer'),
     key: tr.isUserEvent('select') && !tr.isUserEvent('select.pointer'),
+    limit,
   });
-  if (pos === main.head) return tr;
+  if (pos === main.head) return moved();
   const selection = EditorSelection.cursor(
     pos,
     main.assoc,
@@ -374,6 +409,8 @@ const loneCursor = ({ selection }: EditorState) =>
 const deleteSpec = (forward: boolean) => (state: EditorState) => {
   if (!loneCursor(state)) return null;
   const { head } = state.selection.main;
+  // Nothing under the last line is the writer's to take or join.
+  if (forward && head === protectedRange(state)?.from) return {};
   const line = state.doc.lineAt(head);
   const here = hereIn(state);
   // A line can start with a note, whose first word is its visible start.

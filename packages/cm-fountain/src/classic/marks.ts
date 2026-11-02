@@ -20,6 +20,7 @@ import {
 import { inNote, upperFix } from '../input';
 import { BOM } from '../keymap';
 import { appChange, insideRegion, parsedDoc } from '../state';
+import { isBlankScript } from './hidden';
 import {
   BLANK_SPEECH,
   type ClassicKind,
@@ -433,12 +434,14 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
     return tr;
   }
   if (tr.annotation(appChange)) return tr;
-  const state = tr.startState;
-  if (state.selection.ranges.length > 1 || tr.newSelection.ranges.length > 1) return tr;
+  const start = tr.startState;
+  if (start.selection.ranges.length > 1 || tr.newSelection.ranges.length > 1) return tr;
   const typed = typedOnLine(tr);
-  const head = state.selection.main.head;
+  const head = start.selection.main.head;
   if (!typed || head < typed.line.from || head > typed.line.to) return tr;
-  const { line } = typed;
+  // The first letter of a blank script is read as it will stand, on its own line above the block.
+  const state = isBlankScript(start, typed.line) ? withRoomAbove(start) : start;
+  const line = state === start ? typed.line : state.doc.line(1);
   if (blocked(state, line.from)) return tr;
   // A `)` typed against the `)` that's there goes past it (§6.4).
   if (typed.from === head && tr.newDoc.sliceString(typed.from, typed.to) === ')') {
@@ -447,7 +450,7 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
     }
   }
 
-  const own = ownLine(state, line);
+  const own = ownLine(start, line);
   // The capitals, on the typed text alone, then the mark for the text they make.
   const rawText = tr.newDoc.sliceString(
     line.from,
@@ -467,8 +470,12 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
     CAPITALS.has(element) && !inNote(state, line, typed.at)
       ? upperFix(tr.newDoc, typed.from, tr.newDoc.sliceString(typed.from, typed.to))
       : null;
-  return applySettled(tr, line, own, added, fix, rawText);
+  return applySettled(tr, line, own, added, fix, rawText, state);
 });
+
+/** The text with the two breaks `keepMetadata` will add above the block. */
+const withRoomAbove = (state: EditorState) =>
+  state.update({ changes: { from: 0, insert: state.lineBreak.repeat(2) }, filter: false }).state;
 
 /**
  * A delete is a keystroke too (§4.2): what's left of the line may read as something else, or may no
@@ -581,8 +588,8 @@ function applySettled(
   added: readonly Span[],
   fix: { from: number; to: number; insert: string } | null,
   rawText: string,
+  state: EditorState = tr.startState,
 ) {
-  const state = tr.startState;
   const capitals = fix ? ChangeSet.of(fix, tr.newDoc.length) : null;
   const text = fix
     ? rawText.slice(0, fix.from - line.from) + fix.insert + rawText.slice(fix.to - line.from)

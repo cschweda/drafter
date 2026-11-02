@@ -14,6 +14,7 @@ import { type Block, blockAt, type Doc, type Span } from '@drafter/fountain';
 import { blocked, type ElementKind, elementStructure, isBlank, underSpeech } from '../elements';
 import { cueIndex } from '../keymap';
 import { appChange, parsedDoc, regionAt } from '../state';
+import { isBlankScript } from './hidden';
 
 // Classic Mode's idea of the element on a line (design §5). A line with text is what the parser
 // says it is. An empty line has nothing to say, so what the next thing typed will be is worked out
@@ -194,6 +195,7 @@ export const BLANK_SPEECH = '  ';
 
 /** Whether nothing on a line says what it is, so it has a pending element. */
 function isEmpty(state: EditorState, line: Line): boolean {
+  if (isBlankScript(state, line)) return true;
   return (
     isBlank(line.text) && !blocked(state, line.from) && !blockAt(state.field(parsedDoc), line.from)
   );
@@ -238,7 +240,7 @@ const stored = (state: EditorState) => state.field(classicLine, false) ?? null;
  */
 export function lineKindAt(state: EditorState, line: Line): ClassicKind | null {
   const here = cursorLine(state);
-  if (blocked(state, line.from)) return null;
+  if (blocked(state, line.from) && !isBlankScript(state, line)) return null;
   if (line.from === here.from) {
     const own = stored(state);
     if (own) return own.kind;
@@ -262,7 +264,8 @@ export function lineKindAt(state: EditorState, line: Line): ClassicKind | null {
 export function elementAt(state: EditorState): ClassicElement | null {
   if (!oneCursor(state)) return null;
   const line = cursorLine(state);
-  const where = blocked(state, line.from);
+  const blank = isBlankScript(state, line);
+  const where = blank ? null : blocked(state, line.from);
   const doc = state.field(parsedDoc);
   if (where) {
     const kind =
@@ -274,7 +277,7 @@ export function elementAt(state: EditorState): ClassicElement | null {
   }
   const empty = isEmpty(state, line);
   const own = stored(state);
-  const found = blockAt(doc, line.from);
+  const found = blank ? null : blockAt(doc, line.from);
   const kind = own?.kind ?? (found ? readKind(state, found.block) : pendingAt(state, line.from));
   const below = line.number < state.doc.lines ? state.doc.line(line.number + 1) : null;
   const { headings } = state.facet(elementStructure)();

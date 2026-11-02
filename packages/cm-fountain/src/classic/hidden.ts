@@ -1,5 +1,11 @@
 import type { EditorState, Line } from '@codemirror/state';
-import { type Block, type Line as BlockLine, blockAt, type Region } from '@drafter/fountain';
+import {
+  type Block,
+  type Line as BlockLine,
+  blockAt,
+  metadataSpan,
+  type Region,
+} from '@drafter/fountain';
 import { lineMarks } from '../highlight';
 import { BOM } from '../keymap';
 import { parsedDoc } from '../state';
@@ -14,6 +20,16 @@ export interface HiddenSpan {
 }
 
 const NO_SPANS: readonly HiddenSpan[] = [];
+
+/**
+ * Whether a line is the metadata block's own first line with nothing above it. A new blank script
+ * has that and no empty line, so the block's line stands in for the empty line the writer sees (§8.4).
+ */
+export function isBlankScript(state: EditorState, line: Line): boolean {
+  if (line.number !== 1) return false;
+  const span = metadataSpan(state.field(parsedDoc));
+  return span !== null && span.from <= line.to;
+}
 
 /** The line of a block that starts at `from`, by search, as a paragraph can run to many lines. */
 function lineOf(block: Block, from: number): BlockLine | null {

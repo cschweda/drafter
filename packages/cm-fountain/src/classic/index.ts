@@ -12,6 +12,7 @@ import {
 import { classicEnter, classicShiftEnter, classicShiftTab, classicTab } from './keys';
 import { classicLine, keepLineInHistory } from './line';
 import { classicMarks, settleBreaks, settleDeletes, tidyLeft } from './marks';
+import { keepMetadata, metadataHidden } from './metadata';
 import { classicView } from './view';
 
 export {
@@ -59,6 +60,7 @@ export {
   shapeOf,
   tidyLeft,
 } from './marks';
+export { keepMetadata, metadataHidden, protectedRange } from './metadata';
 export { classicView, lineClassOf, roleVariables } from './view';
 
 /** At `Prec.highest`, ahead of `language`, as CodeMirror's completion keys are at that level too (§6). */
@@ -88,9 +90,10 @@ export interface ClassicOptions {
 
 /** Classic Mode: Enter and Tab typing over plain Fountain. Each part is added here as it is built. */
 export function classic(_options: ClassicOptions = {}): Extension {
-  // Filters run last to first, and the caret reads what tidying left.
+  // Filters run last to first: the caret reads what tidying left, and the block's backstop has the last word.
   return [
     classicKeys,
+    keepMetadata,
     classicCaret,
     settleBreaks,
     settleDeletes,
@@ -100,5 +103,6 @@ export function classic(_options: ClassicOptions = {}): Extension {
     classicLine,
     keepLineInHistory,
     classicView,
+    metadataHidden,
   ];
 }
