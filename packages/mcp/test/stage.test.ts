@@ -3,12 +3,16 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import workspace from '../package.json' with { type: 'json' };
 import { tempFolder } from './temp';
 
 const PACKAGE = join(import.meta.dirname, '..');
 const BUNDLE = join(PACKAGE, 'dist', 'drafter-mcp.js');
+
+// `npm pack` and `npm publish --dry-run` take seconds on a shared CI runner (5.5 s once on the
+// v0.24.2 tag's Linux job, past Vitest's 5-second default).
+vi.setConfig({ testTimeout: 60_000 });
 
 beforeAll(() => {
   if (!existsSync(BUNDLE))

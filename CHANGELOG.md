@@ -25,6 +25,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- The npm package's tests allow 60 seconds, since `npm pack` took 5.5 seconds on a shared runner and failed the first v0.24.2 release build.
 - **drafter.dev measures visitor traffic with Plausible**, privacy-focused analytics: no cookies, nothing that identifies you, and no tracking across sites. It runs only on the website: the downloaded desktop app, a self-hosted copy, and local and test builds have no analytics (only drafter.dev's Netlify build sets `DRAFTER_ANALYTICS=plausible`). The content security policy allows plausible.io only in a build whose pages load it. Privacy, What is Drafter, Why, and the README now say so, in place of "no analytics", with a section on why Plausible over Google Analytics.
 - **Check for updates shows that it's working:** a moving bar while it checks, and once it finds a new version, "Found a new version. Downloading it, so it's ready when you reload…" while the new version's files (about 8.6 MB) download. Before, the dialog said only "Checking for updates…" for as long as 15 seconds and looked stuck.
 - The roadmap adds **self-hosting** (v0.24.3): a Dockerfile and compose file that serve the web app from your own machine, with drafter.dev's security headers.
