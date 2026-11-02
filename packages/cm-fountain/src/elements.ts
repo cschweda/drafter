@@ -181,7 +181,7 @@ const NOT_A_PLACE =
   /^(?:(?:END\s+)?(?:FLASHBACK|MONTAGE|SERIES OF SHOTS|DREAM SEQUENCE)|INTERCUT|BACK TO SCENE|(?:MOMENTS\s+)?LATER|CONTINUOUS)$/;
 
 /** A blank line as the parser reads one: only white space, but not the two spaces of a speech. */
-const isBlank = (text: string) => text !== '  ' && /^\s*$/.test(text);
+export const isBlank = (text: string): boolean => text !== '  ' && /^\s*$/.test(text);
 
 /** What a command knows about one line. */
 interface Here {
@@ -253,6 +253,12 @@ function speechAbove(h: Here): boolean {
   if (!above || isBlank(above.text)) return false;
   const up = here(h.state, above.from);
   return !!up && (isCueLine(up) || inSpeech(up) || isLoneCue(up));
+}
+
+/** Whether the line at `pos` sits directly under a cue or a line of a speech. False where no command acts. */
+export function underSpeech(state: EditorState, pos: number): boolean {
+  const h = here(state, pos);
+  return !!h && speechAbove(h);
 }
 
 /**

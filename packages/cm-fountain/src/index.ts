@@ -1,5 +1,12 @@
 export { fountainKeymap } from './bindings';
-export { type ClassicOptions, classic } from './classic';
+export {
+  type ClassicElement,
+  type ClassicKind,
+  type ClassicOptions,
+  classic,
+  classicLine,
+  elementAt,
+} from './classic';
 export { completionOverride, fountainCompletion, fountainCompletionSource } from './complete';
 export { type CursorElement, cursorElement, onCursorElement } from './cursor';
 export {
