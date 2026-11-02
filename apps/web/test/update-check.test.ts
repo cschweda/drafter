@@ -89,6 +89,16 @@ describe('checking on the web', () => {
     expect(await check.run()).toEqual({ status: 'ready', how: 'reload' });
   });
 
+  test('says a found version is downloading while it installs, not just Checking…', async () => {
+    const check = createUpdateCheck(web(registration({ finds: 'installed' })));
+    const done = check.run();
+    await expect.poll(() => check.state.value.status).toBe('fetching');
+    expect(checkMessage(check.state.value, '0.13.1', 'web')).toBe(
+      'Found a new version. Downloading it, so it’s ready when you reload…',
+    );
+    expect(await done).toEqual({ status: 'ready', how: 'reload' });
+  });
+
   test('a new version that fails to install is no new version', async () => {
     const check = createUpdateCheck(web(registration({ finds: 'redundant' })));
     expect(await check.run()).toEqual({ status: 'latest' });

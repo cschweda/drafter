@@ -32,6 +32,8 @@ export interface CheckDeps {
 }
 
 /**
+ * `fetching`: on the web, a new version was found and is downloading (the app's files, a few
+ * megabytes), so the check says so while it waits, rather than looking stuck on "Checking…".
  * `ready`: a new version is waiting (`how`: Reload, Restart, or Get it). `downloading`: the
  * desktop app found one and is downloading it. `unavailable`: this copy can't check (no service
  * worker; an unpackaged desktop build).
@@ -39,6 +41,7 @@ export interface CheckDeps {
 export type CheckStatus =
   | 'idle'
   | 'checking'
+  | 'fetching'
   | 'latest'
   | 'ready'
   | 'downloading'
@@ -146,7 +149,7 @@ function fromDesktop(result: unknown): CheckState {
   return { status: 'error' };
 }
 
-async function check(deps: CheckDeps): Promise<CheckState> {
+async function check(deps: CheckDeps, report: (state: CheckState) => void): Promise<CheckState> {
   const offer = deps.offered();
   if (offer) {
     return { status: 'ready', ...(offer.version && { version: offer.version }), how: offer.how };
@@ -175,6 +178,7 @@ async function check(deps: CheckDeps): Promise<CheckState> {
   if (registration.waiting) return { status: 'ready', how: 'reload' };
   const installing = registration.installing;
   if (installing) {
+    report({ status: 'fetching' });
     const result = await settled(installing, deps.installMs ?? INSTALL_MS);
     if (result === 'installed') return { status: 'ready', how: 'reload' };
     if (result === 'timeout') return { status: 'error' };
@@ -192,7 +196,9 @@ export function createUpdateCheck(deps: CheckDeps): {
   function run(): Promise<CheckState> {
     if (running) return running;
     state.value = { status: 'checking' };
-    running = check(deps).then((result) => {
+    running = check(deps, (now) => {
+      state.value = now;
+    }).then((result) => {
       state.value = result;
       running = null;
       return result;
@@ -209,6 +215,8 @@ export function checkMessage(state: CheckState, current: string, app: 'web' | 'd
     case 'idle':
     case 'checking':
       return 'Checking for updates…';
+    case 'fetching':
+      return 'Found a new version. Downloading it, so it’s ready when you reload…';
     case 'latest':
       return app === 'desktop'
         ? `Drafter ${v(current)} is up to date.`

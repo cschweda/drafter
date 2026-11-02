@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- **Check for updates shows that it's working:** a moving bar while it checks, and once it finds a new version, "Found a new version. Downloading it, so it's ready when you reload…" while the new version's files (about 8.6 MB) download. Before, the dialog said only "Checking for updates…" for as long as 15 seconds and looked stuck.
 - The roadmap adds **self-hosting** (v0.24.3): a Dockerfile and compose file that serve the web app from your own machine, with drafter.dev's security headers.
 - **A click on a note shows it in the Source:** the Source scrolls to the note's line and marks it for a moment (line numbers shown or not), while focus stays on the Notes list. Double-click or Enter still goes to the note and puts the cursor there.
 - The design for **Drafter for Claude** (`docs/drafter-for-claude-design.md`) is approved, to be built for v0.24.2.

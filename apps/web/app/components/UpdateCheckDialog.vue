@@ -5,7 +5,8 @@ import { checkMessage } from '~/update/check';
 import { actionLabel } from '~/update/flow';
 import { runUpdateCheck, takeUpdate, updateCheckOpen, useUpdateCheck } from '~/update/use-check';
 
-// Help → Check for updates: "Checking…", then what was found. A new version is the app's own
+// Help → Check for updates: "Checking…" with a moving bar (a check can take a while when a new
+// version is found and downloads: drafter.dev is rebuilt on every push), then what was found. A new version is the app's own
 // offer (`UpdatePrompt.vue`): Reload, Restart, or Get it here does what the offer's button does
 // (asking first when changes are unsaved), and Close leaves the offer up. Nothing here reloads
 // or restarts by itself.
@@ -17,7 +18,7 @@ const app = about.app;
 const state = computed(() => check.state.value);
 const message = computed(() => checkMessage(state.value, about.version, app));
 const ready = computed(() => state.value.status === 'ready' && !!state.value.how);
-const busy = computed(() => state.value.status === 'checking');
+const busy = computed(() => state.value.status === 'checking' || state.value.status === 'fetching');
 const action = ref<HTMLButtonElement>();
 /**
  * The dialog's contents are in the page only while it is open, so its status line is never a
@@ -68,6 +69,8 @@ async function again() {
     <template v-if="shown">
       <h2 id="check-title" class="d-dialog-title">Check for updates</h2>
       <p id="check-what" role="status" aria-live="polite" data-update-check-message>{{ message }}</p>
+      <!-- Indeterminate: how long a download takes isn't known. Hidden from the tree: the status line says it. -->
+      <progress v-if="busy" class="check-bar" aria-hidden="true" data-update-check-busy />
       <div class="d-dialog-footer">
         <DButton v-if="state.status === 'error'" :disabled="busy" @click="again">Try again</DButton>
         <!-- A plain button with DButton's classes: focus is moved to it, by its ref. -->
@@ -85,5 +88,12 @@ async function again() {
 <style scoped>
 p {
   margin: 0;
+}
+.check-bar {
+  display: block;
+  width: 100%;
+  height: 4px;
+  margin-top: 12px;
+  accent-color: var(--accent);
 }
 </style>
