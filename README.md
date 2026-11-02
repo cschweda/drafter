@@ -186,7 +186,25 @@ Then drag `apps/desktop/release/mac-arm64/Drafter.app` (on an Intel Mac, `apps/d
 
 ### Self-hosted
 
-Run the web app from your own computer or server, so nothing loads from drafter.dev: `docker compose up -d`, then open `http://localhost:8080`. It stores no scripts and has no analytics. See [Self-hosting](https://drafter.dev/docs/self-hosting/).
+Run the web app from your own computer or server, so nothing loads from drafter.dev. You need [Docker](https://docs.docker.com/get-started/get-docker/).
+
+```sh
+git clone https://github.com/cschweda/drafter.git
+cd drafter
+docker compose up -d
+```
+
+The first run builds the app, which takes a few minutes. Then open `http://localhost:8080`. To stop it, run `docker compose down`. To update, run `git pull`, then `docker compose up -d --build`. It stores no scripts and has no analytics. The [Self-hosting](https://drafter.dev/docs/self-hosting/) page has more.
+
+**The downsides:**
+
+- **You keep it up to date.** Nothing updates by itself, security fixes included.
+- **It's still a browser app.** Your work lives in the browser and in the files you choose, so clearing the browser's site data can clear what's kept there, and save-in-place depends on the browser.
+- **Your scripts don't follow you.** A browser keeps each address separate, so scripts kept in the browser at drafter.dev won't appear at `localhost`. Save them to files and open them there.
+- **Other devices take more work.** It listens only on its own computer. Reaching it from elsewhere needs your own HTTPS proxy, because browsers allow offline use, installing, and saving in place only on `localhost` or HTTPS. It has no sign-in, so anyone who can reach the address can open the app, though they'd see only what's in their own browser.
+- **Docker has to be running,** and it's a sizeable program to install just for this.
+
+**Why the downloaded app may suit you better:** if what you want is privacy, the [desktop app](#windows) is usually the better choice, on Windows or Linux. It has no analytics, needs no Docker or server, and works offline. It always saves in place, and keeps its recovery copy in its own folder where no browser can clear it. Self-hosting makes more sense if you want the browser version, can't install apps, are on a Mac and don't want to build the app, or want to serve Drafter to a group from a server you run.
 
 ## Formats
 
