@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- The design for **Classic Mode** (`docs/drafter-classic-mode-design.md`) is in the repository, for the maintainer’s review: Enter and Tab typing, autofill, and a Fountain or Classic switch in the top bar, for v0.25.0, over a file that stays plain Fountain.
+
 ## [0.24.3] - 2026-11-02
 
 **Self-hosting.** `docker compose up -d` serves the web app from your own computer or server, with drafter.dev's security headers, no analytics, and nothing that stores scripts. The README and a new help page give the steps, the downsides, and when the desktop app is the better choice. `publish.sh` now uses npm's browser approval.
