@@ -41,17 +41,25 @@ jobs:
           NETLIFY: "true"
         run: pnpm build
       - name: Every package's tests
-        # A shared runner is slower and noisier than a writer's computer, so a timing test gets two
-        # more tries here; the release gates run them once.
-        run: pnpm -r --workspace-concurrency=1 --filter "./packages/*" test --retry=2
+        # A shared runner is slower and noisier than a writer's computer. The tests with a fixed time
+        # limit ("within 3 seconds", "under 50 ms", "in under a second") are left to the release gates,
+        # which run every test once on a real machine; the tests that compare n with 4n or 8n, which
+        # catch a slowdown on any machine, run here, with two more tries for noise.
+        env:
+          NO_FIXED_LIMITS: '^(?!.*\b(within|under) (a |an |[0-9]))'
+        run: pnpm -r --workspace-concurrency=1 --filter "./packages/*" test --retry=2 -t "$NO_FIXED_LIMITS"
       - name: The trap documents (fixtures/trap/README.md)
+        env:
+          NO_FIXED_LIMITS: '^(?!.*\b(within|under) (a |an |[0-9]))'
         run: |
           pnpm --filter "@drafter/cli..." build
-          pnpm exec vitest run --project trap --retry=2
+          pnpm exec vitest run --project trap --retry=2 -t "$NO_FIXED_LIMITS"
       - name: The web app's typecheck
         run: pnpm --filter @drafter/web typecheck
       - name: The web app's unit tests
-        run: pnpm --filter @drafter/web exec vitest run --retry=2
+        env:
+          NO_FIXED_LIMITS: '^(?!.*\b(within|under) (a |an |[0-9]))'
+        run: pnpm --filter @drafter/web exec vitest run --retry=2 -t "$NO_FIXED_LIMITS"
       - name: The desktop shell's unit tests
         run: pnpm --filter @drafter/desktop test
       - name: The browsers for the end-to-end tests
