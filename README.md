@@ -208,8 +208,8 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 
 **Next:**
 
-- **v0.24.1: Story map** , a visual page of your script or play to send to anyone.
 - **v0.24.2: Drafter for Claude**, a local MCP server so Claude (or another AI app you use) can read your scripts, drafts, and cuts: storyboards, notes, and insights across a series. Nothing in Drafter itself ever calls an AI.
+- **v0.24.3: Self-hosting**, a `docker compose up` that serves the web app from your own computer or server, for privacy without the cloud. Your scripts already stay in your browser; this takes drafter.dev out of the picture too.
 - **v0.25.0: Classic Mode**, for writers who know Final Draft rather than Fountain. Enter and Tab move between elements the way most screenwriting apps work, and the left side looks like a script, with the marks hidden. It's not Fountain typing, but the file is still plain Fountain underneath. Fountain Mode stays the default, and one switch changes it.
 - **v0.26.0: Novel**, a comfortable place to draft a novel in Markdown.
 
