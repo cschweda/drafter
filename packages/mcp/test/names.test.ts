@@ -37,10 +37,17 @@ describe('name neighbours', () => {
   });
 
   it('neighbours count code points', () => {
-    expect(withinEdits('ÉLODIE', 'ELODIE', 1)).toBe(true);
-    // A decomposed É is two code points: the accent is one edit.
-    expect(withinEdits('ÉLODIE', 'ELODIE', 1)).toBe(true);
-    expect(pairOf(neighbours(['ÉLODIE', 'ELODIE']), 'ÉLODIE', 'ELODIE')).toBe(true);
+    const composed = '\u00c9LODIE';
+    const decomposed = 'E\u0301LODIE';
+    expect(composed).not.toBe(decomposed);
+    // One accented letter is one edit from the plain letter.
+    expect(withinEdits(composed, 'ELODIE', 1)).toBe(true);
+    expect(pairOf(neighbours([composed, 'ELODIE']), composed, 'ELODIE')).toBe(true);
+    // Typed as one character or as two, É is the same letter: the same name, never a neighbour.
+    expect(withinEdits(decomposed, composed, 0)).toBe(true);
+    expect(withinEdits(decomposed, 'ELODIE', 1)).toBe(true);
+    expect(neighbours([composed, decomposed])).toEqual([]);
+    expect(neighbours([decomposed, composed, 'ELODIE'])).toEqual([[decomposed, 'ELODIE']]);
     // Two-character Japanese names, one character apart: one edit.
     expect(withinEdits('春子', '夏子', 1)).toBe(true);
     expect(pairOf(neighbours(['春子', '夏子']), '春子', '夏子')).toBe(true);
@@ -54,6 +61,29 @@ describe('name neighbours', () => {
     const pairs = neighbours(['JUNE', 'JUNE', 'DALE', '春子', '春子']);
     for (const [a, b] of pairs) expect(a).not.toBe(b);
     expect(pairs).toEqual([]);
+  });
+
+  it('a thousand long names that share a start are compared quickly', () => {
+    // Long names (past the length any name is compared at) and names just within it, every one
+    // sharing its start with the rest.
+    const long = Array.from({ length: 1_000 }, (_, i) => `${'A'.repeat(195)}${i}`);
+    let t = performance.now();
+    expect(neighbours(long)).toEqual([]);
+    expect(performance.now() - t).toBeLessThan(1_000);
+    const near = Array.from(
+      { length: 1_000 },
+      (_, i) => `${'B'.repeat(36)}${String(i).padStart(4, '0')}`,
+    );
+    t = performance.now();
+    const pairs = neighbours(near);
+    expect(performance.now() - t).toBeLessThan(1_000);
+    expect(pairs.length).toBeGreaterThan(0);
+    expect(pairOf(pairs, near[0] as string, near[1] as string)).toBe(true);
+    // withinEdits itself, on two long names, is linear in their length.
+    t = performance.now();
+    for (let i = 0; i < 1_000; i++)
+      withinEdits(`${'C'.repeat(5_000)}X`, `${'C'.repeat(5_000)}Y`, 2);
+    expect(performance.now() - t).toBeLessThan(1_000);
   });
 
   it('withinEdits agrees with a full Levenshtein for max ≤ 2', () => {

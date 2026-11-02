@@ -142,6 +142,9 @@ const ELEMENTS: Record<Where, ReadonlySet<Element>> = {
 function elementOf(script: Script, block: Doc['blocks'][number]): Element | null {
   if (block.kind === 'scene_heading' || startsScene(script.template, block)) return 'heading';
   switch (block.kind) {
+    case 'lyric':
+      // Sung lines are spoken lines.
+      return 'dialogue';
     case 'dialogue':
     case 'parenthetical':
     case 'action':
@@ -153,6 +156,26 @@ function elementOf(script: Script, block: Doc['blocks'][number]): Element | null
     default:
       return 'other';
   }
+}
+
+/** The most different words one search looks for. */
+export const MAX_WORDS = 20;
+
+/**
+ * The words to find, case-folded, in the order given: each once, and none that is part of
+ * another (an element with "lighthouse" in it has "light" in it too).
+ */
+export function wordsToFind(given: string): string[] {
+  const unique = [
+    ...new Set(
+      given
+        .trim()
+        .split(/\s+/)
+        .filter((word) => word !== '')
+        .map(fold),
+    ),
+  ];
+  return unique.filter((word) => !unique.some((other) => other !== word && other.includes(word)));
 }
 
 /** The hits in a script, in order, at most `limit`; and what it left out. */
@@ -284,12 +307,9 @@ async function search(args: SearchInput, ctx: ToolContext): Promise<SearchOutput
   if (args.folder !== undefined && args.script !== undefined)
     throw new Refusal('Give a folder or a script, not both.');
   // Plain words: split at white space, case-folded; each is found by indexOf.
-  const list = args.words
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word !== '')
-    .map(fold);
+  const list = wordsToFind(args.words);
   if (list.length === 0) throw new Refusal('Give at least one word to find.');
+  if (list.length > MAX_WORDS) throw new Refusal(`Give at most ${MAX_WORDS} words to find.`);
   const include = ctx.include(args);
   const wanted: Wanted = {
     words: list,
@@ -357,10 +377,6 @@ async function search(args: SearchInput, ctx: ToolContext): Promise<SearchOutput
   let i = at;
   files: for (; i < targets.length; i++, skip = 0) {
     const target = targets[i] as Target;
-    if (total >= SEARCH_LIMITS.total) {
-      stopped = 'hits';
-      break;
-    }
     if (i >= SEARCH_LIMITS.files) {
       stopped = 'files';
       break;
@@ -394,6 +410,7 @@ async function search(args: SearchInput, ctx: ToolContext): Promise<SearchOutput
       found = got.hits;
     } else found = markdownHits(loaded, wanted, limit);
     for (let k = skip; k < found.length; k++) {
+      // There is a hit past the last one a search gives: it stopped for the limit.
       if (total >= SEARCH_LIMITS.total) {
         stopped = 'hits';
         break files;
@@ -738,7 +755,7 @@ export const storyMap: ToolDef<MapInput, MapOutput> = {
   name: 'story_map',
   title: 'Story map',
   description:
-    'The Story map of one screenplay or stage play, as data (never the page itself, and never the writer’s contact): its acts, scenes (where and when, what happens, who is in it, planned and to-do marks), characters (screen time, share of the talking, scenes, hooks and ages from their introductions), places, picked lines, setups and payoffs, and what is still to be written. Indexes in it (a scene’s `chips`, a quote’s `character`) count from 0 into its lists. `status` finished leaves planned scenes out. A long script comes a few acts a page, an act too long for one page in parts: pass `next` back as `cursor`; everything but the acts and scenes is on the first page.',
+    'The Story map of one screenplay or stage play, as data (never the page itself, and never the writer’s contact): its acts, scenes (where and when, what happens, who is in it, planned and to-do marks), characters (screen time, share of the talking, scenes, hooks and ages from their introductions), places, picked lines, setups and payoffs, and what is still to be written. Indexes in it (a scene’s `chips`, a quote’s `character`, a character’s `signature`) count from 0 into its lists; when a list was too long for the page (`characters_more`, `quotes_more`), an index can point past what is shown. `status` finished leaves planned scenes out. A long script comes a few acts a page, an act too long for one page in parts: pass `next` back as `cursor`; everything but the acts and scenes is on the first page.',
   input: mapInput,
   output: mapOutput,
   run: storyMapTool,
@@ -840,7 +857,8 @@ async function planSeries(args: SeriesInput, ctx: ToolContext): Promise<Planned[
 
 /** Why a script couldn't be read, in the reader's words (never a path). */
 function whyNot(error: unknown): string {
-  if (error instanceof Refused) return `Can’t read it: ${error.message}.`;
+  // The reader's own words: a fixed phrase, or a file's name with what Drafter reads (never a path).
+  if (error instanceof Refused) return error.message;
   if (error instanceof Refusal) return error.message;
   return 'Drafter couldn’t read it.';
 }
@@ -876,7 +894,8 @@ async function series(args: SeriesInput, ctx: ToolContext): Promise<SeriesOutput
     {
       name: string;
       ages: string[];
-      appears: Array<{ script: number; scenes: number[]; scenes_more?: number }>;
+      /** Every scene, by script: capped when the answer is made. */
+      appears: Array<{ script: number; scenes: number[] }>;
       first: number;
       scenes: number;
     }
@@ -899,19 +918,21 @@ async function series(args: SeriesInput, ctx: ToolContext): Promise<SeriesOutput
     for (const character of cast.characters) {
       const figures = cast.figures.get(character.key);
       const scenes = (figures?.scenes ?? []).map((p) => p.scene + 1);
-      let person = people.get(character.key);
+      // NFC: É typed as one character or as two is the same name.
+      const key = character.key.normalize('NFC');
+      let person = people.get(key);
       if (!person) {
         person = { name: name(character.name), ages: [], appears: [], first: order++, scenes: 0 };
-        people.set(character.key, person);
+        people.set(key, person);
       }
       const found = hooks.get(character.key)?.age;
       const age = found ? clip(found, 50) : null;
       if (age && !person.ages.includes(age)) person.ages.push(age);
-      person.appears.push({
-        script: n,
-        scenes: scenes.slice(0, SERIES_SCENES),
-        ...(scenes.length > SERIES_SCENES ? { scenes_more: scenes.length - SERIES_SCENES } : {}),
-      });
+      const last = person.appears.at(-1);
+      if (last?.script === n)
+        // The same name in another Unicode form, in the same script: one character.
+        last.scenes = [...new Set([...last.scenes, ...scenes])].sort((a, b) => a - b);
+      else person.appears.push({ script: n, scenes });
       person.scenes += scenes.length;
     }
     for (const location of cast.locations.values()) {
@@ -939,7 +960,11 @@ async function series(args: SeriesInput, ctx: ToolContext): Promise<SeriesOutput
   const characters = keyed.map(([, p]) => ({
     name: p.name,
     age: p.ages.length === 0 ? null : p.ages.join(', '),
-    appears: p.appears,
+    appears: p.appears.map(({ script, scenes }) => ({
+      script,
+      scenes: scenes.slice(0, SERIES_SCENES),
+      ...(scenes.length > SERIES_SCENES ? { scenes_more: scenes.length - SERIES_SCENES } : {}),
+    })),
   }));
   const compared = keyed.slice(0, NEIGHBOUR_NAMES).map(([key]) => key);
   const pairs = neighbours(compared);

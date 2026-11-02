@@ -1,3 +1,4 @@
+import { chmodSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { __setLimitsForTests, SERIES_MAX } from '../src/names';
@@ -134,6 +135,37 @@ describe('series_overview', () => {
     const some = await series({ folder: 'Crowd' });
     expect(some.scripts.length).toBeLessThan(SERIES_MAX);
     expect(some.skipped[0]?.why).toBe('past the 20 MB of scripts one call reads');
+  });
+
+  it('a script that can’t be read is skipped, and why never holds a full path', async () => {
+    const dir = tempFolder();
+    const folder = join(dir, 'Broken');
+    put(join(folder, 'A good one.fountain'), 'INT. BARN - DAY\n\nHENRIK\nMorning.\n');
+    // Larger than a script may be, UTF-16, and (where the system honours it) unreadable.
+    put(join(folder, 'B too big.fountain'), 'x'.repeat(5 * 1024 * 1024 + 1));
+    writeFileSync(
+      join(folder, 'C wide.fountain'),
+      Buffer.from('\ufeffINT. BARN - DAY\n', 'utf16le'),
+    );
+    const locked = put(join(folder, 'D locked.fountain'), 'INT. BARN - NIGHT\n');
+    chmodSync(locked, 0o000);
+    open = await connect({ folders: [folder] });
+    const got = await series({ folder: 'Broken' });
+    chmodSync(locked, 0o644);
+    expect(got.scripts.map((s) => s.path)).toEqual(['Broken/A good one.fountain']);
+    expect(got.skipped.map((s) => s.path)).toEqual(
+      expect.arrayContaining(['Broken/B too big.fountain', 'Broken/C wide.fountain']),
+    );
+    expect(got.skipped.find((s) => s.path === 'Broken/B too big.fountain')?.why).toBe(
+      'it is larger than 5 MB',
+    );
+    expect(got.skipped.find((s) => s.path === 'Broken/C wide.fountain')?.why).toBe(
+      'it isn’t UTF-8 text',
+    );
+    for (const skipped of got.skipped) {
+      expect(skipped.why).not.toContain(dir);
+      expect(skipped.why).not.toMatch(/(^|\s)\/[^\s]/);
+    }
   });
 
   it('a folder and a list together, or neither, are refused', async () => {

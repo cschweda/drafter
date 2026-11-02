@@ -277,6 +277,63 @@ describe('search_scripts', () => {
     expect(got.next).toBeDefined();
   });
 
+  it('each word counts once, a word inside another adds nothing, and 20 at most', async () => {
+    const script = await lamp();
+    const once = await search({ script, words: 'lamp' });
+    expect(await search({ script, words: 'lamp LAMP Lamp' })).toEqual(once);
+    const boat = await search({ script, words: 'boat' });
+    expect((await search({ script, words: 'oat boat' })).hits).toEqual(boat.hits);
+    const many = Array.from({ length: 21 }, (_, i) => `w${String.fromCharCode(97 + i)}x`).join(' ');
+    const refused = await (open as Connected).call('search_scripts', { script, words: many });
+    expect(refusalOf(refused).error).toBe('Give at most 20 words to find.');
+    const twenty = many.split(' ').slice(0, 20).join(' ');
+    expect((await search({ script, words: twenty })).hits).toEqual([]);
+  });
+
+  it('sung lines are dialogue, and the singer’s', async () => {
+    const dir = tempFolder();
+    put(
+      join(dir, 'Song', 'Song.fountain'),
+      `INT. CHAPEL - NIGHT\n\nCandles. The heron on the sill.\n\nODILE\n~Over the water, the heron flies\n\nAUGUSTE\nThe heron again.\n`,
+    );
+    open = await connect({ folders: [join(dir, 'Song')] });
+    const spoken = await search({ script: 'Song/Song.fountain', words: 'heron', in: 'dialogue' });
+    expect(spoken.hits.map((h) => [h.element, h.who])).toEqual([
+      ['dialogue', 'ODILE'],
+      ['dialogue', 'AUGUSTE'],
+    ]);
+    expect(spoken.hits[0]?.around).toContain('Over the water');
+    const odile = await search({
+      script: 'Song/Song.fountain',
+      words: 'heron',
+      character: 'Odile',
+    });
+    expect(odile.hits.map((h) => h.around)).toEqual(['~Over the water, the heron flies']);
+  });
+
+  it('exactly 500 hits: the search ends without saying it stopped', async () => {
+    const dir = tempFolder();
+    put(
+      join(dir, 'Pots', 'Pots.fountain'),
+      Array.from({ length: 500 }, (_, i) => `INT. GREENHOUSE ${i + 1} - DAY\n\nA marigold.\n`).join(
+        '\n',
+      ),
+    );
+    // A file after it with no marigold: nothing past the 500th hit.
+    put(join(dir, 'Pots', 'Weeds.fountain'), 'EXT. YARD - DAY\n\nNettles.\n');
+    open = await connect({ folders: [join(dir, 'Pots')] });
+    let total = 0;
+    let page = await search({ folder: 'Pots', words: 'marigold' });
+    for (;;) {
+      total += page.hits.length;
+      if (!page.next) break;
+      page = await search({ folder: 'Pots', words: 'marigold', cursor: page.next });
+    }
+    expect(total).toBe(500);
+    expect(page.stopped).toBeNull();
+    expect(page.files_searched).toBe(2);
+  });
+
   it('a folder and a script together, or no words, are refused', async () => {
     const script = await lamp();
     const both = await (open as Connected).call('search_scripts', {
