@@ -1,7 +1,8 @@
 # The checks on every pull request: Dependabot's updates and anyone else's. The same gates a release
 # runs, on Linux, minus packaging the desktop app (desktop.yml does that on main and on tags):
 # formatting and lint, the build, every package's tests, the trap documents, the web app's
-# typecheck and unit tests, the desktop shell's unit tests, and the browser tests in Chromium.
+# typecheck and unit tests, the desktop shell's unit tests, and the browser tests in Chromium
+# (shown, not required: a shared runner is too slow for them to be reliable; they gate releases).
 #
 # It uses no secret. A pull request from a fork, or from Dependabot, gets a read-only token.
 name: checks
@@ -62,14 +63,72 @@ jobs:
         run: pnpm --filter @drafter/web exec vitest run --retry=2 -t "$NO_FIXED_LIMITS"
       - name: The desktop shell's unit tests
         run: pnpm --filter @drafter/desktop test
+
+  # The browser tests, shown but not required. A shared runner is several times slower than a
+  # writer's computer (the suite takes about 55 minutes here), so the tests that time typing or
+  # drawing are left out, and keyboard-timing tests still miss now and then; the full suite, on all
+  # five browser projects, is a release gate run on a real machine. docs/DEFERRED.md tracks making
+  # these required. macOS has the fonts the layouts were written against; Linux shows the rest.
+  e2e:
+    runs-on: macos-14
+    timeout-minutes: 75
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Nothing here pushes: the token isn't left in .git/config.
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+      # Some tests import the packages' builds (an export read back, a file opened), so build them.
+      - name: Build the packages
+        run: pnpm -r --filter "./packages/*" build
       - name: The browsers for the end-to-end tests
         run: pnpm --filter @drafter/web exec playwright install --with-deps chromium
       - name: The web app's end-to-end tests, in Chromium
-        run: pnpm --filter @drafter/web e2e --project=chromium
+        run: pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within"
       - name: The test report, if anything failed
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: playwright-report
+          name: playwright-report-${{ runner.os }}
+          path: apps/web/playwright-report
+          retention-days: 7
+
+  e2e-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Nothing here pushes: the token isn't left in .git/config.
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+      # Some tests import the packages' builds (an export read back, a file opened), so build them.
+      - name: Build the packages
+        run: pnpm -r --filter "./packages/*" build
+      - name: The browsers for the end-to-end tests
+        run: pnpm --filter @drafter/web exec playwright install --with-deps chromium
+      - name: The web app's end-to-end tests, in Chromium
+        run: pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within"
+      - name: The test report, if anything failed
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report-${{ runner.os }}
           path: apps/web/playwright-report
           retention-days: 7
