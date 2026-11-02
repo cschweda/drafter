@@ -6,7 +6,7 @@ import {
   type Line,
   StateEffect,
   StateField,
-  type Transaction,
+  Transaction,
 } from '@codemirror/state';
 import { type Block, blockAt, type Doc, type Span } from '@drafter/fountain';
 import { blocked, type ElementKind, elementStructure, isBlank, underSpeech } from '../elements';
@@ -35,6 +35,8 @@ export interface StoredLine {
   made: Span | null;
   /** Autofill dismissed with Escape, until the next letter (§7.3). */
   dismissed: boolean;
+  /** The line was empty when it was stored, so what's on it was typed in this stay. */
+  beganEmpty: boolean;
 }
 
 export interface ClassicElement {
@@ -254,11 +256,12 @@ function arrival(state: EditorState): StoredLine | null {
     added: [],
     made: null,
     dismissed: false,
+    beganEmpty: true,
   };
 }
 
 /** A span through a change, shrinking from both ends, or null when none of it is left. */
-function mapSpan({ from, to }: Span, changes: ChangeDesc): Span | null {
+export function mapSpan({ from, to }: Span, changes: ChangeDesc): Span | null {
   const mapped = { from: changes.mapPos(from, 1), to: changes.mapPos(to, -1) };
   return mapped.from < mapped.to ? mapped : null;
 }
@@ -292,6 +295,13 @@ const keepsLine = (tr: Transaction) =>
     tr.isUserEvent('input.type') ||
     (tr.isUserEvent('delete') && staysOnLine(tr)));
 
+/**
+ * Whether an element command made the line something else (it carries a plain `input` and isn't
+ * Classic Mode's own), which may write nothing: what's stored about the line then no longer holds.
+ */
+const remade = (tr: Transaction) =>
+  tr.annotation(Transaction.userEvent) === 'input' && !tr.annotation(classicEdit);
+
 /** What the effects of a transaction make of the line, in the positions of the new text. */
 function applyEffects(line: StoredLine | null, tr: Transaction): StoredLine | null {
   let next = line;
@@ -305,6 +315,7 @@ function applyEffects(line: StoredLine | null, tr: Transaction): StoredLine | nu
         added: [],
         made: null,
         dismissed: false,
+        beganEmpty: isBlank(tr.newDoc.lineAt(from).text),
         ...base,
         ...effect.value,
         ...(effect.value.chosen ? { soft: false } : null),
@@ -317,10 +328,13 @@ function applyEffects(line: StoredLine | null, tr: Transaction): StoredLine | nu
   return next;
 }
 
+const isEmptied = (line: StoredLine, tr: Transaction) => isBlank(tr.newDoc.lineAt(line.from).text);
+
 /** What Classic Mode remembers of the line being typed (§5). It's never saved. */
 export const classicLine: StateField<StoredLine | null> = StateField.define<StoredLine | null>({
   create: arrival,
   update(value, tr) {
+    if (remade(tr)) return applyEffects(null, tr) ?? arrival(tr.state);
     if (!tr.docChanged && !tr.selection && tr.effects.length === 0) return value;
     let line = value;
     if (line && tr.docChanged) {
@@ -328,6 +342,8 @@ export const classicLine: StateField<StoredLine | null> = StateField.define<Stor
       if (line?.dismissed && tr.isUserEvent('input.type')) line = { ...line, dismissed: false };
     }
     line = applyEffects(line, tr);
+    // A line that had text is deleted to nothing: it's an empty line now, as a click would find it.
+    if (line && !line.beganEmpty && tr.isUserEvent('delete') && isEmptied(line, tr)) line = null;
     if (line && tr.newDoc.lineAt(tr.newSelection.main.head).from !== line.from) line = null;
     return line ?? arrival(tr.state);
   },

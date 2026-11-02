@@ -5,6 +5,7 @@ import {
   type Line,
   StateEffect,
   StateField,
+  type Text,
   Transaction,
 } from '@codemirror/state';
 import { blockAt } from '@drafter/fountain';
@@ -114,7 +115,7 @@ function inHeading(state: EditorState, line: Line, pos: number): boolean {
  * `[[` or `/*` typed on the line and not yet closed is in no region, so the line before the
  * cursor is read for the last opener that has no closer after it.
  */
-function inNote(state: EditorState, line: Line, pos: number): boolean {
+export function inNote(state: EditorState, line: Line, pos: number): boolean {
   if (insideRegion(state.field(parsedDoc), pos)) return true;
   const before = state.sliceDoc(line.from, pos);
   return (
@@ -125,6 +126,38 @@ function inNote(state: EditorState, line: Line, pos: number): boolean {
 
 const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
 const isLowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;
+
+/**
+ * The change that puts typed text in capitals, or null when it is in capitals already. `text` is
+ * what was typed at `start` in `doc`. The browser's diff of the text can hand over half of a
+ * surrogate pair, with the other half already in the document. The pair is one character, so it is
+ * changed as one.
+ */
+export function upperFix(
+  doc: Text,
+  start: number,
+  typed: string,
+): { from: number; to: number; insert: string } | null {
+  let from = start;
+  let text = typed;
+  let to = from + text.length;
+  if (from > 0 && isLowSurrogate(text.charCodeAt(0))) {
+    const before = doc.sliceString(from - 1, from);
+    if (isHighSurrogate(before.charCodeAt(0))) {
+      from--;
+      text = before + text;
+    }
+  }
+  if (to < doc.length && isHighSurrogate(text.charCodeAt(text.length - 1))) {
+    const after = doc.sliceString(to, to + 1);
+    if (isLowSurrogate(after.charCodeAt(0))) {
+      to++;
+      text += after;
+    }
+  }
+  const upper = text.toUpperCase();
+  return upper === text ? null : { from, to, insert: upper };
+}
 
 /**
  * Upper-cases what is typed in a cue or a scene heading. It is a transaction filter, so the
@@ -148,27 +181,8 @@ const upperCaseTyping = EditorState.transactionFilter.of((tr) => {
     const line = state.doc.lineAt(fromA);
     if (line.from !== cue?.from && !inHeading(state, line, fromA)) return;
     if (inNote(state, line, fromA)) return;
-    let from = fromB;
-    let text = inserted.line(1).text;
-    let to = from + text.length;
-    // The browser's diff of the text can hand over half of a surrogate pair, with the other half
-    // already in the document. The pair is one character, so it is changed as one.
-    if (from > 0 && isLowSurrogate(text.charCodeAt(0))) {
-      const before = doc.sliceString(from - 1, from);
-      if (isHighSurrogate(before.charCodeAt(0))) {
-        from--;
-        text = before + text;
-      }
-    }
-    if (to < doc.length && isHighSurrogate(text.charCodeAt(text.length - 1))) {
-      const after = doc.sliceString(to, to + 1);
-      if (isLowSurrogate(after.charCodeAt(0))) {
-        to++;
-        text += after;
-      }
-    }
-    const upper = text.toUpperCase();
-    if (upper !== text) fixes.push({ from, to, insert: upper });
+    const fix = upperFix(doc, fromB, inserted.line(1).text);
+    if (fix) fixes.push(fix);
   });
   // The fixes follow the typing, in the new document's positions, and the typing itself (its
   // selection, effects, and user event) is kept. A cursor at the end of a letter that grows, such

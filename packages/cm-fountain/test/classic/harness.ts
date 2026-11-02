@@ -1,4 +1,4 @@
-import type { EditorState, Extension } from '@codemirror/state';
+import { type EditorState, type Extension, Prec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import {
   elementStructure,
@@ -26,7 +26,8 @@ export function classicEditor(
     fountainInput(),
     elementStructure.of(() => structureOf(template)),
     elementTemplate.of(() => template),
-    classic(),
+    // Ahead of Fountain's input filters, as the app's compartment is: filters run last to first.
+    Prec.high(classic()),
   ];
   return editor(marked, extensions);
 }

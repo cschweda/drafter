@@ -305,6 +305,7 @@ describe('the stored line', () => {
       added: [],
       made: null,
       dismissed: false,
+      beganEmpty: true,
     });
   });
 

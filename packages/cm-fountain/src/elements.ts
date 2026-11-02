@@ -170,7 +170,7 @@ export const insertMark = (head: 'Setup' | 'Payoff'): StateCommand =>
   });
 
 /** The parser's start of a scene heading (rule 11): a prefix, then a dot or a space. */
-const HEADING_START = /^(?:INT\.?\/EXT|INT|EXT|EST|I\/E)[. ]/i;
+export const HEADING_START = /^(?:INT\.?\/EXT|INT|EXT|EST|I\/E)[. ]/i;
 
 /**
  * The headings that name no place, which get `.` and not `INT. `: a whole line of one of these
