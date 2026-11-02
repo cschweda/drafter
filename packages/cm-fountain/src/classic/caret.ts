@@ -377,7 +377,9 @@ const deleteSpec = (forward: boolean) => (state: EditorState) => {
   const line = state.doc.lineAt(head);
   const here = hereIn(state);
   // A line can start with a note, whose first word is its visible start.
-  const atNote = !forward && !here && !blocked(state, head) && head === visibleStart(state, line);
+  const first = hiddenSpans(state, line)[0];
+  const opensNote = first?.kind === 'note' || first?.kind === 'boneyard';
+  const atNote = !forward && !here && opensNote && head === visibleStart(state, line);
   const own = here || atNote ? (forward ? forwardDelete : backspace)(state, line, head) : null;
   return own ?? letterPast(state, forward);
 };

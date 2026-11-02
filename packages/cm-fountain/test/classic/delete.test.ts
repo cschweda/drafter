@@ -285,4 +285,103 @@ describe('§6.4, Backspace and Delete', () => {
       expect(back('[[a|\nb]]')).toBe('[[|\nb]]');
     });
   });
+
+  describe('a join or a break taken settles what it touches', () => {
+    test.each([
+      ['BANG|\n\n!NOW\nnext', '!BANG|NOW\nnext'],
+      ['GO|\n\n!NOW\nThe door opens.', '!GO|NOW\nThe door opens.'],
+      ['NOW|\n\n2\nnext', '!NOW|2\nnext'],
+      ['NOW|\n\n[[check]]\nnext', '!NOW|[[check]]\nnext'],
+      ['NOW|\n\n/* cut */\nnext', '!NOW|/* cut */\nnext'],
+      ['CUT|\n\n!TO:\n\nnext', '!CUT|TO:\n\nnext'],
+      ['SMASH CUT |\n\n!TO:', '!SMASH CUT |TO:'],
+      ['in|\n\nt. house', '!in|t. house'],
+      ['INT|\n\n!. HOUSE', '!INT|. HOUSE'],
+    ])('a join: %s', (marked, after) => {
+      expect(del(marked)).toBe(after);
+    });
+
+    test('a join from below is the same', () => {
+      expect(back('BANG\n\n!|NOW\nnext')).toBe('!BANG|NOW\nnext');
+    });
+
+    test('a page break taken', () => {
+      expect(back('NOW\n\n===|\nnext')).toBe('!NOW|\nnext');
+    });
+
+    test('a blank line taken', () => {
+      expect(back('NOW\n|\nnext')).toBe('!NOW|\nnext');
+      expect(del('NOW\n|\nnext')).toBe('!NOW\n|next');
+    });
+
+    test('a line emptied leaves the line under it what it was', () => {
+      const state = moved(classicEditor('Go|\nNOW\nnext'), deleteGroupBackward);
+      expect(render(state)).toBe('|\n!NOW\nnext');
+    });
+
+    test('in one undo', () => {
+      const state = keys(classicEditor('BANG|\n\n!NOW\nnext', { with: [history()] }), 'Delete');
+      expect(moved(state, undo).sliceDoc()).toBe('BANG\n\n!NOW\nnext');
+    });
+
+    test('a selection across lines is Fountain Mode’s', () => {
+      expect(back('BA[NG\n\n!N]OW\nnext')).toBe('BA|OW\nnext');
+    });
+  });
+
+  describe('retyping keeps the element', () => {
+    test('a name selected and retyped', () => {
+      expect(keys(classicEditor('[JUNE]\nHi.'), 'Backspace', 'BOB').sliceDoc()).toBe('BOB\nHi.');
+    });
+
+    test('a name deleted letter by letter and retyped', () => {
+      let state = classicEditor('JUNE|\nHi.');
+      for (let i = 0; i < 4; i++) state = keys(state, 'Backspace');
+      expect(keys(state, 'BOB').sliceDoc()).toBe('BOB\nHi.');
+    });
+
+    test('a heading’s prefix deleted and retyped', () => {
+      const state = moved(classicEditor('INT|. HOUSE'), deleteGroupBackward);
+      expect(elementAt(state)?.kind).toBe('scene_heading');
+      expect(keys(state, 'EXT').sliceDoc()).toBe('EXT. HOUSE');
+    });
+
+    test('action deleted to nothing is an empty line', () => {
+      const state = keys(classicEditor('One.\n\nG|\n\nTwo.'), 'Backspace', 'int. x');
+      expect(state.sliceDoc()).toBe('One.\n\nINT. X\n\nTwo.');
+    });
+  });
+
+  describe('a speech line emptied', () => {
+    const empties = (marked: string) => keys(classicEditor(marked), 'Backspace');
+
+    test.each([['JUNE\nH|\nb'], ['JUNE\n**a|**\nb'], ['JUNE\n[[a|]]\nb']])(
+      'the first letter goes on with the speech: %s',
+      (marked) => {
+        const state = empties(marked);
+        expect(state.sliceDoc()).toBe('JUNE\n\nb');
+        expect(keys(state, 'x').sliceDoc()).toBe('JUNE\nx\nb');
+      },
+    );
+
+    test('leaving takes the line', () => {
+      const state = empties('JUNE\nH|\nb');
+      const left = state.update({ selection: { anchor: 0 }, userEvent: 'select.pointer' }).state;
+      expect(left.sliceDoc()).toBe('JUNE\nb');
+    });
+
+    test('at the end of the speech nothing is held', () => {
+      const state = empties('JUNE\nH|\n\nnext');
+      const left = state.update({ selection: { anchor: 0 }, userEvent: 'select.pointer' }).state;
+      expect(left.sliceDoc()).toBe('JUNE\n\n\nnext');
+    });
+  });
+
+  test('a note alone on its line joins', () => {
+    expect(back('One.\n\n[[|check]]\n\nnext')).toBe('One.|[[check]]\n\nnext');
+  });
+
+  test('an unclosed boneyard is left alone', () => {
+    expect(back('/* cut\n|more')).toBe('/* cut|more');
+  });
 });

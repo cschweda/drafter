@@ -15,6 +15,7 @@ import {
   elementStructure,
   HEADING_START,
   isBlank,
+  underSpeech,
 } from '../elements';
 import { inNote, upperFix } from '../input';
 import { BOM } from '../keymap';
@@ -26,6 +27,7 @@ import {
   classicLine,
   lineKindAt,
   mapSpan,
+  parsedKindAt,
   pendingAt,
   type StoredLine,
   setStored,
@@ -477,13 +479,95 @@ export const settleDeletes: Extension = EditorState.transactionFilter.of((tr) =>
   const state = tr.startState;
   if (state.selection.ranges.length > 1) return tr;
   const typed = typedOnLine(tr);
-  if (!typed || blocked(state, typed.line.from)) return tr;
+  if (!typed) return tr;
   const { line } = typed;
   const own = ownLine(state, line);
   const added = own.added.flatMap((span) => mapSpan(span, tr.changes) ?? []);
   const end = line.to + tr.changes.newLength - tr.changes.length;
-  return applySettled(tr, line, own, added, null, tr.newDoc.sliceString(line.from, end));
+  const text = tr.newDoc.sliceString(line.from, end);
+  const settled = blocked(state, line.from) ? tr : applySettled(tr, line, own, added, null, text);
+  const specs: (Transaction | TransactionSpec)[] = Array.isArray(settled) ? settled : [tr];
+  const kept = keptOnLine(state, line, own, text);
+  return kept ? [...specs, { effects: kept, sequential: true }] : settled;
 });
+
+/**
+ * What a delete must store for the line (§4.2, §5): the element it was, so words retyped are the
+ * same element; and a line of a speech emptied with more of the speech under it is made, as Enter's
+ * is, so a letter goes on with the speech and leaving takes the line.
+ */
+function keptOnLine(state: EditorState, line: Line, own: StoredLine, text: string) {
+  const { doc } = state;
+  const under = line.number < doc.lines && !isBlank(doc.line(line.number + 1).text);
+  if (isBlank(text) && under && line.number > 1 && underSpeech(state, line.from)) {
+    const made = own.made ?? { from: line.from - 1, to: line.from };
+    return setStored.of({ from: line.from, kind: 'dialogue', made });
+  }
+  if (own.kind === 'action' || state.field(classicLine, false)?.from === line.from) return null;
+  return setStored.of({ from: line.from, kind: own.kind, arrivedAs: own.arrivedAs });
+}
+
+/** The change a line needs to read as `kind`, in a state, or null. */
+function markFor(state: EditorState, line: Line, kind: ClassicKind) {
+  if (blocked(state, line.from)) return null;
+  const own = { ...NO_LINE, from: line.from, ...kindsOf(kind) };
+  const { text } = settleLine(state, line, line.text, own);
+  return text === line.text ? null : difference(line.text, text, line.from);
+}
+
+/** The lines a change left next to something new, in the new text: those it ended on, and around. */
+function touched(tr: Transaction, crossed: boolean): Line[] {
+  const { newDoc: doc } = tr;
+  const line = doc.lineAt(tr.newSelection.main.head);
+  let first = line.number;
+  tr.changes.iterChanges((_fromA, _toA, fromB) => {
+    first = Math.min(first, doc.lineAt(fromB).number);
+  });
+  const lines: Line[] = [];
+  for (let n = Math.max(first - (crossed ? 1 : 0), 1); n <= first + 1 && n <= doc.lines; n++) {
+    const other = doc.line(n);
+    if (!isBlank(other.text) && (crossed || n > line.number)) lines.push(other);
+  }
+  return lines;
+}
+
+/**
+ * A delete across a break, or one that empties a line, changes what's around it: a line can come to
+ * stand over text, and read as a cue (§4.2). Each line touched is asked whether it still reads as
+ * what it was, the joined line as the upper line's element, and a mark goes on in the same
+ * transaction. A selection across lines is Fountain Mode's (§6.4).
+ */
+export const settleBreaks: Extension = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || !tr.isUserEvent('delete') || tr.annotation(appChange)) return tr;
+  const start = tr.startState;
+  if (start.selection.ranges.length > 1) return tr;
+  const crossed = typedOnLine(tr) === null;
+  if (crossed && (tr.isUserEvent('delete.selection') || tr.isUserEvent('delete.cut'))) return tr;
+  const here = tr.newDoc.lineAt(tr.newSelection.main.head);
+  if (!crossed && !isBlank(here.text)) return tr;
+  const back = tr.changes.invertedDesc;
+  const state = tr.state;
+  // Top down, and one mark: a line marked no longer makes the one under it a speech.
+  for (const line of touched(tr, crossed)) {
+    const was = start.doc.lineAt(back.mapPos(line.from, 1));
+    const kind = wasKind(start, was);
+    const change = kind && markFor(state, line, kind);
+    if (!change) continue;
+    const marks = ChangeSet.of(change, tr.newDoc.length);
+    const selection = { anchor: marks.mapPos(tr.newSelection.main.head, 1) };
+    return [tr, { changes: marks, selection, sequential: true }];
+  }
+  return tr;
+});
+
+/**
+ * What a line was: the stored element on the cursor's line, and the parser's elsewhere, as a lone
+ * name draws as a Character only while its Dialogue is pending under the cursor (§4.3).
+ */
+function wasKind(state: EditorState, line: Line): ClassicKind | null {
+  const on = state.doc.lineAt(state.selection.main.head).from === line.from;
+  return on ? lineKindAt(state, line) : parsedKindAt(state, line);
+}
 
 /** What the filter adds to the typing: the capitals, the mark, the cursor, and what's stored. */
 function applySettled(

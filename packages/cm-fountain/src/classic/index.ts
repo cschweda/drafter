@@ -11,7 +11,7 @@ import {
 } from './caret';
 import { classicEnter, classicShiftEnter, classicShiftTab, classicTab } from './keys';
 import { classicLine, keepLineInHistory } from './line';
-import { classicMarks, settleDeletes, tidyLeft } from './marks';
+import { classicMarks, settleBreaks, settleDeletes, tidyLeft } from './marks';
 
 export {
   classicArrows,
@@ -52,6 +52,7 @@ export {
   classicMarks,
   MAX_RUN,
   readsAs,
+  settleBreaks,
   settleDeletes,
   settleLine,
   shapeOf,
@@ -89,6 +90,7 @@ export function classic(_options: ClassicOptions = {}): Extension {
   return [
     classicKeys,
     classicCaret,
+    settleBreaks,
     settleDeletes,
     keepHiddenMarks,
     classicMarks,

@@ -218,6 +218,12 @@ function readKind(state: EditorState, block: Block): ClassicKind {
   }
 }
 
+/** A line as the parser reads it, or null for a line with no element. */
+export function parsedKindAt(state: EditorState, line: Line): ClassicKind | null {
+  const found = blockAt(state.field(parsedDoc), line.from);
+  return found ? readKind(state, found.block) : null;
+}
+
 const cursorLine = (state: EditorState) => state.doc.lineAt(state.selection.main.head);
 
 const oneCursor = ({ selection }: EditorState) =>
@@ -406,8 +412,17 @@ export const classicLine: StateField<StoredLine | null> = StateField.define<Stor
       if (line?.dismissed && tr.isUserEvent('input.type')) line = { ...line, dismissed: false };
     }
     line = applyEffects(line, tr);
-    // A line that had text is deleted to nothing: it's an empty line now, as a click would find it.
-    if (line && !line.beganEmpty && tr.isUserEvent('delete') && isEmptied(line, tr)) line = null;
+    // Action deleted to nothing is an empty line now, as a click would find it. Any other element
+    // stays that element, for the words that replace them.
+    if (
+      line &&
+      line.kind === 'action' &&
+      !line.beganEmpty &&
+      tr.isUserEvent('delete') &&
+      isEmptied(line, tr)
+    ) {
+      line = null;
+    }
     // Typed and deleted to nothing, the line is what it arrived as: a shape it took has gone.
     if (line?.beganEmpty && tr.isUserEvent('delete') && isEmptied(line, tr)) {
       line = { ...line, kind: line.arrivedAs };
