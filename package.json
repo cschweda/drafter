@@ -7,7 +7,7 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "prepare": "git config core.hooksPath .githooks",
+    "prepare": "git config core.hooksPath .githooks || true",
     "build": "pnpm -r build",
     "test": "vitest run",
     "bench": "vitest bench --run",

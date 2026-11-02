@@ -184,6 +184,10 @@ pnpm desktop:mac
 
 Then drag `apps/desktop/release/mac-arm64/Drafter.app` (on an Intel Mac, `apps/desktop/release/mac/Drafter.app`) to **Applications**. To update, run `git pull`, `pnpm install`, and `pnpm desktop:mac` again. The [Mac guide](docs/desktop-install-macos.md) has what to install first, opening files, where Drafter keeps things, updating, removing it, and what to do if something goes wrong. Or skip the build, and install [drafter.dev](https://drafter.dev) as an app from Chrome or Edge: it sits in your Dock, works offline, and saves straight back to your files.
 
+### Self-hosted
+
+Run the web app from your own computer or server, so nothing loads from drafter.dev: `docker compose up -d`, then open `http://localhost:8080`. It stores no scripts and has no analytics. See [Self-hosting](https://drafter.dev/docs/self-hosting/).
+
 ## Formats
 
 Fountain is where you write. Everything else is a door in or a door out.

@@ -26,6 +26,8 @@ const about: Record<string, string> = {
     'A picture of your script or play to send to anyone who asks what you are writing: making one, what goes in, and what never does.',
   'help-drafter-for-claude':
     'Let Claude, or another AI app you use, read the scripts, drafts, and cuts in folders you choose: setting it up, and what goes to the AI service.',
+  'help-self-hosting':
+    'Run the web app from your own computer or server with Docker, so nothing loads from drafter.dev.',
   'help-shortcuts': 'Every command and its keys, for a Mac and for Windows and Linux.',
   'help-privacy': 'No account, no cookies, no telemetry: your script never leaves your device.',
   'help-open-formats':

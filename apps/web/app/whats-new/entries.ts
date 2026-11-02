@@ -45,6 +45,15 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // Unreleased: its version is the next release's, and the release sets its date (a test lets an
   // entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.24.3-self-hosting',
+    date: '2026-11-02',
+    version: '0.24.3',
+    kind: 'New',
+    title: 'Run Drafter from your own computer or server',
+    text: 'A Docker setup now serves the web app yourself, with drafter.dev’s security rules and no analytics. It stores no scripts: your work stays in your browser and your files.',
+    link: { href: '/docs/self-hosting/', label: 'Self-hosting' },
+  },
+  {
     id: 'v0.24.2-drafter-for-claude',
     date: '2026-11-02',
     version: '0.24.2',

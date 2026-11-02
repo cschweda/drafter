@@ -1,0 +1,17 @@
+# `docker compose up -d`, then open http://localhost:8080 (docs: /docs/self-hosting/).
+services:
+  drafter:
+    build: .
+    # This computer only. To reach it from elsewhere, put your own HTTPS proxy in front: a browser
+    # gives the app its offline and save-in-place features only on localhost or HTTPS.
+    ports:
+      - 127.0.0.1:8080:8080
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /config
+      - /data

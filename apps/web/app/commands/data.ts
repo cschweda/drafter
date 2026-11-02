@@ -46,6 +46,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
     path: '/docs/drafter-for-claude',
     title: 'Drafter for Claude',
   },
+  { id: 'help-self-hosting', path: '/docs/self-hosting', title: 'Self-hosting' },
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
   { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy' },
   { id: 'help-open-formats', path: '/docs/open-formats', title: 'Open formats' },
