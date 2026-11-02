@@ -1,6 +1,6 @@
 {
   "name": "@drafter/archive",
-  "version": "0.24.2",
+  "version": "0.24.3",
   "description": "Files from other screenwriting apps that come packed as a zip: Drafter's own strict read-only zip reader.",
   "license": "MIT",
   "type": "module",

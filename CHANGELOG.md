@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.24.3] - 2026-11-02
+
+**Self-hosting.** `docker compose up -d` serves the web app from your own computer or server, with drafter.dev's security headers, no analytics, and nothing that stores scripts. The README and a new help page give the steps, the downsides, and when the desktop app is the better choice. `publish.sh` now uses npm's browser approval.
+
 ### Added
 
 - **Self-hosting:** a `Dockerfile` and `compose.yaml` serve the web app from your own computer or server: `docker compose up -d`, then `http://localhost:8080`. A small Caddy server, read-only, unprivileged, on this computer only, with no analytics and nothing that stores scripts. Its headers are generated from the same `_headers` drafter.dev serves, and a new pull-request check builds and tests the image. A help page, Self-hosting, says how.
@@ -1201,7 +1205,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.24.2...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.24.3...HEAD
+[0.24.3]: https://github.com/cschweda/drafter/compare/v0.24.2...v0.24.3
 [0.24.2]: https://github.com/cschweda/drafter/compare/v0.24.1...v0.24.2
 [0.24.1]: https://github.com/cschweda/drafter/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/cschweda/drafter/compare/v0.23.3...v0.24.0

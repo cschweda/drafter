@@ -17,7 +17,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.24.2.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Drafter for Claude is out, so Claude can read your scripts, drafts, and cuts; next up is self-hosting (v0.24.3). See the [roadmap](#roadmap).
+> **Status: v0.24.3.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Self-hosting with Docker is out; next up is Classic Mode (v0.25.0), for writers who know Final Draft rather than Fountain. See the [roadmap](#roadmap).
 
 ## Free, no login, private
 
@@ -204,7 +204,7 @@ The first run builds the app, which takes a few minutes. Then open `http://local
 - **Other devices take more work.** It listens only on its own computer. Reaching it from elsewhere needs your own HTTPS proxy, because browsers allow offline use, installing, and saving in place only on `localhost` or HTTPS. It has no sign-in, so anyone who can reach the address can open the app, though they'd see only what's in their own browser.
 - **Docker has to be running,** and it's a sizeable program to install just for this.
 
-**Why the downloaded app may suit you better:** if what you want is privacy, the [desktop app](#windows) is usually the better choice, on Windows or Linux. It has no analytics, needs no Docker or server, and works offline. It always saves in place, and keeps its recovery copy in its own folder where no browser can clear it. Self-hosting makes more sense if you want the browser version, can't install apps, are on a Mac and don't want to build the app, or want to serve Drafter to a group from a server you run.
+**Why the downloaded app may suit you better:** if what you want is privacy, the [desktop app](#get-drafter) is usually the better choice, on Windows or Linux. It has no analytics, needs no Docker or server, and works offline. It always saves in place, and keeps its recovery copy in its own folder where no browser can clear it. Self-hosting makes more sense if you want the browser version, can't install apps, are on a Mac and don't want to build the app, or want to serve Drafter to a group from a server you run.
 
 ## Formats
 
@@ -228,11 +228,10 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 
 ## Roadmap
 
-**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, HTML and EPUB export, Drafts and Cuts (v0.24.0): numbered drafts, and a permanent file of everything you cut, Story map (v0.24.1): a visual page of your script to send to anyone, and Drafter for Claude (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose.
+**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, HTML and EPUB export, Drafts and Cuts (v0.24.0): numbered drafts, and a permanent file of everything you cut, Story map (v0.24.1): a visual page of your script to send to anyone, and Drafter for Claude (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose. You can also host the web app yourself with Docker (v0.24.3).
 
 **Next:**
 
-- **v0.24.3: Self-hosting**, a `docker compose up` that serves the web app from your own computer or server, for privacy without the cloud. Your scripts already stay in your browser; this takes drafter.dev out of the picture too.
 - **v0.25.0: Classic Mode**, for writers who know Final Draft rather than Fountain. Enter and Tab move between elements the way most screenwriting apps work, and the left side looks like a script, with the marks hidden. It's not Fountain typing, but the file is still plain Fountain underneath. Fountain Mode stays the default, and one switch changes it.
 - **v0.26.0: Novel**, a comfortable place to draft a novel in Markdown.
 
