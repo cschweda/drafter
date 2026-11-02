@@ -49,20 +49,19 @@ export interface ReadCappedOptions {
   expect?: { dev: bigint; ino: bigint };
 }
 
+type Handle = Awaited<ReturnType<typeof open>>;
+
 /**
- * The file's bytes, or a refusal when it is over `cap`, a folder, or anything but a regular file (a
- * pipe, a device such as /dev/zero): never more than `cap` + 1 bytes are read, and nothing waits.
+ * Opens a file for reading, checked as `options` asks: non-blocking, so a pipe put in the file's
+ * place after it was checked can't hang the open; the handle's own stat then refuses anything but
+ * a regular file, and one that isn't the file checked. The caller closes the handle.
  */
-export async function readCapped(
+async function openChecked(
   source: string,
-  cap: number,
-  tooBig: () => Error,
-  options: ReadCappedOptions = {},
-): Promise<Uint8Array> {
-  let handle: Awaited<ReturnType<typeof open>>;
+  options: ReadCappedOptions,
+): Promise<{ handle: Handle; size: bigint }> {
+  let handle: Handle;
   try {
-    // Non-blocking, so a pipe put in the file's place after it was checked can't hang the open;
-    // the handle's own stat then refuses it.
     handle = await open(
       source,
       constants.O_RDONLY |
@@ -75,29 +74,76 @@ export async function readCapped(
       throw new Refused("can't read it: it is a link");
     throw new Refused(`can't read it: ${reason(error)}`);
   }
-  let big: Error | undefined;
-  const over = () => (big = tooBig());
   try {
     const info = await handle.stat({ bigint: true });
     if (options.expect && (info.dev !== options.expect.dev || info.ino !== options.expect.ino))
       throw new Refused('it changed while it was being read');
     if (info.isDirectory()) throw new Refused("it's a folder");
     if (!info.isFile()) throw new Refused('it isn’t a file');
-    if (info.size > BigInt(cap)) throw over();
+    return { handle, size: info.size };
+  } catch (error) {
+    await handle.close();
+    if (error instanceof Refused) throw error;
+    throw new Refused(`can't read it: ${reason(error)}`);
+  }
+}
+
+/** Reads into `buffer` from the start until it is full or the file ends; how many bytes were read. */
+async function fill(handle: Handle, buffer: Uint8Array): Promise<number> {
+  let filled = 0;
+  while (filled < buffer.length) {
+    const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
+    if (bytesRead === 0) break;
+    filled += bytesRead;
+  }
+  return filled;
+}
+
+/**
+ * The file's bytes, or a refusal when it is over `cap`, a folder, or anything but a regular file (a
+ * pipe, a device such as /dev/zero): never more than `cap` + 1 bytes are read, and nothing waits.
+ */
+export async function readCapped(
+  source: string,
+  cap: number,
+  tooBig: () => Error,
+  options: ReadCappedOptions = {},
+): Promise<Uint8Array> {
+  const { handle, size } = await openChecked(source, options);
+  let big: Error | undefined;
+  const over = () => (big = tooBig());
+  try {
+    if (size > BigInt(cap)) throw over();
     // The size can change after the stat: read one byte more than it said, and no further.
-    const buffer = new Uint8Array(Math.min(Number(info.size), cap) + 1);
-    let filled = 0;
-    while (filled < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
-      if (bytesRead === 0) break;
-      filled += bytesRead;
-    }
+    const buffer = new Uint8Array(Math.min(Number(size), cap) + 1);
+    const filled = await fill(handle, buffer);
     if (filled > cap) throw over();
     return buffer.subarray(0, filled);
   } catch (error) {
     if (error instanceof Refused || error instanceof ArchiveError) throw error;
     // The caller's own refusal for a file that is too big passes as it is made.
     if (error === big) throw error;
+    throw new Refused(`can't read it: ${reason(error)}`);
+  } finally {
+    await handle.close();
+  }
+}
+
+/**
+ * The first `length` bytes of a file (fewer when it is shorter), checked as `readCapped` checks
+ * it: enough to tell what kind of file it is without reading the rest.
+ */
+export async function readHead(
+  source: string,
+  length: number,
+  options: ReadCappedOptions = {},
+): Promise<Uint8Array> {
+  const { handle } = await openChecked(source, options);
+  try {
+    const buffer = new Uint8Array(length);
+    return buffer.subarray(0, await fill(handle, buffer));
+  } catch (error) {
+    if (error instanceof Refused) throw error;
     throw new Refused(`can't read it: ${reason(error)}`);
   } finally {
     await handle.close();

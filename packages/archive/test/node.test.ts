@@ -14,7 +14,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { sourceElement } from '../src';
-import { Refused, readCapped, readScriptFile, reason, strictText } from '../src/node';
+import { Refused, readCapped, readHead, readScriptFile, reason, strictText } from '../src/node';
 import { makeZip } from './make-zip';
 
 const posix = process.platform !== 'win32';
@@ -39,6 +39,27 @@ const failure = async (promise: Promise<unknown>) =>
     () => null,
     (error: Error) => error,
   );
+
+describe('readHead', () => {
+  test('reads only the first bytes, or fewer from a short file', async () => {
+    const path = put('head.txt', 'EXT. DOCK - DAY\n');
+    expect(new TextDecoder().decode(await readHead(path, 4))).toBe('EXT.');
+    expect(new TextDecoder().decode(await readHead(path, 100))).toBe('EXT. DOCK - DAY\n');
+    const big = put('head.bin', '');
+    await truncate(big, 6 * MB);
+    expect((await readHead(big, 4096)).length).toBe(4096);
+  });
+
+  test.skipIf(!posix)('refuses a folder and a link, as readCapped does', async () => {
+    expect((await failure(readHead(dir, 10)))?.message).toBe("it's a folder");
+    const target = put('target.txt', 'x');
+    const link = join(dir, 'head-link.txt');
+    symlinkSync(target, link);
+    expect((await failure(readHead(link, 10, { noFollow: true })))?.message).toBe(
+      "can't read it: it is a link",
+    );
+  });
+});
 
 describe('readCapped', () => {
   test('reads a regular file whole, and never more than the cap plus one byte', async () => {

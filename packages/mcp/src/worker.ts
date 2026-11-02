@@ -4,6 +4,7 @@ import { isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { Refused } from '@drafter/archive/node';
 import { LoadCache } from './cache';
 import type { Include } from './envelope';
+import { cantRead } from './inside';
 import type { Loaded } from './load';
 import { Refusal } from './paths';
 import type { Job, JobResult, WorkerData } from './pool';
@@ -59,7 +60,7 @@ export async function handle(job: Job, data: WorkerData): Promise<JobResult> {
         ? { refused: error.message, extra }
         : { refused: error.message };
     }
-    if (error instanceof Refused) return { refused: `Can’t read that file: ${error.message}.` };
+    if (error instanceof Refused) return { refused: cantRead(error.message) };
     return { refused: WENT_WRONG };
   }
 }

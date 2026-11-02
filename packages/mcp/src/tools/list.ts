@@ -16,7 +16,15 @@ import * as z from 'zod/v4';
 import { LoadCache } from '../cache';
 import { argsHash, type CursorAt, makeCursor, readCursor } from '../cursor';
 import { ABOUT } from '../envelope';
-import { type Content, NAMED, NotOpened, NotRead, readInside } from '../inside';
+import {
+  CANT_OPEN,
+  type Content,
+  cantRead,
+  NAMED,
+  NotOpened,
+  NotRead,
+  readInside,
+} from '../inside';
 import { answerBudget, itemCost } from '../paging';
 import { resolvePath } from '../paths';
 import { type Found, WALK_LIMITS, walk } from '../walk';
@@ -172,8 +180,10 @@ async function summarize(file: Found): Promise<Summary> {
     if (error instanceof NotOpened) return { content: 'not a script', refused: error.message };
     // The reader's own phrase for text Open won't read, as every tool says it.
     if (error instanceof Refused)
-      return { content: 'not a script', refused: `Can’t read that file: ${error.message}.` };
-    throw error;
+      return { content: 'not a script', refused: cantRead(error.message) };
+    // Anything else (an importer or the export reader failing in a way it doesn't name): the file
+    // is still listed, in a fixed phrase, never the error's own text.
+    return { content: 'not a script', refused: CANT_OPEN };
   }
 }
 

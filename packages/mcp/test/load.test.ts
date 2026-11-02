@@ -8,6 +8,7 @@ import { renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
 import { builtins, type Template } from '@drafter/templates';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CACHE_MAX } from '../src/cache';
+import { cantRead } from '../src/inside';
 import { __parsesForTests, type Loaded, load } from '../src/load';
 import { type Connected, connect, refusalOf } from './connect';
 import { contextFor } from './context';
@@ -255,5 +256,53 @@ describe('every file is judged by what is inside it, as Open does', () => {
     expect(txt.content).toBe('fountain');
     expect(fountain.content).toBe('fountain');
     expect(txt.index.scenes).toHaveLength(13);
+  });
+
+  it('an import whose script comes to over 5 MB is refused, as Open refuses it', async () => {
+    const dir = tempFolder();
+    // Each line that starts with # is guarded with a backslash: 2 bytes in, 3 out, so a 4 MB
+    // Final Draft file imports as a 6 MB script.
+    const body = `a${'\n#'.repeat(2_000_000)}`;
+    const fdx = `<?xml version="1.0"?>\n<FinalDraft DocumentType="Script" Template="No" Version="5"><Content><Paragraph Type="Action"><Text>${body}</Text></Paragraph></Content></FinalDraft>\n`;
+    put(join(dir, 'Lib', 'grows.fdx'), fdx);
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    const body2 = refusalOf(await open.call('script_overview', { script: 'Lib/grows.fdx' }));
+    expect(body2.error).toBe('Can’t read that file: the script in it is larger than 5 MB.');
+  }, 30_000);
+
+  it('over 5 MB, a file is judged by its first bytes, then refused by its size', async () => {
+    const dir = tempFolder();
+    const big = 6 * 1024 * 1024;
+    const pdf = new Uint8Array(big).fill(0x20);
+    pdf.set(new TextEncoder().encode('%PDF-1.7\n'));
+    writeBytes(join(dir, 'Lib', 'printed.fountain'), pdf);
+    put(join(dir, 'Lib', 'long.fountain'), `INT. HALL - DAY\n\n${'a'.repeat(big)}\n`);
+    put(
+      join(dir, 'Lib', 'long.fdx'),
+      `<?xml version="1.0"?>\n<FinalDraft>${' '.repeat(big)}</FinalDraft>\n`,
+    );
+    put(
+      join(dir, 'Lib', 'big.html'),
+      `<!doctype html>\n<html><body>${' '.repeat(big)}</body></html>\n`,
+    );
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    const error = async (name: string) =>
+      refusalOf(await (open as Connected).call('script_overview', { script: `Lib/${name}` })).error;
+    expect(await error('printed.fountain')).toMatch(
+      /^Drafter can’t open a PDF \(printed\.fountain\)/,
+    );
+    expect(await error('long.fountain')).toBe('Can’t read that file: it is larger than 5 MB.');
+    expect(await error('long.fdx')).toBe('Can’t read that file: it is larger than 5 MB.');
+    // A web page is read whole, as Open reads it, to look for the script inside.
+    expect(await error('big.html')).toMatch(/^Drafter can’t open a web page \(big\.html\)/);
+  }, 30_000);
+
+  it('the reader’s phrase is said once, with curly apostrophes', () => {
+    expect(cantRead("can't read it: it is a link")).toBe('Can’t read that file: it is a link.');
+    expect(cantRead('can’t read it: permission denied')).toBe(
+      'Can’t read that file: permission denied.',
+    );
+    expect(cantRead("it's a folder")).toBe('Can’t read that file: it’s a folder.');
+    expect(cantRead('it isn’t UTF-8 text')).toBe('Can’t read that file: it isn’t UTF-8 text.');
   });
 });
