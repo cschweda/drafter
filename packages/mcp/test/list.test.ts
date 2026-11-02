@@ -1,11 +1,13 @@
-import { statSync, utimesSync } from 'node:fs';
+import { statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { refusalMessage } from '@drafter/archive';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ABOUT, MAX_ANSWER_CHARS } from '../src/envelope';
 import { __setBudgetForTests } from '../src/paging';
+import { __setListReadLimitForTests } from '../src/tools/list';
 import { type Connected, connect } from './connect';
-import { EPISODE_101, EPISODE_102, EPISODE_103, makeLibrary } from './library';
+import { EPISODE_101, EPISODE_102, EPISODE_103, EXPORT, makeLibrary } from './library';
 import { put, tempFolder } from './temp';
 
 interface Listed {
@@ -18,10 +20,19 @@ interface Listed {
   bytes: number;
   drafts: number | null;
   cuts: number | null;
+  content: string;
+  matches_name: boolean | null;
+  refused: string | null;
 }
 interface Listing {
   about: string;
   files: Listed[];
+  manifest: {
+    files: number;
+    by_content: Record<string, number>;
+    mismatched: number;
+    refused: number;
+  };
   truncated: boolean;
   next?: string;
   restarted?: boolean;
@@ -88,6 +99,9 @@ describe('list_scripts', () => {
         bytes: info.size,
         drafts: 3,
         cuts: 3,
+        content: 'fountain',
+        matches_name: true,
+        refused: null,
       },
       expect.objectContaining({ path: 'Scripts/Signal Hill/Signal Hill – 101.html' }),
       expect.objectContaining({
@@ -135,7 +149,7 @@ describe('list_scripts', () => {
     ]);
   });
 
-  it('an export is listed but not read', async () => {
+  it('an export is listed with the script inside it, and no drafts or cuts', async () => {
     const { scripts, plays } = makeLibrary(tempFolder());
     await start([scripts, plays]);
     const listing = await list({ folder: 'Scripts/Signal Hill' });
@@ -144,15 +158,17 @@ describe('list_scripts', () => {
     expect(exported).toEqual({
       path: 'Scripts/Signal Hill/Signal Hill – 101.html',
       format: 'html',
-      kind: null,
-      title: null,
-      scenes: null,
+      kind: 'screenplay',
+      title: 'Read From The Export',
+      scenes: 1,
       modified: new Date(info.mtimeMs).toISOString(),
       bytes: info.size,
       drafts: null,
       cuts: null,
+      content: 'html export',
+      matches_name: true,
+      refused: null,
     });
-    expect(JSON.stringify(listing)).not.toContain('Read From The Export');
   });
 
   it('a title page’s Contact never shows', async () => {
@@ -253,5 +269,151 @@ describe('list_scripts never shows where the folders are on disk', () => {
       expect(line).not.toContain(dir);
       expect(line).not.toContain(tmpdir());
     }
+  });
+});
+
+describe('list_scripts says what is inside each file', () => {
+  const PDF = '%PDF-1.7\nINT. HALL - DAY\n';
+
+  it('the manifest says what is inside each file', async () => {
+    const dir = tempFolder();
+    const { scripts, plays } = makeLibrary(dir);
+    const series = join(scripts, 'Signal Hill');
+    put(join(series, 'Printed.fountain'), PDF);
+    put(join(series, 'Exported.txt'), EXPORT);
+    await start([scripts, plays]);
+    const listing = await list({ folder: 'Scripts/Signal Hill' });
+    const by = (name: string) =>
+      listing.files.find((file) => file.path === `Scripts/Signal Hill/${name}`) as Listed;
+    expect(by(EPISODE_101)).toMatchObject({
+      content: 'fountain',
+      matches_name: true,
+      refused: null,
+    });
+    expect(by('Series bible.md')).toMatchObject({
+      content: 'markdown',
+      matches_name: true,
+      refused: null,
+    });
+    expect(by('Signal Hill – 101.html')).toMatchObject({
+      content: 'html export',
+      matches_name: true,
+      refused: null,
+    });
+    expect(by('Printed.fountain')).toEqual(
+      expect.objectContaining({
+        format: 'fountain',
+        content: 'not a script',
+        matches_name: false,
+        refused: refusalMessage('Printed.fountain', {
+          format: 'a PDF',
+          advice: 'Open the script it was made from instead, or copy its text into a new script.',
+        }),
+        kind: null,
+        title: null,
+        scenes: null,
+      }),
+    );
+    expect(by('Exported.txt')).toEqual(
+      expect.objectContaining({
+        format: 'text',
+        content: 'html export',
+        matches_name: false,
+        refused: null,
+        title: 'Read From The Export',
+        scenes: 1,
+      }),
+    );
+    expect(listing.manifest).toEqual({
+      files: 7,
+      by_content: { fountain: 3, markdown: 1, 'html export': 2, 'not a script': 1 },
+      mismatched: 2,
+      refused: 1,
+    });
+  });
+
+  it('exports are read for title and scenes', async () => {
+    const { scripts, plays } = makeLibrary(tempFolder());
+    await start([scripts, plays]);
+    const listing = await list({ folder: 'Scripts/Signal Hill' });
+    const exported = listing.files.find((file) => file.format === 'html');
+    expect(exported).toMatchObject({
+      path: 'Scripts/Signal Hill/Signal Hill – 101.html',
+      kind: 'screenplay',
+      title: 'Read From The Export',
+      scenes: 1,
+      drafts: null,
+      cuts: null,
+    });
+  });
+
+  it('a refused file is listed with why, and the call still answers', async () => {
+    const dir = tempFolder();
+    put(join(dir, 'Lib', 'a.fountain'), 'INT. HALL - DAY\n');
+    writeFileSync(join(dir, 'Lib', 'b.fountain'), Buffer.from([0x49, 0xc9, 0x0a]));
+    put(join(dir, 'Lib', 'c.md'), '<!doctype html>\n<html><body>Hi</body></html>\n');
+    await start([join(dir, 'Lib')]);
+    const listing = await list({});
+    expect(listing.files.map((f) => [f.path, f.content, f.refused])).toEqual([
+      ['Lib/a.fountain', 'fountain', null],
+      ['Lib/b.fountain', 'not a script', 'Can’t read that file: it isn’t UTF-8 text.'],
+      [
+        'Lib/c.md',
+        'not a script',
+        expect.stringMatching(/^Drafter can’t open a web page \(c\.md\)\. /),
+      ],
+    ]);
+    expect(listing.manifest).toMatchObject({ files: 3, refused: 2, mismatched: 2 });
+    expect(JSON.stringify(listing)).not.toContain(dir);
+  });
+
+  it('past the read budget a file is not read, and its content is unknown', async () => {
+    const dir = tempFolder();
+    put(join(dir, 'Lib', 'a.fountain'), 'INT. HALL - DAY\n');
+    await start([join(dir, 'Lib')]);
+    __setListReadLimitForTests(0);
+    try {
+      const listing = await list({});
+      expect(listing.files[0]).toMatchObject({
+        content: 'not read',
+        matches_name: null,
+        refused: null,
+        title: null,
+      });
+      expect(listing.manifest).toEqual({
+        files: 1,
+        by_content: { 'not read': 1 },
+        mismatched: 0,
+        refused: 0,
+      });
+    } finally {
+      __setListReadLimitForTests(undefined);
+    }
+  });
+
+  it('the manifest pages with the list, every page under the cap', async () => {
+    const dir = tempFolder();
+    for (let i = 0; i < 40; i++)
+      put(
+        join(dir, 'Many', `Scene ${String(i).padStart(2, '0')}.fountain`),
+        i % 3 ? `INT. ROOM ${i} - DAY\n` : PDF,
+      );
+    await start([join(dir, 'Many')]);
+    __setBudgetForTests(3_000);
+    let cursor: string | undefined;
+    let total = 0;
+    let refused = 0;
+    do {
+      const result = await (open as Connected).call('list_scripts', cursor ? { cursor } : {});
+      const text = (result.content[0] as { text: string }).text;
+      expect(text.length).toBeLessThanOrEqual(3_000);
+      const page = result.structuredContent as unknown as Listing;
+      expect(page.manifest.files).toBe(page.files.length);
+      total += page.manifest.files;
+      refused += page.manifest.refused;
+      cursor = page.next;
+    } while (cursor);
+    expect(total).toBe(40);
+    expect(refused).toBe(14);
   });
 });

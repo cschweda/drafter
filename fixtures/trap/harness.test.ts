@@ -586,7 +586,8 @@ describe('mcp: every trap through Drafter for Claude', () => {
       .map((t) => t.id);
     expect(scened.length).toBeGreaterThan(50);
     expect(scened).toContain('fountain-cr-only');
-    expect(scened).not.toContain('fountain-is-export');
+    // Read for the script inside it, as Open reads it: its scene is found.
+    expect(scened).toContain('fountain-is-export');
     expect(scened).not.toContain('fountain-empty');
   });
 

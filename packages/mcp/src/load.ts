@@ -1,10 +1,9 @@
 // A file to what the tools read (§3): a script parsed, laid out, indexed, with its cast and its
 // story map; or a Markdown document and its sections. Read only through a checked path, opened
-// without following a link and only if it is still the file that was checked; kept in the
-// reader's memory by real path, size, and modified time.
+// without following a link and only if it is still the file that was checked, and judged by what
+// is inside it as the app's Open judges it (inside.ts); kept in the reader's memory by real path,
+// size, and modified time.
 import { createHash } from 'node:crypto';
-import { MAX_SCRIPT_BYTES } from '@drafter/archive';
-import { Refused, readCapped, readScriptFile, strictText } from '@drafter/archive/node';
 import { type Cast, castOf } from '@drafter/cast';
 import { markdownAnchors, splitLines } from '@drafter/compare';
 import { type Doc, parse } from '@drafter/fountain';
@@ -14,6 +13,7 @@ import { linesPerPage, type SceneIndex, sceneIndex } from '@drafter/outline';
 import { buildStoryMap, type StoryMap, storyMapMeta } from '@drafter/story-map';
 import { builtins, type Template } from '@drafter/templates';
 import { type Format, formatOf } from './formats';
+import { type Content, readInside } from './inside';
 import { type Checked, Refusal, resolvePath } from './paths';
 import type { ToolContext } from './tools/index';
 
@@ -22,6 +22,8 @@ export type Loaded =
       kind: 'script';
       file: Checked;
       format: Format;
+      /** What was found inside the file, whatever its name says. */
+      content: Content;
       text: string;
       doc: Doc;
       template: Template;
@@ -36,6 +38,8 @@ export type Loaded =
       kind: 'markdown';
       file: Checked;
       format: Format;
+      /** What was found inside the file, whatever its name says. */
+      content: Content;
       text: string;
       title: string | null;
       /** Its headings of levels 1 to 3, each to the next (or to the metadata comment, or the end). */
@@ -148,6 +152,7 @@ export function mapOf(
 function loadScript(
   file: Checked,
   format: Format,
+  content: Content,
   text: string,
   importNotes: number,
   wordsPerMinute: number,
@@ -163,6 +168,7 @@ function loadScript(
     kind: 'script',
     file,
     format,
+    content,
     text,
     doc,
     template,
@@ -174,7 +180,7 @@ function loadScript(
   };
 }
 
-function loadMarkdown(file: Checked, format: Format, text: string): Loaded {
+function loadMarkdown(file: Checked, format: Format, content: Content, text: string): Loaded {
   const meta = findMarkdownMeta(text);
   const end = meta ? meta.from : text.length;
   const { starts } = splitLines(text);
@@ -187,45 +193,34 @@ function loadMarkdown(file: Checked, format: Format, text: string): Loaded {
       to: next ? (starts[next.line] as number) : end,
     };
   });
-  return { kind: 'markdown', file, format, text, title: markdownTitle(text) ?? null, sections };
+  return {
+    kind: 'markdown',
+    file,
+    format,
+    content,
+    text,
+    title: markdownTitle(text) ?? null,
+    sections,
+  };
 }
-
-const tooBig = () => new Refused('it is larger than 5 MB');
-
-/** An import's own refusal (Final Draft, Highland, Fade In): its words, never a path. */
-const IMPORT_ERRORS = new Set(['FdxError', 'ArchiveError', 'OsfError']);
 
 /** The file a tool's path names, read and parsed (or the cached parse, while it is unchanged). */
 export async function load(path: string, ctx: ToolContext): Promise<Loaded> {
   const { roots, platform, options } = ctx.data;
   const file = await resolvePath(path, roots, platform, 'file');
-  const format = formatOf(file.shown.slice(file.shown.lastIndexOf('/') + 1));
+  const name = file.shown.slice(file.shown.lastIndexOf('/') + 1);
+  const format = formatOf(name);
   if (format === null) throw new Refusal(NOT_READ);
   const cached = ctx.cache.get(file.real, file.size, file.mtimeMs) as Loaded | undefined;
   if (cached) return { ...cached, file };
 
   afterCheck?.();
-  const read = { noFollow: true, expect: { dev: file.dev, ino: file.ino } };
-  let loaded: Loaded;
-  try {
-    if (format === 'fountain' || format === 'text' || format === 'markdown') {
-      const text = strictText(await readCapped(file.real, MAX_SCRIPT_BYTES, tooBig, read));
-      parses++;
-      loaded =
-        format === 'markdown'
-          ? loadMarkdown(file, format, text)
-          : loadScript(file, format, text, 0, options.wordsPerMinute);
-    } else {
-      const got = await readScriptFile(file.real, 'it holds no script Drafter can read', read);
-      parses++;
-      loaded = got.markdown
-        ? loadMarkdown(file, format, got.text)
-        : loadScript(file, format, got.text, got.notes, options.wordsPerMinute);
-    }
-  } catch (error) {
-    if (error instanceof Error && IMPORT_ERRORS.has(error.name)) throw new Refusal(error.message);
-    throw error;
-  }
+  // Judged by what is inside, in Open's order, whatever the name says.
+  const inside = await readInside(file, name);
+  parses++;
+  const loaded = inside.markdown
+    ? loadMarkdown(file, format, inside.content, inside.text)
+    : loadScript(file, format, inside.content, inside.text, inside.notes, options.wordsPerMinute);
   ctx.cache.set(file.real, file.size, file.mtimeMs, loaded);
   return loaded;
 }

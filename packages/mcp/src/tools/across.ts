@@ -37,8 +37,13 @@ const clip = (text: string, max: number) => clipText(text, max).text;
 export const NEIGHBOUR_NAMES = 1_000;
 const MAX_PAIRS = 1_000;
 
-/** An export is a copy of a script: a folder's search or series reads the script, not the copy. */
+/**
+ * An export is a copy of a script: a folder's search or series reads the script, not the copy.
+ * By its name before it is read, and by what is inside it after (an export named `.txt`).
+ */
 const isExport = (format: string) => format === 'html' || format === 'epub';
+const holdsExport = (loaded: Loaded) =>
+  loaded.content === 'html export' || loaded.content === 'epub export';
 
 // ---------------------------------------------------------------------------------------------
 // search_scripts
@@ -402,6 +407,7 @@ async function search(args: SearchInput, ctx: ToolContext): Promise<SearchOutput
       continue;
     }
     if (!cached) parsed += target.size;
+    if (args.script === undefined && holdsExport(loaded)) continue;
     const limit = skip + (SEARCH_LIMITS.total - total) + 1;
     let found: Hit[];
     if (loaded.kind === 'script') {
@@ -881,6 +887,8 @@ async function series(args: SeriesInput, ctx: ToolContext): Promise<SeriesOutput
     try {
       const loaded = await load(each.path, ctx);
       if (loaded.kind === 'markdown') skipped.push({ path: each.path, why: A_DOCUMENT });
+      else if (args.folder !== undefined && holdsExport(loaded))
+        skipped.push({ path: each.path, why: AN_EXPORT });
       else read.push(loaded);
     } catch (error) {
       // Its path was checked already: what is left is a file that can't be read.

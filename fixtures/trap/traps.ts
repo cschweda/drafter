@@ -503,9 +503,9 @@ function textTraps({ ext, format, name }: TextKind): Trap[] {
       id: id('pdf'),
       format,
       name: n('printed'),
-      tests: `A PDF renamed .${ext} is named a PDF, by its first bytes. Drafter for Claude reads it as the text it is, as \`drafter build\` does, and finds no scene in it: naming a PDF is Open’s.`,
+      tests: `A PDF renamed .${ext} is named a PDF, by its first bytes, by Open and by Drafter for Claude alike.`,
       bytes: PDF,
-      expect: { 'web-open': refused(SAYS.pdf), mcp: opens() },
+      expect: { 'web-open': refused(SAYS.pdf) },
     },
   ];
 }
@@ -659,27 +659,27 @@ const FOUNTAIN_TRAPS: Trap[] = [
     format: 'fountain',
     name: 'packed.fountain',
     tests:
-      'A Highland zip named .fountain is named a packed file, by its first bytes. Drafter for Claude, which reads a .fountain file only as text, refuses it as more than text.',
+      'A Highland zip named .fountain is named a packed file, by its first bytes, by Open and by Drafter for Claude alike.',
     bytes: highland([TEXT_ENTRY]),
-    expect: { 'web-open': refused(SAYS.packed), mcp: refused(SAYS.binary) },
+    expect: { 'web-open': refused(SAYS.packed) },
   },
   {
     id: 'fountain-is-rtf',
     format: 'fountain',
     name: 'rich.fountain',
     tests:
-      'An RTF document named .fountain is named an RTF document. Drafter for Claude reads it as the text it is, as `drafter build` does: naming an RTF document is Open’s.',
+      'An RTF document named .fountain is named an RTF document, by its first bytes, by Open and by Drafter for Claude alike.',
     bytes: () => enc('{\\rtf1\\ansi INT. HALL - DAY\\par A lever waits.}'),
-    expect: { 'web-open': refused(SAYS.rtf), mcp: opens() },
+    expect: { 'web-open': refused(SAYS.rtf) },
   },
   {
     id: 'fountain-is-ole',
     format: 'fountain',
     name: 'older.fountain',
     tests:
-      'An OLE compound file (an older Office or Final Draft file) named .fountain is named so. Drafter for Claude, which reads a .fountain file only as text, refuses it as more than text.',
+      'An OLE compound file (an older Office or Final Draft file) named .fountain is named so, by Open and by Drafter for Claude alike.',
     bytes: () => concat([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1], new Uint8Array(504)),
-    expect: { 'web-open': refused(SAYS.ole), mcp: refused(SAYS.binary) },
+    expect: { 'web-open': refused(SAYS.ole) },
   },
   {
     id: 'fountain-story-map-hostile',
@@ -726,9 +726,9 @@ const FOUNTAIN_TRAPS: Trap[] = [
     format: 'fountain',
     name: 'export.fountain',
     tests:
-      'A Drafter HTML export named .fountain is reopened by its content: the script inside opens. Drafter for Claude, which goes by the name, reads the page as the text it is and finds no scene in it.',
+      'A Drafter HTML export named .fountain is reopened by its content: the script inside opens, in Open and in Drafter for Claude alike.',
     bytes: () => enc(page(`<main>…</main>\n${block(SCRIPT)}`)),
-    expect: { 'web-open': opens(SCRIPT), mcp: opensWith('<main>…</main>') },
+    expect: { 'web-open': opens(SCRIPT) },
   },
 ];
 
@@ -845,9 +845,9 @@ const MARKDOWN_TRAPS: Trap[] = [
     format: 'markdown',
     name: 'book.md',
     tests:
-      'An EPUB named .md is named an e-book by its content, whatever its name. Drafter for Claude, which goes by the name, reads a .md file only as text and refuses it as more than text.',
+      'An EPUB named .md is named an e-book by its content, whatever its name, by Open and by Drafter for Claude alike.',
     bytes: epub([]),
-    expect: { 'web-open': refused(SAYS.eBook), mcp: refused(SAYS.binary) },
+    expect: { 'web-open': refused(SAYS.eBook) },
   },
 ];
 

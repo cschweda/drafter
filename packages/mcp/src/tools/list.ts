@@ -1,11 +1,11 @@
 // list_scripts (§3, tool 1): the scripts under the writer's folders, each with its kind, title,
-// scene count, date, size, and the drafts and cuts beside it. A title is the title page's Title
-// and nothing else from it, so Contact never shows. At most 100 MB is read per call; past that a
-// file is listed with no title or scene count, and an HTML or EPUB export is listed without being
-// read at all.
+// scene count, date, size, and the drafts and cuts beside it, and a manifest: what Drafter found
+// inside each file (judged by its bytes as Open judges them, whatever its name says), whether
+// that is what its name says, and Open's words for a file it won't read. A refused file stays in
+// the list. A title is the title page's Title and nothing else from it, so Contact never shows.
+// At most 100 MB is read per call; past that a file is listed as not read.
 import { readdir } from 'node:fs/promises';
-import { MAX_SCRIPT_BYTES } from '@drafter/archive';
-import { Refused, readCapped, readScriptFile, strictText } from '@drafter/archive/node';
+import { Refused, readCapped } from '@drafter/archive/node';
 import { markdownAnchors } from '@drafter/compare';
 import { type Doc, parse } from '@drafter/fountain';
 import { besideNames, MAX_BESIDE_BYTES, readCutsBytes } from '@drafter/history';
@@ -16,14 +16,36 @@ import * as z from 'zod/v4';
 import { LoadCache } from '../cache';
 import { argsHash, type CursorAt, makeCursor, readCursor } from '../cursor';
 import { ABOUT } from '../envelope';
+import { type Content, NAMED, NotOpened, NotRead, readInside } from '../inside';
 import { answerBudget, itemCost } from '../paging';
-import { Refusal, resolvePath } from '../paths';
+import { resolvePath } from '../paths';
 import { type Found, WALK_LIMITS, walk } from '../walk';
 import type { ToolContext, ToolDef } from './index';
 import { cursor, format, path } from './schemas';
 
 /** The most bytes one call reads to find titles and scene counts (and count cuts). */
 export const LIST_READ_LIMIT = 100 * 1024 * 1024;
+
+let readLimitForTests: number | undefined;
+
+/** For tests only: a smaller read budget per call; undefined puts it back. */
+export function __setListReadLimitForTests(limit: number | undefined): void {
+  readLimitForTests = limit;
+}
+
+/** What a listing says was inside a file: what was found, a file it won't read, or one not read. */
+const CONTENTS = [
+  'fountain',
+  'markdown',
+  'final draft',
+  'highland',
+  'fade in',
+  'html export',
+  'epub export',
+  'not a script',
+  'not read',
+] as const;
+type ListedContent = (typeof CONTENTS)[number];
 
 const input = z.strictObject({
   folder: path.optional(),
@@ -42,11 +64,27 @@ const listed = z.object({
   bytes: z.number().int().min(0),
   drafts: z.number().int().min(0).nullable(),
   cuts: z.number().int().min(0).nullable(),
+  /** What Drafter found inside, whatever the name says; `not read` past the call's read budget. */
+  content: z.enum(CONTENTS),
+  /** Whether that is what the file's name says; null when it wasn't read. */
+  matches_name: z.boolean().nullable(),
+  /** Open's words, when Drafter won't read the file. */
+  refused: z.string().nullable(),
 });
 type Listed = z.infer<typeof listed>;
 
+const manifest = z.object({
+  files: z.number().int().min(0),
+  by_content: z.record(z.string(), z.number().int().min(0)),
+  mismatched: z.number().int().min(0),
+  refused: z.number().int().min(0),
+});
+type Manifest = z.infer<typeof manifest>;
+
 const output = z.object({
   files: z.array(listed),
+  /** What the files on this page hold, counted. */
+  manifest,
   truncated: z.boolean(),
   next: z.string().optional(),
   /** The cursor was for a listing that has changed (or wasn't one), so this starts again. */
@@ -54,12 +92,15 @@ const output = z.object({
 });
 type Output = z.infer<typeof output>;
 
-/** What reading a file says about it. */
-interface Summary {
-  kind: 'screenplay' | 'stage play' | 'markdown';
-  title: string | null;
-  scenes: number;
-}
+/** What reading a file says about it: what it holds, or why Drafter won't read it. */
+type Summary =
+  | {
+      content: Content;
+      kind: 'screenplay' | 'stage play' | 'markdown';
+      title: string | null;
+      scenes: number;
+    }
+  | { content: 'not a script' | 'not read'; refused: string };
 
 /** Summaries by file, as they were: small, so as many as a listing holds are kept. */
 const summaries = new LoadCache<Summary>(WALK_LIMITS.files);
@@ -83,7 +124,7 @@ function titleOf(doc: Doc): string | null {
   return text === '' ? null : text;
 }
 
-function scriptSummary(text: string): Summary {
+function scriptSummary(content: Content, text: string): Summary {
   const doc = parse(text);
   const named = doc.meta?.template;
   // As the CLI: the file's own template when it is built in, else the US screenplay.
@@ -96,14 +137,16 @@ function scriptSummary(text: string): Summary {
   for (let i = 0; i < end; i++)
     if (startsScene(template, doc.blocks[i] as Doc['blocks'][number])) scenes++;
   return {
+    content,
     kind: template.id === STAGE_PLAY ? 'stage play' : 'screenplay',
     title: titleOf(doc),
     scenes,
   };
 }
 
-function markdownSummary(text: string): Summary {
+function markdownSummary(content: Content, text: string): Summary {
   return {
+    content,
     kind: 'markdown',
     title: markdownTitle(text) ?? null,
     scenes: markdownAnchors(text).length,
@@ -112,15 +155,26 @@ function markdownSummary(text: string): Summary {
 
 const tooBig = () => new Refused('it is too big');
 
-/** Reads and summarises a file the walk checked: opened without following a link, and only if it is still that file. */
+/**
+ * Reads and summarises a file the walk checked (opened without following a link, and only if it
+ * is still that file), judged by what is inside it as `load` judges it: a file Drafter won't read
+ * is summarised with Open's words, never thrown.
+ */
 async function summarize(file: Found): Promise<Summary> {
-  const options = { noFollow: true, expect: { dev: file.dev, ino: file.ino } };
-  if (file.format === 'fountain' || file.format === 'text' || file.format === 'markdown') {
-    const text = strictText(await readCapped(file.real, MAX_SCRIPT_BYTES, tooBig, options));
-    return file.format === 'markdown' ? markdownSummary(text) : scriptSummary(text);
+  const name = file.shown.slice(file.shown.lastIndexOf('/') + 1);
+  try {
+    const inside = await readInside(file, name);
+    return inside.markdown
+      ? markdownSummary(inside.content, inside.text)
+      : scriptSummary(inside.content, inside.text);
+  } catch (error) {
+    if (error instanceof NotRead) return { content: 'not read', refused: error.message };
+    if (error instanceof NotOpened) return { content: 'not a script', refused: error.message };
+    // The reader's own phrase for text Open won't read, as every tool says it.
+    if (error instanceof Refused)
+      return { content: 'not a script', refused: `Can’t read that file: ${error.message}.` };
+    throw error;
   }
-  const read = await readScriptFile(file.real, 'it isn’t a script', options);
-  return read.markdown ? markdownSummary(read.text) : scriptSummary(read.text);
 }
 
 /** The folder a listed file is in, as shown: `Scripts/Signal Hill`. */
@@ -234,17 +288,25 @@ async function run(args: Input, ctx: ToolContext): Promise<Output> {
   }
 
   let read = 0;
+  const limit = readLimitForTests ?? LIST_READ_LIMIT;
   const spend = (bytes: number) => {
-    if (read + bytes > LIST_READ_LIMIT) return false;
+    if (read + bytes > limit) return false;
     read += bytes;
     return true;
   };
 
   // The answer's own characters, with the longest cursor it could carry.
   const budget = answerBudget();
+  const most = Number.MAX_SAFE_INTEGER;
   const overhead = JSON.stringify({
     about: ABOUT,
     files: [],
+    manifest: {
+      files: most,
+      by_content: Object.fromEntries(CONTENTS.map((content) => [content, most])),
+      mismatched: most,
+      refused: most,
+    },
     truncated,
     next: makeCursor(ctx.data.key, { ...now, at: found.length }),
     restarted: true,
@@ -262,9 +324,22 @@ async function run(args: Input, ctx: ToolContext): Promise<Output> {
 
   return {
     files,
+    manifest: manifestOf(files),
     truncated,
     ...(i < found.length ? { next: makeCursor(ctx.data.key, { ...now, at: i }) } : {}),
     ...(restarted ? { restarted: true as const } : {}),
+  };
+}
+
+/** What the files on a page hold, counted. */
+function manifestOf(files: Listed[]): Manifest {
+  const byContent: Record<string, number> = {};
+  for (const file of files) byContent[file.content] = (byContent[file.content] ?? 0) + 1;
+  return {
+    files: files.length,
+    by_content: byContent,
+    mismatched: files.filter((file) => file.matches_name === false).length,
+    refused: files.filter((file) => file.refused !== null).length,
   };
 }
 
@@ -274,41 +349,32 @@ async function describe(
   spend: (bytes: number) => boolean,
 ): Promise<Listed> {
   const modified = new Date(file.mtimeMs).toISOString();
-  // An export is listed, never read: its drafts and cuts belong to the script it was made from.
-  if (file.format === 'html' || file.format === 'epub')
-    return {
-      path: file.shown,
-      format: file.format,
-      kind: null,
-      title: null,
-      scenes: null,
-      modified,
-      bytes: file.size,
-      drafts: null,
-      cuts: null,
-    };
-
   let summary = summaries.get(file.real, file.size, file.mtimeMs);
   if (!summary && spend(file.size)) {
-    try {
-      summary = await summarize(file);
-      summaries.set(file.real, file.size, file.mtimeMs, summary);
-    } catch (error) {
-      // A file that can't be read is still listed; a path problem is a refusal for the call.
-      if (error instanceof Refusal) throw error;
-    }
+    summary = await summarize(file);
+    // A file that couldn't be read at all (gone, a link, permission) may be readable next time.
+    if (summary.content !== 'not read') summaries.set(file.real, file.size, file.mtimeMs, summary);
   }
+  const content: ListedContent = summary?.content ?? 'not read';
+  const read = summary && 'kind' in summary ? summary : undefined;
+  // An export's drafts and cuts belong to the script it was made from.
+  const exported = content === 'html export' || content === 'epub export';
+  const nameIsExport = file.format === 'html' || file.format === 'epub';
   const workKind = file.format === 'markdown' ? 'markdown' : 'fountain';
+  const beside = !exported && !nameIsExport;
   return {
     path: file.shown,
     format: file.format,
-    kind: summary?.kind ?? (file.format === 'markdown' ? 'markdown' : null),
-    title: summary?.title ?? null,
-    scenes: summary?.scenes ?? null,
+    kind: read?.kind ?? null,
+    title: read?.title ?? null,
+    scenes: read?.scenes ?? null,
     modified,
     bytes: file.size,
-    drafts: await countDrafts(file, workKind, ctx),
-    cuts: await countCuts(file, workKind, ctx, spend),
+    drafts: beside ? await countDrafts(file, workKind, ctx) : null,
+    cuts: beside ? await countCuts(file, workKind, ctx, spend) : null,
+    content,
+    matches_name: content === 'not read' ? null : content === NAMED[file.format],
+    refused: summary && 'refused' in summary ? summary.refused : null,
   };
 }
 
@@ -316,7 +382,7 @@ export const listScripts: ToolDef<Input, Output> = {
   name: 'list_scripts',
   title: 'List scripts',
   description:
-    'Lists the scripts, plays, and documents in the writer’s folders (or one folder, given as a path that starts with a folder’s name): each file’s path, kind, title, scene count, date, size, and how many drafts and cuts Drafter keeps beside it. Pass `next` back as `cursor` for the rest.',
+    'Lists the scripts, plays, and documents in the writer’s folders (or one folder, given as a path that starts with a folder’s name): each file’s path, kind, title, scene count, date, size, and how many drafts and cuts Drafter keeps beside it, with a manifest: what Drafter found inside each file (`content`), whether that matches its name (`matches_name`), and why Drafter won’t read it (`refused`). Pass `next` back as `cursor` for the rest.',
   input,
   output,
   run,

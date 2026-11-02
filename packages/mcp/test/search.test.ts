@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { buildScript } from '../../../fixtures/generators/script';
 import { __setLimitsForTests, SEARCH_LIMITS } from '../src/names';
 import { answerOf, type Connected, connect, refusalOf } from './connect';
-import { EPISODE_102, makeLibrary } from './library';
+import { EPISODE_102, EXPORT, makeLibrary } from './library';
 import { put, tempFolder } from './temp';
 
 interface Hit {
@@ -344,5 +344,34 @@ describe('search_scripts', () => {
     expect(refusalOf(both).error).toBe('Give a folder or a script, not both.');
     const blank = await (open as Connected).call('search_scripts', { words: '   ' });
     expect(refusalOf(blank).error).toBe('Give at least one word to find.');
+  });
+});
+
+describe('search_scripts and what is inside a file', () => {
+  it('an export named .txt is a copy in a folder, but read when named', async () => {
+    const dir = tempFolder();
+    put(join(dir, 'Lib', 'Exported.txt'), EXPORT);
+    put(join(dir, 'Lib', 'Real.fountain'), 'INT. HALL - DAY\n\nStatic on the line.\n');
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    const folder = await search({ words: 'static', folder: 'Lib' });
+    expect(folder.hits.map((h) => h.path)).toEqual(['Lib/Real.fountain']);
+    const named = await search({ words: 'static', script: 'Lib/Exported.txt' });
+    expect(named.hits.map((h) => [h.path, h.heading])).toEqual([
+      ['Lib/Exported.txt', 'INT. JUNE’S KITCHEN - NIGHT'],
+    ]);
+  });
+
+  it('a PDF named .fountain in a folder is passed over; named, it is refused in Open’s words', async () => {
+    const dir = tempFolder();
+    put(join(dir, 'Lib', 'Printed.fountain'), '%PDF-1.7\nINT. HALL - DAY\nStatic.\n');
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    expect((await search({ words: 'static', folder: 'Lib' })).hits).toEqual([]);
+    const body = refusalOf(
+      await (open as Connected).call('search_scripts', {
+        words: 'static',
+        script: 'Lib/Printed.fountain',
+      }),
+    );
+    expect(body.error).toMatch(/^Drafter can’t open a PDF \(Printed\.fountain\)\. /);
   });
 });

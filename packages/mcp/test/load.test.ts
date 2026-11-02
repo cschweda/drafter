@@ -1,5 +1,6 @@
-import { readFileSync, utimesSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { notAScript, refusalMessage, zipStored } from '@drafter/archive';
 import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
@@ -10,10 +11,15 @@ import { CACHE_MAX } from '../src/cache';
 import { __parsesForTests, type Loaded, load } from '../src/load';
 import { type Connected, connect, refusalOf } from './connect';
 import { contextFor } from './context';
-import { EPISODE_101, LIBRARY, makeLibrary } from './library';
+import { EPISODE_101, EXPORT, LIBRARY, makeLibrary } from './library';
 import { put, tempFolder } from './temp';
 
 const SCREENPLAY = builtins['us-screenplay'] as Template;
+
+function writeBytes(path: string, bytes: Uint8Array): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, bytes);
+}
 
 const script = (loaded: Loaded) => {
   if (loaded.kind !== 'script') throw new Error('not a script');
@@ -150,5 +156,104 @@ describe('load', () => {
     expect(__parsesForTests() - before).toBe(CACHE_MAX + 1);
     await load('Lib/00.fountain', ctx);
     expect(__parsesForTests() - before).toBe(CACHE_MAX + 2);
+  });
+});
+
+describe('every file is judged by what is inside it, as Open does', () => {
+  const PDF = new TextEncoder().encode('%PDF-1.7\nINT. HALL - DAY\n');
+  const RTF = new TextEncoder().encode('{\\rtf1\\ansi INT. HALL - DAY\\par A lever waits.}');
+  const WORD = zipStored([{ name: 'word/document.xml', data: new TextEncoder().encode('<w/>') }]);
+  const said = (name: string, bytes: Uint8Array) =>
+    refusalMessage(name, notAScript(name, bytes) as NonNullable<ReturnType<typeof notAScript>>);
+  const epubWith = (entries: Array<{ name: string; text: string }>) =>
+    zipStored([
+      { name: 'mimetype', data: new TextEncoder().encode('application/epub+zip') },
+      ...entries.map((e) => ({ name: e.name, data: new TextEncoder().encode(e.text) })),
+    ]);
+
+  it('a PDF, an RTF, and a Word file are refused by their bytes whatever their names', async () => {
+    const dir = tempFolder();
+    const files: Array<[string, Uint8Array]> = [
+      ['printed.fountain', PDF],
+      ['printed.md', PDF],
+      ['rich.fountain', RTF],
+      ['rich.txt', RTF],
+      ['packed.md', WORD],
+      ['packed.txt', WORD],
+      ['packed.fdx', WORD],
+    ];
+    for (const [name, bytes] of files) writeBytes(join(dir, 'Lib', name), bytes);
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    for (const [name, bytes] of files) {
+      for (const [tool, args] of [
+        ['script_overview', { script: `Lib/${name}` }],
+        ['read_scene', { script: `Lib/${name}`, scene: '1' }],
+        ['search_scripts', { words: 'hall', script: `Lib/${name}` }],
+      ] as const) {
+        const body = refusalOf(await open.call(tool, args));
+        expect(body.error, `${name} at ${tool}`).toBe(said(name, bytes));
+        expect(body.error).not.toContain(dir);
+      }
+    }
+    expect(said('printed.fountain', PDF)).toMatch(
+      /^Drafter can’t open a PDF \(printed\.fountain\)/,
+    );
+  });
+
+  it('a Drafter HTML export named .fountain is read as the export, like Open', async () => {
+    const dir = tempFolder();
+    put(join(dir, 'Lib', 'export.fountain'), EXPORT);
+    const ctx = await contextFor([join(dir, 'Lib')]);
+    const loaded = script(await load('Lib/export.fountain', ctx));
+    expect(loaded.content).toBe('html export');
+    expect(loaded.index.scenes.map((s) => s.heading)).toEqual(['INT. JUNE’S KITCHEN - NIGHT']);
+    expect(loaded.map.title).toBe('Read From The Export');
+  });
+
+  it('an e-book named .txt is read as the export or refused as Open does', async () => {
+    const dir = tempFolder();
+    const book = epubWith([
+      {
+        name: 'EPUB/drafter-source.fountain',
+        text: 'Title: Booked\n\nINT. HALL - DAY\n\nA lever.\n',
+      },
+    ]);
+    const bare = epubWith([{ name: 'EPUB/chapter.xhtml', text: '<p>INT. HALL - DAY</p>' }]);
+    writeBytes(join(dir, 'Lib', 'book.txt'), book);
+    writeBytes(join(dir, 'Lib', 'bare.txt'), bare);
+    const ctx = await contextFor([join(dir, 'Lib')]);
+    const loaded = script(await load('Lib/book.txt', ctx));
+    expect(loaded.content).toBe('epub export');
+    expect(loaded.index.scenes.map((s) => s.heading)).toEqual(['INT. HALL - DAY']);
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    const body = refusalOf(await open.call('script_overview', { script: 'Lib/bare.txt' }));
+    expect(body.error).toBe(said('bare.txt', bare));
+    expect(body.error).toMatch(/^Drafter can’t open an e-book \(bare\.txt\)/);
+  });
+
+  it('a web page that isn’t a Drafter export is refused, whatever its name', async () => {
+    const dir = tempFolder();
+    const page = '<!DOCTYPE html>\n<html><body><p>INT. HALL - DAY</p></body></html>\n';
+    for (const name of ['page.fountain', 'page.md', 'page.txt', 'page.html'])
+      put(join(dir, 'Lib', name), page);
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    for (const name of ['page.fountain', 'page.md', 'page.txt', 'page.html']) {
+      const body = refusalOf(await open.call('script_overview', { script: `Lib/${name}` }));
+      expect(body.error, name).toBe(said(name, new TextEncoder().encode(page)));
+      expect(body.error).toMatch(/^Drafter can’t open a web page/);
+    }
+  });
+
+  it('a real Fountain file named .txt still opens', async () => {
+    const dir = tempFolder();
+    const text = readFileSync(join(LIBRARY, EPISODE_101), 'utf8');
+    put(join(dir, 'Lib', 'episode.txt'), text);
+    put(join(dir, 'Lib', 'episode.fountain'), text);
+    const ctx = await contextFor([join(dir, 'Lib')]);
+    const txt = script(await load('Lib/episode.txt', ctx));
+    const fountain = script(await load('Lib/episode.fountain', ctx));
+    expect(txt.content).toBe('fountain');
+    expect(fountain.content).toBe('fountain');
+    expect(txt.index.scenes).toHaveLength(13);
   });
 });

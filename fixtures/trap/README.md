@@ -61,7 +61,7 @@ Every way a file comes into Drafter, and the harness that runs each one
 | `package` | Each format's reader on its own: `parse`, `parseMarkdown`, `fromFdx`, `fromHighland`, `fromFadeIn`, `embeddedSource`; and Drafter's HTML export and story map of a hostile script, which must hold nothing live. | `packages/fountain`, `markdown`, `fdx`, `archive`, `render-html-file`, `story-map` | `harness.test.ts` |
 | `desktop-modules` | The desktop app's modules folder: each `module.json`, read once at start. | `apps/desktop/src/module-folder.ts` | `harness.test.ts` |
 | `beside-read` | Drafts and cuts read back from beside the work when it opens: the cuts file (`Boca.fountain.cuts.md`), each entry checked by its ID and merged, and draft files (`Boca drafts/Boca – Draft 03.fountain`), each ID checked against its text. Untrusted: they may have been edited anywhere. | `apps/web/app/beside/read.ts` → `@drafter/history` | `harness.test.ts` |
-| `mcp` | Drafter for Claude: each tool’s read of a file in a configured folder, and every path a tool is given. | `packages/mcp/src` (`paths.ts`, `load.ts`, `tools/`) → `@drafter/archive/node` (`readCapped`, `readScriptFile`) and each format’s reader | `harness.test.ts`, in the trap worker, through the SDK’s in-memory transport |
+| `mcp` | Drafter for Claude: each tool’s read of a file in a configured folder, and every path a tool is given. | `packages/mcp/src` (`paths.ts`, `load.ts`, `inside.ts`, `tools/`) → `@drafter/archive` (`notAScript`, `reopenFormatOf`, `embeddedSource`), `@drafter/archive/node` (`readCapped`, `strictText`), and each format’s reader | `harness.test.ts`, in the trap worker, through the SDK’s in-memory transport |
 
 ### Drafter for Claude (`mcp`)
 
@@ -75,9 +75,12 @@ in-memory transport, as an AI app calls it.
   a trap that opens gives a valid answer (`about` first, its text the same JSON as its structured
   content, at most 40,000 characters), or "There’s no scene 1." for a script with none; a trap
   that is refused is refused in the server's words, with the envelope, never a stack or a full
-  path. The caps' words are the server's (“it is larger than 5 MB”); a trap whose outcome is
-  different here has its own `mcp` outcome in `traps.ts`, with the reason in its sentence (a PDF
-  or RTF document named `.fountain` is read as the text it is, as `drafter build` reads it).
+  path. The server judges every file by what is inside it, in Open's order (`inside.ts`): a web
+  page or e-book is an export or refused, then a PDF, RTF, Word, or other known non-script is
+  refused in Open's words whatever its name, then an import by its name, then strict text. So a
+  PDF named `.fountain` is refused, and an export named `.fountain` is read for its script, as
+  Open does. Only the caps' words are the server's (“it is larger than 5 MB”); no trap has an
+  `mcp` outcome of its own.
 - **Path traps** ([`mcp-traps.ts`](mcp-traps.ts), `MCP_PATH_TRAPS`): `..` first, in the middle,
   and last; a full path; a link to a file and to a folder outside (refused as outside); a loop of
   links; a folder named `x.fountain`; a pipe; a socket; `/dev/zero` behind a link; a file swapped

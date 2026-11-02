@@ -69,7 +69,7 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
   {
     id: 'mcp',
     what: 'Drafter for Claude: each tool’s read of a file in a configured folder, and every path a tool is given.',
-    code: 'packages/mcp/src (paths.ts, load.ts, tools/) → @drafter/archive/node (readCapped, readScriptFile) and each format’s reader',
+    code: 'packages/mcp/src (paths.ts, load.ts, inside.ts, tools/) → @drafter/archive (notAScript, reopenFormatOf, embeddedSource), @drafter/archive/node (readCapped, strictText), and each format’s reader',
     harness:
       'fixtures/trap/harness.test.ts (in the trap worker, through the SDK’s in-memory transport)',
   },

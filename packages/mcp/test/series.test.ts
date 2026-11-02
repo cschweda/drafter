@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { __setLimitsForTests, SERIES_MAX } from '../src/names';
 import { answerOf, type Connected, connect, refusalOf } from './connect';
-import { EPISODE_101, EPISODE_102, EPISODE_103, makeLibrary } from './library';
+import { EPISODE_101, EPISODE_102, EPISODE_103, EXPORT, makeLibrary } from './library';
 import { put, tempFolder } from './temp';
 
 interface Series {
@@ -177,5 +177,19 @@ describe('series_overview', () => {
     expect(refusalOf(both).error).toBe('Give a folder or a list of scripts, not both.');
     const neither = await (open as Connected).call('series_overview', {});
     expect(refusalOf(neither).error).toBe('Give a folder or a list of scripts.');
+  });
+});
+
+describe('series_overview and what is inside a file', () => {
+  it('an export named .fountain in a folder is skipped as an export', async () => {
+    const { scripts } = makeLibrary(tempFolder());
+    put(join(scripts, 'Signal Hill', 'Signal Hill – 104.fountain'), EXPORT);
+    open = await connect({ folders: [scripts] });
+    const got = await series({ folder: SERIES });
+    expect(got.scripts).toHaveLength(3);
+    expect(got.skipped).toContainEqual({
+      path: `${SERIES}/Signal Hill – 104.fountain`,
+      why: 'an export; name it in scripts to read it',
+    });
   });
 });
