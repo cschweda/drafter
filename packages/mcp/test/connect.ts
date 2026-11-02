@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { DEFAULT_WORDS_PER_MINUTE } from '@drafter/outline';
 import type { CallToolResult } from '@modelcontextprotocol/client';
 import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
+import { ABOUT, MAX_ANSWER_CHARS } from '../src/envelope';
 import { ReaderPool, type WorkerSpec } from '../src/pool';
 import { resolveRoots } from '../src/roots';
 import { createServer } from '../src/server';
@@ -75,4 +76,26 @@ export async function connect(options: {
     rootsAsked: () => asked,
     logged,
   };
+}
+
+/** A successful answer's structured content, checked: its text is the same JSON, under the cap. */
+export function answerOf<T = Record<string, unknown>>(result: CallToolResult): T {
+  if (result.isError) throw new Error(`refused: ${(result.content[0] as { text: string }).text}`);
+  const text = (result.content[0] as { text: string }).text;
+  if (text.length > MAX_ANSWER_CHARS) throw new Error(`answer of ${text.length} characters`);
+  const parsed = JSON.parse(text);
+  if (JSON.stringify(parsed) !== JSON.stringify(result.structuredContent))
+    throw new Error('the text and the structured content differ');
+  if (parsed.about !== ABOUT) throw new Error('no about');
+  return parsed as T;
+}
+
+/** A refusal's body: `{ about, error, …extra }`. */
+export function refusalOf(result: CallToolResult): {
+  about: string;
+  error: string;
+  [key: string]: unknown;
+} {
+  if (!result.isError) throw new Error('not refused');
+  return JSON.parse((result.content[0] as { text: string }).text);
 }

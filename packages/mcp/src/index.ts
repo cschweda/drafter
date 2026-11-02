@@ -11,6 +11,7 @@ export {
   refused,
 } from './envelope';
 export { type Format, formatOf } from './formats';
+export { load, NOT_READ } from './load';
 export { type MainIo, main, VERSION } from './main';
 export {
   BAD_PACE,
@@ -43,8 +44,11 @@ export {
   type WorkerSpec,
 } from './pool';
 export { isInside, type Root, resolveRoots, StartError } from './roots';
+export { findScene, MAX_MATCHES, oneScene, type SceneFound } from './scenes';
 export { createServer, type ServerConfig } from './server';
 export { type Loaded, TOOLS, type ToolContext, type ToolDef, type ToolName } from './tools/index';
 export { LIST_READ_LIMIT } from './tools/list';
+export { castKey, MAX_RUN, OVERVIEW_SCENES } from './tools/script';
+export { scriptEnd, visible, visibleMarkdown } from './visible';
 export { type Found, WALK_LIMITS, walk } from './walk';
-export { handle, runWorker } from './worker';
+export { handle, makeContext, runWorker } from './worker';

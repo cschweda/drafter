@@ -404,6 +404,9 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
+      '@drafter/render-html-file':
+        specifier: workspace:*
+        version: link:../render-html-file
       '@modelcontextprotocol/client':
         specifier: 2.3.1
         version: 2.3.1

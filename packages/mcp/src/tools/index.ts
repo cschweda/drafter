@@ -3,8 +3,10 @@
 import type * as z from 'zod/v4';
 import type { LoadCache } from '../cache';
 import type { Include } from '../envelope';
+import type { Loaded } from '../load';
 import type { WorkerData } from '../pool';
 import { listScripts } from './list';
+import { characterLines, readScene, scriptOverview } from './script';
 
 export type ToolName =
   | 'list_scripts'
@@ -18,8 +20,7 @@ export type ToolName =
   | 'story_map'
   | 'series_overview';
 
-/** A parsed file, as the cache keeps it (load.ts gives it its shape). */
-export type Loaded = unknown;
+export type { Loaded } from '../load';
 
 /** What a tool's code is given beside its arguments. */
 export interface ToolContext {
@@ -42,4 +43,9 @@ export interface ToolDef<I, O extends object> {
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: each tool has its own argument and answer types.
-export const TOOLS: ReadonlyArray<ToolDef<any, any>> = [listScripts];
+export const TOOLS: ReadonlyArray<ToolDef<any, any>> = [
+  listScripts,
+  scriptOverview,
+  readScene,
+  characterLines,
+];

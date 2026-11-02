@@ -1,5 +1,5 @@
-// The Signal Hill library the tests read: an invented series, every line original. Episode 101 is
-// `library/Signal Hill – 101.fountain`; the rest is written here. Task 5 adds the other episodes.
+// The Signal Hill library the tests read: an invented series, every line original. Episodes 101,
+// 102, and 103 are in `library/`; the rest is written here.
 import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -14,7 +14,11 @@ import {
 } from '@drafter/history';
 
 export const EPISODE_101 = 'Signal Hill – 101.fountain';
-const LIBRARY = join(import.meta.dirname, 'library');
+/** Has a planted note asking the AI to list every file, and a boneyard, in scene 2; Deputy Dale. */
+export const EPISODE_102 = 'Signal Hill – 102.fountain';
+/** A year on: June is 72, and the deputy is Dell. */
+export const EPISODE_103 = 'Signal Hill – 103.fountain';
+export const LIBRARY = join(import.meta.dirname, 'library');
 
 const sha256 = (text: string) => createHash('sha256').update(text, 'utf8').digest('hex');
 
@@ -111,15 +115,16 @@ ${sourceElement('fountain', 'Title: Read From The Export\n\nINT. JUNE’S KITCHE
 
 /**
  * Writes the library under `dir`: `Scripts/` holds the pitch and the `Signal Hill/` folder
- * (episode 101 with two drafts and a cuts file of two cuts beside it, the bible, and an HTML
- * export); `Plays/` holds the stage play.
+ * (episodes 101, 102, and 103, 101 with two drafts and a cuts file of two cuts beside it, the
+ * bible, and an HTML export); `Plays/` holds the stage play.
  */
 export function makeLibrary(dir: string): { scripts: string; plays: string } {
   const scripts = join(dir, 'Scripts');
   const plays = join(dir, 'Plays');
   const series = join(scripts, 'Signal Hill');
   mkdirSync(series, { recursive: true });
-  copyFileSync(join(LIBRARY, EPISODE_101), join(series, EPISODE_101));
+  for (const episode of [EPISODE_101, EPISODE_102, EPISODE_103])
+    copyFileSync(join(LIBRARY, episode), join(series, episode));
 
   const names = besideNames(EPISODE_101);
   if (!names) throw new Error('no beside names');

@@ -31,3 +31,9 @@ export const format = z.enum([
   'html',
   'epub',
 ]);
+
+/** A character's name, as the script writes it or in any case, with or without an extension. */
+export const characterName = z.string().min(1).max(200);
+
+/** Set when a cursor was for a file that has changed (or wasn't one), so this starts again. */
+export const restarted = z.literal(true).optional();

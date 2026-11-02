@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ABOUT, INSTRUCTIONS } from '../src/envelope';
 import { logLine } from '../src/server';
 import { type Connected, connect } from './connect';
-import { makeLibrary } from './library';
+import { EPISODE_101, makeLibrary } from './library';
 import { tempFolder } from './temp';
 
 const REAL_WORKER = {
@@ -85,7 +85,16 @@ describe('the server', () => {
     expect(result.isError).toBeFalsy();
     const body = result.structuredContent as { about: string; files: unknown[] };
     expect(body.about).toBe(ABOUT);
-    expect(body.files.length).toBe(5);
+    expect(body.files.length).toBe(7);
+    // A scene, read in the worker thread too.
+    const scene = await call('read_scene', {
+      script: `Scripts/Signal Hill/${EPISODE_101}`,
+      scene: '1',
+    });
+    expect(scene.isError).toBeFalsy();
+    expect(
+      (scene.structuredContent as { scenes: Array<{ heading: string }> }).scenes[0]?.heading,
+    ).toBe("INT. JUNE'S KITCHEN - NIGHT");
     expect(rootsAsked()).toBe(0);
     expect(client.getServerCapabilities()?.tools).toBeDefined();
   });

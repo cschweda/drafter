@@ -27,6 +27,8 @@ export interface Checked {
 export class Refusal extends Error {
   /** Scenes a reference could mean, when it means more than one. */
   matches?: Array<{ scene: number; heading: string }>;
+  /** Anything else the refusal carries beside its message (the names nearest a name, say). */
+  extra?: Record<string, unknown>;
 }
 
 export const OUTSIDE = 'That file is outside the folders Drafter for Claude may read.';

@@ -4,9 +4,10 @@ import { isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { Refused } from '@drafter/archive/node';
 import { LoadCache } from './cache';
 import type { Include } from './envelope';
+import type { Loaded } from './load';
 import { Refusal } from './paths';
 import type { Job, JobResult, WorkerData } from './pool';
-import { type Loaded, TOOLS } from './tools/index';
+import { TOOLS, type ToolContext } from './tools/index';
 
 /** Any failure that isn't a refusal: never its own text, which may hold a path or a script's words. */
 export const WENT_WRONG = 'Drafter couldn’t read that. Try again, or ask for less at once.';
@@ -24,14 +25,9 @@ function cacheFor(data: WorkerData): LoadCache<Loaded> {
   return cache;
 }
 
-/** Runs one call: its tool's `run`, with a refusal (a Refusal, or a file refused) as its words. */
-export async function handle(job: Job, data: WorkerData): Promise<JobResult> {
-  const tool = TOOLS.find((each) => each.name === job.tool);
-  if (!tool) return { refused: `There’s no tool called ${String(job.tool)}.` };
-  // The server checked the arguments already; checked again here, where they are used.
-  const parsed = tool.input.safeParse(job.args);
-  if (!parsed.success) return { refused: BAD_ARGUMENTS };
-  const ctx = {
+/** What a tool's code is given: the reader's data, its parsed files, and what to include. */
+export function makeContext(data: WorkerData): ToolContext {
+  return {
     data,
     cache: cacheFor(data),
     include(args: { include?: Include }): Include {
@@ -41,13 +37,28 @@ export async function handle(job: Job, data: WorkerData): Promise<JobResult> {
       return (['notes', 'boneyard'] as const).filter((kind) => wanted.has(kind));
     },
   };
+}
+
+/** Runs one call: its tool's `run`, with a refusal (a Refusal, or a file refused) as its words. */
+export async function handle(job: Job, data: WorkerData): Promise<JobResult> {
+  const tool = TOOLS.find((each) => each.name === job.tool);
+  if (!tool) return { refused: `There’s no tool called ${String(job.tool)}.` };
+  // The server checked the arguments already; checked again here, where they are used.
+  const parsed = tool.input.safeParse(job.args);
+  if (!parsed.success) return { refused: BAD_ARGUMENTS };
+  const ctx = makeContext(data);
   try {
     return { ok: await tool.run(parsed.data, ctx) };
   } catch (error) {
-    if (error instanceof Refusal)
-      return error.matches
-        ? { refused: error.message, extra: { matches: error.matches } }
+    if (error instanceof Refusal) {
+      const extra = {
+        ...error.extra,
+        ...(error.matches ? { matches: error.matches } : {}),
+      };
+      return Object.keys(extra).length > 0
+        ? { refused: error.message, extra }
         : { refused: error.message };
+    }
     if (error instanceof Refused) return { refused: `Can’t read that file: ${error.message}.` };
     return { refused: WENT_WRONG };
   }

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ABOUT, MAX_ANSWER_CHARS } from '../src/envelope';
 import { __setBudgetForTests } from '../src/paging';
 import { type Connected, connect } from './connect';
-import { EPISODE_101, makeLibrary } from './library';
+import { EPISODE_101, EPISODE_102, EPISODE_103, makeLibrary } from './library';
 import { put, tempFolder } from './temp';
 
 interface Listed {
@@ -91,6 +91,16 @@ describe('list_scripts', () => {
       },
       expect.objectContaining({ path: 'Scripts/Signal Hill/Signal Hill – 101.html' }),
       expect.objectContaining({
+        path: `Scripts/Signal Hill/${EPISODE_102}`,
+        title: 'Signal Hill Episode 102',
+        scenes: 6,
+      }),
+      expect.objectContaining({
+        path: `Scripts/Signal Hill/${EPISODE_103}`,
+        title: 'Signal Hill Episode 103',
+        scenes: 6,
+      }),
+      expect.objectContaining({
         path: 'Plays/The Long Watch.fountain',
         format: 'fountain',
         kind: 'stage play',
@@ -108,6 +118,8 @@ describe('list_scripts', () => {
       'Scripts/Signal Hill/Series bible.md',
       `Scripts/Signal Hill/${EPISODE_101}`,
       'Scripts/Signal Hill/Signal Hill – 101.html',
+      `Scripts/Signal Hill/${EPISODE_102}`,
+      `Scripts/Signal Hill/${EPISODE_103}`,
     ]);
   });
 
