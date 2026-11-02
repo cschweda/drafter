@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  // The SDK's client (tests only) depends on eventsource, whose "source" export is TypeScript that
+  // doesn't check under these options; so no "source" condition here, and Drafter's own packages
+  // from source by path instead.
+  "compilerOptions": {
+    "customConditions": [],
+    "paths": {
+      "@drafter/archive/node": ["../archive/src/node.ts"],
+      "@drafter/markdown/*": ["../markdown/src/*.ts"],
+      "@drafter/*": ["../*/src/index.ts"]
+    }
+  },
+  "include": ["src", "test"]
+}

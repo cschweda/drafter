@@ -113,6 +113,9 @@ function files(version = '1.2.3', skip: string[] = []) {
     if (!skip.includes(name)) writeFileSync(join(release, name), text);
   };
   for (const name of [linux.image, linux.deb, ...windows]) write(name, `the ${name}`);
+  const mcp = `drafter-mcp-${version}.js`;
+  write(mcp, `the ${mcp}`);
+  write(`${mcp}.sha256`, `${createHash('sha256').update(`the ${mcp}`).digest('hex')}  ${mcp}\n`);
   const entry = (name: string) =>
     `  - url: ${name}\n    sha512: ${sha512(`the ${name}`)}\n    size: ${Buffer.byteLength(`the ${name}`)}`;
   write(
@@ -156,6 +159,8 @@ describe.skipIf(!runnable)('publish-release.sh', () => {
         'Drafter-x86_64.AppImage',
         'latest-linux.yml',
         'latest.yml',
+        'drafter-mcp-1.2.3.js',
+        'drafter-mcp-1.2.3.js.sha256',
       ].sort(),
     );
     // Published only after the upload and the check.

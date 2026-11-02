@@ -601,6 +601,7 @@ for (const theme of THEMES) {
       '/docs/fountain/',
       '/docs/saving/',
       '/docs/story-map/',
+      '/docs/drafter-for-claude/',
       '/docs/privacy/',
       '/docs/shortcuts/',
       '/docs/technical/',

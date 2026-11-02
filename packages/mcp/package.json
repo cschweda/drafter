@@ -1,0 +1,56 @@
+{
+  "name": "drafter-mcp",
+  "private": true,
+  "version": "0.24.1",
+  "description": "Drafter for Claude: a local, read-only MCP server that lets an AI app read the scripts in the folders the writer names.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cschweda/drafter.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://drafter.dev/docs/drafter-for-claude/",
+  "keywords": [
+    "mcp",
+    "fountain",
+    "screenwriting",
+    "claude"
+  ],
+  "bin": {
+    "drafter-mcp": "./dist/drafter-mcp.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "stage": "node scripts/stage.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drafter/archive": "workspace:*",
+    "@drafter/cast": "workspace:*",
+    "@drafter/compare": "workspace:*",
+    "@drafter/fdx": "workspace:*",
+    "@drafter/fountain": "workspace:*",
+    "@drafter/history": "workspace:*",
+    "@drafter/layout": "workspace:*",
+    "@drafter/lint": "workspace:*",
+    "@drafter/markdown": "workspace:*",
+    "@drafter/notes": "workspace:*",
+    "@drafter/outline": "workspace:*",
+    "@drafter/story-map": "workspace:*",
+    "@drafter/templates": "workspace:*",
+    "@modelcontextprotocol/server": "2.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@drafter/render-html-file": "workspace:*",
+    "@modelcontextprotocol/client": "2.3.1"
+  }
+}

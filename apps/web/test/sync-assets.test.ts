@@ -94,6 +94,16 @@ describe('syncAssets', () => {
     expect(await readFile(join(out, 'licenses/is-buffer.txt'))).toEqual(
       await readFile(join(isBuffer, 'LICENSE')),
     );
+    // Drafter for Claude's SDK and zod, resolved from packages/mcp.
+    const mcp = join(repoRoot, 'packages/mcp/package.json');
+    for (const [name, file] of [
+      ['@modelcontextprotocol/server', 'licenses/modelcontextprotocol-server.txt'],
+      ['zod', 'licenses/zod.txt'],
+    ] as const) {
+      expect(await readFile(join(out, file)), name).toEqual(
+        await readFile(join(packageDir(name, mcp), 'LICENSE')),
+      );
+    }
     expect(PACKAGE_ASSETS.map(({ to }) => to).sort()).toEqual([
       'dictionaries/en-GB/index.aff',
       'dictionaries/en-GB/index.dic',
@@ -102,7 +112,9 @@ describe('syncAssets', () => {
       'licenses/dictionary-en-gb.txt',
       'licenses/dictionary-en.txt',
       'licenses/is-buffer.txt',
+      'licenses/modelcontextprotocol-server.txt',
       'licenses/nspell.txt',
+      'licenses/zod.txt',
     ]);
   });
 

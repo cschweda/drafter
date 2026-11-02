@@ -61,6 +61,48 @@ Every way a file comes into Drafter, and the harness that runs each one
 | `package` | Each format's reader on its own: `parse`, `parseMarkdown`, `fromFdx`, `fromHighland`, `fromFadeIn`, `embeddedSource`; and Drafter's HTML export and story map of a hostile script, which must hold nothing live. | `packages/fountain`, `markdown`, `fdx`, `archive`, `render-html-file`, `story-map` | `harness.test.ts` |
 | `desktop-modules` | The desktop app's modules folder: each `module.json`, read once at start. | `apps/desktop/src/module-folder.ts` | `harness.test.ts` |
 | `beside-read` | Drafts and cuts read back from beside the work when it opens: the cuts file (`Boca.fountain.cuts.md`), each entry checked by its ID and merged, and draft files (`Boca drafts/Boca – Draft 03.fountain`), each ID checked against its text. Untrusted: they may have been edited anywhere. | `apps/web/app/beside/read.ts` → `@drafter/history` | `harness.test.ts` |
+| `mcp` | Drafter for Claude: each tool’s read of a file in a configured folder, and every path a tool is given. | `packages/mcp/src` (`paths.ts`, `load.ts`, `inside.ts`, `tools/`) → `@drafter/archive` (`notAScript`, `reopenFormatOf`, `embeddedSource`), `@drafter/archive/node` (`readCapped`, `strictText`), and each format’s reader | `harness.test.ts`, in the trap worker, through the SDK’s in-memory transport |
+
+### Drafter for Claude (`mcp`)
+
+The real server (`createServer`, its reader inline in the trap worker, which is stopped from
+outside at the trap's limit) is given one folder, `Scripts`, and called through the SDK's
+in-memory transport, as an AI app calls it.
+
+- **Every trap** of a format the server reads (Fountain, plain text, Markdown, Final Draft,
+  Highland, Fade In, HTML, EPUB) goes through `read_scene` (scene 1), `script_overview`, and
+  `search_scripts` (`the`), from a folder holding only it. Its outcome is derived from Open's:
+  a trap that opens gives a valid answer (`about` first, its text the same JSON as its structured
+  content, at most 40,000 characters), or "There’s no scene 1." for a script with none; a trap
+  that is refused is refused in the server's words, with the envelope, never a stack or a full
+  path. The server judges every file by what is inside it, in Open's order (`inside.ts`): a web
+  page or e-book is an export or refused, then a PDF, RTF, Word, or other known non-script is
+  refused in Open's words whatever its name, then an import by its name, then strict text. So a
+  PDF named `.fountain` is refused, and an export named `.fountain` is read for its script, as
+  Open does. Only the caps' words are the server's (“it is larger than 5 MB”); no trap has an
+  `mcp` outcome of its own.
+- **Path traps** ([`mcp-traps.ts`](mcp-traps.ts), `MCP_PATH_TRAPS`): `..` first, in the middle,
+  and last; a full path; a link to a file and to a folder outside (refused as outside); a loop of
+  links; a folder named `x.fountain`; a pipe; a socket; `/dev/zero` behind a link; a file swapped
+  for a link between the check and the read (through `__afterCheckForTests` in `load.ts`); a
+  Windows stream, a trailing dot, a drive-relative path, and a UNC path (checked through
+  `pathProblem(…, 'win32')` on every system, and for real on Windows); a NUL; a
+  10,000-character name (refused by the schema, in the SDK's own words); and a cursor from
+  another file and a forged one, which start again from the beginning (`restarted`), reading
+  nothing else.
+- **Size traps** (`MCP_SIZE_TRAPS`): a 300-scene script read whole, its overview paged and its
+  scenes ten a call; a speech of 100,000 words through `character_lines`, in parts; a search that
+  matches every word (it stops at 500 hits); and a folder of 2,000 scripts eight levels deep
+  (`list_scripts` stops at 500 and says it was cut short). Every page is under the cap.
+- **Nothing fetched or run, and the folder unchanged:** before the worker first imports the server, it replaces
+  `fetch`, `WebSocket`, and every function of `node:net`, `tls`, `http`, `https`, `http2`,
+  `dgram`, `dns`, and `child_process` with one that records the call and throws (and
+  `syncBuiltinESMExports`, so ESM imports see them too); every job's answer carries what was
+  tried, which must be nothing, as must the guard's own failures (a function it couldn't
+  replace, or a call tried while the server loaded); tests check the guard catches each kind. The
+  trap's folder is listed, and its every file hashed, before and after each job: the same. Writes
+  anywhere else are covered by the package's read-only scan of its source
+  (`packages/mcp/test/read-only.test.ts`).
 
 Not entry points, so no trap goes through them, but part of the survey:
 

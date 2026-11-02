@@ -270,6 +270,11 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <strong>No cookies, no tracking of you, no telemetry.</strong> The website, drafter.dev, measures visitor traffic with Plausible, privacy-focused analytics with no cookies; the downloaded desktop app has no analytics at all. See
           <a :href="help('help-privacy')">Privacy</a>.
         </li>
+        <li>
+          <strong>Drafter never calls an AI.</strong> If you use one,
+          <a :href="help('help-drafter-for-claude')">Drafter for Claude</a> lets it read the folders
+          you choose, and nothing else.
+        </li>
         <li><strong>Works offline</strong>, once it has loaded.</li>
         <li>
           <strong>Open source.</strong> The code is MIT-licensed and

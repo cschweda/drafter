@@ -1,5 +1,5 @@
 import type { Doc } from '@drafter/fountain';
-import { noteEntries } from '@drafter/notes';
+import { type NoteEntry, noteEntries } from '@drafter/notes';
 import { type Scene, type SceneIndex, STAGE_STUB, STUB_HEADING, wordsIn } from '@drafter/outline';
 import { STORY_MAP_LIMITS } from './limits';
 import type { MapAct, MapGaps, MapKind, MapScene, MapStatus, StoryMap } from './types';
@@ -29,6 +29,24 @@ export function isPlanned(scene: Scene): boolean {
   );
 }
 
+/** A note headed `TODO:` or tagged `#todo`, and not `#resolved`. */
+function isOpenTodo(entry: NoteEntry): boolean {
+  const note = entry.note;
+  if (!note || note.resolved) return false;
+  const head = note.head;
+  return (head?.kind === 'category' && head.name === 'todo') || note.tags.includes('todo');
+}
+
+/**
+ * The open to-dos in the script (each note `todoScenes` counts, wherever it is), as a number: the
+ * notes' text never leaves here.
+ */
+export function openTodos(doc: Doc): number {
+  let count = 0;
+  for (const entry of noteEntries(doc)) if (isOpenTodo(entry)) count++;
+  return count;
+}
+
 /**
  * The scenes (0-based) with a to-do: a note headed `TODO:` or tagged `#todo`, not `#resolved`.
  * Only the mark counts; the note's text never leaves here.
@@ -37,11 +55,7 @@ export function todoScenes(doc: Doc, index: SceneIndex): Set<number> {
   const out = new Set<number>();
   let s = 0;
   for (const entry of noteEntries(doc)) {
-    const note = entry.note;
-    if (!note || note.resolved) continue;
-    const head = note.head;
-    const todo = (head?.kind === 'category' && head.name === 'todo') || note.tags.includes('todo');
-    if (!todo) continue;
+    if (!isOpenTodo(entry)) continue;
     // Entries and scenes are both in source order.
     const at = entry.span.from;
     while (s < index.scenes.length && (index.scenes[s] as Scene).span.to <= at) s++;

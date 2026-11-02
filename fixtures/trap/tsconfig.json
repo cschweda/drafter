@@ -1,13 +1,18 @@
 {
   // The suite isn't a package, so the packages are found by path, at their source, as the tests
   // import them (vitest.shared.ts). `pnpm check` doesn't run this; `npx tsc -p fixtures/trap` does.
+  // No "source" condition, as packages/mcp: the SDK's client (the mcp entry point's) depends on
+  // eventsource, whose "source" export is TypeScript that doesn't check under these options.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "customConditions": [],
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
       "@drafter/cli": ["../../packages/cli/src/cli.ts"],
+      "@drafter/archive/node": ["../../packages/archive/src/node.ts"],
+      "@drafter/markdown/*": ["../../packages/markdown/src/*.ts"],
       "@drafter/*": ["../../packages/*/src/index.ts"]
     }
   },

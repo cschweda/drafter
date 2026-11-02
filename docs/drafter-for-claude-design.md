@@ -1,6 +1,8 @@
 # Drafter for Claude — Design
 
-**Status:** designed 2026-11-01; approved by the maintainer 2026-11-02 ("sample session looks great"), with the calls in §11 as written. Publishing to npm waits on the maintainer's npm account and the `@drafter` scope; until then the bundle ships on the GitHub Release. Planned for **v0.24.2**, after Story map (v0.24.1) and before Classic Mode (v0.25.0). The roadmap entry is in [ROADMAP.md](ROADMAP.md) and the README's Roadmap. The maintainer reviewed two samples, both local and not committed: a storyboard of one scene, and a session showing a writer using Claude with Drafter for Claude on an invented script. They are described in words here, so this document stands alone.
+**Status:** designed 2026-11-01; approved by the maintainer 2026-11-02 ("sample session looks great"), with the calls in §11 as written. Built for **v0.24.2**: on npm as `drafter-mcp`, published by the maintainer from their machine with `./publish.sh`, which checks the file is byte for byte the GitHub Release's, and on the GitHub Release as `drafter-mcp-<version>.js` with its SHA-256. It comes after Story map (v0.24.1) and before Classic Mode (v0.25.0). The roadmap entry is in [ROADMAP.md](ROADMAP.md) and the README's Roadmap. The maintainer reviewed two samples, both local and not committed: a storyboard of one scene, and a session showing a writer using Claude with Drafter for Claude on an invented script. They are described in words here, so this document stands alone.
+
+**Changed while it was built (maintainer, 2026-11-02).** The package was to be `@drafter/mcp`, but the `@drafter` scope on npm belongs to someone else, so it is the unscoped **`drafter-mcp`**, the command's own name. npm provenance from the release workflow (trusted publishing) gave way to `./publish.sh`, run by the maintainer; trusted publishing is in [DEFERRED](DEFERRED.md). Every file is judged by what is inside it, as Open judges it, and `list_scripts` gained a manifest (§3). The lines below are updated to match; [DECISIONS](DECISIONS.md), "Drafter for Claude", has every choice made while building it.
 
 **Asked for (maintainer, 2026-11-01), in their words:**
 - "is it worth creating an mcp server for this that can be used in Claude or other LLMs to look at the exported files and, say, create a story board or give additional analysis that the app itself doesn't give? Or give insights across a series of files?"
@@ -39,7 +41,7 @@ A small program, **`drafter-mcp`**, that the writer's AI app starts on the write
 
 ### 2.1 One program of its own, not a CLI subcommand
 
-**Call: a package of its own, `@drafter/mcp` in `packages/mcp`, with the command `drafter-mcp`. It is not `drafter mcp`.** Reasons:
+**Call: a package of its own, `drafter-mcp` in `packages/mcp`, with the command `drafter-mcp`. It is not `drafter mcp`.** Reasons:
 
 - **No write code in the process.** `@drafter/cli` writes files (`drafter build`, `drafter convert`). A separate program has no file-writing code at all, so no bug or confused request can reach it. This is the strongest reason.
 - **A smaller dependency tree for each.** The MCP SDK (§7.7) stays out of the CLI. The PDF renderer and `commander` stay out of the server.
@@ -50,7 +52,7 @@ The hardened reader `drafter build` uses (`readCapped` in `packages/cli/src/conv
 
 ### 2.2 How the writer sets it up
 
-**Call: delivered as one bundled file, published to npm as `@drafter/mcp` and attached to the GitHub Release with its SHA-256.** The bundle carries every Drafter package and the SDK inside it, so `npx` installs one package with **no dependencies** and runs no install scripts. The configuration pins the exact version, so nothing updates by itself (as with "No forced updates" in the README). It needs Node.js 22.12 or later, the same as the CLI. This is the first Drafter package on npm, ahead of the CLI's Phase 5 plan; it publishes with npm provenance from the release workflow.
+**Call: delivered as one bundled file, published to npm as `drafter-mcp` and attached to the GitHub Release with its SHA-256.** The bundle carries every Drafter package and the SDK inside it, so `npx` installs one package with **no dependencies** and runs no install scripts. The configuration pins the exact version, so nothing updates by itself (as with "No forced updates" in the README). It needs Node.js 22.12 or later, the same as the CLI. This is the first Drafter package on npm, ahead of the CLI's Phase 5 plan; the maintainer publishes it with `./publish.sh`, which stops unless npm gets byte for byte the GitHub Release's file (npm trusted publishing is deferred).
 
 Not chosen for v0.24.2:
 
@@ -65,7 +67,7 @@ Not chosen for v0.24.2:
     "drafter": {
       "command": "npx",
       "args": [
-        "-y", "@drafter/mcp@0.24.2",
+        "-y", "drafter-mcp@0.24.2",
         "--folder", "/Users/sam/Scripts",
         "--folder", "/Users/sam/Plays"
       ]
@@ -79,7 +81,7 @@ On Windows the folders are written `"C:\\Users\\sam\\Scripts"` (a JSON string do
 **Claude Code** (any platform; `--scope user` makes it available in every project):
 
 ```sh
-claude mcp add drafter --scope user -- npx -y @drafter/mcp@0.24.2 --folder ~/Scripts --folder ~/Plays
+claude mcp add drafter --scope user -- npx -y drafter-mcp@0.24.2 --folder ~/Scripts --folder ~/Plays
 ```
 
 Its prompts show as slash commands, such as `/mcp__drafter__storyboard`.
@@ -105,11 +107,11 @@ Ten tools. Each name is a plain verb or noun, and each reads only from the confi
 
 **What every result looks like.** Each result has `structuredContent`, JSON matching the tool's declared `outputSchema`, and the same JSON as text in `content` for apps that read only text. Text from the writer's files only ever appears **inside JSON string values**, and every result carries the same `about` line (§7.5). Long results are paged (§7.3) with a `next` cursor.
 
-**Which files.** **Call:** Fountain (`.fountain`) and Markdown documents (`.md`), and plain `.txt` read as Fountain, as Open does. Drafter's drafts folders and cuts files are read from beside each work. Final Draft (`.fdx`), Highland, and Fade In files, and HTML and EPUB exports with an embedded script (v0.23.1's reopenable exports), are read through the same readers and caps `drafter convert` uses, which the trap suite already covers. The maintainer's ask was to "look at the exported files", so a reopenable export counts. An export without an embedded script is listed but not read.
+**Which files.** **Call:** Fountain (`.fountain`) and Markdown documents (`.md`), and plain `.txt` read as Fountain, as Open does. **Every file is judged by what is inside it, in Open's order, whatever its name** (maintainer, 2026-11-02: "i think it's important to look inside files, yes -- if only for the security aspect even if it can't run something malicious directly. Maybe include a manifest?"): a web page or e-book is read for the script a Drafter export carries, or refused; a PDF, RTF, Word, or other packed file is refused in Open's words; then Final Draft, Highland, and Fade In go to their importers, and anything else must be strict UTF-8 text. Hidden files and folders (a name starting with a dot) are never read. Drafter's drafts folders and cuts files are read from beside each work. Final Draft (`.fdx`), Highland, and Fade In files, and HTML and EPUB exports with an embedded script (v0.23.1's reopenable exports), are read through the same readers and caps `drafter convert` uses, which the trap suite already covers. The maintainer's ask was to "look at the exported files", so a reopenable export counts. An export without an embedded script is listed, with Open's refusal, but not read.
 
 | # | Tool | Inputs | Returns | Limits | Packages |
 |---|---|---|---|---|---|
-| 1 | `list_scripts` | `folder?` (a configured folder or a subfolder; all of them when left out), `recursive?` (default true) | Each file: path, kind (screenplay, stage play, Markdown, Final Draft…), title from the title page, scene count, modified date, size, whether a drafts folder and a cuts file are beside it, with their counts | At most 500 files, 6 levels deep. Folders that are links are not followed. Each file is checked by its title page and headings only. | `fountain`, `markdown`, `templates`, `history` (counts) |
+| 1 | `list_scripts` | `folder?` (a configured folder or a subfolder; all of them when left out), `recursive?` (default true) | Each file: path, kind (screenplay, stage play, Markdown, Final Draft…), title from the title page, scene count, modified date, size, whether a drafts folder and a cuts file are beside it, with their counts; and a manifest: what is inside each file (`content`), whether that matches its name (`matches_name`), why it is refused (`refused`), and counts of each | At most 500 files, 6 levels deep, 100 MB read a call. Folders that are links are not followed. Each file is judged by its content, as Open judges it. | `fountain`, `markdown`, `templates`, `history` (counts) |
 | 2 | `script_overview` | `script`, `include?` (§6) | Title page (Title, Credit, Author(s), Source, Draft date; never Contact), template, pages, running time; acts and sections with their synopses; every scene (number, heading, place, inside or outside, time of day, act, pages, minutes, first synopsis, who is in it); characters (speeches, words, share of the talking, scenes, first and last, long absences, most often with); places; gaps (empty acts, planned scenes, open to-dos as a count, pages still to write); a count of Problems | Scene list paged after 150 scenes | `fountain`, `templates`, `layout` (pages), `outline` (scene index, timing), `cast`, `story-map` (`gaps.ts`, acts), `lint` |
 | 3 | `read_scene` | `script`, `scene`, `through?` (a later scene, for a run), `include?` | The scene's text as Fountain, as written, minus notes and boneyard unless included; and its heading, place, time, act, page, minutes, and who is in it | A run of at most 10 scenes; paged past the size cap | `fountain`, `outline`, `cast` |
 | 4 | `character_lines` | `script`, `character`, `from?` and `to?` (scenes), `include?` | Every speech in order: scene, extension (`V.O.`…), parenthetical, dialogue; dual dialogue marked; and the character's figures (as in the overview) | Paged | `fountain`, `outline` (`speeches`), `cast` |
@@ -120,7 +122,7 @@ Ten tools. Each name is a plain verb or noun, and each reads only from the confi
 | 9 | `story_map` | `script`, `status?` (in progress or finished) | The Story map's model as JSON (`buildStoryMap`): acts, scenes, characters, places, lines, threads, gaps. Never the HTML, and never the writer's contact. | One per call; long scripts paged by act | `story-map` |
 | 10 | `series_overview` | `folder`, or `scripts` (a list, in order) | Across every script: each character with the scripts and scenes they appear in, their age where an introduction gives one, and names that look like spellings of each other (Dale and Dell); each place and where it appears; per script, pages, running time, and its leads | At most 30 scripts | `cast`, `outline`, `fountain` |
 
-**Call: `series_overview` is the tenth tool.** "Insights across a series of files" was in the maintainer's first question. Claude could call `script_overview` once per episode, but a cross-script cast with spelling neighbours is something only Drafter can count exactly, and it keeps a ten-episode question to one call. Name neighbours are found by edit distance (1 for names up to 5 letters, 2 above), always shown as "looks like" and never merged.
+**Call: `series_overview` is the tenth tool.** "Insights across a series of files" was in the maintainer's first question. Claude could call `script_overview` once per episode, but a cross-script cast with spelling neighbours is something only Drafter can count exactly, and it keeps a ten-episode question to one call. Name neighbours are found by edit distance, counted in code points after NFC: 1 for names up to 3 letters, 2 from 4 ("up to 5" was planned, but Dale and Dell are 2 edits in 4 letters); names over 40 code points aren't compared. They are always shown as "looks like" and never merged.
 
 **What the tools don't do:** run a pattern (regular expressions invite slow matches), read any other kind of file, read the app's own storage (snapshots, settings, IndexedDB), or reach anything outside the folders.
 
@@ -340,13 +342,13 @@ The samples, the tests, and the docs use original text only. **Signal Hill**, it
 
 ## 11. The calls
 
-1. **Name:** "Drafter for Claude"; the package `@drafter/mcp`, the command `drafter-mcp`. It works with any MCP app, and the help says it isn't made by Anthropic (§1, §9).
+1. **Name:** "Drafter for Claude"; the package `drafter-mcp` (unscoped on npm; the `@drafter` scope is someone else's), the command `drafter-mcp`. It works with any MCP app, and the help says it isn't made by Anthropic (§1, §9).
 2. **A program of its own, not `drafter mcp`:** no write code in the process, and a separate dependency tree and audit scope (§2.1).
 3. **`readCapped` moves to `@drafter/archive/node`,** shared by the CLI and the server (§2.1).
-4. **One bundled file on npm (`npx -y @drafter/mcp@<exact version>`) and on the GitHub Release with its SHA-256.** No dependencies, no install scripts, npm provenance. Not in the desktop app (`runAsNode` stays off); `.mcpb` later (§2.2, §10).
+4. **One bundled file on npm (`npx -y drafter-mcp@<exact version>`) and on the GitHub Release with its SHA-256.** No dependencies, no install scripts; published with `./publish.sh`, which checks the npm file is the Release's. Not in the desktop app (`runAsNode` stays off); `.mcpb` later (§2.2, §10).
 5. **Folders only from `--folder`;** the AI app's roots are ignored (§2.2).
 6. **Ten tools,** with `series_overview` added for series (§3).
-7. **Files read:** Fountain, Markdown, `.txt`, drafts and cuts files, and Final Draft, Highland, Fade In, and reopenable HTML and EPUB through `convert`'s readers (§3).
+7. **Files read:** Fountain, Markdown, `.txt`, drafts and cuts files, and Final Draft, Highland, Fade In, and reopenable HTML and EPUB through `convert`'s readers, each judged by what is inside it as Open does, with a manifest in `list_scripts` (§3).
 8. **Scenes named by order first,** then written number, then heading words; ambiguity returns the matches (§3).
 9. **Prompts:** storyboard, shot list, reader's notes, character arc, ideas from cuts, continuity, previously on. Seven, with the shot list its own (§4).
 10. **Storyboard is writer-first:** beats with no camera terms; Director's notes off by default, with sizes the reader can change, a shot list, and an optional room plan (§4.1).

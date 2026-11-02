@@ -4,6 +4,7 @@
 // one entry point; the answer is what happened, how long it took, and what it kept once garbage
 // is collected.
 
+import { createRequire, syncBuiltinESMExports } from 'node:module';
 import { setFlagsFromString } from 'node:v8';
 import { runInNewContext } from 'node:vm';
 import { parentPort } from 'node:worker_threads';
@@ -18,7 +19,7 @@ import {
 import { run } from '@drafter/cli';
 import { FdxError, fromFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
-import { mergeCuts } from '@drafter/history';
+import { mergeCuts, readCutsBytes, readDraftBytes, skippedLine } from '@drafter/history';
 import { paginate } from '@drafter/layout';
 import { NestedTooDeeply, parseMarkdown } from '@drafter/markdown';
 import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
@@ -30,7 +31,7 @@ import {
 } from '@drafter/story-map';
 import { builtins, type Template } from '@drafter/templates';
 import { currentWriter, readModulesFolder } from '../../../apps/desktop/src/module-folder';
-import { readCutsBytes, readDraftBytes, skippedLine } from '../../../apps/web/app/beside/read';
+import type { ToolName } from '../../../packages/mcp/src/tools/index';
 import type { Happened } from '../check';
 
 setFlagsFromString('--expose-gc');
@@ -45,7 +46,64 @@ export type Job =
   | { kind: 'package'; format: string; bytes: Uint8Array; inert: boolean }
   | { kind: 'cli'; cwd: string; args: string[] }
   | { kind: 'modules'; dir: string }
-  | { kind: 'beside'; format: string; bytes: Uint8Array };
+  | { kind: 'beside'; format: string; bytes: Uint8Array }
+  | McpJob;
+
+/**
+ * One trap through Drafter for Claude: a real server (packages/mcp) given `folders`, connected
+ * through the SDK's in-memory transport, its reader inline in this worker (which is stopped from
+ * outside at the trap's limit), and `tool` called with `args`.
+ */
+export interface McpJob {
+  kind: 'mcp';
+  /** The trap's own folder, holding the writer's folder and anything outside it. */
+  dir: string;
+  /** The path the tool is given. */
+  path: string;
+  tool: ToolName;
+  args: object;
+  folders: string[];
+  /** Each call's arguments in turn, in place of `args`. */
+  calls?: object[];
+  /** Follow each answer's `next` until there is none. */
+  pages?: boolean;
+  /** A call made first, whose `next` is the cursor of the call that is checked. */
+  cursorFrom?: { tool: ToolName; args: object };
+  /** An mcp trap whose `swap` runs once its path is checked and before it is read. */
+  swap?: string;
+  /** The guard's own check: after the calls, try each kind of call it must stop, through ESM imports. */
+  probe?: boolean;
+  /** The guard's own check, in a new worker: try each kind of call while the server is imported. */
+  probeFirst?: boolean;
+}
+
+/** Tries a fetch, a socket, a name lookup, and a program run, each as an ESM import sees it. */
+async function probe(): Promise<void> {
+  const attempts: Array<() => unknown> = [
+    () => fetch('http://example.invalid/'),
+    async () => (await import('node:net')).createConnection({ port: 9 }),
+    async () => (await import('node:dns')).lookup('example.invalid', () => {}),
+    async () => (await import('node:dns/promises')).lookup('example.invalid'),
+    async () => (await import('node:child_process')).execFileSync('true'),
+  ];
+  for (const attempt of attempts) {
+    try {
+      await attempt();
+    } catch {
+      // Each one throws: what was tried is in `tried`.
+    }
+  }
+}
+
+/** One tool call's result, as the AI app gets it. */
+export interface McpResult {
+  isError: boolean;
+  /** `content[0].text`. */
+  text: string;
+  structured?: Record<string, unknown>;
+  /** The client threw rather than returning a result. */
+  threw?: true;
+}
 
 export interface Answer {
   happened: Happened;
@@ -55,6 +113,8 @@ export interface Answer {
   html?: string | null;
   /** The opened text's story map, for an inert trap. */
   storyMap?: string;
+  /** For `mcp`: every call's result, and every network or process call that was tried (none). */
+  mcp?: { results: McpResult[]; calls: string[]; guard: string[] };
   ms: number;
   kept: number;
 }
@@ -249,7 +309,7 @@ async function drafter(cwd: string, args: string[]) {
 const BESIDE_NOW = new Date('2026-11-01T12:00:00.000Z');
 
 /**
- * The app's reading of a file beside the work (apps/web/app/beside/read.ts): a cuts file's entries
+ * The app's reading of a file beside the work (packages/history/src/beside-read.ts): a cuts file's entries
  * checked and merged into none, given as their titles, one a line, with what the lists say was
  * left out; a draft file's text, with "changed outside Drafter" when its ID no longer holds.
  */
@@ -273,7 +333,173 @@ async function readBeside(format: string, bytes: Uint8Array): Promise<Happened> 
   };
 }
 
+// ---- Drafter for Claude ------------------------------------------------------------------------
+
+/** Every network, process, or socket call tried since the guard went in: each one also throws. */
+const tried: string[] = [];
+/**
+ * The guard's own failures, kept for the worker's life and reported with every answer: a function
+ * it couldn't replace, and any call tried while the server was being imported.
+ */
+const guardFailures: string[] = [];
+let guarded = false;
+
+/**
+ * Replaces `fetch`, `WebSocket`, and every function of Node's network and process modules with
+ * one that records the call and throws, so nothing in the server can fetch, listen, look a name
+ * up, or run a program unseen. `syncBuiltinESMExports` makes the ESM imports see the same.
+ * Installed before the server is first imported, and kept for the worker's life, so the `mcp`
+ * blocks run last in harness.test.ts (the runner reuses the worker for every trap after them).
+ */
+function guardNetwork(): void {
+  if (guarded) return;
+  guarded = true;
+  const trip = (name: string) =>
+    function tripped() {
+      tried.push(name);
+      throw new Error(`${name} was called`);
+    };
+  const g = globalThis as Record<string, unknown>;
+  g.fetch = trip('fetch');
+  g.WebSocket = trip('WebSocket');
+  const require = createRequire(import.meta.url);
+  const replaceAll = (mod: Record<string, unknown>, name: string, keys = Object.keys(mod)) => {
+    for (const key of keys) {
+      if (typeof mod[key] !== 'function') continue;
+      const tripped = trip(`${name}.${key}`);
+      try {
+        mod[key] = tripped;
+      } catch {
+        // A getter (`http.WebSocket`, `net.BlockList`): replaced by a plain value, if it may be.
+        try {
+          Object.defineProperty(mod, key, { value: tripped, writable: true, configurable: true });
+        } catch {
+          // Reported below.
+        }
+      }
+      if (mod[key] !== tripped) guardFailures.push(`${name}.${key} couldn’t be replaced`);
+    }
+  };
+  for (const id of [
+    'node:net',
+    'node:tls',
+    'node:http',
+    'node:https',
+    'node:http2',
+    'node:dgram',
+    'node:dns',
+    'node:dns/promises',
+    'node:child_process',
+  ])
+    replaceAll(require(id) as Record<string, unknown>, id);
+  // `dns.promises` (the same object as `node:dns/promises` today; replaced again if it isn't), and
+  // the shared agents that make the sockets for `http` and `https`.
+  const dns = require('node:dns') as { promises: Record<string, unknown> };
+  if (dns.promises !== require('node:dns/promises')) replaceAll(dns.promises, 'node:dns.promises');
+  for (const id of ['node:http', 'node:https']) {
+    const agent = (require(id) as { globalAgent: Record<string, unknown> }).globalAgent;
+    replaceAll(agent, `${id}.globalAgent`, ['createConnection', 'addRequest', 'createSocket']);
+  }
+  syncBuiltinESMExports();
+}
+
+type Kit = {
+  connect: typeof import('../../../packages/mcp/test/connect').connect;
+  afterCheck: typeof import('../../../packages/mcp/src/load').__afterCheckForTests;
+  traps: typeof import('../mcp-traps').MCP_TRAPS;
+};
+let kit: Promise<Kit> | undefined;
+
+/**
+ * The server and its client, imported once the guard is in. Anything tried while they load is a
+ * guard failure, reported with every answer from then on. (`probeFirst`, the guard's own test,
+ * tries each kind of call there, in a new worker.)
+ */
+function mcpKit(probeFirst: boolean): Promise<Kit> {
+  guardNetwork();
+  kit ??= (async () => {
+    tried.length = 0;
+    if (probeFirst) await probe();
+    const [connected, load, traps] = await Promise.all([
+      import('../../../packages/mcp/test/connect'),
+      import('../../../packages/mcp/src/load'),
+      import('../mcp-traps'),
+    ]);
+    for (const call of tried.splice(0)) guardFailures.push(`${call}, while the server loaded`);
+    return {
+      connect: connected.connect,
+      afterCheck: load.__afterCheckForTests,
+      traps: traps.MCP_TRAPS,
+    };
+  })();
+  return kit;
+}
+
+async function runMcp(job: McpJob): Promise<Omit<Answer, 'ms' | 'kept'>> {
+  tried.length = 0;
+  const { connect, afterCheck, traps } = await mcpKit(job.probeFirst === true);
+  if (job.swap) {
+    // The trap's setup is made again (the same files) for its swap, which runs here, once.
+    let swap = traps.find((trap) => trap.id === job.swap)?.setup(job.dir).swap;
+    if (!swap) throw new Error(`no swap for ${job.swap}`);
+    afterCheck(() => {
+      const once = swap;
+      swap = undefined;
+      once?.();
+    });
+  }
+  const server = await connect({ folders: job.folders });
+  const call = async (tool: ToolName, args: object): Promise<McpResult> => {
+    try {
+      const result = await server.call(tool, args);
+      const first = result.content[0] as { text?: string } | undefined;
+      return {
+        isError: result.isError === true,
+        text: first?.text ?? '',
+        ...(result.structuredContent
+          ? { structured: result.structuredContent as Record<string, unknown> }
+          : {}),
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        text: error instanceof Error ? error.message : String(error),
+        threw: true,
+      };
+    }
+  };
+  try {
+    let args = job.args;
+    if (job.cursorFrom) {
+      const first = await call(job.cursorFrom.tool, job.cursorFrom.args);
+      const next = first.structured?.next;
+      if (typeof next !== 'string') throw new Error('the first call gave no cursor');
+      args = { ...args, cursor: next };
+    }
+    const results: McpResult[] = [];
+    for (const each of job.calls ?? [args]) {
+      let result = await call(job.tool, each);
+      results.push(result);
+      for (let page = 0; job.pages && page < 1_000; page++) {
+        const next = result.structured?.next;
+        if (result.isError || typeof next !== 'string') break;
+        result = await call(job.tool, { ...each, cursor: next });
+        results.push(result);
+      }
+    }
+    if (job.probe) await probe();
+    return {
+      happened: { kind: 'refused', message: '' },
+      mcp: { results, calls: [...tried], guard: [...guardFailures] },
+    };
+  } finally {
+    afterCheck(undefined);
+    await server.close();
+  }
+}
+
 async function work(job: Job): Promise<Omit<Answer, 'ms' | 'kept'>> {
+  if (job.kind === 'mcp') return runMcp(job);
   if (job.kind === 'beside') return { happened: await readBeside(job.format, job.bytes) };
   if (job.kind === 'package') {
     const happened = await readPackage(job.format, job.bytes);

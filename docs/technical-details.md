@@ -38,6 +38,7 @@ One repository holds them all as pnpm workspaces: the engine packages in `packag
 flowchart BT
   web["@drafter/web"]
   cli["@drafter/cli"]
+  drafter_mcp["drafter-mcp"]
   cm_fountain["@drafter/cm-fountain"]
   outline["@drafter/outline"]
   compare["@drafter/compare"]
@@ -67,6 +68,9 @@ flowchart BT
   render_pdf --> cli
   render_text --> cli
   story_map --> cli
+  history --> drafter_mcp
+  lint --> drafter_mcp
+  story_map --> drafter_mcp
   lint --> cm_fountain
   layout --> outline
   notes --> outline
@@ -200,7 +204,8 @@ Drafter is tested against a set of deliberately broken and hostile files, the tr
 - **Reopening an HTML or EPUB export** never parses the page. `embeddedSource` looks for the exact opening text of the `drafter-source` block with `indexOf`, takes exactly one, with a kind of `fountain` or `markdown`, and decodes strict base64 (the alphabet only, white space skipped, padding only at the end with its spare bits zero) in one linear pass. The file is capped at 32 MB and the script at 5 MB before decoding (an over-long block is given up on from its length), and the script then gets Open’s own text checks. In an EPUB only the one file `EPUB/drafter-source.fountain` or `.md` is read, through the zip reader.
 - **The XML reader** (`@drafter/fdx`, for Final Draft (.fdx) and Fade In (.fadein)) is Drafter’s own and narrower than XML: a DOCTYPE, or any other `<!` declaration, is refused, so no entity is ever defined, expanded, read from a file, or fetched. Only the five predefined entities and character references to characters XML allows are decoded; a processing instruction other than the opening XML declaration is refused; the encoding declaration is ignored, since the bytes must be strict UTF-8. It reads in one pass with its own stack, at most 5 MB and 64 elements deep, and keeps an attribute named `__proto__` as a plain key.
 - **The desktop app** (Electron) runs its page with `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false` (in frames and workers too), `webSecurity: true`, `webviewTag: false`, and `navigateOnDragDrop: false`, so a file dropped on the window never replaces the page. A `will-frame-navigate` guard keeps every frame on `app://drafter/` (an https link goes to your browser; a folder module’s own frame is the one exception), redirects off it are cancelled, `window.open` opens only the app’s own pages, and no webview can attach. A web request from a page is cancelled, except a folder module’s to an origin you agreed to. The page reaches files only through the main process, which answers only the app’s own pages and only for files you chose, judging a dropped or named file by where its links lead; it reads a regular file of at most 64 MB, never a pipe or a device, and hands the bytes to the page. An opened file is never loaded into a window. Where a Linux AppImage’s launcher turns the sandbox off, the app says so and asks before it goes on.
-- **The trap documents** (`fixtures/trap/`) are 262 deliberately broken and hostile files: Fountain, Markdown, plain text, Final Draft (.fdx), Highland (.highland), Fade In (.fadein), HTML and EPUB reopening, pipes, links and folders, and module manifests. A manifest gives each its outcome: it opens with given text, opens with a warning, or is refused with a given message. Vitest runs every one through every way in that applies (the web app’s Open, the desktop app’s, `drafter convert` and `build`, each format’s reader, and the modules folder), checking the outcome, that nothing threw, the time (2 seconds unless it says more), and the memory kept: the readers, the command line, and the modules folder run in a worker thread that is terminated at the limit or past 3 GB of heap, so a hang fails; the app’s own Open runs in the test’s thread, timed and measured but not stopped mid-hang; Playwright runs a few of each kind in Chromium, Firefox, and WebKit, at desktop and phone sizes, and in the desktop app, watching that nothing runs or is fetched. The desktop workflow runs the Vitest parts and the Electron part on every push to `main`. To add one, write its file under `fixtures/trap/files/` or a function in `traps.ts`, give it its outcome, and regenerate the manifest with `pnpm vitest run --project trap -u`.
+- **Drafter for Claude** (`packages/mcp`, the `drafter-mcp` program) reads only the folders named with `--folder` on its command line, never the folders an AI app offers. A tool’s path starts with a folder’s name and is refused if it holds `..`, an empty part, a part starting with a dot, a control character, or (on Windows) a drive, a UNC prefix, a stream, or a trailing dot or space; the joined path’s real path must be inside the folder’s, and the file is opened without following a last link and checked by device and inode against what was checked. Folder walks never follow a link to a folder and stop at 6 levels and 500 files. Every file is judged by what is inside it, as Open judges it, and read with the app’s caps (5 MB a script, the archive caps, 32 MB a draft or cuts file). Each call runs in a worker thread stopped at 10 seconds, an answer is at most 40,000 characters with an HMAC-signed cursor for the rest, and the program has no code that writes a file, starts a process, or opens a socket (a test reads its source for any). The writer’s text only ever appears inside JSON strings, after a fixed line saying it is a story to read, not instructions.
+- **The trap documents** (`fixtures/trap/`) are 262 deliberately broken and hostile files: Fountain, Markdown, plain text, Final Draft (.fdx), Highland (.highland), Fade In (.fadein), HTML and EPUB reopening, pipes, links and folders, and module manifests. A manifest gives each its outcome: it opens with given text, opens with a warning, or is refused with a given message. Vitest runs every one through every way in that applies (the web app’s Open, the desktop app’s, `drafter convert` and `build`, each format’s reader, the modules folder, and Drafter for Claude’s tools, with its own path and size traps), checking the outcome, that nothing threw, the time (2 seconds unless it says more), and the memory kept: the readers, the command line, and the modules folder run in a worker thread that is terminated at the limit or past 3 GB of heap, so a hang fails; the app’s own Open runs in the test’s thread, timed and measured but not stopped mid-hang; Playwright runs a few of each kind in Chromium, Firefox, and WebKit, at desktop and phone sizes, and in the desktop app, watching that nothing runs or is fetched. The desktop workflow runs the Vitest parts and the Electron part on every push to `main`. To add one, write its file under `fixtures/trap/files/` or a function in `traps.ts`, give it its outcome, and regenerate the manifest with `pnpm vitest run --project trap -u`.
 
 [The trap documents (fixtures/trap/README.md)](../fixtures/trap/README.md)
 
@@ -244,7 +249,7 @@ flowchart TD
 
 ## What it depends on
 
-Drafter takes as few of other people’s packages as it can, and none from the screenwriting world. Here is each one the app, the desktop app, and the command line need to build and run, and what it does for Drafter.
+Drafter takes as few of other people’s packages as it can, and none from the screenwriting world. Here is each one the app, the desktop app, the command line, and Drafter for Claude need to build and run, and what it does for Drafter.
 
 - `nuxt`: Builds drafter.dev as a set of static files, with nothing running on a server.
 - `vue`: Draws the app’s screens and keeps them up to date as you write.
@@ -274,9 +279,11 @@ Drafter takes as few of other people’s packages as it can, and none from the s
 - `dictionary-en`: The American English dictionary.
 - `dictionary-en-gb`: The British English dictionary.
 - `commander`: Reads the command line’s options.
+- `@modelcontextprotocol/server`: Lets Drafter for Claude talk to an AI app on your computer, using the Model Context Protocol.
+- `zod`: Checks every request Drafter for Claude gets before it is read.
 - `electron-updater`: Lets the Linux and Windows apps check GitHub for a new version, and the AppImage and the Windows app update themselves.
 
-The spellchecker’s, the dictionaries’, and the fonts’ licences are given in full on the [Third-party licences](https://drafter.dev/docs/licences/) page.
+The spellchecker’s, the dictionaries’, the fonts’, and Drafter for Claude’s licences are given in full on the [Third-party licences](https://drafter.dev/docs/licences/) page.
 
 Building and testing use a few more tools that never reach you: TypeScript, Vitest, Playwright, Biome (formatting and linting), tsdown (building each package), and electron-builder (packaging the desktop app).
 

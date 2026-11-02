@@ -4,6 +4,7 @@ export {
   gapsOf,
   isPlanned,
   isStub,
+  openTodos,
   todoScenes,
 } from './gaps';
 export {

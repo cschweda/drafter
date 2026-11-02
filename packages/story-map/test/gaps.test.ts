@@ -1,6 +1,14 @@
 import { sceneIndex } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
-import { defaultStatus, gapsOf, isPlanned, type MapGaps, STORY_MAP_LIMITS } from '../src';
+import {
+  defaultStatus,
+  gapsOf,
+  isPlanned,
+  type MapGaps,
+  openTodos,
+  STORY_MAP_LIMITS,
+  todoScenes,
+} from '../src';
 import { build, HARBOUR } from './scripts';
 
 // What isn't written yet (story-map design §6): empty acts, planned scenes, to-dos, and the
@@ -192,6 +200,27 @@ Late again.
     // A resolved to-do is done.
     const done = build('INT. KILN - DAY\n\nABEL stacks bricks. [[TODO: fix this #resolved]]\n').map;
     expect(done.gaps.todo).toEqual([]);
+  });
+
+  test('openTodos counts open to-dos as the gaps do', () => {
+    const { doc } = build(`INT. KILN - DAY
+
+ABEL stacks bricks. [[TODO: the kiln speech]] [[and the door #todo]]
+
+EXT. YARD - NIGHT
+
+ABEL sleeps. [[TODO: fix this #resolved]] [[not a to-do]]
+
+INT. KILN - DAWN
+
+ABEL wakes. [[TODO: the ending]]
+`);
+    expect(openTodos(doc)).toBe(3);
+    // The scenes with one: the same notes, counted by scene.
+    const index = sceneIndex(doc, build('').template);
+    expect([...todoScenes(doc, index)].sort()).toEqual([0, 2]);
+    expect(openTodos(build(SHIPYARD).doc)).toBe(build(SHIPYARD).map.gaps.todo.length);
+    expect(openTodos(build('INT. KILN - DAY\n\nNothing to do.\n').doc)).toBe(0);
   });
 
   test('a planned length gives the percent and the tail', () => {

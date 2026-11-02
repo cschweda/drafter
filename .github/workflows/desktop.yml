@@ -3,7 +3,8 @@
 #   push to main or phase-1-desktop   build, package, test the packages and the shell, on Linux
 #                                     (xvfb) and Windows (x64)
 #   push of a tag v*                  the same, then publish the AppImage, the .deb,
-#                                     latest-linux.yml, the Windows installer, and latest.yml
+#                                     latest-linux.yml, the Windows installer, latest.yml, and
+#                                     Drafter for Claude (drafter-mcp-<version>.js and its .sha256)
 #                                     as that tag's GitHub Release, all of them or none
 #   workflow_dispatch                 the same as a branch push, for trying it by hand
 #
@@ -20,6 +21,12 @@
 # the tag against the version, builds and tests, and makes the release itself: as a draft, with all
 # its files uploaded and checked, published only then (.github/scripts/publish-release.sh). It waits
 # for the Linux and Windows jobs: if either fails, nothing is published.
+#
+# Drafter for Claude (packages/mcp) is built and tested in the `linux` job, as one file with its
+# SHA-256 for the release, and staged and packed as its npm package (the `drafter-mcp-npm` artifact,
+# to look at). Nothing here publishes to npm, and no npm token is stored on GitHub: the maintainer
+# publishes from their own machine with ./publish.sh, after the release, which checks that npm gets
+# byte for byte the release's file.
 #
 # There is no pull_request trigger, so nothing here runs on a fork's pull request, and no job gets a
 # secret other than the repository's own GITHUB_TOKEN (read-only, except in `publish`).
@@ -98,6 +105,54 @@ jobs:
           pnpm --filter "@drafter/cli..." build
           pnpm exec vitest run --project trap
           pnpm exec vitest run --project web trap-open.test.ts
+      # Drafter for Claude: one file with every dependency and its licences inside it, run as an AI
+      # app runs it (over standard input and output, each call in its reader thread), then staged as
+      # its npm package. The file and its SHA-256 go on the release; npm gets the same file from the
+      # maintainer's machine (publish.sh, which checks it byte for byte against the release's).
+      - name: Drafter for Claude (the one-file build, run over stdio, and its npm package staged)
+        run: |
+          pnpm --filter "drafter-mcp..." build
+          pnpm --filter drafter-mcp exec vitest run test/bundle.test.ts test/stage.test.ts
+      - name: The tag matches drafter-mcp's version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(node -p "require('./packages/mcp/package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::The tag is $GITHUB_REF_NAME but packages/mcp/package.json says $version. Bump every package, then tag."
+            exit 1
+          fi
+      - name: Drafter for Claude's release file, its SHA-256, and its npm package
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./packages/mcp/package.json').version")
+          rm -rf release-mcp npm-mcp "$RUNNER_TEMP/mcp-stage"
+          mkdir release-mcp npm-mcp
+          cp packages/mcp/dist/drafter-mcp.js "release-mcp/drafter-mcp-$version.js"
+          (cd release-mcp && sha256sum "drafter-mcp-$version.js" > "drafter-mcp-$version.js.sha256")
+          node packages/mcp/scripts/stage.mjs "$RUNNER_TEMP/mcp-stage"
+          npm pack "$RUNNER_TEMP/mcp-stage" --pack-destination npm-mcp --ignore-scripts
+          {
+            echo "## Drafter for Claude"
+            echo '```'
+            wc -c release-mcp/* npm-mcp/*
+            cat "release-mcp/drafter-mcp-$version.js.sha256"
+            echo
+            echo "npm-mcp/drafter-mcp-$version.tgz:"
+            tar -tzf "npm-mcp/drafter-mcp-$version.tgz"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: drafter-mcp
+          retention-days: 14
+          if-no-files-found: error
+          path: release-mcp/*
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: drafter-mcp-npm
+          retention-days: 14
+          if-no-files-found: error
+          path: npm-mcp/*.tgz
       - name: Package (AppImage and .deb)
         run: pnpm --filter @drafter/desktop package
       - name: The package holds what it should (app.asar)
@@ -455,6 +510,10 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: desktop-windows
+          path: release
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: drafter-mcp
           path: release
       - name: Publish the release (a draft, filled and checked, then published)
         env:

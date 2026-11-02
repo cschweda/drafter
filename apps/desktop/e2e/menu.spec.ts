@@ -295,6 +295,7 @@ test('opens a help page in its own window', async ({ desktop }) => {
     ['Saving', '/docs/saving/'],
     ['Drafts and Cuts', '/docs/drafts-and-cuts/'],
     ['Story Map', '/docs/story-map/'],
+    ['Drafter for Claude', '/docs/drafter-for-claude/'],
     ['Privacy', '/docs/privacy/'],
   ] as const) {
     const next = app.waitForEvent('window');

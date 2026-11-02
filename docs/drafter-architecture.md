@@ -113,7 +113,8 @@ drafter/
 │   ├── spell/                # nspell wrapper, dictionary loading, project dictionary
 │   ├── stats/                # Page count, runtime, dialogue share, pacing
 │   ├── cm-fountain/          # CodeMirror 6 integration (decorations, keymaps, autocomplete)
-│   └── cli/                  # `drafter build` / `drafter check`
+│   ├── cli/                  # `drafter build` / `drafter check`
+│   └── mcp/                  # drafter-mcp: Drafter for Claude, a read-only MCP server
 ├── templates/                # Community templates live here as plain JSON
 ├── samples/                  # A short screenplay and stage play: the same story in both formats
 └── docs/
@@ -408,6 +409,7 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 
 - **Drafts and Cuts** (v0.24.0, [its design](drafter-drafts-and-cuts-design.md)): **Start new draft…** keeps the text as a numbered draft (Draft 01, Draft 02, …) with an ID that is the SHA-256 of its text; the Drafts list reads, compares, and restores drafts; **Draft by draft** walks them in Compare; and **Cuts**, replacing Deleted scenes, keeps every cut for good (whole scenes, chapters, and sections, whole speeches and paragraphs, and runs of 12 or more words), found by `@drafter/history`'s `findCuts` in the history worker at each kept snapshot. Drafts and cuts live in two new IndexedDB tables, and as plain files beside the work (`Boca drafts/` and `Boca.fountain.cuts.md`) wherever a folder can be written; see §6.
 - **Story map** (v0.24.1, built and ready, not yet released; [its design](drafter-story-map-design.md)): **Export → Story map…** opens a short dialog, then the export worker runs `@drafter/story-map`: `buildStoryMap` turns the scene index, pages, cast, and Setup and Payoff notes into a plain model (acts only as the writer marks them, gaps, lines of dialogue steered by `[[Quote]]` and `[[No quote]]`, a play's interval and who's on stage), and `renderStoryMap` draws it as one HTML string with hand-built SVG, three embedded WOFF2 faces, and a content security policy with no `script-src`. The page has no JavaScript and fetches nothing. The logline goes on the title page (`Logline:`), the planned length and edited hooks in the metadata block, and the rest on the project. `drafter build --story-map` writes the same page.
+- **Drafter for Claude** (v0.24.2, built and ready, not yet released; [its design](drafter-for-claude-design.md)): `drafter-mcp` (`packages/mcp`), a separate program the writer's AI app (Claude Desktop, Claude Code, or any app that speaks MCP) starts over stdio, which reads only the folders named with `--folder`. Ten read-only tools (`list_scripts`, `script_overview`, `read_scene`, `character_lines`, `list_drafts`, `compare_drafts`, `list_cuts`, `search_scripts`, `story_map`, `series_overview`) built on the engine packages, so every number is the app's; seven prompts; no resources and no write tools. Notes and the boneyard left out unless asked for; every file judged by its content as Open does; each call in a worker stopped at 10 seconds; answers of at most 40,000 characters with signed cursors; the writer's text only inside JSON strings. One bundled file, on npm as `drafter-mcp` and on the GitHub Release with its SHA-256. Drafter itself still never calls an AI.
 
 **Next:**
 

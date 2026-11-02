@@ -194,6 +194,8 @@ describe('checking the service worker’s precache', () => {
       'licenses/is-buffer.txt',
       'licenses/dictionary-en.txt',
       'licenses/dictionary-en-gb.txt',
+      'licenses/modelcontextprotocol-server.txt',
+      'licenses/zod.txt',
       'fonts/courier-prime/OFL.txt',
       'fonts/inter-tight/OFL.txt',
       'fonts/anton/OFL.txt',
@@ -272,7 +274,10 @@ describe('checking the files the build must have', () => {
     ]) {
       expect(REQUIRED_FILES).toContain(`fonts/story-map/${face}.woff2`);
     }
-    expect(REQUIRED_FILES).toHaveLength(20);
+    // The licences of the two packages inside Drafter for Claude, which the Licences page links.
+    expect(REQUIRED_FILES).toContain('licenses/modelcontextprotocol-server.txt');
+    expect(REQUIRED_FILES).toContain('licenses/zod.txt');
+    expect(REQUIRED_FILES).toHaveLength(22);
   });
 
   test('passes when every one is there', async () => {

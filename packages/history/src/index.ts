@@ -1,4 +1,19 @@
 export { type Anchor, sceneAnchors } from './anchors';
+export type { BesideNames } from './beside-names';
+export { besideNames } from './beside-names';
+export {
+  CANT_READ,
+  CHANGED_OUTSIDE,
+  type CutsRead,
+  type DraftRead,
+  decodeBeside,
+  MAX_BESIDE_BYTES,
+  NOT_UTF8,
+  readCutsBytes,
+  readDraftBytes,
+  skippedLine,
+  TOO_BIG,
+} from './beside-read';
 export { CANDIDATES_MAX, Candidates } from './candidates';
 export { CUT_KEEP_SHARE, CUT_MIN_WORDS, type FoundCut, findCuts } from './cuts';
 export {

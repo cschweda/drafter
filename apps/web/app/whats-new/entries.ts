@@ -45,6 +45,17 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // Unreleased: its version is the next release's, and the release sets its date (a test lets an
   // entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.24.2-drafter-for-claude',
+    date: '2026-11-02',
+    version: '0.24.2',
+    kind: 'New',
+    title: 'Drafter for Claude: let your AI app read your scripts',
+    text: 'Drafter for Claude lets Claude Desktop, Claude Code, or another AI app read the scripts, drafts, and cuts in folders you choose, for storyboards, reader’s notes, and insights across a series. It only reads, and Drafter itself never calls an AI.',
+    link: { href: '/docs/drafter-for-claude/', label: 'Drafter for Claude' },
+    banner: false,
+  },
+
+  {
     id: 'v0.24.1-story-map',
     date: '2026-11-01',
     version: '0.24.1',
