@@ -86,8 +86,8 @@ describe('list_scripts', () => {
         scenes: 13,
         modified: new Date(info.mtimeMs).toISOString(),
         bytes: info.size,
-        drafts: 2,
-        cuts: 2,
+        drafts: 3,
+        cuts: 3,
       },
       expect.objectContaining({ path: 'Scripts/Signal Hill/Signal Hill – 101.html' }),
       expect.objectContaining({

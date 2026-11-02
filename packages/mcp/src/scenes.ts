@@ -17,7 +17,7 @@ export function headingsOf(loaded: Loaded): Array<{ heading: string; number: str
 }
 
 /** The words of a text, case-folded: runs of letters, marks, and digits. */
-function wordsOf(text: string): string[] {
+export function wordsOf(text: string): string[] {
   return text.toLocaleLowerCase('und').match(/[\p{L}\p{M}\p{N}]+/gu) ?? [];
 }
 

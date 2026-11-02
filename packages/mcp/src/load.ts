@@ -87,6 +87,14 @@ function draftOf(doc: Doc, text: string): { number: number; id: string } {
   return { number: 1, id: createHash('sha256').update(text).digest('hex') };
 }
 
+/** As the CLI: the file's own template when it is built in, else the US screenplay. */
+export function templateFor(doc: Doc): Template {
+  const named = doc.meta?.template;
+  return typeof named === 'string' && Object.hasOwn(builtins, named)
+    ? (builtins[named] as Template)
+    : SCREENPLAY;
+}
+
 /** The file's stem, as shown: `Signal Hill – 101`. */
 const stemOf = (shown: string) => {
   const name = shown.slice(shown.lastIndexOf('/') + 1);
@@ -102,12 +110,7 @@ function loadScript(
   wordsPerMinute: number,
 ): Loaded {
   const doc = parse(text);
-  const named = doc.meta?.template;
-  // As the CLI: the file's own template when it is built in, else the US screenplay.
-  const template =
-    typeof named === 'string' && Object.hasOwn(builtins, named)
-      ? (builtins[named] as Template)
-      : SCREENPLAY;
+  const template = templateFor(doc);
   const layout = paginate(doc, template);
   const index = sceneIndex(doc, template, layout);
   // As the story map: only capitals count, as with no dictionary.

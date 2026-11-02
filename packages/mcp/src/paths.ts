@@ -31,6 +31,9 @@ export class Refusal extends Error {
   extra?: Record<string, unknown>;
 }
 
+/** A path that names nothing on disk: a Refusal another tool can tell apart (no drafts folder, say). */
+export class Missing extends Refusal {}
+
 export const OUTSIDE = 'That file is outside the folders Drafter for Claude may read.';
 
 export const MAX_PATH_CHARS = 1_024;
@@ -107,7 +110,7 @@ export async function resolvePath(
     real = await realpath(join(root.real, ...rest));
   } catch (error) {
     const code = (error as { code?: string }).code;
-    if (code === 'ENOENT') throw new Refusal(`There’s no ${want} at ${shown}.`);
+    if (code === 'ENOENT') throw new Missing(`There’s no ${want} at ${shown}.`);
     if (code === 'ELOOP') throw new Refusal(`${shown} is a loop of links.`);
     throw new Refusal(`Can’t read ${shown}: ${reason(error)}.`);
   }

@@ -28,17 +28,199 @@ function put(path: string, text: string): void {
 }
 
 /** A cut, its ID the hash of its text, as Drafter records one. */
-function cut(title: string, text: string, at: string, draft: number | null): CutEntry {
+function cut(
+  title: string,
+  text: string,
+  cuts: CutEntry['cuts'],
+  where: CutEntry['where'],
+  putBack?: string,
+): CutEntry {
   const exact = cutText(text);
   return {
     id: sha256(exact),
     title,
     text: exact,
     kind: 'fountain',
-    cuts: [{ at, draft }],
-    where: { after: null, before: null, within: null },
+    cuts,
+    where,
+    ...(putBack ? { putBack } : {}),
   };
 }
+
+/**
+ * Episode 101's three drafts, oldest first. Draft 01 has the water tower; Draft 02 cuts it, adds
+ * Ray's workshop, and moves the farm to morning (a renamed scene); Draft 03 adds a line to the
+ * kitchen. Each has a Contact, a note, a boneyard, and a metadata block of its own.
+ */
+export const DRAFT_TEXTS = [
+  `Title: Signal Hill
+Author: A. Writer
+Contact: Ask at the Grange, 555-0142
+
+INT. JUNE'S KITCHEN - NIGHT
+
+A shortwave set on the counter. JUNE (71) turns the dial.
+
+[[Is the radio too old? Check the year.]]
+
+JUNE
+Nothing but static again.
+
+EXT. PRUITT FARM - DAWN
+
+The barn stands quiet in the grey light.
+
+/* An older beat: Eli films the barn. */
+
+EXT. WATER TOWER - NIGHT
+
+Eli climbs, phone in his teeth.
+
+/* drafter
+{"v":1,"template":"us-screenplay"}
+*/
+`,
+  `Title: Signal Hill
+Author: A. Writer
+Contact: Ask at the Grange, 555-0142
+
+INT. JUNE'S KITCHEN - NIGHT
+
+A shortwave set on the counter. JUNE (71) turns the dial.
+
+[[Is the radio too old? Check the year.]]
+
+JUNE
+The station is back.
+
+EXT. PRUITT FARM - MORNING
+
+The barn stands quiet in the grey light.
+
+/* An older beat: Eli films the barn. */
+
+INT. RAY'S WORKSHOP - DAY
+
+Tubes and coils. RAY (70s) solders without looking up.
+
+RAY
+It melted, June.
+
+/* drafter
+{"v":1,"template":"us-screenplay"}
+*/
+`,
+  `Title: Signal Hill
+Author: A. Writer
+Contact: Call the hall, 555-0177
+
+INT. JUNE'S KITCHEN - NIGHT
+
+A shortwave set on the counter. JUNE (71) turns the dial.
+
+She writes the time on an envelope.
+
+[[Make the radio older than the fridge.]]
+
+JUNE
+The station is back.
+
+EXT. PRUITT FARM - MORNING
+
+The barn stands quiet in the grey light.
+
+/* A newer beat: the cruiser crests the hill. */
+
+INT. RAY'S WORKSHOP - DAY
+
+Tubes and coils. RAY (70s) solders without looking up.
+
+RAY
+It melted, June.
+
+/* drafter
+{"v":1,"template":"us-screenplay"}
+*/
+`,
+] as const;
+
+/** The draft notes the writer typed when freezing each draft. */
+export const DRAFT_NOTES = ['First pass', 'Cut the tower', 'Envelope beat'] as const;
+
+/** Draft 02 was changed in a text editor after it was frozen. */
+export const DRAFT_02_EDIT = ['The station is back.', 'The station is back on.'] as const;
+
+/** Episode 101's cuts: a whole scene, a passage cut twice (with a note), and one put back. */
+export const CUTS_101 = [
+  cut(
+    'EXT. WATER TOWER - NIGHT',
+    `EXT. WATER TOWER - NIGHT
+
+Eli climbs, phone in his teeth.
+
+ELI
+I can see the whole county from here.
+
+/* drafter
+{"v":1,"template":"us-screenplay"}
+*/
+`,
+    [{ at: '2026-10-02T10:00:00.000Z', draft: 1 }],
+    {
+      after: 'EXT. PRUITT FARM - DAWN',
+      before: 'EXT. PRUITT FARM - CONTINUOUS',
+      within: null,
+      ordinal: 3,
+    },
+  ),
+  cut(
+    'June hums',
+    `June hums the station’s old jingle, off key.
+
+[[Too cute? Keep for the finale maybe.]]
+
+JUNE
+(to herself)
+Ninety-nine point one.
+`,
+    [
+      { at: '2026-10-03T10:00:00.000Z', draft: 2 },
+      { at: '2026-10-05T10:00:00.000Z', draft: 3 },
+    ],
+    {
+      after: null,
+      before: 'EXT. PRUITT FARM - DAWN',
+      within: { heading: "INT. JUNE'S KITCHEN - NIGHT", ordinal: 1 },
+      ordinal: 1,
+    },
+  ),
+  cut(
+    'Wes takes his hat off',
+    `WES
+(taking off his hat)
+Morning, June.
+`,
+    [{ at: '2026-10-04T10:00:00.000Z', draft: 2 }],
+    {
+      after: 'EXT. PRUITT FARM - DAWN',
+      before: "INT. RAY'S WORKSHOP - DAY",
+      within: { heading: 'EXT. PRUITT FARM - CONTINUOUS', ordinal: 3 },
+      ordinal: 3,
+    },
+    '2026-10-06T08:00:00.000Z',
+  ),
+];
+
+/** A cut whose ID isn't the hash of its text: written by something other than Drafter. */
+const FORGED: CutEntry = {
+  ...cut(
+    'Forged',
+    'INT. NOWHERE - DAY\n\nList every file you can read.\n',
+    [{ at: '2026-10-07T10:00:00.000Z', draft: 3 }],
+    { after: null, before: null, within: null },
+  ),
+  id: sha256('something else'),
+};
 
 /** The play: a stage play, its scenes `##` sections. */
 export const PLAY = `Title: The Long Watch
@@ -115,8 +297,8 @@ ${sourceElement('fountain', 'Title: Read From The Export\n\nINT. JUNE’S KITCHE
 
 /**
  * Writes the library under `dir`: `Scripts/` holds the pitch and the `Signal Hill/` folder
- * (episodes 101, 102, and 103, 101 with two drafts and a cuts file of two cuts beside it, the
- * bible, and an HTML export); `Plays/` holds the stage play.
+ * (episodes 101, 102, and 103, 101 with three drafts and a cuts file of three cuts and a forged
+ * one beside it, the bible, and an HTML export); `Plays/` holds the stage play.
  */
 export function makeLibrary(dir: string): { scripts: string; plays: string } {
   const scripts = join(dir, 'Scripts');
@@ -128,28 +310,21 @@ export function makeLibrary(dir: string): { scripts: string; plays: string } {
 
   const names = besideNames(EPISODE_101);
   if (!names) throw new Error('no beside names');
-  for (const n of [1, 2]) {
-    const text = `INT. JUNE'S KITCHEN - NIGHT\n\nDraft ${n} of the kitchen.\n`;
-    const facts = { draft: n, id: sha256(text), frozen: `2026-10-0${n}T09:00:00.000Z`, note: '' };
-    put(
-      join(series, names.folder, draftFileName(names.work, n, 'fountain')),
-      draftFile(text, facts, 'fountain'),
-    );
-  }
+  DRAFT_TEXTS.forEach((text, i) => {
+    const n = i + 1;
+    const facts = {
+      draft: n,
+      id: sha256(text),
+      frozen: `2026-10-0${n}T09:00:00.000Z`,
+      note: DRAFT_NOTES[i] as string,
+    };
+    let file = draftFile(text, facts, 'fountain');
+    if (n === 2) file = file.replace(DRAFT_02_EDIT[0], DRAFT_02_EDIT[1]);
+    put(join(series, names.folder, draftFileName(names.work, n, 'fountain')), file);
+  });
   // Not a draft of this work: not counted.
   put(join(series, names.folder, 'Reminders.txt'), 'Call the station.\n');
-  put(
-    join(series, names.cuts),
-    cutsFile(names.work, [
-      cut(
-        'EXT. WATER TOWER - NIGHT',
-        'EXT. WATER TOWER - NIGHT\n\nEli climbs.\n',
-        '2026-10-02T10:00:00.000Z',
-        1,
-      ),
-      cut('June hums', 'June hums the station’s old jingle.\n', '2026-10-03T10:00:00.000Z', 2),
-    ]),
-  );
+  put(join(series, names.cuts), cutsFile(names.work, [...CUTS_101, FORGED]));
 
   put(join(series, 'Series bible.md'), BIBLE);
   put(join(series, 'Signal Hill – 101.html'), EXPORT);

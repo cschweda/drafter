@@ -5,6 +5,7 @@ import type { LoadCache } from '../cache';
 import type { Include } from '../envelope';
 import type { Loaded } from '../load';
 import type { WorkerData } from '../pool';
+import { compareDraftsTool, listCutsTool, listDraftsTool } from './history';
 import { listScripts } from './list';
 import { characterLines, readScene, scriptOverview } from './script';
 
@@ -48,4 +49,7 @@ export const TOOLS: ReadonlyArray<ToolDef<any, any>> = [
   scriptOverview,
   readScene,
   characterLines,
+  listDraftsTool,
+  compareDraftsTool,
+  listCutsTool,
 ];

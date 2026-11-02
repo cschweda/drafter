@@ -59,7 +59,7 @@ const addLeftOut = (into: LeftOut, more: LeftOut) => {
 const nameOf = (name: string) => clipText(name, TEXT_LIMITS.name).text;
 
 /** Where the page asked for starts, or the beginning (restarted) for a cursor that isn't this call's. */
-function startOf(
+export function startOf(
   ctx: ToolContext,
   given: string | undefined,
   now: Omit<CursorAt, 'at' | 'part'>,
@@ -72,7 +72,11 @@ function startOf(
 }
 
 /** What a cursor for this call is checked against: the tool, the file as it is, and the arguments. */
-function cursorBase(tool: string, loaded: Loaded, args: object): Omit<CursorAt, 'at' | 'part'> {
+export function cursorBase(
+  tool: string,
+  loaded: Loaded,
+  args: object,
+): Omit<CursorAt, 'at' | 'part'> {
   return {
     tool,
     path: loaded.file.shown,
@@ -83,7 +87,7 @@ function cursorBase(tool: string, loaded: Loaded, args: object): Omit<CursorAt, 
 }
 
 /** The longest cursor an answer could carry, for its size. */
-const longestCursor = (ctx: ToolContext, now: Omit<CursorAt, 'at' | 'part'>) =>
+export const longestCursor = (ctx: ToolContext, now: Omit<CursorAt, 'at' | 'part'>) =>
   makeCursor(ctx.data.key, { ...now, at: Number.MAX_SAFE_INTEGER, part: Number.MAX_SAFE_INTEGER });
 
 /**
@@ -91,7 +95,7 @@ const longestCursor = (ctx: ToolContext, now: Omit<CursorAt, 'at' | 'part'>) =>
  * in parts (`split` makes them, each within the room it is given), a part a page. A part index
  * that doesn't exist (a stale cursor) starts again from the beginning.
  */
-function pageWithParts<T>(
+export function pageWithParts<T>(
   items: readonly T[],
   start: { at: number; part: number; restarted: boolean },
   overhead: number,
