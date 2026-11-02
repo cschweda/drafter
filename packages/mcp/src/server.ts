@@ -6,6 +6,7 @@ import * as z from 'zod/v4';
 import { ABOUT, INSTRUCTIONS, ok, refused } from './envelope';
 import type { Options } from './options';
 import type { ReaderPool } from './pool';
+import { registerPrompts } from './prompts';
 import type { Root } from './roots';
 import { TOOLS } from './tools/index';
 
@@ -65,5 +66,6 @@ export function createServer(config: ServerConfig): McpServer {
       },
     );
   }
+  registerPrompts(server);
   return server;
 }
