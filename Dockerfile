@@ -5,11 +5,13 @@
 # Base images are pinned by digest; Dependabot proposes updates.
 FROM node:22.23.4-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS build
 WORKDIR /app
+# The packages first, from the lockfile alone, so a change to the code doesn't download them again.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN corepack enable && pnpm fetch
 COPY . .
 # Only the web app and what it needs, so no Electron download. The Licences page copies the licence
 # files of drafter-mcp's SDK, so that package's dependencies are installed too.
-RUN corepack enable \
-  && pnpm install --frozen-lockfile --filter "@drafter/web..." --filter drafter-mcp \
+RUN pnpm install --offline --frozen-lockfile --filter "@drafter/web..." --filter drafter-mcp \
   && pnpm --filter "@drafter/web..." run build \
   && node apps/web/scripts/caddyfile.mjs apps/web/.output/public /tmp/Caddyfile
 

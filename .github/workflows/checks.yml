@@ -138,7 +138,7 @@ jobs:
       - name: It serves the app, its help, and its headers
         run: |
           set -e -o pipefail
-          curl -fsS http://localhost:8080/ -o index.html
+          curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://localhost:8080/ -o index.html
           grep -q '<title>' index.html
           if grep -q plausible index.html; then exit 1; fi
           curl -fsS http://localhost:8080/docs/privacy/ -o /dev/null

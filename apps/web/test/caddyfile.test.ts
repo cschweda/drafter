@@ -14,8 +14,8 @@ describe('the Caddyfile', () => {
   });
 
   test('keeps each path’s caching to that path', () => {
-    expect(text).toMatch(/@rule\d+ path \/sw\.js\n\theader @rule\d+ Cache-Control "no-cache"/);
-    expect(text).toMatch(/@rule\d+ path \/_nuxt\/\*\n\theader @rule\d+ Cache-Control "public/);
+    expect(text).toMatch(/@(rule\d+) path \/sw\.js\n\theader @\1 Cache-Control "no-cache"/);
+    expect(text).toMatch(/@(rule\d+) path \/_nuxt\/\*\n\theader @\1 Cache-Control "public/);
   });
 
   test('serves plain HTTP on 8080 with no admin port, and a 404 page', () => {

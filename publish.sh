@@ -354,6 +354,8 @@ read -r -p "To publish it, type the version ($VERSION): " REPLY || REPLY=""
 
 # npm approves every publish itself, after every check and the typed version: it prints a link to
 # open in a browser on any device (or, for some accounts, asks for its code here), and waits.
+[[ -t 0 && -t 1 ]] ||
+  die "npm can only show its approval link in a terminal, so nothing was published. Run ./publish.sh in a terminal (in Git Bash on Windows, under winpty or in Windows Terminal)."
 info "npm will now ask you to approve this: open its link, or type its code."
 # The tarball that was installed and run above, not a new one packed from the folder.
 npm publish "$TARBALL" --access public --ignore-scripts --auth-type=web ${NPM_TAG[@]+"${NPM_TAG[@]}"}

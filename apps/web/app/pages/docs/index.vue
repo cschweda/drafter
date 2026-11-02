@@ -7,7 +7,7 @@ definePageMeta({ layout: 'docs' });
 useDocsHead({
   title: 'Help',
   description:
-    'Help for Drafter: what it is, why Drafter, a Fountain cheat sheet, saving and your browser, drafts and cuts, the story map, Drafter for Claude, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
+    'Help for Drafter: what it is, why Drafter, a Fountain cheat sheet, saving and your browser, drafts and cuts, the story map, Drafter for Claude, self-hosting, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
   path: '/docs',
 });
 
@@ -44,7 +44,7 @@ const about: Record<string, string> = {
   <article>
     <h1>Help</h1>
     <p class="docs-lead">
-      Thirteen short pages: what Drafter is, writing in Fountain, how Drafter works, and what’s new.
+      Fourteen short pages: what Drafter is, writing in Fountain, how Drafter works, running it yourself, and what’s new.
     </p>
     <ul>
       <li v-for="page in HELP_PAGES" :key="page.id">
