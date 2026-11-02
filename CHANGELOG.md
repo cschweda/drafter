@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-11-01
+
+**Story map, and the security audit's fixes.** Export → Story map makes one dark, phone-first page that answers "What are you writing?" in pictures: the shape of the story, its people, and every scene so far, with a few lines of dialogue. It runs no code and fetches nothing, and your notes never go in. The desktop app takes a dropped file only from a real drop, and every pull request is checked on GitHub.
+
 ### Added
 
 - **Story map**: one page that answers "What are you writing?" in pictures, to send by text or email to anyone who doesn't read scripts. **Export → Story map…** (the toolbar's Export menu, the Drafter menu, the palette, and the desktop app's File → Export) opens **Make a story map**, a short dialog whose choices start sensible, so Enter makes the page. It saves one file, `<title> – story map.html`.
@@ -1143,7 +1147,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.24.1...HEAD
+[0.24.1]: https://github.com/cschweda/drafter/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/cschweda/drafter/compare/v0.23.3...v0.24.0
 [0.23.3]: https://github.com/cschweda/drafter/compare/v0.23.2...v0.23.3
 [0.23.2]: https://github.com/cschweda/drafter/compare/v0.23.1...v0.23.2

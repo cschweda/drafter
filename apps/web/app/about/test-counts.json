@@ -1,14 +1,14 @@
 {
-  "version": "0.24.0",
-  "date": "2026-11-02",
+  "version": "0.24.1",
+  "date": "2026-11-01",
   "unit": {
     "packages": 2883,
     "packageCount": 20,
-    "web": 2284,
+    "web": 2289,
     "desktop": 446,
     "modules": 58,
     "trapHarness": 408,
-    "total": 6079
+    "total": 6084
   },
   "e2e": {
     "web": 1265,
