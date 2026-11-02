@@ -62,6 +62,8 @@ export const REQUIRED_FILES = [
   'licenses/is-buffer.txt',
   'licenses/dictionary-en.txt',
   'licenses/dictionary-en-gb.txt',
+  'licenses/modelcontextprotocol-server.txt',
+  'licenses/zod.txt',
   'fonts/courier-prime/OFL.txt',
   'fonts/inter-tight/OFL.txt',
   'fonts/anton/OFL.txt',

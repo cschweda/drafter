@@ -289,6 +289,17 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **The strip's per-scene hover titles** cost about 12.5 KB at 200 scenes (about 4% of the page). They are kept, as the only per-scene hover on the main chart; the pace table lists every scene for anyone who needs it.
 - **`]]>` can't be tested in a note label** (`]]` closes the note); the hostile trap puts it in names and places instead.
 
+## Drafter for Claude
+
+- **Not in v0.24.2 (Drafter for Claude design §10):**
+  - **A Claude Desktop extension bundle (`.mcpb`)**, for a one-click install that might not need Node, once the format's docs have been read and tested.
+  - **Resources** (§5), a script attached from a menu, returning exactly what `read_scene` would for the whole script, with the same exclusions, if writers ask.
+  - **Write tools** ("add a note to scene 7", "save this storyboard beside the script", "freeze a draft"). Each needs its own design: a confirmation in Drafter, undo, never touching a file open in Drafter without Drafter knowing, and the trap suite's "nothing is written" check rewritten. Maybe a note-only tool, writing a `[[Claude: …]]` note, if writers ask.
+- **npm trusted publishing with provenance from the release workflow.** The maintainer chose `./publish.sh` from their own machine for now, so no npm token is on GitHub and npm shows no "Built and signed on GitHub Actions" badge. Trusted publishing would need the package's one-time setup on npmjs.com (the repository, the workflow file, and its environment) and an npm job in `desktop.yml` with `id-token: write`.
+- **The SDK at 2.4.0.** `@modelcontextprotocol/server` 2.4.0 (2026-10-23) is two weeks old on 2026-11-06. Its inlined Ajv is built with fast-uri 3.1.8 (2.3.1's has 3.1.0), which `pnpm audit` can't see inside the SDK's files. Moving up needs the bundle's licence list (`scripts/notices.mjs`'s `INLINE`) and `licences/` updated.
+- **The review's minors, left as they are:** `noFollow` is a no-op on Windows (no `O_NOFOLLOW`; the device-and-inode check still runs); a subfolder that can't be read is skipped without setting `truncated`; a `--folder` that can't be read says it "isn't a folder"; the cuts file is read again for each page, with no cache; `search_scripts`' `left_out` counts a file resumed on the next page twice; the timing tests (a huge draft within 5 seconds, the 20 MB budgets, the call limit's follow-up call) could be slow on a slow runner; a name cut at 200 characters has no flag; place names aren't NFC-normalised in a series; an export's text keeps its BOM and CRLF into the parse.
+- **Windows junctions and OneDrive reparse points** are checked only as Node reports them (`realpath`, `lstat`); CI on Windows runs the path tests through `pathProblem(…, 'win32')` but no real junction.
+
 ## Flaky tests seen in CI
 
 - **Web, Linux runner: `cuts.spec.ts:83` ("cutting a scene shows it in Cuts after a snapshot, and not before")** timed out once (2026-11-02, the required browser tests' fourth full run): its first click, on Open, right after the page loaded, didn't return for 29 seconds, which looks like the runner stalling rather than the test. Passed in every other run. If it misses again, look at what the page does in its first second.

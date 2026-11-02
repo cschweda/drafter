@@ -9,13 +9,16 @@ if (!page) throw new Error('The Third-party licences page is not in the list of 
 useDocsHead({
   ...page,
   description:
-    'The other people’s work inside Drafter: the spellchecker, its English dictionaries, and the fonts, each with its version, its licence, and the licence’s full text.',
+    'The other people’s work inside Drafter: the spellchecker, its dictionaries, the fonts, and Drafter for Claude’s SDK, each with its version, its licence, and its full text.',
 });
 
 // The versions docs/DEPENDENCIES.md records, pinned in packages/spell/package.json; the
 // dictionaries' come from DICTIONARIES. e2e/docs.spec.ts checks these against what is installed.
 const NSPELL_VERSION = '2.1.5';
 const IS_BUFFER_VERSION = '2.0.5';
+// Drafter for Claude's, pinned in packages/mcp/package.json (the same check).
+const MCP_SDK_VERSION = '2.3.1';
+const ZOD_VERSION = '4.6.7';
 
 const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);
 </script>
@@ -136,6 +139,46 @@ const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);
         Terms: the same as Courier Prime’s: use, embed, and share it freely; it may not be sold by
         itself, and a changed version must take another name.
         <a href="/fonts/archivo/OFL.txt">Archivo’s licence (full text)</a>
+      </p>
+    </section>
+
+    <h2 id="drafter-for-claude">Inside Drafter for Claude only</h2>
+    <p>
+      <a href="/docs/drafter-for-claude/">Drafter for Claude</a> is a separate program, one file,
+      with these inside it. They are not in the app or the website. The file ends with the full
+      licence of every package it carries, these two and the small JSON Schema helpers the SDK
+      carries in its own files (Ajv, ajv-formats, content-type, fast-deep-equal, fast-uri, and
+      json-schema-traverse, under the MIT and BSD-3-Clause licences).
+    </p>
+
+    <section>
+      <h3>@modelcontextprotocol/server</h3>
+      <p>
+        The official MCP SDK’s server, with <code>@modelcontextprotocol/core</code>, which it is
+        built on: it lets Drafter for Claude talk to an AI app on your computer, using the Model
+        Context Protocol. Versions {{ MCP_SDK_VERSION }}, under the Apache License 2.0.
+      </p>
+      <p>Copyright (c) 2024-2025 Model Context Protocol a Series of LF Projects, LLC.</p>
+      <p>
+        Terms: use, copy, change, and share it freely, keeping its copyright, licence, and notices
+        with it, and saying what was changed in a changed copy. Some of its earlier code is still
+        under the MIT License, as its licence explains.
+        <a href="/licenses/modelcontextprotocol-server.txt"
+          >@modelcontextprotocol/server’s licence (full text)</a
+        >
+      </p>
+    </section>
+
+    <section>
+      <h3>zod</h3>
+      <p>
+        Checks every request Drafter for Claude gets before it is read. Version {{ ZOD_VERSION }},
+        under the MIT License.
+      </p>
+      <p>Copyright (c) 2025 Colin McDonnell</p>
+      <p>
+        Terms: use, copy, change, and share it freely, keeping its copyright and licence with it.
+        <a href="/licenses/zod.txt">zod’s licence (full text)</a>
       </p>
     </section>
   </article>

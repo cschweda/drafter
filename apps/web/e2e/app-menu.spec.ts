@@ -321,6 +321,7 @@ test.describe('the Help menu', () => {
       /^Saving and your browser/,
       /^Drafts and cuts/,
       /^Story map/,
+      /^Drafter for Claude/,
       /^Keyboard shortcuts/,
       /^Privacy/,
       /^Open formats/,

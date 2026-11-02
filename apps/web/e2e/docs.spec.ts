@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { expect, type Page, test } from '@playwright/test';
 import { DICTIONARIES } from '../../../packages/spell/src/dictionaries';
 import { DEPENDENCY_NOTES, TECH_SECTIONS } from '../app/about/tech';
@@ -166,6 +167,9 @@ test.describe('without JavaScript', () => {
     const isBufferDir = createRequire(`${nspellDir}/package.json`)
       .resolve('is-buffer')
       .replace(/[/\\]index\.js$/, '');
+    // A package packages/mcp depends on, in the folder pnpm links it into there.
+    const mcpDir = (name: string) =>
+      fileURLToPath(new URL(`../../../packages/mcp/node_modules/${name}`, import.meta.url));
     const packages = [
       { name: 'nspell', version: version(nspellDir), licence: 'MIT', file: '/licenses/nspell.txt' },
       {
@@ -179,6 +183,18 @@ test.describe('without JavaScript', () => {
         version: d.version,
         licence: d.licence,
         file: d.licenceFile,
+      })),
+      // Inside Drafter for Claude only, resolved from packages/mcp.
+      ...(
+        [
+          ['@modelcontextprotocol/server', 'Apache', '/licenses/modelcontextprotocol-server.txt'],
+          ['zod', 'MIT', '/licenses/zod.txt'],
+        ] as const
+      ).map(([name, licence, file]) => ({
+        name,
+        version: version(mcpDir(name)),
+        licence,
+        file,
       })),
     ];
     await page.goto('/docs/licences');
@@ -605,9 +621,63 @@ test.describe('without JavaScript', () => {
     }
     expect(text).not.toMatch(/ICJIA/i);
   });
+  test('the Drafter for Claude help page has its set-up, its privacy words, and no Copy button', async ({
+    page,
+  }) => {
+    await page.goto('/docs/drafter-for-claude');
+    await expect(heading(page)).toHaveText('Drafter for Claude');
+    const text = await mainText(page);
+    for (const phrase of [
+      '"-y", "drafter-mcp@0.24.2",',
+      'claude mcp add drafter --scope user -- npx -y drafter-mcp@0.24.2 --folder ~/Scripts --folder ~/Plays',
+      'Node.js 22.12 or later',
+      'shasum -a 256 drafter-mcp-0.24.2.js',
+      'certutil -hashfile drafter-mcp-0.24.2.js SHA256',
+      '"command": "node"',
+      'When you ask Claude something, what Drafter hands Claude goes to Anthropic, the same as pasting it in.',
+      'Text from a script can include words aimed at an AI. If someone sent you the script, read it with care.',
+      'a hard link inside a folder is that file',
+      'Not in a browser: claude.ai can’t start a program on your computer; Claude Desktop is the same account.',
+      'It isn’t made by or connected with Anthropic.',
+      'Each npm release is the same file as the one on the GitHub Release; you can check its SHA-256.',
+    ]) {
+      expect(text, phrase).toContain(phrase);
+    }
+    // The text reads and selects without a script; a button that couldn't work isn't shown.
+    await expect(page.locator('main pre')).toHaveCount(6);
+    await expect(page.getByRole('button', { name: /^Copy/ })).toHaveCount(0);
+    // Privacy links back with the table of what each tool returns.
+    await page.goto('/docs/privacy');
+    await expect(page.locator('#drafter-for-claude')).toBeVisible();
+    await expect(page.locator('main table').last().locator('tbody tr')).toHaveCount(10);
+  });
 });
 
 test.describe('with JavaScript', () => {
+  test('the Drafter for Claude help page copies each configuration', async ({
+    page,
+    context,
+    browserName,
+  }) => {
+    const chromium = browserName === 'chromium';
+    if (chromium) await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.goto('/docs/drafter-for-claude');
+    const copy = page.getByRole('button', { name: 'Copy the Claude Code command', exact: true });
+    await expect(page.getByRole('button', { name: /^Copy/ })).toHaveCount(6);
+    await copy.click();
+    await expect(
+      page.locator('main [role="status"]').filter({ hasText: /Copied\.|Couldn’t copy/ }),
+    ).toHaveCount(1);
+    if (chromium) {
+      await expect(page.locator('main [role="status"]').filter({ hasText: 'Copied.' })).toHaveCount(
+        1,
+      );
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+        'claude mcp add drafter --scope user -- npx -y drafter-mcp@0.24.2 --folder ~/Scripts --folder ~/Plays',
+      );
+    }
+  });
+
   test('the Download page asks nothing of another site, and marks the reader’s system without moving anything', async ({
     page,
   }) => {

@@ -211,8 +211,9 @@ describe('directUses', () => {
     expect(edges).toBeLessThan(PACKAGES.reduce((n, p) => n + p.uses.length, 0));
     // A drawing that stays readable: 32 lines since the CLI writes the HTML export too, and one
     // more since the draft and cuts files (history reads Markdown's metadata comment), and two more
-    // since the story map (the app and the CLI both make one).
-    expect(edges).toBeLessThanOrEqual(35);
+    // since the story map (the app and the CLI both make one), and three more since Drafter for
+    // Claude (drafter-mcp reads archives, drafts and cuts, problems, and the story map).
+    expect(edges).toBeLessThanOrEqual(38);
   });
 });
 

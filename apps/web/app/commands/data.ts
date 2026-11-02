@@ -41,6 +41,11 @@ export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
   { id: 'help-drafts-and-cuts', path: '/docs/drafts-and-cuts', title: 'Drafts and cuts' },
   { id: 'help-story-map', path: '/docs/story-map', title: 'Story map' },
+  {
+    id: 'help-drafter-for-claude',
+    path: '/docs/drafter-for-claude',
+    title: 'Drafter for Claude',
+  },
   { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
   { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy' },
   { id: 'help-open-formats', path: '/docs/open-formats', title: 'Open formats' },

@@ -3,7 +3,8 @@
 // their metrics; Inter Tight's four static styles, which a Markdown document's
 // PDF embeds (the export worker fetches them); the story map's four WOFF2 faces (the same); the brand's icons, logos, and share image; and the
 // spellchecker's dictionaries with the licence of each package it uses, served
-// verbatim (the dictionaries' UKACD notice asks for its text "verbatim"). The
+// verbatim (the dictionaries' UKACD notice asks for its text "verbatim"), and the licences of the
+// two packages inside Drafter for Claude. The
 // copies are ignored by Git, so `brand/`, `packages/render-pdf/fonts/`, and the
 // installed packages stay the only sources.
 import { readFileSync } from 'node:fs';
@@ -64,7 +65,8 @@ export const ASSETS = [
 /**
  * The files copied from installed packages, as `@drafter/spell` resolves them: `package` is
  * resolved from `packages/spell` (or, with `via`, from that package's folder, as nspell's own
- * dependency is), and `file` is in its folder. The dictionaries' folders and licence paths are
+ * dependency is; or, with `from`, from that package.json, relative to the repository's root), and
+ * `file` is in its folder. The dictionaries' folders and licence paths are
  * `DICTIONARIES`' in `packages/spell/src/dictionaries.ts`.
  */
 export const PACKAGE_ASSETS = [
@@ -78,6 +80,15 @@ export const PACKAGE_ASSETS = [
   ]),
   { package: 'nspell', file: 'license', to: 'licenses/nspell.txt' },
   { package: 'is-buffer', via: 'nspell', file: 'LICENSE', to: 'licenses/is-buffer.txt' },
+  // Drafter for Claude's two packages, which travel only inside its own file (packages/mcp), for the
+  // Licences page to link in full: resolved from packages/mcp (`from`).
+  {
+    package: '@modelcontextprotocol/server',
+    from: 'packages/mcp/package.json',
+    file: 'LICENSE',
+    to: 'licenses/modelcontextprotocol-server.txt',
+  },
+  { package: 'zod', from: 'packages/mcp/package.json', file: 'LICENSE', to: 'licenses/zod.txt' },
 ];
 
 /**
@@ -117,8 +128,12 @@ export async function syncAssets(repoRoot, publicDir) {
     written.push(target);
   }
   const spell = join(repoRoot, 'packages/spell/package.json');
-  for (const { package: name, via, file, to } of PACKAGE_ASSETS) {
-    const from = via ? join(packageDir(via, spell), 'package.json') : spell;
+  for (const { package: name, via, from: base, file, to } of PACKAGE_ASSETS) {
+    const from = base
+      ? join(repoRoot, base)
+      : via
+        ? join(packageDir(via, spell), 'package.json')
+        : spell;
     const target = join(publicDir, to);
     await mkdir(dirname(target), { recursive: true });
     await copyFile(join(packageDir(name, from), file), target);

@@ -126,6 +126,108 @@ useDocsHead({
       before you can turn it on.
     </p>
 
+    <h2 id="drafter-for-claude">Drafter for Claude</h2>
+    <p>
+      Drafter never calls an AI. If you use one, <a href="/docs/drafter-for-claude/">Drafter for
+      Claude</a> lets it read the scripts in the folders you choose, and nothing else. It is a
+      separate program you set up in your AI app, not part of the app or the website; it opens no
+      network connection, and it writes, moves, or deletes nothing.
+    </p>
+    <p>
+      When you ask Claude something, what Drafter hands Claude goes to Anthropic, the same as
+      pasting it in. The AI app sends the tool’s answer to its AI service along with your question.
+      If your app uses another company’s AI, it goes there. Whatever that service’s terms say about
+      your chats applies to this text too. Drafter can’t change that.
+    </p>
+    <p>
+      Your notes and the boneyard are left out unless you ask for them, and every answer says how
+      many it left out. Never handed over, whatever you ask: Drafter’s own data at the end of a
+      script, your title page’s Contact, anything from Drafter’s storage in your browser, and the
+      text of a file Claude didn’t ask about. What each of its tools can return:
+    </p>
+    <div
+      class="docs-scroll"
+      role="region"
+      aria-label="What each tool can return (scrolls sideways)"
+      tabindex="0"
+    >
+      <table>
+        <caption>
+          What each of Drafter for Claude’s tools can return
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Tool</th>
+            <th scope="col">Script text</th>
+            <th scope="col">Notes and boneyard</th>
+            <th scope="col">Other</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">List scripts</th>
+            <td>Titles only</td>
+            <td>Never</td>
+            <td>File names, sizes, dates, counts, and what is inside each file</td>
+          </tr>
+          <tr>
+            <th scope="row">Script overview</th>
+            <td>Headings, synopses, and the title page (never the Contact)</td>
+            <td>A count of to-dos; their text only if you ask</td>
+            <td>Numbers from Drafter</td>
+          </tr>
+          <tr>
+            <th scope="row">Read a scene</th>
+            <td>The scenes asked for</td>
+            <td>Only if you ask</td>
+            <td></td>
+          </tr>
+          <tr>
+            <th scope="row">A character’s lines</th>
+            <td>That character’s speeches</td>
+            <td>Only if you ask (notes inside a speech)</td>
+            <td>Numbers</td>
+          </tr>
+          <tr>
+            <th scope="row">List drafts</th>
+            <td>Never a draft’s text</td>
+            <td>Never</td>
+            <td>The note you typed when you started each draft</td>
+          </tr>
+          <tr>
+            <th scope="row">Compare drafts</th>
+            <td>Changed lines, both sides</td>
+            <td>Only if you ask</td>
+            <td>Counts</td>
+          </tr>
+          <tr>
+            <th scope="row">List cuts</th>
+            <td>Cut text (trimmed in a list)</td>
+            <td>Only if you ask</td>
+            <td>Dates, drafts, and places</td>
+          </tr>
+          <tr>
+            <th scope="row">Search scripts</th>
+            <td>About 200 characters around each match</td>
+            <td>Searched and shown only if you ask</td>
+            <td></td>
+          </tr>
+          <tr>
+            <th scope="row">Story map</th>
+            <td>What a story map shows: short summaries, a few lines, hooks, and thread names</td>
+            <td>Your Setup and Payoff names only, as the story map shows them</td>
+            <td>Numbers</td>
+          </tr>
+          <tr>
+            <th scope="row">Series overview</th>
+            <td>Names, ages from introductions, and places</td>
+            <td>Never</td>
+            <td>Numbers</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <p class="docs-note">
       Drafter is free and open source. If you want to be sure of any of this, the code is there to
       read.
