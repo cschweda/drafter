@@ -113,7 +113,7 @@ describe('the bundle', () => {
     expect(run.stdout.trim()).toBe(pkg.version);
   });
 
-  it('a call over 10 seconds is stopped, in the reader thread, and the next call answers', async () => {
+  it('a call over the limit is stopped, in the reader thread, and the next call answers', async () => {
     const dir = tempFolder();
     const scripts = join(dir, 'Scripts');
     const unit =
@@ -123,8 +123,9 @@ describe('the bundle', () => {
       unit.repeat(Math.floor((MAX_SCRIPT_BYTES - 4096) / unit.length)),
     );
     put(join(scripts, 'Short.fountain'), 'INT. HALL - DAY\n\nEmpty.\n');
-    // The limit is shortened only for a test (NODE_ENV=test), so the stop is quick to see.
-    const app = await start([scripts], { NODE_ENV: 'test', DRAFTER_MCP_LIMIT_MS: '200' });
+    // The limit is shortened only for a test (NODE_ENV=test), so the stop is quick to see: 20 ms,
+    // far less than parsing a 5 MB script takes on any machine (the reader's start isn't counted).
+    const app = await start([scripts], { NODE_ENV: 'test', DRAFTER_MCP_LIMIT_MS: '20' });
     const slow = await app.callTool({
       name: 'script_overview',
       arguments: { script: 'Scripts/Long.fountain' },

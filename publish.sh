@@ -176,7 +176,8 @@ else
   problem "There's no tag $TAG. Make the release first (bump, merge, push the tag)."
 fi
 
-if grep -qE "^## \[$VERSION\]" CHANGELOG.md; then
+# A fixed string, so the dots in the version are dots (^ isn't needed: "## [" starts a section).
+if grep -qF "## [$VERSION]" CHANGELOG.md; then
   info "CHANGELOG.md has a section for $VERSION."
 else
   problem "CHANGELOG.md has no '## [$VERSION]' section."
@@ -219,7 +220,9 @@ else
   warn "Building this commit instead of the tag, for the dry run."
 fi
 info "Checking out $BUILD_AT in a temporary worktree..."
-git worktree add --quiet --detach "$WORKTREE" "$BUILD_AT"
+# Line endings exactly as committed (LF), whatever this machine's Git says: a Windows checkout with
+# core.autocrlf=true would put CRLF in the bundle, and it would never match the Release's file.
+git -c core.autocrlf=false -c core.eol=lf worktree add --quiet --detach "$WORKTREE" "$BUILD_AT"
 (
   cd "$WORKTREE"
   # No install scripts: building and testing drafter-mcp needs none (Electron's download is the
@@ -260,11 +263,11 @@ fi
 info "Checking the packed files..."
 PACKED="$WORK/packed"
 mkdir "$PACKED"
-PACK_JSON=$(npm pack "$STAGE" --pack-destination "$PACKED" --json --ignore-scripts)
-FILES=$(node --input-type=commonjs -e '
-  const [pack] = JSON.parse(process.argv[1]);
-  console.log(pack.files.map((f) => f.path).sort().join("\n"));
-' "$PACK_JSON")
+FILES=$(npm pack "$STAGE" --pack-destination "$PACKED" --json --ignore-scripts |
+  node --input-type=commonjs -e '
+    const [pack] = JSON.parse(require("fs").readFileSync(0, "utf8"));
+    console.log(pack.files.map((f) => f.path).sort().join("\n"));
+  ')
 EXPECTED=$(printf '%s\n' LICENSE README.md drafter-mcp.js package.json)
 [[ "$FILES" == "$EXPECTED" ]] ||
   die "The package should hold exactly package.json, README.md, LICENSE, and drafter-mcp.js; it holds:"$'\n'"$FILES"
