@@ -14,9 +14,20 @@ import {
 import type { Command } from '@codemirror/view';
 import { blockAt } from '@drafter/fountain';
 import { blocked, isBlank } from '../elements';
+import { BOM } from '../keymap';
 import { appChange, insideRegion, parsedDoc } from '../state';
-import { type HiddenSpan, hiddenSpans, steps, visibleEnd, visibleStart } from './hidden';
-import { type Here, hereIn, isEmptyParens, key, removeParens } from './keys';
+import {
+  endAmong,
+  type HiddenSpan,
+  hiddenSpans,
+  pairsOn,
+  pastLead,
+  startAmong,
+  steps,
+  visibleEnd,
+  visibleStart,
+} from './hidden';
+import { hereIn, isEmptyParens, key, removeParens } from './keys';
 import { BLANK_SPEECH, classicEdit, classicLine } from './line';
 import { classicTidied } from './marks';
 
@@ -71,8 +82,8 @@ function lastElementEnd(state: EditorState): number | null {
 }
 
 /** Whether a line has something hidden before its words, so its start is no place to stand. */
-const hidesItsStart = (state: EditorState, line: Line, start: number) =>
-  (hiddenSpans(state, line)[0]?.from ?? start) < start || line.text.charCodeAt(0) === 0xfeff;
+const hidesItsStart = (line: Line, spans: readonly HiddenSpan[], start: number) =>
+  (spans[0]?.from ?? start) < start || line.text.startsWith(BOM);
 
 const closesRegion = (state: EditorState, { kind, from, to }: HiddenSpan) =>
   (kind === 'note' || kind === 'boneyard') && /^(?:\]\]|\*\/)$/.test(state.sliceDoc(from, to));
@@ -90,18 +101,18 @@ function place(state: EditorState, pos: number, travel: Travel): number {
   }
   if (pastTheLastElement(state, pos, travel)) return lastElementEnd(state) ?? pos;
 
-  const start = visibleStart(state, line);
-  if (pos < start && hidesItsStart(state, line, start)) {
+  const spans = hiddenSpans(state, line);
+  const start = startAmong(line, spans);
+  if (pos < start && hidesItsStart(line, spans, start)) {
     // A step back from the words goes on above. A jump to the line's start stops at the words.
     const steppedOff = !forward && !pointer && from === start;
     return steppedOff && line.number > 1 ? place(state, line.from - 1, travel) : start;
   }
-  const end = visibleEnd(state, line);
+  const end = endAmong(line, spans);
   if (pos > end) {
     const steppedOff = forward && !pointer && from === end;
     return steppedOff && line.number < doc.lines ? place(state, line.to + 1, travel) : end;
   }
-  const spans = hiddenSpans(state, line);
   // The end of a note's words is a place to add to it, which after the `]]` isn't.
   const closing = spans.find(
     (span) => pos >= span.from && pos < span.to && closesRegion(state, span),
@@ -219,13 +230,21 @@ function below({ doc }: EditorState, line: Line) {
 const isPageBreak = (state: EditorState, line: Line) =>
   blockAt(state.field(parsedDoc), line.from)?.block.kind === 'page_break';
 
-/** The line under `upper` joined on to it: hidden marks between go, and a closing mark stays last. */
+/**
+ * The line under `upper` joined on to it. Only the lower line's lead and closing mark go: emphasis
+ * and notes come along whole, a closing mark of the upper line stays last, and the cursor stands
+ * past an opening pair, as it would anywhere.
+ */
 function join(state: EditorState, upper: Line, lower: Line): TransactionSpec {
   const end = visibleEnd(state, upper);
-  const rest = state.sliceDoc(visibleStart(state, lower), visibleEnd(state, lower));
+  const start = pastLead(state, lower);
+  const rest = state.sliceDoc(start, visibleEnd(state, lower));
+  const opener = hiddenSpans(state, lower).find(
+    (span) => span.from === start && span.kind === 'pair',
+  );
   return {
     changes: { from: end, to: lower.to, insert: rest + state.sliceDoc(end, upper.to) },
-    selection: { anchor: end },
+    selection: { anchor: end + (opener ? opener.to - opener.from : 0) },
     userEvent: 'delete',
     scrollIntoView: true,
   };
@@ -256,6 +275,8 @@ function backspaceJoin(state: EditorState, line: Line): TransactionSpec {
   if (blanks >= 2) return taking(line.from - 1, line.from, head - 1);
   if (!upper) return {};
   if (blocked(state, upper.from) === 'title page') return {};
+  if (upper.text === BLANK_SPEECH)
+    return taking(upper.from, line.from, head - (line.from - upper.from));
   if (isPageBreak(state, upper)) {
     return taking(upper.from, line.from, head - (line.from - upper.from));
   }
@@ -263,8 +284,7 @@ function backspaceJoin(state: EditorState, line: Line): TransactionSpec {
 }
 
 /** What Backspace does that CodeMirror's doesn't. */
-function backspace(here: Here): TransactionSpec | null {
-  const { state, line, head } = here;
+function backspace(state: EditorState, line: Line, head: number): TransactionSpec | null {
   if (line.text === BLANK_SPEECH) return taking(line.from - 1, line.to, line.from - 1);
   if (isPageBreak(state, line)) return takeBreak(state, line);
   if (isBlank(line.text)) return backspaceEmpty(state, line);
@@ -300,8 +320,7 @@ function deleteJoin(state: EditorState, line: Line): TransactionSpec {
 }
 
 /** What Delete does that CodeMirror's doesn't. */
-function forwardDelete(here: Here): TransactionSpec | null {
-  const { state, line, head } = here;
+function forwardDelete(state: EditorState, line: Line, head: number): TransactionSpec | null {
   if (line.text === BLANK_SPEECH) return deleteBlankSpeech(state, line);
   if (isPageBreak(state, line)) return takeBreak(state, line);
   if (isBlank(line.text)) return deleteEmpty(state, line);
@@ -354,8 +373,13 @@ const loneCursor = ({ selection }: EditorState) =>
 
 const deleteSpec = (forward: boolean) => (state: EditorState) => {
   if (!loneCursor(state)) return null;
+  const { head } = state.selection.main;
+  const line = state.doc.lineAt(head);
   const here = hereIn(state);
-  return (here && (forward ? forwardDelete(here) : backspace(here))) ?? letterPast(state, forward);
+  // A line can start with a note, whose first word is its visible start.
+  const atNote = !forward && !here && !blocked(state, head) && head === visibleStart(state, line);
+  const own = here || atNote ? (forward ? forwardDelete : backspace)(state, line, head) : null;
+  return own ?? letterPast(state, forward);
 };
 
 const backspaceKey = deleting(deleteSpec(false));
@@ -394,37 +418,36 @@ function outside({ from, to }: Stretch, spans: readonly HiddenSpan[]): Stretch[]
   return out;
 }
 
-/** Whether nothing the writer sees is left in a stretch once `words` go. */
-function clearOf(
-  state: EditorState,
-  stretch: Stretch,
-  spans: readonly HiddenSpan[],
-  words: Stretch[],
-) {
-  const shown = outside(stretch, spans);
-  const left = shown.flatMap((part) =>
-    outside(
-      part,
-      words.map((word) => ({ ...word, kind: 'pair' })),
-    ),
-  );
-  return left.every(({ from, to }) => !state.sliceDoc(from, to).trim());
+/** How many characters the writer would still see before each place on a line once `words` go. */
+function shownBefore(line: Line, spans: readonly HiddenSpan[], words: readonly Stretch[]) {
+  const gone = new Uint8Array(line.length);
+  for (const { from, to } of [...spans, ...words]) gone.fill(1, from - line.from, to - line.from);
+  const before = new Int32Array(line.length + 1);
+  for (let at = 0; at < line.length; at++) {
+    const shown = !gone[at] && /\S/.test(line.text.charAt(at));
+    before[at + 1] = (before[at] as number) + (shown ? 1 : 0);
+  }
+  return before;
 }
 
-/** The hidden marks with nothing left to mark once `words` go. */
+/** What goes with `words`, beyond them: marks with nothing left to mark, and an escape's backslash. */
 function emptied(state: EditorState, line: Line, spans: readonly HiddenSpan[], words: Stretch[]) {
-  if (clearOf(state, line, spans, words)) return [...spans];
-  const out: HiddenSpan[] = [];
-  const pairs = spans.filter((span) => span.kind === 'pair');
-  for (let i = 0; i + 1 < pairs.length; i++) {
-    const open = pairs[i] as HiddenSpan;
-    const close = pairs[i + 1] as HiddenSpan;
-    const between = { from: open.to, to: close.from };
-    if (open.to - open.from !== close.to - close.from || between.from === between.to) continue;
-    if (clearOf(state, between, spans, words)) {
-      out.push(open, close);
-      i++;
-    }
+  const before = shownBefore(line, spans, words);
+  const pairs = pairsOn(state, line, spans);
+  const halves = (kind: HiddenSpan['kind']) =>
+    spans.filter((span) => span.kind === kind).length -
+    pairs.filter(([open]) => open.kind === kind).length * 2;
+  // Nothing left on the line takes it whole, spaces too, unless half a note is all that's holding it.
+  if (!before[line.length] && !halves('note') && !halves('boneyard')) return null;
+  const out: Stretch[] = spans.filter(
+    (span) =>
+      span.kind === 'escape' && words.some(({ from, to }) => from <= span.to && span.to < to),
+  );
+  for (const pair of pairs) {
+    const [open, close] = pair;
+    const left =
+      (before[close.from - line.from] as number) - (before[open.to - line.from] as number);
+    if (!left) out.push(open, close);
   }
   return out;
 }
@@ -470,18 +493,11 @@ export const keepHiddenMarks: Extension = EditorState.transactionFilter.of((tr) 
     words = outside(past, spans);
   }
   const marks = emptied(state, line, spans, words);
-  if (
-    !marks.length &&
-    words.length === 1 &&
-    words[0]?.from === taken.from &&
-    words[0].to === taken.to
-  ) {
-    return tr;
+  const whole = { from: line.from + (line.text.startsWith(BOM) ? 1 : 0), to: line.to };
+  if (marks && !marks.length && words.length === 1) {
+    if (words[0]?.from === taken.from && words[0].to === taken.to) return tr;
   }
-  const changes = ChangeSet.of(
-    [...words, ...marks.map(({ from, to }) => ({ from, to }))],
-    state.doc.length,
-  );
+  const changes = ChangeSet.of(marks ? [...words, ...marks] : whole, state.doc.length);
   return {
     changes,
     selection: { anchor: changes.mapPos(head, forward ? 1 : -1) },

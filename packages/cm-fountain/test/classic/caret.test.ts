@@ -102,6 +102,15 @@ describe('hiddenSpans', () => {
     ]);
   });
 
+  test('marks that touch are one each', () => {
+    expect(kinds('*a _b_*|')).toEqual([
+      ['*', 'pair'],
+      ['_', 'pair'],
+      ['_', 'pair'],
+      ['*', 'pair'],
+    ]);
+  });
+
   test('a dual mark', () => {
     const state = classicEditor('JUNE ^\nHi.');
     expect(hiddenSpans(state, state.doc.line(1)).map((span) => span.kind)).toEqual(['dual']);

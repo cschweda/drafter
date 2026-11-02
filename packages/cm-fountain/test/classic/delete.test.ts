@@ -7,9 +7,9 @@ import {
   undo,
 } from '@codemirror/commands';
 import { EditorSelection, type EditorState } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { EditorView, keymap } from '@codemirror/view';
 import { describe, expect, test } from 'vitest';
-import { elementAt } from '../../src/classic';
+import { classicBackspace, classicDelete, elementAt } from '../../src/classic';
 import { classicEditor, keys, render } from './harness';
 
 function moved(state: EditorState, motion: (view: EditorView) => boolean): EditorState {
@@ -111,6 +111,8 @@ describe('§6.4, Backspace and Delete', () => {
 
   test('Alt+Backspace takes the words the writer sees', () => {
     const word = (marked: string) => render(moved(classicEditor(marked), deleteGroupBackward));
+    // The space against the mark unpairs it, and the `**` shows: a mark that doesn't pair stays
+    // visible (Call 23), and goes away as the writer retypes.
     expect(word('a **big cat**| d')).toBe('a **big **| d');
     expect(word('a **cat**| d')).toBe('a | d');
     expect(render(moved(classicEditor('**cat|**'), deleteGroupForward))).toBe('**cat|**');
@@ -172,5 +174,115 @@ describe('§6.4, Backspace and Delete', () => {
 
   test('a selection is Fountain Mode’s', () => {
     expect(back('On[e.]')).toBe('On|');
+  });
+
+  describe('two emphases on a line', () => {
+    test('only the pair emptied goes', () => {
+      expect(back('**a** b| **c**')).toBe('**a** | **c**');
+      expect(back('*a* b| _c_')).toBe('*a* | _c_');
+      expect(back('**a** **b**| **c**')).toBe('**a** | **c**');
+      expect(del('**a** |b **c**')).toBe('**a** | **c**');
+      const word = moved(classicEditor('**a** bc| **d**'), deleteGroupBackward);
+      expect(render(word)).toBe('**a** | **d**');
+    });
+
+    test('marks that touch are told apart', () => {
+      expect(back('*a _b_*| c')).toBe('*a *| c');
+      expect(back('x *_b_*| c')).toBe('x | c');
+      expect(back('x *a *b*| c*')).toBe('x *a | c*');
+    });
+
+    test('a run of three that matches nothing is text', () => {
+      expect(back('**a *b|***')).toBe('**a *|***');
+    });
+
+    test('a line of many marks costs a pass', () => {
+      const line = '*a* '.repeat(25000);
+      const state = classicEditor(`${line.slice(0, 50000 - 1)}|`);
+      const start = performance.now();
+      keys(state, 'Backspace');
+      expect(performance.now() - start).toBeLessThan(400);
+    });
+  });
+
+  describe('a join carries what isn’t its lead', () => {
+    test('a leading pair keeps its opener', () => {
+      expect(back('One.\n\n**|b** c')).toBe('One.**|b** c');
+      expect(back('One.\n\n*|b* c *d*')).toBe('One.*|b* c *d*');
+      expect(back('One.\n\n!**|b** c')).toBe('One.**|b** c');
+    });
+
+    test('a note or a boneyard stays one', () => {
+      expect(del('One.|\n\n[[note]] text')).toBe('One.|[[note]] text');
+      expect(del('One.|\n\n/* cut */ text')).toBe('One.|/* cut */ text');
+      expect(back('One.\n\n[[|note]] text')).toBe('One.|[[note]] text');
+    });
+
+    test('a closing mark of the lower line goes', () => {
+      expect(back('One.\n\n>|Two.<')).toBe('One.|Two.');
+    });
+  });
+
+  describe('an escape goes with its character', () => {
+    test('from either side', () => {
+      expect(back('a \\*|b')).toBe('a |b');
+      expect(back('a \\*|')).toBe('a |');
+      expect(del('a \\|*b')).toBe('a |b');
+    });
+
+    test('the escape of a letter further on stays', () => {
+      expect(back('a \\*b|')).toBe('a \\*|');
+    });
+  });
+
+  test('Mac’s Ctrl+H and Ctrl+D are the same keys', () => {
+    const bindings = classicEditor('x').facet(keymap).flat();
+    expect(bindings.find(({ mac }) => mac === 'Ctrl-h')?.run).toBe(classicBackspace);
+    expect(bindings.find(({ mac }) => mac === 'Ctrl-d')?.run).toBe(classicDelete);
+  });
+
+  test('Backspace under a blank speech line takes it whole', () => {
+    expect(back('JUNE\nHi.\n  \n|Two.')).toBe('JUNE\nHi.\n|Two.');
+  });
+
+  describe('a delete settles the line', () => {
+    test('a line that would turn into something else gets its mark', () => {
+      const state = classicEditor('Go| NOW\nnext');
+      expect(render(moved(state, deleteGroupBackward))).toContain('!');
+      expect(render(keys(classicEditor('Go| NOW\nnext'), 'Backspace', 'Backspace', 'Delete'))).toBe(
+        '!|NOW\nnext',
+      );
+      expect(del('|xINT. HOUSE')).toBe('!|INT. HOUSE');
+    });
+
+    test('in one undo', () => {
+      const state = keys(classicEditor('|xINT. HOUSE', { with: [history()] }), 'Delete');
+      expect(moved(state, undo).sliceDoc()).toBe('xINT. HOUSE');
+    });
+
+    test('a selection deleted does the same', () => {
+      expect(back('[x]INT. HOUSE')).toBe('!|INT. HOUSE');
+    });
+
+    test('a line that stays what it is writes nothing', () => {
+      expect(back('She go|es.')).toBe('She g|es.');
+    });
+  });
+
+  describe('nothing left', () => {
+    test('spaces go with the marks', () => {
+      expect(back('J| ^\nHi.')).toBe('|\nHi.');
+      expect(back('> a| <')).toBe('|');
+    });
+
+    test('an emptied note or boneyard goes with its last letter', () => {
+      expect(back('x [[a|]] y')).toBe('x | y');
+      expect(back('x /*a|*/ y')).toBe('x | y');
+      expect(back('[[a|]]')).toBe('|');
+    });
+
+    test('half a note across lines stays', () => {
+      expect(back('[[a|\nb]]')).toBe('[[|\nb]]');
+    });
   });
 });

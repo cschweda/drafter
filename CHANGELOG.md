@@ -13,7 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - **Classic Mode**, in the editor package and not yet switched on in the app: Enter and Tab move through the script element by element, Tab walks the elements on an empty line, Shift+Enter keeps a break inside an element, and an empty line or `()` left unused is taken away.
-- In **Classic Mode** the caret stays where a writer can see it: it steps over hidden marks and the blank line between elements, Backspace and Delete join elements in one press, a hidden mark outlives the delete beside it and goes with the last letter, and a typed `)` moves past the one that's there.
+- In **Classic Mode** the caret stays where a writer can see it: it steps over hidden marks and the blank line between elements, Backspace and Delete join elements in one press, a hidden mark outlives the delete beside it and goes with the last letter, a delete settles the line as typing does, and a typed `)` moves past the one that's there.
 - The implementation plan for **Classic Mode** (`docs/plans/2026-11-02-classic-mode.md`), for v0.25.0, with the places the design needed changing against the real code.
 - The design for **Classic Mode** (`docs/drafter-classic-mode-design.md`) is in the repository, for the maintainer’s review: Enter and Tab typing, autofill, and a Fountain or Classic switch in the top bar, for v0.25.0, over a file that stays plain Fountain.
 

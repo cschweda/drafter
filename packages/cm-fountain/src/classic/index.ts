@@ -11,7 +11,7 @@ import {
 } from './caret';
 import { classicEnter, classicShiftEnter, classicShiftTab, classicTab } from './keys';
 import { classicLine, keepLineInHistory } from './line';
-import { classicMarks, tidyLeft } from './marks';
+import { classicMarks, settleDeletes, tidyLeft } from './marks';
 
 export {
   classicArrows,
@@ -48,7 +48,15 @@ export {
   setStored,
   WRITES,
 } from './line';
-export { classicMarks, MAX_RUN, readsAs, settleLine, shapeOf, tidyLeft } from './marks';
+export {
+  classicMarks,
+  MAX_RUN,
+  readsAs,
+  settleDeletes,
+  settleLine,
+  shapeOf,
+  tidyLeft,
+} from './marks';
 
 /** At `Prec.highest`, ahead of `language`, as CodeMirror's completion keys are at that level too (§6). */
 const classicKeys = Prec.highest(
@@ -61,6 +69,8 @@ const classicKeys = Prec.highest(
     { key: 'ArrowDown', run: classicArrows[1] },
     { key: 'Backspace', run: classicBackspace, shift: classicBackspace },
     { key: 'Delete', run: classicDelete },
+    { mac: 'Ctrl-h', run: classicBackspace },
+    { mac: 'Ctrl-d', run: classicDelete },
     { key: 'Home', mac: 'Cmd-ArrowLeft', run: classicHome },
     { mac: 'Ctrl-a', run: classicHome },
     { key: 'End', mac: 'Cmd-ArrowRight', run: classicEnd },
@@ -79,6 +89,7 @@ export function classic(_options: ClassicOptions = {}): Extension {
   return [
     classicKeys,
     classicCaret,
+    settleDeletes,
     keepHiddenMarks,
     classicMarks,
     tidyLeft,

@@ -413,6 +413,14 @@ const kindsOf = (kind: ClassicKind) => ({ kind, arrivedAs: kind });
 const sameSpans = (a: readonly Span[], b: readonly Span[]) =>
   a.length === b.length && a.every((span, i) => span.from === b[i]?.from && span.to === b[i]?.to);
 
+/** The stored line, or what a line the cursor has no stored line for is. */
+function ownLine(state: EditorState, line: Line): StoredLine {
+  const held = state.field(classicLine, false);
+  if (held?.from === line.from) return held;
+  const kind = lineKindAt(state, line) ?? pendingAt(state, line.from);
+  return { ...NO_LINE, from: line.from, ...kindsOf(kind) };
+}
+
 /**
  * Writes the marks and the capitals, on the writer's typing on the cursor's line. Everything else
  * passes: a change the app makes, text still being composed, a replace-all, undo and redo, and a
@@ -437,15 +445,7 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
     }
   }
 
-  const held = state.field(classicLine, false);
-  const own: StoredLine =
-    held?.from === line.from
-      ? held
-      : {
-          ...NO_LINE,
-          from: line.from,
-          ...kindsOf(lineKindAt(state, line) ?? pendingAt(state, line.from)),
-        };
+  const own = ownLine(state, line);
   // The capitals, on the typed text alone, then the mark for the text they make.
   const rawText = tr.newDoc.sliceString(
     line.from,
@@ -466,6 +466,23 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
       ? upperFix(tr.newDoc, typed.from, tr.newDoc.sliceString(typed.from, typed.to))
       : null;
   return applySettled(tr, line, own, added, fix, rawText);
+});
+
+/**
+ * A delete is a keystroke too (§4.2): what's left of the line may read as something else, or may no
+ * longer need its mark, and that's settled in the same transaction.
+ */
+export const settleDeletes: Extension = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || !tr.isUserEvent('delete') || tr.annotation(appChange)) return tr;
+  const state = tr.startState;
+  if (state.selection.ranges.length > 1) return tr;
+  const typed = typedOnLine(tr);
+  if (!typed || blocked(state, typed.line.from)) return tr;
+  const { line } = typed;
+  const own = ownLine(state, line);
+  const added = own.added.flatMap((span) => mapSpan(span, tr.changes) ?? []);
+  const end = line.to + tr.changes.newLength - tr.changes.length;
+  return applySettled(tr, line, own, added, null, tr.newDoc.sliceString(line.from, end));
 });
 
 /** What the filter adds to the typing: the capitals, the mark, the cursor, and what's stored. */
