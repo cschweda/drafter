@@ -73,6 +73,8 @@ export interface McpJob {
   swap?: string;
   /** The guard's own check: after the calls, try each kind of call it must stop, through ESM imports. */
   probe?: boolean;
+  /** The guard's own check, in a new worker: try each kind of call while the server is imported. */
+  probeFirst?: boolean;
 }
 
 /** Tries a fetch, a socket, a name lookup, and a program run, each as an ESM import sees it. */
@@ -81,6 +83,7 @@ async function probe(): Promise<void> {
     () => fetch('http://example.invalid/'),
     async () => (await import('node:net')).createConnection({ port: 9 }),
     async () => (await import('node:dns')).lookup('example.invalid', () => {}),
+    async () => (await import('node:dns/promises')).lookup('example.invalid'),
     async () => (await import('node:child_process')).execFileSync('true'),
   ];
   for (const attempt of attempts) {
@@ -111,7 +114,7 @@ export interface Answer {
   /** The opened text's story map, for an inert trap. */
   storyMap?: string;
   /** For `mcp`: every call's result, and every network or process call that was tried (none). */
-  mcp?: { results: McpResult[]; calls: string[] };
+  mcp?: { results: McpResult[]; calls: string[]; guard: string[] };
   ms: number;
   kept: number;
 }
@@ -334,13 +337,19 @@ async function readBeside(format: string, bytes: Uint8Array): Promise<Happened> 
 
 /** Every network, process, or socket call tried since the guard went in: each one also throws. */
 const tried: string[] = [];
+/**
+ * The guard's own failures, kept for the worker's life and reported with every answer: a function
+ * it couldn't replace, and any call tried while the server was being imported.
+ */
+const guardFailures: string[] = [];
 let guarded = false;
 
 /**
  * Replaces `fetch`, `WebSocket`, and every function of Node's network and process modules with
  * one that records the call and throws, so nothing in the server can fetch, listen, look a name
  * up, or run a program unseen. `syncBuiltinESMExports` makes the ESM imports see the same.
- * Installed before the server is first imported, and kept for the worker's life.
+ * Installed before the server is first imported, and kept for the worker's life, so the `mcp`
+ * blocks run last in harness.test.ts (the runner reuses the worker for every trap after them).
  */
 function guardNetwork(): void {
   if (guarded) return;
@@ -354,6 +363,23 @@ function guardNetwork(): void {
   g.fetch = trip('fetch');
   g.WebSocket = trip('WebSocket');
   const require = createRequire(import.meta.url);
+  const replaceAll = (mod: Record<string, unknown>, name: string, keys = Object.keys(mod)) => {
+    for (const key of keys) {
+      if (typeof mod[key] !== 'function') continue;
+      const tripped = trip(`${name}.${key}`);
+      try {
+        mod[key] = tripped;
+      } catch {
+        // A getter (`http.WebSocket`, `net.BlockList`): replaced by a plain value, if it may be.
+        try {
+          Object.defineProperty(mod, key, { value: tripped, writable: true, configurable: true });
+        } catch {
+          // Reported below.
+        }
+      }
+      if (mod[key] !== tripped) guardFailures.push(`${name}.${key} couldn’t be replaced`);
+    }
+  };
   for (const id of [
     'node:net',
     'node:tls',
@@ -362,17 +388,17 @@ function guardNetwork(): void {
     'node:http2',
     'node:dgram',
     'node:dns',
+    'node:dns/promises',
     'node:child_process',
-  ]) {
-    const mod = require(id) as Record<string, unknown>;
-    for (const key of Object.keys(mod)) {
-      if (typeof mod[key] !== 'function') continue;
-      try {
-        mod[key] = trip(`${id}.${key}`);
-      } catch {
-        tried.push(`${id}.${key} couldn’t be replaced`);
-      }
-    }
+  ])
+    replaceAll(require(id) as Record<string, unknown>, id);
+  // `dns.promises` (the same object as `node:dns/promises` today; replaced again if it isn't), and
+  // the shared agents that make the sockets for `http` and `https`.
+  const dns = require('node:dns') as { promises: Record<string, unknown> };
+  if (dns.promises !== require('node:dns/promises')) replaceAll(dns.promises, 'node:dns.promises');
+  for (const id of ['node:http', 'node:https']) {
+    const agent = (require(id) as { globalAgent: Record<string, unknown> }).globalAgent;
+    replaceAll(agent, `${id}.globalAgent`, ['createConnection', 'addRequest', 'createSocket']);
   }
   syncBuiltinESMExports();
 }
@@ -384,24 +410,34 @@ type Kit = {
 };
 let kit: Promise<Kit> | undefined;
 
-/** The server and its client, imported once the guard is in. */
-function mcpKit(): Promise<Kit> {
+/**
+ * The server and its client, imported once the guard is in. Anything tried while they load is a
+ * guard failure, reported with every answer from then on. (`probeFirst`, the guard's own test,
+ * tries each kind of call there, in a new worker.)
+ */
+function mcpKit(probeFirst: boolean): Promise<Kit> {
   guardNetwork();
-  kit ??= Promise.all([
-    import('../../../packages/mcp/test/connect'),
-    import('../../../packages/mcp/src/load'),
-    import('../mcp-traps'),
-  ]).then(([connected, load, traps]) => ({
-    connect: connected.connect,
-    afterCheck: load.__afterCheckForTests,
-    traps: traps.MCP_TRAPS,
-  }));
+  kit ??= (async () => {
+    tried.length = 0;
+    if (probeFirst) await probe();
+    const [connected, load, traps] = await Promise.all([
+      import('../../../packages/mcp/test/connect'),
+      import('../../../packages/mcp/src/load'),
+      import('../mcp-traps'),
+    ]);
+    for (const call of tried.splice(0)) guardFailures.push(`${call}, while the server loaded`);
+    return {
+      connect: connected.connect,
+      afterCheck: load.__afterCheckForTests,
+      traps: traps.MCP_TRAPS,
+    };
+  })();
   return kit;
 }
 
 async function runMcp(job: McpJob): Promise<Omit<Answer, 'ms' | 'kept'>> {
-  const { connect, afterCheck, traps } = await mcpKit();
   tried.length = 0;
+  const { connect, afterCheck, traps } = await mcpKit(job.probeFirst === true);
   if (job.swap) {
     // The trap's setup is made again (the same files) for its swap, which runs here, once.
     let swap = traps.find((trap) => trap.id === job.swap)?.setup(job.dir).swap;
@@ -452,7 +488,10 @@ async function runMcp(job: McpJob): Promise<Omit<Answer, 'ms' | 'kept'>> {
       }
     }
     if (job.probe) await probe();
-    return { happened: { kind: 'refused', message: '' }, mcp: { results, calls: [...tried] } };
+    return {
+      happened: { kind: 'refused', message: '' },
+      mcp: { results, calls: [...tried], guard: [...guardFailures] },
+    };
   } finally {
     afterCheck(undefined);
     await server.close();

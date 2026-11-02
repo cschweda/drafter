@@ -726,9 +726,9 @@ const FOUNTAIN_TRAPS: Trap[] = [
     format: 'fountain',
     name: 'export.fountain',
     tests:
-      'A Drafter HTML export named .fountain is reopened by its content: the script inside opens.',
+      'A Drafter HTML export named .fountain is reopened by its content: the script inside opens. Drafter for Claude, which goes by the name, reads the page as the text it is and finds no scene in it.',
     bytes: () => enc(page(`<main>…</main>\n${block(SCRIPT)}`)),
-    expect: { 'web-open': opens(SCRIPT) },
+    expect: { 'web-open': opens(SCRIPT), mcp: opensWith('<main>…</main>') },
   },
 ];
 

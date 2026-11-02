@@ -459,11 +459,38 @@ function snapshot(dir: string): string[] {
   return out;
 }
 
-/** What a result may never hold: a full path of the trap's, or a stack. */
-function expectNothingLeaked(text: string, dir: string, label: string) {
-  for (const path of new Set([dir, realpathSync(dir), tmp, realpathSync(tmp)]))
-    expect(text.includes(path), `${label}: holds a full path`).toBe(false);
-  expect(/\n\s+at \S/.test(text), `${label}: holds a stack`).toBe(false);
+/** The full paths a trap's results may never hold: its folder and the suite's, as given and real. */
+const fullPaths = (dir: string) => [...new Set([dir, realpathSync(dir), tmp, realpathSync(tmp)])];
+
+/** Every string in a JSON value, however deep, keys included. */
+function stringsIn(value: unknown, out: string[] = []): string[] {
+  if (typeof value === 'string') out.push(value);
+  else if (Array.isArray(value)) for (const item of value) stringsIn(item, out);
+  else if (value !== null && typeof value === 'object')
+    for (const [key, item] of Object.entries(value)) {
+      out.push(key);
+      stringsIn(item, out);
+    }
+  return out;
+}
+
+/**
+ * What a result may never hold: one of `paths`, or a stack. Checked in the raw text and in every
+ * string of its JSON, decoded (where a stack's line breaks and a Windows path's backslashes are
+ * themselves again).
+ */
+function expectNothingLeaked(text: string, paths: readonly string[], label: string) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    parsed = undefined;
+  }
+  for (const each of [text, ...stringsIn(parsed)]) {
+    for (const path of paths)
+      expect(each.includes(path), `${label}: holds a full path`).toBe(false);
+    expect(/\n\s+at \S/.test(each), `${label}: holds a stack`).toBe(false);
+  }
 }
 
 /** A successful answer, checked: `about` first, its text the same JSON, under the cap. */
@@ -481,7 +508,7 @@ function expectAnswer(result: McpResult, label: string): Record<string, unknown>
  * A refusal's message: the envelope's `error` (`about` first), or, when `sdk` allows it, the
  * SDK's own plain words for arguments its schema refuses.
  */
-function refusalMessage(result: McpResult, label: string, sdk = false): string {
+function refusalMessage(result: McpResult, label: string, sdk: boolean): string {
   expect(result.isError, `${label}: should be refused`).toBe(true);
   let body: Record<string, unknown> | undefined;
   try {
@@ -499,6 +526,15 @@ function refusalMessage(result: McpResult, label: string, sdk = false): string {
   return body.error as string;
 }
 
+/** What the worker's probe tries, in order: each must be recorded (and stopped) by the guard. */
+const PROBED = [
+  'fetch',
+  'node:net.createConnection',
+  'node:dns.lookup',
+  'node:dns/promises.lookup',
+  'node:child_process.execFileSync',
+];
+
 const mcpJob = (dir: string, path: string, tool: ToolName, args: object): McpJob => ({
   kind: 'mcp',
   dir,
@@ -511,22 +547,70 @@ const mcpJob = (dir: string, path: string, tool: ToolName, args: object): McpJob
 /** What every `mcp` job must leave as it was: the folder, and the network and processes, untouched. */
 function expectUntouched(answer: Answer, before: string[] | null, dir: string, label: string) {
   expect(answer.mcp?.calls, `${label}: a network or process call`).toEqual([]);
+  expect(answer.mcp?.guard, `${label}: the guard failed`).toEqual([]);
   if (before) expect(snapshot(dir), `${label}: the folder changed`).toEqual(before);
 }
 
+// The mcp blocks run last in this file: the worker keeps the network guard installed for its
+// life (worker/run.ts), and the runner reuses it.
 describe('mcp: every trap through Drafter for Claude', () => {
+  test('a stack or a full path anywhere in a result is caught, its JSON decoded', () => {
+    const envelope = (error: string) => JSON.stringify({ about: ABOUT, error });
+    const windows = 'C:\\Users\\sam\\Scripts';
+    expect(() =>
+      expectNothingLeaked(envelope('Error: x\n    at load (load.ts:1:1)'), [], 'stack'),
+    ).toThrow(/holds a stack/);
+    expect(() =>
+      expectNothingLeaked(envelope(`Can’t read ${windows}\\a.fountain`), [windows], 'path'),
+    ).toThrow(/holds a full path/);
+    expect(() =>
+      expectNothingLeaked(
+        JSON.stringify({ about: ABOUT, hits: [{ around: `${windows}` }] }),
+        [windows],
+        'deep',
+      ),
+    ).toThrow(/holds a full path/);
+    expectNothingLeaked(envelope('There’s no file at Scripts/a.fountain.'), [windows], 'fine');
+  });
+
+  test('only the long-name trap may be refused in the SDK’s plain words', () => {
+    expect(MCP_PATH_TRAPS.filter((t) => t.sdk).map((t) => t.id)).toEqual(['mcp-long-name']);
+    const plain: McpResult = { isError: true, text: 'Input validation error: too long' };
+    expect(() => refusalMessage(plain, 'plain', false)).toThrow(/not Drafter’s refusal/);
+    expect(refusalMessage(plain, 'plain', true)).toBe(plain.text);
+  });
+
+  test('a trap whose text has a scene must have read_scene find it', () => {
+    const scened = trapsFor('mcp')
+      .filter(hasScene)
+      .map((t) => t.id);
+    expect(scened.length).toBeGreaterThan(50);
+    expect(scened).toContain('fountain-cr-only');
+    expect(scened).not.toContain('fountain-is-export');
+    expect(scened).not.toContain('fountain-empty');
+  });
+
+  test('anything tried while the server loads is the guard’s failure', async () => {
+    // A new worker, so the server is imported again, with each kind of call tried as it loads.
+    await runner.close();
+    const dir = join(tmp, 'mcp-guard-import');
+    mkdirSync(folderIn(dir), { recursive: true });
+    const job = { ...mcpJob(dir, 'Scripts', 'list_scripts', {}), probeFirst: true };
+    const answer = (await runner.run(job, 10_000, PEAK_BOUND)).answer as Answer;
+    // The worker keeps that failure for its life: the next test starts a clean one.
+    await runner.close();
+    expect(answer.mcp?.calls).toEqual([]);
+    expect(answer.mcp?.guard).toEqual(PROBED.map((call) => `${call}, while the server loaded`));
+  });
+
   test('the guard records and stops a fetch, a socket, a name lookup, and a program run', async () => {
     const dir = join(tmp, 'mcp-guard');
     mkdirSync(folderIn(dir), { recursive: true });
     writeFileSync(join(folderIn(dir), 'lamp.fountain'), 'INT. LAMP ROOM - NIGHT\n');
     const job = { ...mcpJob(dir, 'Scripts/lamp.fountain', 'list_scripts', {}), probe: true };
     const answer = (await runner.run(job, 5_000, PEAK_BOUND)).answer as Answer;
-    expect(answer.mcp?.calls).toEqual([
-      'fetch',
-      'node:net.createConnection',
-      'node:dns.lookup',
-      'node:child_process.execFileSync',
-    ]);
+    expect(answer.mcp?.calls).toEqual(PROBED);
+    expect(answer.mcp?.guard).toEqual([]);
   });
 
   test('every trap of a format the server reads goes through it', () => {
@@ -556,16 +640,32 @@ describe('mcp: every trap through Drafter for Claude', () => {
       expectUntouched(answer, before, dir, label);
       const [result] = answer.mcp?.results ?? [];
       if (!result) throw new Error(`${label}: no result`);
-      expectNothingLeaked(result.text, dir, label);
+      expectNothingLeaked(result.text, fullPaths(dir), label);
       if (outcome.kind === 'refused') {
-        expect(refusalMessage(result, label), label).toContain(outcome.says);
-      } else if (tool === 'read_scene' && result.isError) {
+        expect(refusalMessage(result, label, false), label).toContain(outcome.says);
+      } else if (tool === 'read_scene' && result.isError && !hasScene(trap)) {
         // A script or document with no scenes has no scene 1, and says so.
-        expect(refusalMessage(result, label), label).toMatch(/^There’s no scene 1\. /);
+        expect(refusalMessage(result, label, false), label).toMatch(/^There’s no scene 1\. /);
       } else expectAnswer(result, label);
     }
   });
 });
+
+/**
+ * Whether a trap's text has a scene the server must find: a scene heading, or, for a Markdown
+ * document, a heading of level 1 to 3. The text is its explicit `mcp` outcome's (its text or key
+ * lines) when that gives any, else Open's.
+ */
+function hasScene(trap: Trap): boolean {
+  const mcp = trap.expect.mcp;
+  const own = mcp && mcp.kind !== 'refused' && (mcp.text !== undefined || mcp.lines !== undefined);
+  const outcome = own ? mcp : trap.expect['web-open'];
+  if (!outcome || outcome.kind === 'refused') return false;
+  const lines = outcome.text !== undefined ? outcome.text.split('\n') : (outcome.lines ?? []);
+  const heading =
+    trap.format === 'markdown' ? /^#{1,3} \S/ : /^(?:INT|EXT|EST|INT\.?\/EXT|I\/E)[. ]/;
+  return lines.some((line) => heading.test(line));
+}
 
 /** A trap of the entry point's own, as `checkRan` measures one. */
 const measuredAs = (trap: McpTrap): Trap => ({
@@ -598,14 +698,16 @@ async function runMcpTrap(trap: McpTrap) {
   const results = answer.mcp?.results ?? [];
   expect(results.length, trap.id).toBeGreaterThan(0);
   for (const result of results) {
-    expectNothingLeaked(result.text, dir, trap.id);
+    expectNothingLeaked(result.text, fullPaths(dir), trap.id);
     expect(result.text.includes('OUTSIDE-THE-FOLDER-MARKER'), `${trap.id}: read outside`).toBe(
       false,
     );
   }
   if ('refused' in trap.expect) {
     for (const result of results)
-      expect(refusalMessage(result, trap.id, true), trap.id).toMatch(trap.expect.refused);
+      expect(refusalMessage(result, trap.id, trap.sdk === true), trap.id).toMatch(
+        trap.expect.refused,
+      );
     return;
   }
   const pages = results.map((result) => expectAnswer(result, trap.id));

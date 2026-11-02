@@ -91,12 +91,15 @@ in-memory transport, as an AI app calls it.
   scenes ten a call; a speech of 100,000 words through `character_lines`, in parts; a search that
   matches every word (it stops at 500 hits); and a folder of 2,000 scripts eight levels deep
   (`list_scripts` stops at 500 and says it was cut short). Every page is under the cap.
-- **Nothing written, fetched, or run:** before the worker first imports the server, it replaces
+- **Nothing fetched or run, and the folder unchanged:** before the worker first imports the server, it replaces
   `fetch`, `WebSocket`, and every function of `node:net`, `tls`, `http`, `https`, `http2`,
   `dgram`, `dns`, and `child_process` with one that records the call and throws (and
   `syncBuiltinESMExports`, so ESM imports see them too); every job's answer carries what was
-  tried, which must be nothing, and a test checks the guard catches each kind. The folder's every
-  file is hashed and listed before and after each job: the same.
+  tried, which must be nothing, as must the guard's own failures (a function it couldn't
+  replace, or a call tried while the server loaded); tests check the guard catches each kind. The
+  trap's folder is listed, and its every file hashed, before and after each job: the same. Writes
+  anywhere else are covered by the package's read-only scan of its source
+  (`packages/mcp/test/read-only.test.ts`).
 
 Not entry points, so no trap goes through them, but part of the survey:
 

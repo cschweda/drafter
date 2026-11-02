@@ -15,7 +15,11 @@ export interface McpTrap {
   id: string;
   /** What it tests, in a sentence. */
   tests: string;
-  /** Makes its files in `dir`; the path the tool is given, and, for the swap, what the read meets. */
+  /**
+   * Makes its files in `dir`; the path the tool is given, and, for the swap, what the read meets.
+   * Must be idempotent: the worker runs a swap trap's setup again on the same folder to get its
+   * `swap` (a function can't be sent to it), so it may only write the same files again.
+   */
   setup(dir: string): { path: string; swap?: () => void };
   tool: ToolName;
   args(path: string): object;
@@ -24,6 +28,8 @@ export interface McpTrap {
    * page's answer (or, for a trap that pages, every page's, in order, as `{ pages }`) is checked.
    */
   expect: { refused: RegExp } | { ok: (result: object) => void };
+  /** Refused by the tool's schema, in the SDK's own plain words, not Drafter's envelope. */
+  sdk?: boolean;
   /** What `pathProblem(path, 'win32')` must say, checked on every system (Windows's own names). */
   windows?: RegExp;
   /** A call made first whose `next` is the main call's cursor (a cursor from another file). */
@@ -303,6 +309,7 @@ export const MCP_PATH_TRAPS: readonly McpTrap[] = [
     tool: 'read_scene',
     args: readFirst,
     expect: { refused: /Input validation error|Invalid arguments/i },
+    sdk: true,
   },
   {
     id: 'mcp-cursor-other-file',
