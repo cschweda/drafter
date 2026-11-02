@@ -81,6 +81,9 @@ jobs:
 
       - name: Install the workspace
         run: pnpm install --frozen-lockfile
+      # Some tests import the packages' builds (an export read back, a file opened), so build them.
+      - name: Build the packages
+        run: pnpm -r --filter "./packages/*" build
       - name: The browsers for the end-to-end tests
         run: pnpm --filter @drafter/web exec playwright install --with-deps chromium
       - name: The web app's end-to-end tests, in Chromium
@@ -112,6 +115,9 @@ jobs:
 
       - name: Install the workspace
         run: pnpm install --frozen-lockfile
+      # Some tests import the packages' builds (an export read back, a file opened), so build them.
+      - name: Build the packages
+        run: pnpm -r --filter "./packages/*" build
       - name: The browsers for the end-to-end tests
         run: pnpm --filter @drafter/web exec playwright install --with-deps chromium
       - name: The web app's end-to-end tests, in Chromium
