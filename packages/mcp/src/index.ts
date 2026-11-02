@@ -23,7 +23,7 @@ export {
   TOO_MANY_FOLDERS,
   USAGE,
 } from './options';
-export { answerBudget, itemCost, type Page, pageOf, partsOf } from './paging';
+export { answerBudget, clipText, fitting, itemCost, type Page, pageOf, partsOf } from './paging';
 export {
   type Checked,
   MAX_PATH_CHARS,
@@ -48,7 +48,7 @@ export { findScene, MAX_MATCHES, oneScene, type SceneFound } from './scenes';
 export { createServer, type ServerConfig } from './server';
 export { type Loaded, TOOLS, type ToolContext, type ToolDef, type ToolName } from './tools/index';
 export { LIST_READ_LIMIT } from './tools/list';
-export { castKey, MAX_RUN, OVERVIEW_SCENES } from './tools/script';
-export { scriptEnd, visible, visibleMarkdown } from './visible';
+export { castKey, MAX_RUN, OVERVIEW_SCENES, TEXT_LIMITS } from './tools/script';
+export { drafterBlocks, scriptEnd, visible, visibleMarkdown } from './visible';
 export { type Found, WALK_LIMITS, walk } from './walk';
 export { handle, makeContext, runWorker } from './worker';

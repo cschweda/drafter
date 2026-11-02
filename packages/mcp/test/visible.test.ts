@@ -54,6 +54,30 @@ describe('visible', () => {
     expect(visible(doc, source.indexOf('/* drafter'), source.length, ['boneyard']).text).toBe('');
   });
 
+  it('an indented metadata block after an unclosed boneyard never shows, even included', () => {
+    for (const indent of ['  ', '\t']) {
+      const source = `INT. ROOM - DAY\n\nStatic. /* never closed\nmore\n\n${indent}/* drafter\n{"v":1,"id":"secret-id"}\n*/\n`;
+      const shown = all(source, ['notes', 'boneyard']).text;
+      expect(shown).not.toContain('drafter');
+      expect(shown).not.toContain('secret-id');
+      expect(shown).toBe('INT. ROOM - DAY\n\nStatic. /* never closed\nmore');
+    }
+  });
+
+  it('every drafter block is cut, an older one before the metadata too', () => {
+    const source = `INT. ROOM - DAY\n\nStatic.\n\n/* drafter\n{not json, "old-secret"}\n*/\n\nMore static. /* my own aside */\n\n/* drafter\n{"v":1,"id":"new-secret"}\n*/\n`;
+    for (const include of [[], ['boneyard'], ['notes', 'boneyard']] as const) {
+      const shown = all(source, include);
+      expect(shown.text).not.toContain('old-secret');
+      expect(shown.text).not.toContain('new-secret');
+      expect(shown.text).not.toContain('/* drafter');
+      expect(shown.text).toContain('More static.');
+      // Drafter's own blocks aren't the writer's boneyard: never counted as left out.
+      expect(shown.leftOut.boneyard).toBe(include.length === 0 ? 1 : 0);
+    }
+    expect(all(source, ['boneyard']).text).toContain('/* my own aside */');
+  });
+
   it('Contact never shows, in any case, with its continuation lines', () => {
     for (const key of ['Contact', 'CONTACT', 'contact']) {
       const source = `Title: Signal Hill\n${key}:\n    The Grange\n    555-0199\nAuthor: A. Writer\n\nINT. GRANGE - NIGHT\n\nChairs.\n`;
@@ -78,17 +102,30 @@ describe('visible', () => {
       { weight: 1, arbitrary: word.map((w) => `[[${w}]]`) },
       { weight: 1, arbitrary: word.map((w) => `/* ${w} */`) },
     );
-    const line = fc.array(piece, { minLength: 1, maxLength: 6 }).map((p) => p.join(' '));
+    const text = fc.array(piece, { minLength: 1, maxLength: 6 }).map((p) => p.join(' '));
+    const note = piece.filter((p) => p.startsWith('[[') || p.startsWith('/*'));
+    // Action, and notes inside synopses, headings, and cues.
+    const line = fc.oneof(
+      { weight: 4, arbitrary: text },
+      { weight: 1, arbitrary: note.map((n) => `= The radio ${n} wakes.`) },
+      { weight: 1, arbitrary: note.map((n) => `\nEXT. HILL ${n} - NIGHT\n`) },
+      { weight: 1, arbitrary: note.map((n) => `\nJUNE ${n}\nHello.`) },
+    );
     const script = fc.record({
       lines: fc.array(fc.oneof(line, fc.constant('')), { minLength: 1, maxLength: 12 }),
       unclosed: fc.boolean(),
       meta: fc.boolean(),
+      indent: fc.constantFrom('', '  ', '\t', ' \t '),
+      eol: fc.constantFrom('\n', '\r\n'),
+      lastBreak: fc.boolean(),
     });
     fc.assert(
-      fc.property(script, ({ lines, unclosed, meta }) => {
+      fc.property(script, ({ lines, unclosed, meta, indent, eol, lastBreak }) => {
         let body = `INT. ROOM - DAY\n\n${lines.join('\n')}\n`;
         if (unclosed) body += '\n/* never closed\nmore words\n';
-        const source = meta ? `${body}\n${META}` : body;
+        body = body.replaceAll('\n', eol);
+        const block = `${indent}/* drafter${eol}{"v":1}${eol}*/${lastBreak ? eol : ''}`;
+        const source = meta ? `${body}${eol}${block}` : body;
         const doc = parse(source);
         // Where the script ends: before the metadata block and the blank lines before it.
         const limit = meta ? body.trimEnd().length : source.length;

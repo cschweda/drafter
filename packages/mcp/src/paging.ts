@@ -104,3 +104,33 @@ export function partsOf(text: string, budget: number): string[] {
   if (partStart < text.length || parts.length === 0) parts.push(text.slice(partStart));
   return parts;
 }
+
+/**
+ * `text` whole when its JSON-escaped length is at most `max`; else its start, cut between code
+ * points (never inside a surrogate pair) so that it is, and `cut: true`.
+ */
+export function clipText(text: string, max: number): { text: string; cut: boolean } {
+  let cost = 0;
+  let i = 0;
+  while (i < text.length) {
+    const code = text.codePointAt(i) as number;
+    const next = cost + escapedLength(code);
+    if (next > max) return { text: text.slice(0, i), cut: true };
+    cost = next;
+    i += code > 0xffff ? 2 : 1;
+  }
+  return { text, cut: false };
+}
+
+/** Items from `start`, whole, while their JSON array stays within `room`: possibly none. */
+export function fitting<T>(items: readonly T[], room: number): T[] {
+  const kept: T[] = [];
+  let used = 2;
+  for (const item of items) {
+    const cost = itemCost(item);
+    if (used + cost - 1 > room) break;
+    kept.push(item);
+    used += cost;
+  }
+  return kept;
+}

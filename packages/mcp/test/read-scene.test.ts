@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ABOUT, MAX_ANSWER_CHARS } from '../src/envelope';
+import { __setBudgetForTests } from '../src/paging';
 import { answerOf, type Connected, connect, refusalOf } from './connect';
 import { EPISODE_101, EPISODE_102, makeLibrary } from './library';
 import { put, tempFolder } from './temp';
@@ -27,6 +28,7 @@ interface Read {
 
 let open: Connected | undefined;
 afterEach(async () => {
+  __setBudgetForTests(undefined);
   await open?.close();
   open = undefined;
 });
@@ -187,5 +189,25 @@ describe('read_scene', () => {
     const words = long.split(/\s+/).length;
     expect(words).toBeGreaterThan(100_000);
     expect(parts.join('')).toBe(`INT. KITCHEN - NIGHT\n\n${long}`);
+  });
+
+  it('a cursor for a part that no longer exists starts again', async () => {
+    const dir = tempFolder();
+    const long = Array.from({ length: 400 }, (_, i) => `Static, and then line ${i}.`).join('\n');
+    put(join(dir, 'Lib', 'long.fountain'), `INT. KITCHEN - NIGHT\n\n${long}\n`);
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    __setBudgetForTests(2_000);
+    let page = await read({ script: 'Lib/long.fountain', scene: '1' });
+    let cursor = page.next;
+    for (let i = 0; i < 4 && cursor; i++) {
+      page = await read({ script: 'Lib/long.fountain', scene: '1', cursor });
+      cursor = page.next;
+    }
+    expect(page.scenes[0]?.part).toBe(5);
+    // A bigger page: the scene now comes in fewer parts, and part 6 isn't one.
+    __setBudgetForTests(8_000);
+    const again = await read({ script: 'Lib/long.fountain', scene: '1', cursor });
+    expect(again.restarted).toBe(true);
+    expect(again.scenes[0]?.part).toBe(1);
   });
 });

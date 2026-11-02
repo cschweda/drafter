@@ -326,6 +326,52 @@ describe('script_overview', () => {
     expect(pages).toBeGreaterThan(3);
   });
 
+  it('a huge synopsis, heading, and title page are cut, and every page stays under the cap', async () => {
+    const dir = tempFolder();
+    const big = (word: string, n: number) => Array.from({ length: n }, () => word).join(' ');
+    const scenes = Array.from(
+      { length: 200 },
+      (_, i) =>
+        `INT. ${big('HALL', 400)} ${i} - DAY\n\n= ${big('synopsis', i === 0 ? 12_000 : 300)}\n\n${big('JUNE', 1)}\nHello.\n`,
+    ).join('\n');
+    put(
+      join(dir, 'Lib', 'huge.fountain'),
+      `Title: ${big('Signal', 10_000)}\nAuthor: ${big('Writer', 10_000)}\nDraft date: ${big('Today', 10_000)}\n\n# ${big('Act', 3_000)}\n\n= ${big('act', 20_000)}\n\n${scenes}`,
+    );
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    let cursor: string | undefined;
+    let total = 0;
+    let pages = 0;
+    do {
+      const result = await open.call('script_overview', {
+        script: 'Lib/huge.fountain',
+        ...(cursor ? { cursor } : {}),
+      });
+      expect((result.content[0] as { text: string }).text.length).toBeLessThanOrEqual(
+        MAX_ANSWER_CHARS,
+      );
+      const page = answerOf<
+        Overview & {
+          title_page_cut?: true;
+          acts: Array<{ synopsis_cut?: true }>;
+          scenes: Array<Scene & { synopsis_cut?: true; heading_cut?: true }>;
+        }
+      >(result);
+      expect(page.title_page_cut).toBe(true);
+      expect(page.title_page.Title?.startsWith('Signal Signal')).toBe(true);
+      expect(page.acts[0]?.synopsis_cut).toBe(true);
+      for (const scene of page.scenes) {
+        expect(scene.synopsis_cut).toBe(true);
+        expect(scene.synopsis?.startsWith('synopsis synopsis')).toBe(true);
+        expect(scene.heading_cut).toBe(true);
+      }
+      total += page.scenes.length;
+      cursor = page.next;
+      pages++;
+    } while (cursor && pages < 200);
+    expect(total).toBe(200);
+  });
+
   it('a stage play’s scenes and acts', async () => {
     const { plays } = makeLibrary(tempFolder());
     const got = await overview([plays], { script: 'Plays/The Long Watch.fountain' });

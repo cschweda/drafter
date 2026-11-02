@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { MAX_ANSWER_CHARS } from '../src/envelope';
 import { answerOf, type Connected, connect, refusalOf } from './connect';
 import { EPISODE_101, makeLibrary } from './library';
 import { put, tempFolder } from './temp';
@@ -171,5 +172,104 @@ describe('character_lines', () => {
       }),
     );
     expect(body.error).toMatch(/document/);
+  });
+});
+
+describe('character_lines in parts and around notes', () => {
+  it('a speech too long for a page comes in parts, each under the cap, and they rejoin', async () => {
+    const dir = tempFolder();
+    const line = 'June reads the log aloud, every entry, in the same patient voice. ';
+    const long = Array.from({ length: 8_000 }, (_, i) => `${line}Entry ${i}.`).join('\n');
+    expect(long.split(/\s+/).length).toBeGreaterThan(100_000);
+    put(
+      join(dir, 'Lib', 'log.fountain'),
+      `INT. KITCHEN - NIGHT\n\nJUNE\n(reading)\n${long}\n\nELI\nGran?\n\nJUNE\nNearly done.\n`,
+    );
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    const rebuilt: Array<{ kind: string; text: string }> = [];
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    let pages = 0;
+    do {
+      const result = await open.call('character_lines', {
+        script: 'Lib/log.fountain',
+        character: 'JUNE',
+        ...(cursor ? { cursor } : {}),
+      });
+      expect((result.content[0] as { text: string }).text.length).toBeLessThanOrEqual(
+        MAX_ANSWER_CHARS,
+      );
+      const page = answerOf<Lines & { speeches: Array<{ part?: number; parts?: number }> }>(result);
+      for (const speech of page.speeches) {
+        if (speech.parts !== undefined) {
+          seen.push(`${speech.part}/${speech.parts}`);
+          for (const each of speech.lines as Array<{
+            kind: string;
+            text: string;
+            continues?: true;
+          }>) {
+            const last = rebuilt.at(-1);
+            if (each.continues && last) last.text += each.text;
+            else rebuilt.push({ kind: each.kind, text: each.text });
+          }
+        } else {
+          expect(speech.lines).toEqual([{ kind: 'dialogue', text: 'Nearly done.' }]);
+        }
+      }
+      cursor = page.next;
+      pages++;
+    } while (cursor && pages < 100);
+    expect(seen.length).toBeGreaterThan(1);
+    expect(seen.at(-1)).toBe(`${seen.length}/${seen.length}`);
+    expect(rebuilt).toEqual([
+      { kind: 'parenthetical', text: '(reading)' },
+      { kind: 'dialogue', text: long },
+    ]);
+  });
+
+  it('a note between a cue’s lines is counted when left out and shown when included', async () => {
+    const dir = tempFolder();
+    put(
+      join(dir, 'Lib', 'aside.fountain'),
+      'INT. KITCHEN - NIGHT\n\nJUNE\n(beat)\n[[an aside]]\nHello.\n/* a cut line */\nGoodbye.\n',
+    );
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    const plain = await lines({ script: 'Lib/aside.fountain', character: 'JUNE' });
+    expect(plain.left_out).toEqual({ notes: 1, boneyard: 1 });
+    expect(JSON.stringify(plain.speeches)).not.toContain('aside');
+    expect(JSON.stringify(plain.speeches)).toContain('Goodbye.');
+    const shown = await lines({
+      script: 'Lib/aside.fountain',
+      character: 'JUNE',
+      include: ['notes', 'boneyard'],
+    });
+    expect(shown.left_out).toEqual({ notes: 0, boneyard: 0 });
+    const text = JSON.stringify(shown.speeches);
+    expect(text).toContain('[[an aside]]');
+    expect(text).toContain('/* a cut line */');
+  });
+
+  it('a note inside a heading or a cue never shows in names or headings', async () => {
+    const dir = tempFolder();
+    put(
+      join(dir, 'Lib', 'marked.fountain'),
+      'INT. HOUSE [[secret-one]] - DAY /* bone-two */\n\nJUNE [[secret-three]]\nHi.\n\nELI /* bone-four */\nYo.\n',
+    );
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    const texts = [
+      (await open.call('script_overview', { script: 'Lib/marked.fountain' })).content,
+      (await open.call('read_scene', { script: 'Lib/marked.fountain', scene: '1' })).content,
+      (await open.call('character_lines', { script: 'Lib/marked.fountain', character: 'eli' }))
+        .content,
+      (await open.call('character_lines', { script: 'Lib/marked.fountain', character: 'Nobody' }))
+        .content,
+    ].map((content) => (content[0] as { text: string }).text);
+    for (const text of texts)
+      for (const secret of ['secret-one', 'bone-two', 'secret-three', 'bone-four'])
+        expect(text).not.toContain(secret);
+    const overview = JSON.parse(texts[0] as string);
+    expect(overview.scenes[0].heading).toMatch(/^INT\. HOUSE +- DAY$/);
+    expect(overview.scenes[0].who.sort()).toEqual(['ELI', 'JUNE']);
+    expect(JSON.parse(texts[3] as string).names.sort()).toEqual(['ELI', 'JUNE']);
   });
 });
