@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Drafter for Claude** begins: a new package, `drafter-mcp`, with its command line (`--folder`, `--notes`, `--boneyard`, `--words-per-minute`, `--version`, `--help`) and the checks that keep it inside the folders the writer names. Paths start with a folder’s name, `..`, full paths, and links that lead out are refused, folder walks never follow a link to a folder and stop at 6 levels and 500 files, and a test makes sure its code never writes, starts a program, or connects anywhere. Nothing runs yet for the writer.
+
 ### Changed
 
 - The command line's hardened file reader and the desktop app's Windows path rules now live in `@drafter/archive/node`, a Node-only part of the archive package, so Drafter for Claude can share them. The reader can also refuse a link in the last part of a path and a file swapped after it was checked. Nothing the CLI prints changes.
