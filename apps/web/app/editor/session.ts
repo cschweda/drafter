@@ -21,6 +21,7 @@ import {
   readOnlyExtension,
   relint,
 } from './extensions';
+import { REVEAL_MS, revealLine } from './reveal-line';
 import { SAMPLE_SCREENPLAY } from './samples';
 import { templateIdOf } from './template';
 
@@ -85,6 +86,11 @@ export interface EditorSession {
    * phone's one pane shows the Source, so the editor has focus there).
    */
   goto(offset: number, options?: { select?: Span; keepFocus?: boolean }): void;
+  /**
+   * Puts the cursor at `offset` and scrolls the Source to it, line numbers shown or not, leaving
+   * focus where it is and a phone on the pane it shows: a click on a note shows where it is.
+   */
+  reveal(offset: number): void;
 }
 
 let session: EditorSession | undefined;
@@ -271,6 +277,17 @@ function create(): EditorSession {
     });
   }
 
+  let revealTimer: ReturnType<typeof setTimeout> | undefined;
+  function reveal(offset: number) {
+    const at = Math.min(view.state.doc.length, Math.max(0, offset));
+    view.dispatch({
+      selection: { anchor: at },
+      effects: [EditorView.scrollIntoView(at, { y: 'center' }), revealLine.of(at)],
+    });
+    clearTimeout(revealTimer);
+    revealTimer = setTimeout(() => view.dispatch({ effects: revealLine.of(null) }), REVEAL_MS);
+  }
+
   return {
     view,
     doc,
@@ -288,6 +305,7 @@ function create(): EditorSession {
     onChange,
     onEdit,
     goto,
+    reveal,
   };
 }
 

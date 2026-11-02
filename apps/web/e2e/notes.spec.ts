@@ -386,6 +386,30 @@ test.describe('the Notes tab', () => {
     );
   });
 
+  test('a click on a note scrolls the Source to it, and focus stays on the list', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'the source and the list side by side');
+    // 300 lines of action above the note, so its line starts far out of view.
+    const filler = Array.from({ length: 300 }, (_, i) => `Ann paces, step ${i + 1}.\n`).join('\n');
+    await start(page);
+    await setText(page, `INT. HALL - DAY\n\n${filler}\nBob runs. [[Check the time]]`);
+    // The Source at its top, the note's line far below.
+    await editor(page).press('ControlOrMeta+Home');
+    await showNotes(page);
+    const line = page.locator('.cm-line', { hasText: 'Bob runs.' });
+    await expect(line).not.toBeInViewport();
+    const note = row(page, /^Check the time, open/);
+    await note.click();
+    await expect(line).toBeInViewport();
+    // Marked for a moment, so the eye finds it with line numbers off; then the mark goes.
+    await expect(line).toHaveClass(/cm-revealed/);
+    await expect(line).not.toHaveClass(/cm-revealed/, { timeout: 5000 });
+    await expect(note).toBeFocused();
+    await expect(note).toHaveAttribute('aria-selected', 'true');
+  });
+
   test('finds the note after the script grows a long way above it', async ({ page, isMobile }) => {
     test.skip(!!isMobile, 'the source and the list side by side');
     await start(page);

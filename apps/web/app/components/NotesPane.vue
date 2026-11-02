@@ -223,6 +223,12 @@ function go(item: Item) {
   editor.goto(item.entry.span.from);
 }
 
+/** A click on a row shows the note in the Source, scrolled to its line; focus stays on the list. */
+function show(item: Item) {
+  setActive(item);
+  editor.reveal(item.entry.span.from);
+}
+
 // Each action is on the note the row was drawn for (`item.entry`), found again by `notes.act`: if it
 // changed since, nothing changes and the live region says so.
 
@@ -715,7 +721,7 @@ watch(
               @resolve="resolve(item)"
               @keydown="onKeydown($event, item)"
               @focus="setActive(item)"
-              @click="setActive(item)"
+              @click="show(item)"
               @dblclick="go(item)"
             />
           </div>
@@ -745,7 +751,7 @@ watch(
             @resolve="resolve(item)"
             @keydown="onKeydown($event, item)"
             @focus="setActive(item)"
-            @click="setActive(item)"
+            @click="show(item)"
             @dblclick="go(item)"
           />
         </template>

@@ -26,6 +26,7 @@ import type { Template } from '@drafter/templates';
 import { commandById } from '../commands/registry';
 import type { DocumentKind } from '../markdown/kind';
 import { onSpellContextMenu } from '../spell/menu';
+import { revealedLine } from './reveal-line';
 import { theme } from './theme';
 import { typewriterScrolling } from './typewriter';
 
@@ -227,6 +228,7 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
     drawSelection(),
     // The current line, which carries the bar that shows the editor has focus (editor/theme.ts).
     highlightActiveLine(),
+    revealedLine,
     foldGutter(),
     search(),
     EditorView.lineWrapping,

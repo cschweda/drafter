@@ -27,6 +27,19 @@ export const theme = EditorView.theme({
     boxShadow: 'inset 3px 0 0 var(--focus)',
     backgroundColor: 'var(--current-line)',
   },
+  // The line a click on a note showed (reveal-line.ts), for a moment; no fade when the writer asks
+  // for no motion, and an outline where colours are forced.
+  '.cm-revealed': {
+    boxShadow: 'inset 3px 0 0 var(--focus)',
+    backgroundColor: 'var(--current-line)',
+    animation: 'cm-revealed 1.6s ease-out',
+  },
+  '@keyframes cm-revealed': {
+    from: { backgroundColor: 'color-mix(in srgb, var(--focus) 35%, transparent)' },
+    to: { backgroundColor: 'var(--current-line)' },
+  },
+  '@media (prefers-reduced-motion: reduce)': { '.cm-revealed': { animation: 'none' } },
+  '@media (forced-colors: active)': { '.cm-revealed': { outline: '2px solid Highlight' } },
   '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'calc(21px * var(--text-scale, 1))' },
   '.cm-content': { padding: '12px 0', caretColor: 'var(--focus)' },
   '.cm-line': { padding: '0 16px 0 8px' },
