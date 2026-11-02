@@ -46,7 +46,7 @@ The design leans on what the editor already does, so Classic Mode is a thin laye
 - **Completion.** `complete.ts` already offers names (nearest cue above the cursor first), places, times, transitions, extensions, and section titles.
 - **What counts as a mark.** `highlight.ts` already works out every marker character on a line and gives it `cm-f-marker`.
 - **The element bar and the announcer.** `ElementBar.vue` and `ElementAnnouncer.vue` already name the element the cursor is in.
-- **An escape from Tab.** CodeMirror 6.43 (`InputState.keydown`) lets Tab through to the browser for two seconds after Escape, and `defaultKeymap` has `toggleTabFocusMode` (Ctrl+M, or Shift+Alt+M on a Mac). `F6` and `Mod+K` already leave the editor.
+- **An escape from Tab.** CodeMirror 6.43 (`InputState.keydown`) lets Tab through to the browser for two seconds after an Escape that reaches it, and `defaultKeymap` has Ctrl+M (Shift+Alt+M on a Mac), which turns that on until it is turned off. `F6` and `Mod+K` already leave the editor.
 
 What's new: an idea of the element the cursor is in on an **empty** line (§5), the Enter and Tab rules (§6), hiding marks (§8), and the mode switch (§3).
 
@@ -88,7 +88,7 @@ A new compartment, `writingMode` in `extensions.ts`, holds `classic()` or nothin
 - The text, the undo history, the selection, and the Script pane are untouched, because a transaction with no changes can't alter them.
 - Undo works across a switch.
 - The switch keeps the cursor's line where it is on the screen (`scrollSnapshot` is by line) and returns focus to the editor.
-- `load` and `setKind` start the compartments over, so `applyEditorSettings` sets it again, with the document's kind: Markdown gets nothing.
+- `load` starts the compartments over, so `applyEditorSettings` sets this one again, with the document's kind: Markdown gets nothing. `setKind` keeps the state and doesn't reset compartments, so it needs its own `writingMode.reconfigure` in the same dispatch as `language`.
 - A polite notice says "Classic Mode. Enter and Tab move between elements." or "Fountain Mode. You type the marks." (`sayElement`).
 
 The same extension object is reused, as `TYPEWRITER` is, so changing another setting doesn't rebuild it.
@@ -113,9 +113,10 @@ Exactly what Classic Mode may put in the text:
 | ` - ` and a time | When the writer accepts a time of day (§7) |
 | Two spaces | On an empty line inside a speech, made with Shift+Enter: that is Fountain's way to keep a speech together (§6.4) |
 | The words of an accepted suggestion | When the writer accepts one |
+| Capitals on a heading's prefix | When `int.`, `ext.`, `est.`, `i/e`, or `int./ext.` typed on the line in this stay completes a heading, the letters of the prefix already typed become capitals, in the same transaction (§4.2). The writer's words don't otherwise change |
 | A forcing mark | Only as §4.2 says |
 
-Never written: indent spaces, tabs, a mode flag, a metadata field, a change to the case of existing text, or any change to a line the writer isn't on.
+Never written: indent spaces, tabs, a mode flag, a metadata field, any other change to the case of existing text, or any change to a line the writer isn't on.
 
 Everything uses `state.lineBreak`, so a file with CRLF stays CRLF, and a byte-order mark stays, as the element commands already do (`BOM`, `here`).
 
@@ -129,17 +130,27 @@ Each line in Classic Mode has an element (§5). After every keystroke on the lin
 | Scene heading | `INT. DINER - DAY` | Scene heading | as typed, no mark |
 | Character (a pasted or lower-case name) | `june` | Action | `@june` |
 | Character, a name in a script with no capitals | `李明` | Action | `@李明` |
-| Action (chosen) | `INT. BY THE DOOR` | Scene heading | `!INT. BY THE DOOR` |
-| Action (chosen) | `CUT TO:` | Transition | `!CUT TO:` |
-| Action | `.45 in the drawer` | Scene heading | `!.45 in the drawer` |
+| Action (chosen, or a line returned to) | `INT. BY THE DOOR` | Scene heading | `!INT. BY THE DOOR` |
+| Action (chosen, or a line returned to) | `CUT TO:` | Transition | `!CUT TO:` |
+| Action, any | `.45 in the drawer` | Scene heading | `!.45 in the drawer` |
+| Action, any | `.FLASHBACK` | Scene heading | `!.FLASHBACK` |
 | Action | `#1 fan`, `@home`, `= sign` | Section, cue, synopsis | `!#1 fan`, `!@home`, `!= sign` |
-| Action, a second line in a block (Shift+Enter) | `BANG` then `The door flies open.` | Character and Dialogue | `!BANG` on the first line |
+| Action, Shift+Enter pressed at the end of `BANG` | `BANG` | Character, once a line follows | `!BANG`, written by the Shift+Enter, while the cursor is still on that line |
 | Transition | `FADE OUT.` | Action | `>FADE OUT.` |
 | Transition | `CUT TO:` | Transition | as typed, no mark |
 | Stage direction | `SMASH CUT TO:` | A transition, disabled in a play | `!SMASH CUT TO:` |
 | Lyric, centered, a play's Act and Scene | anything | Needs its mark always | `~`, `>…<`, `#`, `##` |
 
-**The element a mark is judged against.** Action reached with no choice, by Enter or on a fresh line, is **soft**: if the text takes the shape of a scene heading or a transition, the line becomes that, which is what the parser reads, and no mark is needed. That's how "type INT." works in the agreed flow. Every other element is **firm**, including an Action the writer chose in the chooser (§9.1), the element bar, or with Tab, and it keeps its element with a mark. **Call: soft Action only in a template with headings.** In a stage play a stage direction is firm, since headings and transitions don't exist there.
+**A line in Action stays Action.** **Call:** Character is reached by Tab or the chooser, never by typing capitals. `BANG` on an Action line stays Action and keeps its indent while it's typed, Enter gives a blank line and a new Action line, and no mark is needed, as a blank line follows it. A line that would read as a cue only because of what comes after it gets its `!` at the moment the writer makes that happen, on the line they are on: the Shift+Enter in the table, or a keystroke on a line that already has text directly under it. So a mark is never written on a line the cursor has left, and §4.1 needs no exception.
+
+**Soft and firm.** The only thing that turns an Action line into something else is a heading's prefix or a transition's shape, and only while the line is **soft**.
+
+- **Soft** means: the line was empty when the cursor arrived, it wasn't chosen, and the cursor hasn't left it since. It's a state of this stay, held in `classicLine` while the line is being typed, never worked out from the text.
+- **On a soft line,** a heading prefix (`INT.`, `ext `, and the rest, as the parser's `HEADING` reads them) makes the line a Scene heading, with no mark, and that's how "type INT." works in the agreed flow. A line of capitals ending in `TO:` makes it a Transition, with no mark.
+- **Everything else is firm,** and keeps its element with a mark: an Action the writer chose in the chooser (§9.1), the element bar, or with Tab; every other element; and **any line with text the cursor returns to**, which is plain Action however it began.
+- **A line starting with a mark's character is never a shape.** `.45 in the drawer` and `.FLASHBACK` typed on Action, soft or firm, are the writer's words: a writer in Classic Mode isn't typing Fountain's marks. Each gets `!` at its second character, when the parser would first read a forced heading. For a heading that names no place, a writer chooses Scene heading and types `FLASHBACK`, which writes `.FLASHBACK` with the `.` hidden. A `.` typed in a chosen Scene heading is the same mark.
+
+**Call: soft Action only in a template with headings.** In a stage play a stage direction is firm, since headings and transitions don't exist there.
 
 **A mark comes off too.** A mark Classic Mode added during this stay on the line is taken off if it stops being needed: `.INT`, then `.INT.`, then `INT. ` as the prefix completes, in the same way `dropBarCueMark` takes off an `@`. Classic Mode remembers which marks it added, only while the cursor stays on the line.
 
@@ -151,11 +162,11 @@ Each line in Classic Mode has an element (§5). After every keystroke on the lin
 
 ### 4.3 A name with no speech
 
-`JUNE` typed and left with nothing under it is action to the parser (rule 12 wants a line under a cue). **Call: no mark.** The left pane shows it as a Character, as the element bar already does (`readsAsName`), and the Script pane shows what the parser reads, until there's a speech. An `@` here would be added and removed every time a writer paused, and a name alone isn't a finished element.
+`JUNE` typed and left with nothing under it is action to the parser (rule 12 wants a line under a cue). **Call: no mark.** While the cursor is on the name, or on the pending Dialogue line just under it, the left pane draws a Character (§8.2). Once the cursor goes elsewhere both panes draw what the parser reads, Action, and agree. An `@` here would be added and removed every time a writer paused, and a name alone isn't a finished element.
 
 ### 4.4 An empty line left behind
 
-Enter makes an empty line for what comes next. If the writer goes elsewhere without typing, the breaks Classic Mode made for it are taken away in the same transaction as the move, the same pattern as `dropBarCueMark`. So wandering leaves nothing behind. It applies only to the empty line made in this stay, never to blank lines that were already in the file. At the end of the file, and on an edit made by the app, it does nothing.
+Enter makes an empty line for what comes next. If the writer goes elsewhere without typing, the breaks Classic Mode made for it are taken away in the same transaction as the move, the same pattern as `dropBarCueMark`. An empty `()` that Tab made is taken away the same way when the cursor leaves it, with its line. So wandering leaves nothing behind. It applies only to the empty line or `()` made in this stay, never to blank lines that were already in the file. At the end of the file, and on an edit made by the app, it does nothing.
 
 ### 4.5 Marks already in a file
 
@@ -165,7 +176,7 @@ A script full of marks opens in Classic Mode with nothing changed and nothing wr
 
 **The elements** are the ones `ELEMENT_NAMES` and the element bar already have. In a screenplay: Scene heading, Action, Character, Dialogue, Parenthetical, Transition, and in the chooser's second group Centered, Lyric, Section, Synopsis, Page break. In a stage play, following `structureOf`: Act, Scene, Stage direction, Character, Dialogue, Parenthetical, and Centered, Lyric, Synopsis, Page break. A stage play has no headings or transitions (its role map disables them).
 
-**A line with text** has the element the parser gives it, read from `parsedDoc`, plus `readsAsName`, plus the element the line was given if the cursor is on it. Roles for a play come from `resolveRole`, as the bar's do.
+**A line with text** has the element the parser gives it, read from `parsedDoc`, except the line the cursor is on, which has the element stored for it, and a name with a pending Dialogue under it, which stays a Character. Opened files have what the parser says. Roles for a play come from `resolveRole`, as the bar's do.
 
 **An empty line** has a **pending element**: what the next thing typed will be. The file has nothing to say about it, so it's worked out:
 
@@ -173,7 +184,7 @@ A script full of marks opens in Classic Mode with nothing changed and nothing wr
 - Otherwise, if the nearest element above is in a speech: **Character**.
 - Otherwise: **Action** (soft), or Stage direction in a play.
 
-A state field, `classicLine`, holds only what can't be worked out: a pending element the writer **chose** (Tab, the chooser, a bar button), the marks added this stay, and the empty line made this stay. It's never saved. **Call: work the pending element out, and store only the exceptions.** That way a click on an empty line, an undo, or a newly opened script all behave the same, and there's little state to go wrong.
+A state field, `classicLine`, holds only what can't be worked out: the element of the line being typed, whether it's soft (§4.2), a pending element the writer **chose** (Tab, the chooser, a bar button), the marks added this stay, the empty line or `()` made this stay, and whether autofill was dismissed there (§7.3). It's never saved. **Call: work the pending element out, and store only the exceptions.** That way a click on an empty line, an undo, or a newly opened script all behave the same, and there's little state to go wrong.
 
 **Where a scene heading comes from.** Enter never gives a pending Scene heading. A writer types `INT.` on an Action line, or picks it in the chooser. **Call:** the agreed flow starts with "type INT.", and with a firm pending heading after a transition or at the top of a script, a writer who starts with a line of action would get it in capitals.
 
@@ -185,7 +196,7 @@ A state field, `classicLine`, holds only what can't be worked out: a pending ele
 
 Fountain Mode's keys in `bindings.ts` stay. Classic Mode's keymap comes first and returns false where it doesn't act.
 
-**Call: Classic's keys sit at `Prec.highest`, ahead of `language` in the extension order,** because CodeMirror's completion keys are at that level too, and Tab must be Classic Mode's before Fountain's Tab runs.
+**Call: Classic's keys sit at `Prec.highest`, ahead of `language` in the extension order,** because CodeMirror's completion keys are at that level too, inside `fountainCompletion`, which is inside `language`, and Tab must be Classic Mode's before Fountain's Tab runs. So Classic's keys run first, and **Classic's Enter returns false while a completion list is open,** which leaves Enter to CodeMirror's `acceptCompletion`. What happens after accepting belongs to the option (§7.3).
 
 Every row below is one transaction, one undo step, with the user event `input`, which `command()` in `keymap.ts` already gives. None acts in a read-only editor, on the title page, or in a note or boneyard (`blocked`), so Tab there is given back and moves focus, as it does today.
 
@@ -287,12 +298,13 @@ Names and places are read from `parsedDoc` without the cursor's own line (`witho
 ### 7.3 Accepting and dismissing
 
 - **Enter or Tab** accepts the highlighted suggestion. Up and Down move in the list. CodeMirror binds Enter already; Classic Mode adds Tab.
+- **Fast typing gets the same answer.** `JU` and Tab must give `JUNE`, even when the list hasn't drawn yet: CodeMirror waits `activateOnTypingDelay` (100 ms) before it opens one. So on Tab or Enter, with no list open, where a list would be offered, Classic Mode asks the same source for the same ranked options and accepts the top one itself, in the key's own transaction. With no match it just moves on. Fountain Mode's delays, and CodeMirror's settings, don't change. **Autofill dismissed with Escape stays dismissed** until the next letter, so a writer who wants `JO` can have it.
 - **On a name:** accepting goes straight to Dialogue, in one transaction and one undo step ("Tab or Enter accepts and goes to Dialogue").
 - **On a place:** accepting writes the place, and the list of times opens. **Call: the ` - ` isn't written until a time is accepted.** The times list is offered at the end of the line, and accepting `NIGHT` writes ` - NIGHT`. Escape leaves `INT. KITCHEN` with no dash trailing. Typing ` - ` by hand also works, as today.
 - **On a time:** accepting goes straight to Action. There's nothing left to do on the line, so a second Enter would be wasted.
 - **On a prefix:** accepting writes `INT. ` and offers places.
 - **On an extension or transition:** accepting writes it and stays on the line, for an extension, or goes to Action, for a transition.
-- **Escape** closes the list and writes nothing. The next Enter or Tab acts as in §6.
+- **Escape** closes the list and writes nothing. The next Enter or Tab acts as in §6, with the typed text as it stands. With a list open, that Escape is the list's, and it doesn't arm Tab (§12).
 - **If the typed text is already a label,** there's no list, as today (`optionsAfter`): `JO` with `JOHN` in the script offers `JOHN`, and a writer who wants `JO` presses Escape. `JOHN` typed in full goes on with Enter.
 - Typing goes on narrowing the list. A click accepts. Left, Right, or moving away closes it.
 
@@ -306,7 +318,8 @@ CodeMirror already gives the list `role="listbox"`, and the editor `aria-autocom
 
 **Call: decorations only, never a change to the text.** `Decoration.replace` takes a mark out of the drawn line and the same set goes to `EditorView.atomicRanges`, so the cursor steps over it as one position. The marks aren't in the DOM, so a screen reader doesn't read them, and nothing about them is copied into the document. Copying still gives the true text with its marks (§11).
 
-- **The set:** what `decorateLine` already finds as `cm-f-marker`, split out so that highlighting and hiding read one list, plus the opening and closing of notes and boneyard. Hiding is done for the visible ranges only, as highlighting is.
+- **The set:** what `decorateLine` already finds as `cm-f-marker`, plus the opening and closing of notes and boneyard. `cm-f-marker` is split so highlighting and hiding read one list, with scene numbers as a kind of their own that isn't hidden (§8.3). Hiding is done for the visible ranges only, as highlighting is.
+- **The metadata block is the exception.** It can span lines, and CodeMirror refuses a multi-line or block replace from a view plugin, so a small `StateField` provides that one decoration. Everything else stays in the view plugin.
 - **The cursor never sits before a leading hidden mark.** `classicCaret` (§6.4) moves it after, so typing can't land in front of a `@` and turn it into text.
 - **A mark that doesn't pair isn't hidden.** An unclosed `/*`, a stray `**`: the parser doesn't read these as marks, and Classic Mode shows what the parser reads, as text. **Call:** better a visible oddity the writer can fix than hidden text that changes the page, and an unclosed boneyard must be seen or the rest of the script looks cut for no reason.
 - **Search:** finds the true text, marks included. A match on a hidden mark selects it, with nothing to see. **Call:** a small cost, left as it is for this release.
@@ -327,6 +340,7 @@ CodeMirror already gives the list `role="listbox"`, and the editor `aria-autocom
 | Centered | centered | centered |
 | Act, Scene | | centered, Act in capitals on the screen |
 
+- **What is drawn:** the stored element on the line the cursor is on (§5), and what the parser reads everywhere else. **Call:** so typing `BANG` on Action never jumps to the Character indent, and an opened file draws exactly what the parser says.
 - **How:** a line decoration per element, `cm-c-character` and so on, with `padding-left` and a `max-width` in `ch`, set from the template as CSS variables on the editor. No character is added to the text.
 - **Narrow panes.** The indents shrink with the pane, `min(<indent>ch, <share of the width>)`, so nothing scrolls sideways, down to a 320px phone (WCAG 1.4.10). **Call:** the left pane's lines match the page's when the pane is at least 60 characters wide, and aren't promised to when it's narrower. The Script pane stays the true page.
 - **Blank lines stay.** They're the space on the page, so the left pane reads like one. A second blank before a scene heading isn't drawn; a small margin stands for it.
@@ -343,13 +357,13 @@ CodeMirror already gives the list `role="listbox"`, and the editor `aria-autocom
 | **Setup and payoff** `[[Setup: x]]` | The same; `Setup:` stays visible, since it's the note's words | The same |
 | **Boneyard** `/* */` | Delimiters hidden, struck through, as now | The same as a note |
 | **Unclosed boneyard** | The opening `/*` stays visible (§8.1) | The same |
-| **Metadata block** `/* drafter … */` | Not shown at all. The cursor stops before it. It's the app's data, and a Classic writer has no use for it | Not reachable. **Call:** the writer's new text always lands above it, so the block stays last, which `readMeta` needs |
+| **Metadata block** `/* drafter … */` | Not shown at all, through its `StateField` (§8.1). The cursor stops before it. It's the app's data, and a Classic writer has no use for it | Not reachable. **Call:** the writer's new text always lands above it, so the block stays last, which `readMeta` needs |
 | **Section** `#` | `#` hidden; depth shown by size and weight | Chooser's second group; Enter goes to Action |
 | **Synopsis** `=` | `=` hidden, `--muted` italics | Chooser's second group; Enter goes to Action |
 | **Page break** `===` | A thin rule with the words "Page break". Atomic, so one Backspace removes it | |
 | **Centered** `> <` | Marks hidden, centered | |
 | **Lyric** `~` | `~` hidden, italics | |
-| **Scene number** `#7A#` | `#`s hidden; the number in `--muted` at the line's end, editable | |
+| **Scene number** `#12#` | Stays visible in `--muted`, as written, and editable. It's a production number the writer needs to see, and it isn't in the hidden set (§8.1) | |
 | **Dual dialogue** `^` | `^` replaced by a small tag, "dual", on the name, not in the text. `Mod+Shift+D` toggles it | |
 | **Emphasis** `**`, `*`, `_` | Marks hidden; bold, italics, underline shown. The bar and palette add them | |
 | **Escapes** `\*` | The backslash hidden | |
@@ -381,7 +395,7 @@ The bar stays in both modes. In Classic Mode:
 
 ### 9.3 Teaching
 
-- **A first-run hint.** The first time Classic Mode is turned on, a small card under the top bar, which stays until dismissed: "Classic Mode. Press Enter and Tab to move through the script, and Enter on an empty line to choose an element. Your file stays Fountain. Press Esc, then Tab, to leave the text." with Got it and Learn more. It's stored as `classicHintSeen` in the settings, so it isn't shown again. It takes no focus, and it reaches a screen reader through a polite live region.
+- **A first-run hint.** The first time Classic Mode is turned on, a small card under the top bar, which stays until dismissed: "Classic Mode. Press Enter and Tab to move through the script, and Enter on an empty line to choose an element. Your file stays Fountain. To leave the text, press Esc, then Tab; if a list is open, press Esc twice." with Got it and Learn more. It's stored as `classicHintSeen` in the settings, so it isn't shown again. It takes no focus, and it reaches a screen reader through a polite live region.
 - **A key line in the status bar.** While the cursor is in Classic Mode, on a wide screen: "Enter: Character · Tab: Parenthetical". It changes with the element, never with each letter. **Call:** always on, in `--muted`. It's the quietest possible teacher, and it answers "what does Tab do here?" at the moment of asking. It isn't a live region, since the keys would talk over the writer; a screen reader gets it through the chip's description.
 - **The tour:** one step on the switch, with `data-tour="mode"`. **Call: `TOUR_VERSION` stays,** so people who've seen the tour don't see it again for one step. The What's new banner tells them.
 - **Guided starters** stay as they are. Their notes teach the element bar's buttons, which are still there.
@@ -426,12 +440,12 @@ This is the riskiest part of the design and is tested on a real Android phone (�
 Classic Mode meets WCAG 2.2 AA in both themes, and it's tested the way the rest of the app is (§15.4).
 
 - **Tab has an escape (WCAG 2.1.2).** Fountain Mode's rule is that a Tab with no meaning is given back. In Classic Mode Tab nearly always has a meaning, so a keyboard user needs a way out, and has four:
-  - **Esc, then Tab** (or Shift+Tab) moves focus within two seconds. This is CodeMirror's own behaviour. Esc also closes an open list, and it arms Tab in the same press.
-  - **Ctrl+M** (Shift+Alt+M on a Mac) turns Tab's focus mode on until it's turned off. The palette gets "Tab moves focus", the same command, for a writer who needs longer than two seconds. While it's on, the status bar says "Tab moves focus". Tab and Shift+Tab are given back, and Enter, the bar, and the element keys still work.
+  - **Esc, then Tab** (or Shift+Tab) moves focus within two seconds. This is CodeMirror's own behaviour. **With a list open, it's Esc, Esc, Tab:** the first Esc is taken by the list (CodeMirror's plugin handlers run first), and the second arms Tab. Classic Mode doesn't call `setTabFocusMode` to shorten this. **In focus mode** a plain Esc also leaves focus mode (`onEscape` in `pages/index.vue`, when nothing else used the key), so Tab then moves focus in the full layout.
+  - **Ctrl+M** (Shift+Alt+M on a Mac), CodeMirror's own key, makes Tab move focus until it's pressed again, for a writer who needs longer than two seconds. The help page lists it, and the §6 Tab keys don't run while it's on.
   - **F6** moves to the Inspector, on a wide screen and outside focus mode.
   - **`Mod+K`** opens the palette anywhere.
 
-  WCAG asks that a user be told when the way out isn't a plain Tab. **So the text box describes it:** `aria-describedby` on the editor gives "Press Escape, then Tab, to leave the text." in Classic Mode, and the first-run hint and help page say the same.
+  WCAG asks that a user be told when the way out isn't a plain Tab. **So the text box describes it:** `aria-describedby` on the editor gives "To leave the text, press Escape, then Tab. If a list is open, press Escape twice." in Classic Mode, and the first-run hint and help page say the same.
 - **The editor's name** is "Source, Classic Mode", so the mode is heard on entering it.
 - **The current element is announced.** `ElementAnnouncer.vue` reads `session.element`, not `cursor`, so it says a pending element where today a blank line says nothing. Every Enter and Tab says where it went, even Action to Action, by resetting the live region so that the same word is spoken again. An arrow onto another line speaks only when the element changes, as it does today, so reading isn't a stream of words.
 - **The chooser and the list** are `role="listbox"` with an active descendant, and they speak through the live region too (§7.4). Their open state is on the text box.
@@ -482,10 +496,12 @@ No new dependency. `@codemirror/autocomplete` and `@codemirror/view` are already
 ### 15.1 The byte promise
 
 - **A model test.** An oracle written apart from the code, `fountainOf(elements)`, turns a list of elements (kind and words) into canonical Fountain by the spec's rules. Fast-check generates element lists, a test drives the Classic commands key by key (Enter, Tab, typing, accepting), and the document must equal the oracle's output, byte for byte, and parse back to the same elements. Words come with the awkward starts: `.45`, `@home`, `#1`, `INT. `, all capitals, `CUT TO:`, `~`, no-case scripts, and emoji across the surrogate pair.
-- **A second property: Classic only adds what it may.** Any key sequence, on any script: the text afterwards, with the writer's inserted characters removed, differs from the text before only by the items in §4.1's table. A diff checker in the test enforces it.
+- **A second property: Classic only adds what it may.** Any key sequence, on any script: the text afterwards, with the writer's inserted characters removed, differs from the text before only by the items in §4.1's table. A diff checker in the test enforces it, and it allows one change to existing text: the letters of a heading prefix typed in this stay changing to capitals, and nothing else about them.
 - **Moving writes nothing.** On every script in `fixtures/classification`, the samples, and the generators: arrows, Home, End, `Mod+End`, clicks at random, and Page keys. The document is unchanged. **Tidying is the one allowed change,** and it only takes back what the same test made.
 - **Switching writes nothing.** Any state, any number of switches: `doc.eq`, no `docChanged` transaction, the selection the same, `undoDepth` the same.
-- **Undo.** After each key in any sequence, undo gives back the exact previous text, and redo the exact next. A keystroke and its mark are one step. Undo across a switch works.
+- **Undo.** The history groups a run of typing, so a step may hold several letters. **A letter and its mark are never split:** no undo or redo stops between them, or leaves a mark with no letter. Enter, Tab, and an accepted suggestion are a step each, and undoing one gives back the exact text before it, as does a test that types with spaced time, so that each letter is its own step. Undo across a switch works.
+- **Action stays Action.** Words in capitals on Action never become a cue, by any key sequence, and a line that the parser would read as a cue only because of the line below always has its `!`.
+- **Tidying.** An empty line or `()` made and left is gone; one that was in the file stays.
 - **Marks kept.** A script with a mark on every line, edited on one line, keeps every other line's bytes. Line endings: CRLF files stay CRLF. A byte-order mark stays.
 - **What Fountain Mode does.** The whole existing `cm-fountain` suite runs unchanged, with Classic Mode off, and proves Fountain Mode didn't move.
 
@@ -512,7 +528,9 @@ A new entry point, **`classic`**, in `fixtures/trap/entry-points.ts`: "A hostile
 - The switch: visible in the top bar at 1280, 1024, 800, and 320px; never folded; in focus mode; absent in Markdown.
 - A first visit is Fountain. A reload keeps the choice.
 - Settings, palette, and key all switch; the file doesn't change.
-- Esc then Tab, and Shift+Tab, leave the editor, with a list open too; Ctrl+M; F6.
+- Esc, Tab and Esc, Shift+Tab leave the editor; with a list open, one Esc doesn't and Esc, Esc, Tab does; in focus mode Esc also leaves focus mode; Ctrl+M; F6.
+- `JU` and Tab typed with no wait gives `JUNE` and Dialogue, with Enter too; a name with no match moves on; `JO` after Escape stays `JO`.
+- `int.` becomes `INT.`; `BANG` on Action stays at the Action indent, and Enter gives a new Action.
 - Added to `a11y.spec.ts`: axe with Classic Mode on, in dark and light, with the list, chooser, and hint open.
 - Added to `keyboard.spec.ts`: no trap, walked by Tab.
 - Added to `phone.spec.ts`: the Next button, the row, the chooser. `composition.spec.ts`: names and heading capitals after a composition; text not lost at Enter.
@@ -525,7 +543,7 @@ A real Android phone and an iPhone, an IME in Japanese, and NVDA and VoiceOver, 
 
 ## 16. Docs, What's new, the image
 
-- **A help page, "Classic Mode"** (`apps/web/app/pages/docs/classic-mode.vue`, in `HELP_PAGES`), prerendered and offline: what it is, in a sentence ("It isn't Fountain typing; it's what many script writers expect, and your file stays Fountain"); how to switch; the §6 tables in plain words, with the first-time flow; autofill; the chooser; leaving the text; phones; what's hidden and why it's safe; and "Is my file still Fountain? Yes." The trademark line, as the Drafter for Claude page has its own: Final Draft is a trademark of its owner, and Drafter isn't connected with it.
+- **A help page, "Classic Mode"** (`apps/web/app/pages/docs/classic-mode.vue`, in `HELP_PAGES`), prerendered and offline: what it is, in a sentence ("It isn't Fountain typing; it's what many script writers expect, and your file stays Fountain"); how to switch; the §6 tables in plain words, with the first-time flow; autofill; the chooser; leaving the text, in the §12 words, Esc twice with a list open; phones; what's hidden and why it's safe; and "Is my file still Fountain? Yes." The trademark line, as the Drafter for Claude page has its own: Final Draft is a trademark of its owner, and Drafter isn't connected with it.
 - **Keyboard shortcuts** (`docs/shortcuts.vue`): a Classic Mode section.
 - **The Fountain cheat sheet:** one line at the top: "Don't want to learn marks? Try Classic Mode."
 - **What is Drafter** and the tour's welcome: a sentence each. "Fountain-first" stays true, with Classic Mode beside it.
@@ -582,10 +600,10 @@ Built from the shared screenwriting convention (what comes after what on a page)
 3. **Markdown:** the switch is hidden, not greyed (§3.2).
 4. **Key:** `Mod+Alt+0`, with palette commands and a Settings row (§3.3).
 5. **Needed marks are settled per keystroke,** in the transaction that types (§4.2).
-6. **Soft and firm:** unchosen Action follows the text into a heading or transition; everything else keeps its element with a mark; soft only where the template has headings (§4.2).
+6. **Soft and firm:** Action is soft only while freshly reached, empty on arrival, and being typed in this stay; a line returned to is plain Action and keeps itself with a mark; `.45` and `.FLASHBACK` typed on Action stay Action; soft only where the template has headings (§4.2).
 7. **Marks not written in this stay are never touched** (§4.2).
-8. **A name with no speech takes no `@`,** and the left pane shows it as Character (§4.3).
-9. **An empty line left behind is taken away** in the move's transaction (§4.4).
+8. **A name with no speech takes no `@`,** and draws as what the parser reads once the cursor goes elsewhere (§4.3).
+9. **An empty line or `()` left behind is taken away** in the move's transaction (§4.4).
 10. **The pending element is worked out;** only exceptions are stored (§5).
 11. **A heading is never pending by flow:** type `INT.` or use the chooser; a new script and the line after a Transition start on soft Action (§5).
 12. **Classic's keys at `Prec.highest`,** ahead of `language` (§6).
@@ -615,3 +633,5 @@ Built from the shared screenwriting convention (what comes after what on a page)
 36. **The logic lives in `cm-fountain`,** as pure commands where it can (§14).
 37. **The cards' sample has a mark in it,** so the two modes look different (§16).
 38. **Mixed-case names aren't typed in Classic Mode** this release (§17.2).
+39. **A line in Action stays Action:** Character is reached by Tab or the chooser, never by typing capitals; a cue-only-by-what-follows line gets `!` on the line the writer is on (§4.2).
+40. **Drawing follows the stored element while the cursor is on the line,** and the parser elsewhere; opened files draw what the parser says (§8.2).
