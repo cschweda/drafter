@@ -20,6 +20,7 @@ import { appChange, parsedDoc } from '../state';
 import {
   type ClassicKind,
   classicLine,
+  HOLD,
   lineKindAt,
   mapSpan,
   pendingAt,
@@ -228,7 +229,7 @@ export function shapeOf(
 }
 
 /** What the mark is for each element: what goes before the words, and after. */
-function markOf(
+export function markOf(
   kind: ClassicKind,
   { actDepth, sceneDepth, headings }: ElementStructure,
 ): readonly [string, string] | null {
@@ -386,9 +387,9 @@ export const tidyLeft: Extension = EditorState.transactionFilter.of((tr) => {
   if (!made) return tr;
   const line = tr.newDoc.lineAt(from);
   const empty = isBlank(line.text) && line.number < tr.newDoc.lines;
-  return empty || line.text.trim() === '()'
-    ? [tr, { changes: { from: made.from, to: made.to }, sequential: true }]
-    : tr;
+  if (!empty && line.text !== HOLD && line.text.trim() !== '()') return tr;
+  const mark = held.madeMark && mapSpan(held.madeMark, tr.changes);
+  return [tr, { changes: [made, ...(mark ? [mark] : [])], sequential: true }];
 });
 
 const kindsOf = (kind: ClassicKind) => ({ kind, arrivedAs: kind });

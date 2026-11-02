@@ -1,6 +1,6 @@
 import { history, undo } from '@codemirror/commands';
 import { EditorSelection, EditorState } from '@codemirror/state';
-import { makeElement } from '@drafter/cm-fountain';
+import { makeElement, parsedDoc } from '@drafter/cm-fountain';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
 import {
@@ -10,6 +10,7 @@ import {
   classicShiftEnter,
   classicShiftTab,
   classicTab,
+  visibleStart,
 } from '../../src/classic/keys';
 import { type ClassicKind, classicEdit, elementAt, setStored } from '../../src/classic/line';
 import { apply, BOM, run } from '../helpers';
@@ -77,7 +78,7 @@ describe('§6.1, a line with text, cursor at its end', () => {
       'Dialogue, an earlier line: Enter gives a new line of the speech',
       'JUNE\nHello.|\nAgain.',
       'Enter',
-      'JUNE\nHello.\n|\nAgain.',
+      'JUNE\nHello.\n  |\nAgain.',
     ],
     [
       'Dialogue, an earlier line: Tab gives a Parenthetical',
@@ -416,11 +417,6 @@ describe('§6.3, the cursor mid-line', () => {
   test('the rest of a name is Dialogue', () => {
     expect(elementAt(keys(start('JU|NE', 'character'), 'Enter'))?.kind).toBe('dialogue');
   });
-
-  test('a kind with no row here is Fountain’s Enter', () => {
-    expect(run(classicEditor('~La| la'), classicEnter).handled).toBe(false);
-    expect(render(keys(classicEditor('~La| la'), 'Enter'))).toBe('~La\n| la');
-  });
 });
 
 describe('§6.3, selections and several cursors', () => {
@@ -686,4 +682,217 @@ describe('the agreed flow', () => {
     const state = flow(classicEditor(`|${NEXT_SCENE}`));
     expect(state.sliceDoc()).toBe(`${WRITTEN}${NEXT_SCENE}`);
   });
+});
+
+describe('what a key leaves reads right', () => {
+  /** What the parser reads at each line with text, in order. */
+  const kinds = (state: EditorState) => state.field(parsedDoc).blocks.map((block) => block.kind);
+
+  describe('a key never cuts a speech', () => {
+    rows([
+      [
+        'Enter at the start of a speech line opens a line above it',
+        'JUNE\n|Hello.',
+        'Enter',
+        'JUNE\n  |\nHello.',
+      ],
+      ['Shift+Enter there too', 'JUNE\n|Hello.', 'Shift-Enter', 'JUNE\n  |\nHello.'],
+      ['Enter at the start of a lyric in a speech', 'JUNE\n~|La', 'Enter', 'JUNE\n  |\n~La'],
+      [
+        'Enter on a Parenthetical with speech below',
+        'JUNE\n(soft|ly)\nHello.',
+        'Enter',
+        'JUNE\n(softly)\n  |\nHello.',
+      ],
+      [
+        'Tab on a Parenthetical with speech below',
+        'JUNE\n(soft|ly)\nHello.',
+        'Tab',
+        'JUNE\n(softly)\n  |\nHello.',
+      ],
+      ['Enter on a lyric with speech below', 'JUNE\n~La|\nHi.', 'Enter', 'JUNE\n~La\n  |\nHi.'],
+      [
+        'Shift+Enter at the end of dialogue with speech below',
+        'JUNE\nHi.|\nAgain.',
+        'Shift-Enter',
+        'JUNE\nHi.\n  |\nAgain.',
+      ],
+      ['Enter in an empty () with speech under', 'JUNE\n(|)\nHello.', 'Enter', 'JUNE\n  |\nHello.'],
+      ['Tab in an empty () with speech under', 'JUNE\n(|)\nHello.', 'Tab', 'JUNE\n  |\nHello.'],
+      [
+        'Shift+Tab in an empty () with speech under',
+        'JUNE\n(|)\nHello.',
+        'Shift-Tab',
+        'JUNE\n  |\nHello.',
+      ],
+      ['Tab on the held line writes ()', 'JUNE\nHi.|\nAgain.', 'Tab', 'JUNE\nHi.\n(|)\nAgain.'],
+    ]);
+
+    test.each([
+      ['JUNE\n(soft|ly)\nHello.', 'Enter'],
+      ['JUNE\nHi.|\nAgain.', 'Enter'],
+      ['JUNE\n|Hello.', 'Enter'],
+      ['JUNE\n(|)\nHello.', 'Enter'],
+    ])('%s with %s reads as a speech at once', (marked, press) => {
+      const after = kinds(keys(classicEditor(marked), press));
+      expect(after).not.toContain('action');
+      expect(after[0]).toBe('character');
+    });
+
+    test('the held line is pending Dialogue', () => {
+      const state = keys(classicEditor('JUNE\nHi.|\nAgain.'), 'Enter');
+      expect(elementAt(state)).toMatchObject({
+        kind: 'dialogue',
+        pending: true,
+        tab: 'parenthetical',
+      });
+    });
+
+    test('the first letter takes the two spaces, in its own transaction', () => {
+      const state = keys(classicEditor('JUNE\nHi.|\nAgain.'), 'Enter', 'S');
+      expect(render(state)).toBe('JUNE\nHi.\nS|\nAgain.');
+    });
+
+    test('a lyric held in a speech gets its ~ with the first letter', () => {
+      const state = keys(classicEditor('JUNE\n~La|\nHi.'), 'Enter', 'oh');
+      expect(render(state)).toBe('JUNE\n~La\n~oh|\nHi.');
+    });
+
+    test('Enter at the start, left, is gone', () => {
+      const state = keys(classicEditor('JUNE\n|Hello.'), 'Enter');
+      const left = state.update({ selection: { anchor: 0 }, userEvent: 'select.pointer' }).state;
+      expect(left.sliceDoc()).toBe('JUNE\nHello.');
+    });
+
+    test('a held line left is gone, and Shift+Tab leaves it too', () => {
+      const state = keys(classicEditor('JUNE\nHi.|\nAgain.'), 'Enter');
+      const left = state.update({ selection: { anchor: 0 }, userEvent: 'select.pointer' }).state;
+      expect(left.sliceDoc()).toBe('JUNE\nHi.\nAgain.');
+      expect(render(keys(state, 'Shift-Tab'))).toBe('JUNE\nHi.|\nAgain.');
+    });
+
+    test('an empty () in a file, left, takes its line and keeps the speech', () => {
+      const state = keys(classicEditor('JUNE\n(|)\nHello.'), 'Enter');
+      const left = state.update({ selection: { anchor: 0 }, userEvent: 'select.pointer' }).state;
+      expect(left.sliceDoc()).toBe('JUNE\nHello.');
+    });
+
+    test('undo gives the text back', () => {
+      const state = classicEditor('JUNE\nHi.|\nAgain.', { with: [history()] });
+      expect(apply(keys(state, 'Enter'), undo).sliceDoc()).toBe('JUNE\nHi.\nAgain.');
+    });
+  });
+
+  describe('a hidden mark at a line’s start', () => {
+    rows([
+      ['@|JUNE', '@|JUNE\nHi.', 'Enter', '\n@|JUNE\nHi.'],
+      ['.|FLASH', 'A.\n\n.|FLASH', 'Enter', 'A.\n\n\n.|FLASH'],
+      ['!|BANG', 'A.\n\n!|BANG', 'Enter', 'A.\n\n\n!|BANG'],
+      ['>|FADE OUT.', '>|FADE OUT.', 'Enter', '\n>|FADE OUT.'],
+      ['>|THE END<', '>|THE END<', 'Enter', '\n>|THE END<'],
+      ['~|La', '~|La', 'Enter', '\n~|La'],
+      ['before the mark', '|@JUNE\nHi.', 'Enter', '\n@|JUNE\nHi.'],
+      ['Shift+Enter, !|BANG', '!|BANG', 'Shift-Enter', '\n!|BANG'],
+    ]);
+
+    test('dialogue has no mark: a leading . is its words', () => {
+      expect(visibleStart(classicEditor('x').doc.line(1), 'dialogue')).toBe(0);
+      const line = classicEditor('.5 cal').doc.line(1);
+      expect(visibleStart(line, 'dialogue')).toBe(0);
+      expect(visibleStart(line, 'scene_heading')).toBe(1);
+    });
+
+    test('a byte-order mark comes before the mark', () => {
+      expect(render(keys(classicEditor(`${BOM}!|BANG`), 'Enter'))).toBe(`${BOM}\n!|BANG`);
+    });
+  });
+
+  test('Enter inside an inline note is Fountain’s', () => {
+    const state = classicEditor('She [[a no|te]] waits.');
+    for (const command of [classicEnter, classicTab, classicShiftTab, classicShiftEnter]) {
+      expect(run(state, command).handled).toBe(false);
+    }
+    expect(render(keys(state, 'Enter'))).toBe('She [[a no\n|te]] waits.');
+    expect(render(keys(state, 'Tab'))).toBe('She [[a no|te]] waits.');
+  });
+
+  describe('Enter mid-line, element by element', () => {
+    rows([
+      ['Centered: both parts marked', '>THE| END<', 'Enter', '>THE<\n\n>| END<'],
+      ['Lyric: both parts marked', '~la| la', 'Enter', '~la\n~| la'],
+      ['Section: the second is Action', '# ACT| ONE', 'Enter', '# ACT\n\n| ONE'],
+      ['Synopsis: both parts marked', '= she| runs', 'Enter', '= she\n\n= | runs'],
+      ['A page break: at its end', '=|==', 'Enter', '===\n\n|'],
+      ['A page break, Tab', '=|==', 'Tab', '===\n\n|'],
+    ]);
+
+    rows([['Act: the second is Action', '# ACT| ONE', 'Enter', '# ACT\n\n| ONE']], PLAY);
+
+    test('each part reads as it should', () => {
+      expect(kinds(keys(classicEditor('>THE| END<'), 'Enter'))).toEqual(['centered', 'centered']);
+      expect(render(keys(classicEditor('~la| la'), 'Enter', 'x'))).toBe('~la\n~x| la');
+      expect(kinds(keys(classicEditor('~la| la'), 'Enter'))).toEqual(['lyric']);
+      expect(kinds(keys(classicEditor('= she| runs'), 'Enter'))).toEqual(['synopsis', 'synopsis']);
+      expect(kinds(keys(classicEditor('# ACT| ONE'), 'Enter'))).toEqual(['section', 'action']);
+      expect(kinds(keys(classicEditor('=|=='), 'Enter'))).toEqual(['page_break']);
+    });
+
+    test('Action’s first part gets its ! when it would read as a Transition', () => {
+      const state = keys(classicEditor('SMASH TO:| black'), 'Enter');
+      expect(render(state)).toBe('!SMASH TO:\n\n| black');
+      expect(kinds(state)).toEqual(['action', 'action']);
+    });
+
+    test('both parts of Action can need one', () => {
+      const state = keys(classicEditor('SMASH TO:|INT. BAR'), 'Enter');
+      expect(render(state)).toBe('!SMASH TO:\n\n!|INT. BAR');
+    });
+  });
+
+  test('!BANG loses its ! when Shift+Enter’s empty line is tidied away', () => {
+    const state = keys(classicEditor('BANG|\n\nHe leaves.'), 'Shift-Enter');
+    expect(state.sliceDoc()).toBe('!BANG\n\n\nHe leaves.');
+    const end = state.doc.length;
+    const left = state.update({ selection: { anchor: end }, userEvent: 'select.pointer' }).state;
+    expect(render(left)).toBe('BANG\n\nHe leaves.|');
+  });
+
+  test('!BANG keeps its ! when the line under it is typed on', () => {
+    const state = keys(classicEditor('BANG|\n\nHe leaves.'), 'Shift-Enter', 'x');
+    const left = state.update({ selection: { anchor: 0 }, userEvent: 'select.pointer' }).state;
+    expect(left.sliceDoc()).toBe('!BANG\nx\n\nHe leaves.');
+  });
+
+  describe('a name with a note under it', () => {
+    rows([
+      [
+        'Enter skips the note to the speech',
+        'JUNE|\n[[a note]]\nHello.\nAgain.',
+        'Enter',
+        'JUNE\n[[a note]]\nHello.|\nAgain.',
+      ],
+      [
+        'Tab skips the note to the speech',
+        'JUNE|\n[[a note]]\nHello.',
+        'Tab',
+        'JUNE\n[[a note]]\nHello.|',
+      ],
+      [
+        'no speech: Dialogue goes under the note',
+        'JUNE|\n[[a note]]\n\nHe.',
+        'Enter',
+        'JUNE\n[[a note]]\n|\n\nHe.',
+        'character',
+      ],
+    ]);
+  });
+
+  rows([
+    [
+      'Shift+Enter on a blank line of the file writes nothing that joins what’s below',
+      'JUNE\nHi.\n|\nHe leaves.',
+      'Shift-Enter',
+      'JUNE\nHi.\n|\nHe leaves.',
+    ],
+  ]);
 });

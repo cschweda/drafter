@@ -9,19 +9,21 @@ import {
 } from '@codemirror/state';
 import type { Span } from '@drafter/fountain';
 import { blocked, elementStructure, isBlank, underSpeech } from '../elements';
-import { command } from '../keymap';
+import { BOM, command } from '../keymap';
+import { insideRegion, parsedDoc, regionAt } from '../state';
 import {
   type ClassicElement,
   type ClassicKind,
   classicEdit,
   classicLine,
   elementAt,
+  HOLD,
   lineKindAt,
   NEXT,
   setStored,
   WRITES,
 } from './line';
-import { NO_LINE, settleLine } from './marks';
+import { markOf, NO_LINE, settleLine } from './marks';
 
 // Enter and Tab in Classic Mode (design §6): where they go is in `NEXT`, and what they write on the
 // way is in `WRITES`. Each key is one transaction with the user event `input`, and carries
@@ -41,11 +43,12 @@ interface Here {
   head: number;
 }
 
-/** The one cursor's place, or null where no key acts: a selection, several cursors, a blocked place. */
+/** The one cursor's place, or null where no key acts: a selection, several cursors, a blocked place, a note inside a line. */
 function hereIn(state: EditorState): Here | null {
   const element = elementAt(state);
   if (!element || element.tab === null) return null;
   const { head } = state.selection.main;
+  if (insideRegion(state.field(parsedDoc), head)) return null;
   return { state, element, line: state.doc.lineAt(head), head };
 }
 
@@ -72,13 +75,59 @@ function visibleEnd({ from, to, text }: Line): number {
     : to;
 }
 
+/** The elements with no mark of their own: a line's first character there is one of its words. */
+const UNMARKED: ReadonlySet<ClassicKind> = new Set<ClassicKind>(['dialogue', 'parenthetical']);
+
+/** A mark at the start of a line, after any spaces. */
+const LINE_MARK = /^\s*(?:[!@~>]|\.(?=[\p{L}\p{N}])|#+\s*|=\s*)/u;
+
+/** Where the words of a line of `kind` start: after a byte-order mark and a hidden mark. */
+export function visibleStart({ from, text }: Line, kind: ClassicKind): number {
+  const bom = text.startsWith(BOM) ? 1 : 0;
+  const body = text.slice(bom);
+  const lead = UNMARKED.has(kind) ? null : LINE_MARK.exec(body);
+  return from + bom + (lead ? lead[0].length : body.length - body.trimStart().length);
+}
+
 const isEmptyParens = ({ element, line }: Here) =>
   element.kind === 'parenthetical' && line.text.trim() === '()';
+
+/** Whether text stands straight under a line. */
+function textUnder({ doc }: EditorState, line: Line): boolean {
+  return line.number < doc.lines && !isBlank(doc.line(line.number + 1).text);
+}
+
+/** A line opened at `at` in a speech: a break and two spaces, so what's under stays the speech. */
+function heldLine(at: number, state: EditorState, kind: ClassicKind, chosen: boolean) {
+  const insert = state.lineBreak + HOLD;
+  return {
+    changes: { from: at, insert },
+    selection: { anchor: at + 3 },
+    effects: setStored.of({
+      kind,
+      chosen,
+      made: { from: at, to: at + 3 },
+      added: [{ from: at + 1, to: at + 3 }],
+    }),
+  };
+}
 
 /** Takes an empty `()` away, keeping its line: pending Dialogue. What made the line stays made. */
 function removeParens({ state, line }: Here): TransactionSpec {
   const from = line.from + line.text.indexOf('(');
   const made = state.field(classicLine)?.made;
+  // A speech under it stays one: the line is held, and goes with its break if it's left.
+  if (textUnder(state, line)) {
+    return {
+      changes: { from: line.from, to: line.to, insert: HOLD },
+      selection: { anchor: line.from + 2 },
+      effects: setStored.of({
+        kind: 'dialogue',
+        made: { from: made?.from ?? line.from - 1, to: line.from + 2 },
+        added: [{ from: line.from, to: line.from + 2 }],
+      }),
+    };
+  }
   const left = made && made.to - 2 > made.from ? { from: made.from, to: made.to - 2 } : null;
   return {
     changes: { from, to: from + 2 },
@@ -87,13 +136,19 @@ function removeParens({ state, line }: Here): TransactionSpec {
   };
 }
 
-/** Writes `()` on the cursor's empty line, the cursor inside. */
-function writeParens({ state, head }: Here): TransactionSpec {
-  const from = state.field(classicLine)?.made?.from ?? head;
+/** Writes `()` on the cursor's empty line, the cursor inside, in place of any two spaces there. */
+function writeParens({ state, line, head }: Here): TransactionSpec {
+  const start = line.text === HOLD ? line.from : head;
+  const to = line.text === HOLD ? line.to : head;
+  const from = state.field(classicLine)?.made?.from ?? start;
   return {
-    changes: { from: head, insert: '()' },
-    selection: { anchor: head + 1 },
-    effects: setStored.of({ kind: 'parenthetical', made: { from, to: head + 2 } }),
+    changes: { from: start, to, insert: '()' },
+    selection: { anchor: start + 1 },
+    effects: setStored.of({
+      kind: 'parenthetical',
+      made: { from, to: start + 2 },
+      added: [],
+    }),
   };
 }
 
@@ -112,19 +167,44 @@ function blanksBelow({ doc }: EditorState, line: Line): { blanks: number; text: 
  * Character, is one the writer chose; the rest are what a click on the same empty line would find.
  */
 function arriving(state: EditorState, kind: ClassicKind, by: Key, made: Span | null) {
-  const chosen = (WRITES.firm[by] as readonly ClassicKind[]).includes(kind);
   const soft = kind === 'action' && softAction(state);
-  return setStored.of({ kind, chosen, soft, made });
+  return setStored.of({ kind, chosen: isFirm(kind, by), soft, made });
+}
+
+const isFirm = (kind: ClassicKind, by: Key) =>
+  (WRITES.firm[by] as readonly ClassicKind[]).includes(kind);
+
+/** Whether a line is all note or boneyard. Under a name the parser keeps it in the speech's block. */
+function isAllNote(state: EditorState, line: Line): boolean {
+  const start = line.from + line.text.length - line.text.trimStart().length;
+  const region = regionAt(state.field(parsedDoc), start + 1);
+  return !!region && region.span.to >= line.from + line.text.trimEnd().length;
+}
+
+/**
+ * A name's speech (§6.1): the first line under it that isn't a note. Or the last note under it,
+ * which the speech to come goes below, or the name itself.
+ */
+function speechOf(state: EditorState, name: Line): { speech: Line | null; last: Line } {
+  let last = name;
+  for (let n = name.number + 1; n <= state.doc.lines; n++) {
+    const under = state.doc.line(n);
+    if (isBlank(under.text)) break;
+    if (!isAllNote(state, under)) return { speech: under, last };
+    last = under;
+  }
+  return { speech: null, last };
 }
 
 /** Goes from the end of the cursor's line to the element `kind` under it, writing what it needs. */
 function onward(here: Here, kind: ClassicKind, by: Key): TransactionSpec {
-  const { state, element, line } = here;
+  const { state, element } = here;
   const { doc, lineBreak } = state;
-  const under = line.number < doc.lines ? doc.line(line.number + 1) : null;
-  // A name with its speech under it goes into the speech.
-  if (element.kind === 'character' && under && !isBlank(under.text)) {
-    return { selection: { anchor: under.to } };
+  let { line } = here;
+  if (element.kind === 'character') {
+    const { speech, last } = speechOf(state, line);
+    if (speech) return { selection: { anchor: speech.to } };
+    line = last;
   }
   const writes = WRITES.by[kind];
   if (writes === 'parens') {
@@ -138,6 +218,10 @@ function onward(here: Here, kind: ClassicKind, by: Key): TransactionSpec {
     };
   }
   if (writes === 'break') {
+    // An empty line here would cut the speech under it, even for a moment.
+    if (textUnder(state, line) && underSpeech(state, doc.line(line.number + 1).from)) {
+      return heldLine(line.to, state, kind, isFirm(kind, by));
+    }
     return {
       changes: { from: line.to, insert: lineBreak },
       selection: { anchor: line.to + 1 },
@@ -175,23 +259,54 @@ const SPLITS: Partial<Record<ClassicKind, ClassicKind>> = {
   transition: 'action',
   dialogue: 'dialogue',
   character: 'dialogue',
+  centered: 'centered',
+  lyric: 'lyric',
+  synopsis: 'synopsis',
+  section: 'action',
+  act: 'action',
 };
 
-/** Enter inside a line: the rest of it goes on as the next element, with the mark it needs. */
-function split({ state, element, head }: Here): TransactionSpec | null {
-  const kind = SPLITS[element.kind as ClassicKind];
+/** Enter inside a line: the rest of it goes on as the next element, with the marks each part needs. */
+function split({ state, element, line, head }: Here): TransactionSpec | null {
+  const from = element.kind as ClassicKind;
+  const kind = SPLITS[from];
   if (!kind) return null;
   const breaks = WRITES.by[kind] === 'break' ? 1 : 2;
   const insert = state.lineBreak.repeat(breaks);
+  // An element that goes on as itself carries its own mark over, closing and opening.
+  if (kind === from && kind !== 'action' && kind !== 'dialogue') {
+    const [open, close] = markOf(kind, state.facet(elementStructure)()) ?? ['', ''];
+    const between = close + insert + open;
+    return {
+      changes: { from: head, insert: between },
+      selection: { anchor: head + close.length + breaks + open.length },
+      effects: setStored.of({ kind }),
+    };
+  }
   const after = state.update({ changes: { from: head, insert }, filter: false }).state;
-  const { added, lead } =
-    kind === 'action'
-      ? needed(after, after.doc.lineAt(head + breaks), kind)
-      : { added: [], lead: '' };
+  const first = from === 'action' ? needed(after, after.doc.lineAt(line.from), from) : null;
+  const rest = kind === 'action' ? needed(after, after.doc.lineAt(head + breaks), kind) : null;
+  const changes: ChangeSpec[] = [{ from: head, insert: insert + (rest?.lead ?? '') }];
+  const lead = first?.lead ?? '';
+  const [mark] = first?.added ?? [];
+  if (mark) changes.unshift({ from: mark.from, insert: lead });
+  const anchor = head + lead.length + breaks + (rest?.lead.length ?? 0);
+  const added = (rest?.added ?? []).map((span) => ({
+    from: span.from + lead.length,
+    to: span.to + lead.length,
+  }));
+  return { changes, selection: { anchor }, effects: setStored.of({ kind, added }) };
+}
+
+/** Enter at the visible start of a line: it goes down one, and is what it was. */
+function pushDown({ state, element, line }: Here): TransactionSpec {
+  const kind = element.kind as ClassicKind;
+  const speech = (kind === 'dialogue' || kind === 'lyric') && underSpeech(state, line.from);
+  if (speech) return heldLine(line.from - 1, state, 'dialogue', false);
+  const from = line.from + (line.text.startsWith(BOM) ? 1 : 0);
   return {
-    changes: { from: head, insert: insert + lead },
-    selection: { anchor: head + breaks + lead.length },
-    effects: setStored.of({ kind, added }),
+    changes: { from, insert: state.lineBreak },
+    selection: { anchor: visibleStart(line, kind) + 1 },
   };
 }
 
@@ -206,13 +321,11 @@ export const classicEnter: StateCommand = key((state) => {
   if (isEmptyParens(here)) return removeParens(here);
   // Task 9 opens the chooser here.
   if (element.pending || element.enter === null || element.enter === 'chooser') return {};
-  if (element.kind === 'parenthetical' || head >= visibleEnd(line)) {
+  const { kind } = element;
+  if (kind === 'parenthetical' || kind === 'page_break' || head >= visibleEnd(line)) {
     return onward(here, element.enter, 'enter');
   }
-  // Nothing to split off: the line goes down one, and is what it was.
-  if (state.sliceDoc(line.from, head).trim() === '') {
-    return { changes: { from: head, insert: state.lineBreak }, selection: { anchor: head + 1 } };
-  }
+  if (head <= visibleStart(line, kind as ClassicKind)) return pushDown(here);
   return split(here);
 });
 
@@ -220,13 +333,13 @@ export const classicEnter: StateCommand = key((state) => {
 export const classicTab: StateCommand = key((state) => {
   const { main } = state.selection;
   if (state.selection.ranges.length > 1 || blocked(state, main.head)) return null;
+  if (insideRegion(state.field(parsedDoc), main.head)) return null;
   if (!main.empty) return { selection: { anchor: main.to } };
   const here = hereIn(state);
   if (!here) return null;
   const { element } = here;
-  const { tab } = element;
+  const tab = element.tab as ClassicKind;
   if (isEmptyParens(here)) return removeParens(here);
-  if (tab === null) return null;
   if (!element.pending) return onward(here, tab, 'tab');
   if (tab === 'parenthetical') return writeParens(here);
   return { effects: setStored.of({ kind: tab, chosen: true }) };
@@ -292,7 +405,11 @@ function actionBreak({ state, line, head }: Here): TransactionSpec {
   return {
     changes,
     selection: { anchor: at + 1 },
-    effects: setStored.of({ kind: 'action', made: rest ? null : { from: at, to: at + 1 } }),
+    effects: setStored.of({
+      kind: 'action',
+      made: rest ? null : { from: at, to: at + 1 },
+      madeMark: lead && !rest ? (added[0] as Span) : null,
+    }),
   };
 }
 
@@ -303,15 +420,17 @@ const breakInside: StateCommand = key((state) => {
   const { element, line, head } = here;
   if (element.pending) {
     if (element.kind !== 'dialogue' || !underSpeech(state, line.from)) return null;
+    // Text straight under would join the speech.
+    if (textUnder(state, line)) return null;
     return {
-      changes: { from: line.from, to: line.to, insert: '  ' },
+      changes: { from: line.from, to: line.to, insert: HOLD },
       selection: { anchor: line.from + 2 },
       effects: setStored.of({ kind: 'dialogue', made: null }),
     };
   }
-  if (state.sliceDoc(line.from, head).trim() === '') return null;
+  if (head <= visibleStart(line, element.kind as ClassicKind)) return null;
   if (element.kind === 'action') return actionBreak(here);
-  if (element.kind !== 'dialogue' || head < line.to) return null;
+  if (element.kind !== 'dialogue' || head < line.to || textUnder(state, line)) return null;
   return {
     changes: { from: head, insert: state.lineBreak },
     selection: { anchor: head + 1 },

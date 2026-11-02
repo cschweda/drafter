@@ -33,6 +33,8 @@ export interface StoredLine {
   added: readonly Span[];
   /** The empty line or `()` made in this stay, with the breaks that made it (§4.4). */
   made: Span | null;
+  /** The `!` Shift+Enter wrote on the line above for `made`, which goes when it does (§4.4). */
+  madeMark?: Span | null;
   /** Autofill dismissed with Escape, until the next letter (§7.3). */
   dismissed: boolean;
   /** The line was empty when it was stored, so what's on it was typed in this stay. */
@@ -180,6 +182,12 @@ export function pendingAt(state: EditorState, pos: number): ClassicKind {
   return above >= 0 && cueIndex(doc.blocks, above) >= 0 ? 'character' : 'action';
 }
 
+/**
+ * Two spaces hold a speech together (§4.1), so a key that opens a line inside a speech writes them
+ * and counts them in `added`: the first letter takes them, and until then the line is empty.
+ */
+export const HOLD = '  ';
+
 /** Whether nothing on a line says what it is, so it has a pending element. */
 function isEmpty(state: EditorState, line: Line): boolean {
   return (
@@ -254,8 +262,8 @@ export function elementAt(state: EditorState): ClassicElement | null {
           (blockAt(doc, line.from)?.block.kind === 'note' ? 'note' : 'boneyard'));
     return { kind, pending: false, soft: false, enter: null, tab: null };
   }
-  const empty = isEmpty(state, line);
   const own = stored(state);
+  const empty = isEmpty(state, line) || (!!own?.made && line.text === HOLD);
   const found = blockAt(doc, line.from);
   const kind = own?.kind ?? (found ? readKind(state, found.block) : pendingAt(state, line.from));
   const below = line.number < state.doc.lines ? state.doc.line(line.number + 1) : null;
@@ -302,6 +310,7 @@ function mapLine(line: StoredLine, changes: ChangeDesc): StoredLine {
     from: changes.mapPos(line.from, -1),
     added: line.added.flatMap((span) => mapSpan(span, changes) ?? []),
     made: line.made && mapSpan(line.made, changes),
+    madeMark: line.madeMark && mapSpan(line.madeMark, changes),
   };
 }
 
