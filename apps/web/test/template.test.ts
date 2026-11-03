@@ -50,7 +50,7 @@ describe('DOCUMENT_TYPES', () => {
       newTitle: 'New novel',
       newIcon: 'i-lucide-book-open-text',
     });
-    expect(typeNameOf('markdown', 'us-screenplay', false, true)).toBe('Novel');
+    expect(typeNameOf('markdown', 'us-screenplay', { novel: true })).toBe('Novel');
     expect(typeNameOf('markdown', 'us-screenplay')).toBe('Markdown (plain text)');
   });
 
@@ -119,10 +119,14 @@ describe('an unknown template', () => {
   });
 
   test('is said in the chip’s name and the menu’s note', () => {
-    expect(typeNameOf('fountain', 'us-screenplay', true)).toBe('Screenplay (fallback)');
+    expect(typeNameOf('fountain', 'us-screenplay', { fallback: true })).toBe(
+      'Screenplay (fallback)',
+    );
     expect(typeNameOf('fountain', 'us-screenplay')).toBe('Screenplay');
     // A Markdown document has no template to fall back from.
-    expect(typeNameOf('markdown', 'us-screenplay', true)).toBe('Markdown (plain text)');
+    expect(typeNameOf('markdown', 'us-screenplay', { fallback: true })).toBe(
+      'Markdown (plain text)',
+    );
     expect(unknownTemplateNote('my-own')).toBe(
       "This script asks for “my-own”, which Drafter doesn't have, so it's shown as a screenplay.",
     );

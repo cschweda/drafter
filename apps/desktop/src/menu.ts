@@ -123,7 +123,7 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: prefix('open-sample-'), submenu: 'Open Sample', strip: /^Open sample: / },
     { pick: ['reset-sample'] },
     {
-      pick: (id) => id.startsWith('template-') || id === 'document-markdown',
+      pick: (id) => id.startsWith('template-') || id.startsWith('document-'),
       submenu: 'Template',
       strip: /^(Template|Document): /,
     },

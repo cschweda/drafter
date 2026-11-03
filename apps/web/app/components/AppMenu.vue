@@ -58,7 +58,9 @@ const recentItems = computed<DropdownMenuItem[]>(() => {
     const current = script.project.value?.id === p.id;
     return {
       label: current ? `${p.title} (open now)` : p.title,
-      description: typeNameOf(kindOf(p), p.templateId, false, isNovel(p.source)),
+      description: typeNameOf(kindOf(p), p.templateId, {
+        novel: kindOf(p) === 'markdown' && isNovel(p.source),
+      }),
       icon: current ? 'i-lucide-check' : 'i-lucide-file',
       disabled: !canSwitch.value,
       onSelect: () => {

@@ -24,6 +24,7 @@ const COMMANDS: MenuCommand[] = [
   cmd('new-screenplay', 'File', 'New screenplay', { keys: ['Mod-Alt-n'] }),
   cmd('new-stage-play', 'File', 'New stage play'),
   cmd('template-screenplay', 'File', 'Template: Screenplay'),
+  cmd('document-novel', 'File', 'Document: Novel'),
   cmd('document-markdown', 'File', 'Document: Markdown'),
   cmd('open', 'File', 'Open…', { keys: ['Mod-o'] }),
   cmd('open-as-screenplay', 'File', 'Open as screenplay…'),

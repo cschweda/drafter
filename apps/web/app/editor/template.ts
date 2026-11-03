@@ -115,8 +115,7 @@ export const NOVEL_NAME = 'Novel';
 export function typeNameOf(
   kind: DocumentKind,
   template: TemplateId,
-  fallback = false,
-  novel = false,
+  { fallback = false, novel = false }: { fallback?: boolean; novel?: boolean } = {},
 ): string {
   if (kind === 'markdown') return novel ? NOVEL_NAME : MARKDOWN_NAME;
   return fallback ? `${TEMPLATE_NAMES[template]} (fallback)` : TEMPLATE_NAMES[template];

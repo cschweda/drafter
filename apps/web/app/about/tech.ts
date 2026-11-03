@@ -231,6 +231,11 @@ export const PACKAGES: readonly PackageNote[] = [
     uses: [],
   },
   {
+    name: '@drafter/novel',
+    does: 'A novel in Markdown: its parts, chapters, and sections with their words, moving one byte for byte, and the status, synopsis, and word target kept for each in the metadata comment.',
+    uses: ['@drafter/markdown'],
+  },
+  {
     name: '@drafter/fountain',
     does: 'The parser: reads Fountain text into a syntax tree that prints back to exactly the same text.',
     uses: [],

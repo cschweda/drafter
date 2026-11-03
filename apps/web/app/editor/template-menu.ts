@@ -23,7 +23,10 @@ export function useTemplateMenu(onPick: () => void) {
   );
   /** The current type's name, "(fallback)" included: the chip's text and the status bar's. */
   const name = computed(() =>
-    typeNameOf(template.kind.value, template.id.value, !!unknown.value, novel.value),
+    typeNameOf(template.kind.value, template.id.value, {
+      fallback: !!unknown.value,
+      novel: novel.value,
+    }),
   );
   const note = computed(() =>
     unknown.value === undefined ? '' : unknownTemplateNote(unknown.value),

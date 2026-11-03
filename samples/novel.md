@@ -1,6 +1,6 @@
 # Part One
 
-# The Lighthouse Keeper's Daughter
+# The Salt Road
 
 ## Low Tide
 
@@ -64,4 +64,4 @@ At the top, the great lens waited under its canvas like a sleeping giant. Wren d
 
 She looked at him for a long moment. Outside, far out where the channel had been, something large and slow moved under the water.
 
-<!-- drafter {"template":"novel","novel":{"bookTarget":60000,"nodes":{"chapter:the-lighthouse-keeper-s-daughter:0":{"status":"revised","synopsis":"Wren finds a sealed bottle on the beach at low tide.","target":1200},"chapter:a-letter-in-another-hand:0":{"status":"draft","synopsis":"The page is read, and a stranger arrives.","target":1500},"chapter:the-night-watch:0":{"status":"todo","synopsis":"Wren takes Alder up to the light."}}}} -->
+<!-- drafter {"template":"novel","novel":{"bookTarget":60000,"nodes":{"chapter:the-salt-road:0":{"status":"revised","synopsis":"Wren finds a sealed bottle on the beach at low tide.","target":1200},"chapter:a-letter-in-another-hand:0":{"status":"draft","synopsis":"The page is read, and a stranger arrives.","target":1500},"chapter:the-night-watch:0":{"status":"todo","synopsis":"Wren takes Alder up to the light."}}}} -->

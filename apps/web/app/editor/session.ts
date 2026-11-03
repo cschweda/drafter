@@ -148,18 +148,32 @@ function create(): EditorSession {
   const changeListeners = new Set<(changes: ChangeSet | null) => void>();
   const editListeners = new Set<(transactions: readonly Transaction[]) => void>();
 
-  /** Brings what the session shows up to date with `state`. */
-  /** The metadata comment is the last non-blank line, so only that line is read, however long the novel. */
+  /** The metadata line last read, and whether it named the novel template: typing elsewhere re-reads nothing. */
+  let metaLine: string | null = null;
+  let metaIsNovel = false;
+
+  /**
+   * Keeps `novel`. The metadata comment is the last non-blank line, so only that line is read,
+   * however long the book, and its JSON is parsed only when the line's text has changed.
+   */
   function followNovel(state: EditorState) {
     let found = false;
     if (kind.value === 'markdown') {
       let n = state.doc.lines;
       while (n > 1 && state.doc.line(n).text.trim() === '') n--;
-      found = isNovel(state.doc.line(n).text);
+      const line = state.doc.line(n).text;
+      if (line !== metaLine) {
+        metaLine = line;
+        metaIsNovel = isNovel(line);
+      }
+      found = metaIsNovel;
+    } else {
+      metaLine = null;
     }
     if (found !== novel.value) novel.value = found;
   }
 
+  /** Brings what the session shows up to date with `state`. */
   function follow(state: EditorState) {
     doc.value = state.field(parsedDoc);
     followNovel(state);

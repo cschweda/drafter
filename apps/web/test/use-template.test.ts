@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   kind: undefined as undefined | { value: string },
   novel: undefined as undefined | { value: boolean },
   doc: undefined as undefined | { value: unknown },
+  dispatched: [] as { changes: { from: number; to: number; insert: string } }[],
   setKind: undefined as undefined | ((kind: string) => Promise<void>),
   openSample: undefined as undefined | ((kind: string) => Promise<void>),
   project: undefined as undefined | { value: { id: string; sample?: string } | null },
@@ -25,7 +26,12 @@ vi.mock('../app/editor/session', async () => {
       state.doc = doc;
       state.kind = kind;
       return {
-        view: { state: { readOnly: false, lineBreak: '\n' }, dispatch() {} },
+        view: {
+          state: { readOnly: false, lineBreak: '\n', doc: { toString: () => state.source } },
+          dispatch(spec: (typeof state.dispatched)[number]) {
+            state.dispatched.push(spec);
+          },
+        },
         doc,
         locked: shallowRef(false),
         kind,
@@ -38,17 +44,21 @@ vi.mock('../app/storage/script', async () => {
   const { shallowRef } = await import('vue');
   const project = shallowRef<{ id: string; sample?: string } | null>({ id: 'a' });
   state.project = project;
-  const setKind = vi.fn(async () => {});
+  // As the session does: the kind changes, and the text is kept.
+  const setKind = vi.fn(async (next: string) => {
+    if (state.kind) state.kind.value = next;
+  });
   state.setKind = setKind;
   const openSample = vi.fn(async () => {});
   state.openSample = openSample;
-  return { useScript: () => ({ project, setKind, openSample }) };
+  return { useScript: () => ({ project, setKind, openSample, forgetBlank() {} }) };
 });
 
 const MARKDOWN = DOCUMENT_TYPES.find((t) => t.id === 'markdown') as DocumentType;
 const NOVEL = DOCUMENT_TYPES.find((t) => t.id === 'novel') as DocumentType;
 
 beforeEach(() => {
+  state.dispatched = [];
   state.source = 'INT. HALL - DAY\n\nShe waits.\n';
   vi.mocked(state.setKind as () => Promise<void>).mockClear();
   vi.mocked(state.openSample as () => Promise<void>).mockClear();
@@ -177,11 +187,25 @@ describe('a novel', () => {
     expect(state.openSample).toHaveBeenCalledWith('novel');
   });
 
-  test('on a script asks first, then makes it Markdown', async () => {
+  test('on a script asks first, then makes it Markdown and writes the novel comment', async () => {
     const done = useTemplate().chooseType(NOVEL);
     expect(markdownQuestion.value).not.toBeNull();
     markdownQuestion.value?.answer(true);
     await done;
     expect(state.setKind).toHaveBeenCalledWith('markdown');
+    // One change, at the end of the text: a blank line and the comment.
+    expect(state.dispatched).toHaveLength(1);
+    const { changes } = state.dispatched[0] as (typeof state.dispatched)[number];
+    const text =
+      state.source.slice(0, changes.from) + changes.insert + state.source.slice(changes.to);
+    expect(text).toBe(`${state.source}\n\n<!-- drafter {"template":"novel"} -->\n`);
+  });
+
+  test('on a script that is not agreed to changes nothing', async () => {
+    const done = useTemplate().chooseType(NOVEL);
+    markdownQuestion.value?.answer(false);
+    await done;
+    expect(state.setKind).not.toHaveBeenCalled();
+    expect(state.dispatched).toEqual([]);
   });
 });
