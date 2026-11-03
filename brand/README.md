@@ -1,6 +1,6 @@
 # Drafter's brand
 
-![Drafter: Fountain first, a plain-text script format for screenplays and stage plays; novels and notes in Markdown; Classic mode coming soon](og-image.svg)
+![Drafter: Fountain or Classic. The same scene typed both ways, on two script pages: Fountain, a plain-text script format, with its marks showing, and Classic Mode, with no marks and each element where a page puts it. For screenplays and stage plays; novels and notes in Markdown. Same file, your choice of keys.](og-image.svg)
 
 ## The mark
 
@@ -43,7 +43,7 @@ Both are under the SIL Open Font License 1.1. Inter Tight is in [`fonts/`](fonts
 | File | Size | Use |
 |---|---|---|
 | `og-image.svg`, `og-image.png` | 1200 × 630 | The share image (`og:image`), and the top of the repository README. Upload the PNG as the repository's social preview in GitHub's settings. |
-| `og-image-animated.svg` | 1200 × 630 | The share image, animated: one page fans out into the revision pages, once, then holds. CSS only, so it plays in a README; a reader who asks for less motion sees the finished fan. Link previews only ever show the still PNG. |
+| `og-image-animated.svg` | 1200 × 630 | The share image, animated: the revision pages fan out behind the two front pages, once, then hold. The front pages show the same scene typed both ways, in Fountain with its marks and in Classic Mode without them. CSS only, so it plays in a README; a reader who asks for less motion sees the finished fan. Link previews only ever show the still PNG. |
 | `logo-dark.svg`, `logo-light.svg` | 56 px tall | The navbar logo, for dark and light backgrounds. |
 | `mark.svg` | 56 × 56 | The mark alone. |
 | `favicon.svg`, `favicon.ico`, `favicon-32.png` | 32 × 32 (the .ico also holds 16 and 48) | Browser tabs. |

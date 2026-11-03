@@ -174,11 +174,12 @@ describe('the command data', () => {
     for (const c of COMMAND_DATA.filter((c) => c.global)) expect(c.keys, c.id).toBeTruthy();
   });
 
-  test('has the fourteen help pages, in the Help group', () => {
+  test('has the fifteen help pages, in the Help group', () => {
     expect(HELP_PAGES.map((p) => p.path)).toEqual([
       '/docs/what-is-drafter',
       '/docs/why',
       '/docs/fountain',
+      '/docs/classic-mode',
       '/docs/saving',
       '/docs/drafts-and-cuts',
       '/docs/story-map',
@@ -242,6 +243,7 @@ describe('the command data', () => {
       '/docs/what-is-drafter/',
       '/docs/why/',
       '/docs/fountain/',
+      '/docs/classic-mode/',
       '/docs/saving/',
       '/docs/drafts-and-cuts/',
       '/docs/story-map/',

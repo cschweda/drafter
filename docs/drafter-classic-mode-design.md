@@ -1,6 +1,6 @@
 # Classic Mode — Design
 
-**Status:** designed 2026-11-02, the maintainer's five decisions in, planned for v0.25.0. The flow below is the one the maintainer agreed to ("yes that's it"). It comes after Self-hosting (v0.24.3) and before Novel (v0.26.0) and Production (v0.27.0). The roadmap entry is in [ROADMAP.md](ROADMAP.md), and the first decision is in [DECISIONS](DECISIONS.md), "Classic Mode".
+**Status:** designed 2026-11-02, the maintainer's five decisions in; **built 2026-11-03** on the `classic-design` branch, for v0.25.0, waiting for the maintainer's checks by hand (§15.5) and the release. The plan is [docs/plans/2026-11-02-classic-mode.md](plans/2026-11-02-classic-mode.md), and what was built where the code or the maintainer changed a Call is in [DECISIONS](DECISIONS.md), "Classic Mode". The flow below is the one the maintainer agreed to ("yes that's it"). It comes after Self-hosting (v0.24.3) and before Novel (v0.26.0) and Production (v0.27.0). The roadmap entry is in [ROADMAP.md](ROADMAP.md), and the first decision is in [DECISIONS](DECISIONS.md), "Classic Mode".
 
 **Asked for (maintainer), in their words:**
 - 2026-11-01: "is it worth adding a final draft mode (instead of a fountain mode) for people who might be used to final draft? There's still source on the left, rendered script on the right -- but the way to type the script it would be more familiar for people who don't know fountain marks but are used to final draft."

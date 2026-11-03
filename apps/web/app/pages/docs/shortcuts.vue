@@ -60,6 +60,41 @@ const groups = shortcutGroups(COMMAND_DATA);
       </p>
     </section>
 
+    <section aria-labelledby="group-classic">
+      <h2 id="group-classic">Classic Mode</h2>
+      <p>
+        In <a href="/docs/classic-mode/">Classic Mode</a> (Switch writing mode, <kbd>⌘⌥0</kbd> on a
+        Mac and <kbd>Ctrl+Alt+0</kbd> elsewhere), these keys move you through the script. The
+        <a href="/docs/classic-mode/#keys">Classic Mode page</a> has where each one goes.
+      </p>
+      <ul>
+        <li>
+          <kbd>Enter</kbd> goes on to the next element; on an empty line it opens the chooser, where
+          <kbd>↑</kbd>, <kbd>↓</kbd>, <kbd>Enter</kbd>, or an element’s underlined letter picks, and
+          <kbd>Esc</kbd> closes it.
+        </li>
+        <li>
+          <kbd>Tab</kbd> goes to the element that usually comes next (a Character after Action, a
+          Parenthetical in a speech), and on an empty line walks a row of elements;
+          <kbd>Shift+Tab</kbd> goes back.
+        </li>
+        <li><kbd>Shift+Enter</kbd> starts a new line inside the element.</li>
+        <li>
+          <kbd>Tab</kbd> or <kbd>Enter</kbd> takes a suggestion from autofill, and <kbd>Esc</kbd>
+          closes the list until your next letter.
+        </li>
+        <li>
+          <kbd>Backspace</kbd> at the start of a line, or <kbd>Delete</kbd> at its end, joins two
+          elements in one press.
+        </li>
+        <li>
+          To leave the text, press <kbd>Esc</kbd>, then <kbd>Tab</kbd>; if a list is open, press
+          <kbd>Esc</kbd> twice. <kbd>Ctrl+M</kbd> (<kbd>Shift+Alt+M</kbd> on a Mac) makes
+          <kbd>Tab</kbd> move focus until you press it again.
+        </li>
+      </ul>
+    </section>
+
     <section aria-labelledby="group-other">
       <h2 id="group-other">Other keys</h2>
       <p>

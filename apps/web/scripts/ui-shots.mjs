@@ -14,9 +14,9 @@
 //
 // With `--readme`, it takes only the README's screenshots, into `<folder>` (docs/images from the
 // repository root): `drafter-<shot>-<dark|light>.png` for the editor and the page at twice the
-// pixels, Outline, Cards, the Stats grid, a Scaffold character page, Compare, and a phone, and
-// `drafter-pdf-page.png`, the script's first page as the PDF prints it (it needs the CLI built,
-// `pnpm -r build`, and pdftoppm). Each is squeezed with pngquant when it is installed, to keep it
+// pixels, Outline, Cards, the Stats grid, a Scaffold character page, Compare, Classic Mode, and a
+// phone, and `drafter-pdf-page.png`, the script's first page as the PDF prints it (it needs the CLI
+// built, `pnpm -r build`, and pdftoppm). Each is squeezed with pngquant when it is installed, to keep it
 // under about 165 KB. Every shot uses `ui-shots-script.fountain`, "Signal Hill", an original
 // script written for these shots alone; it is not an in-app sample.
 import { execFile } from 'node:child_process';
@@ -309,6 +309,20 @@ async function readmeShots() {
         await page.waitForTimeout(600);
       },
     ],
+    [
+      'classic',
+      async (page) => {
+        // The same scene in Classic Mode: marks hidden, each element in its place, and the status
+        // bar's key line. The first-run hint is dismissed, as a writer would.
+        await run(page, 'Switch to Classic Mode');
+        const hint = page.locator('[data-classic-hint]');
+        await hint.waitFor({ timeout: 3000 }).catch(() => {});
+        if (await hint.isVisible()) await hint.getByRole('button', { name: 'Got it' }).click();
+        await page.locator('.cm-content').focus();
+        await scrollSourceTo(page, '.cm-line.cm-c-scene_heading, .cm-line.cm-f-scene_heading');
+        await page.waitForTimeout(600);
+      },
+    ],
   ];
   const chrome = await chromium.launch();
   for (const theme of THEMES) {
@@ -386,7 +400,16 @@ async function readmeShots() {
       `  drafter-pdf-page: ${error instanceof Error ? error.message.split('\n')[0] : error}`,
     );
   }
-  for (const shot of ['ide', 'outline', 'cards', 'stats', 'scaffold', 'compare', 'phone'])
+  for (const shot of [
+    'ide',
+    'outline',
+    'cards',
+    'stats',
+    'scaffold',
+    'compare',
+    'classic',
+    'phone',
+  ])
     for (const theme of THEMES)
       await squeeze(join(OUT, `drafter-${shot}-${theme}.png`)).catch(() => {});
   await squeeze(join(OUT, 'drafter-pdf-page.png')).catch(() => {});

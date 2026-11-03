@@ -50,6 +50,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-what-is', path: '/docs/what-is-drafter', title: 'What is Drafter?' },
   { id: 'help-why', path: '/docs/why', title: 'Why Drafter' },
   { id: 'help-fountain', path: '/docs/fountain', title: 'Fountain cheat sheet' },
+  { id: 'help-classic-mode', path: '/docs/classic-mode', title: 'Classic Mode' },
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
   { id: 'help-drafts-and-cuts', path: '/docs/drafts-and-cuts', title: 'Drafts and cuts' },
   { id: 'help-story-map', path: '/docs/story-map', title: 'Story map' },

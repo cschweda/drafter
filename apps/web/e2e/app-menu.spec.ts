@@ -333,6 +333,7 @@ test.describe('the Help menu', () => {
       /^What is Drafter\?/,
       /^Why Drafter/,
       /^Fountain cheat sheet/,
+      /^Classic Mode/,
       /^Saving and your browser/,
       /^Drafts and cuts/,
       /^Story map/,

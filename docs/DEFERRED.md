@@ -303,6 +303,17 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 
 ## Classic Mode
 
+- **The Beat Board block is unprotected** (maintainer's ruling, 2026-11-02). A `/* beat board` block before the metadata block is the app's data too, but Classic Mode protects only the block `parse` reads as `doc.meta` (design §8.3, §8.4). In Classic Mode the Beat Board block shows as struck-through text, and Select All then Delete takes it, as it does in Fountain Mode (Undo brings it back). `Mod+End` stops after its `*/`, not at the end of the last element. Protecting it would mean a second protected range in `keepMetadata` and `classicCaret`, and hiding it in `hidden.ts`.
+- **A letter typed above the metadata block in the shape `One.\n\n\n/* drafter` still joins the line above** when that line isn't the title page. Under a title page, the first letter brings its own blank line in its own transaction (Classic Mode Task 14), so it stands apart; under any other line, in the same shape, the letter typed where the cursor stops, just above the block, joins the line above it into one paragraph. Rare, and nothing is lost (Undo takes it back). The fix is the same first-letter break for any line above, which Task 14 left because it would reach scripts with text.
+- **Mixed-case names by typing** (design §17.2, decided 2026-11-02). A name typed in Classic Mode is all capitals for v0.25.0. To get `McGRAW`, it's typed once in Fountain Mode as `@McGRAW`; autofill then offers it. A rule for guessing would be wrong as often as right.
+- **Ways to change the Enter and Tab tables** (§17.2). No custom key settings; the tables stay data, so they could come if writers ask.
+- **Cycling the most likely speaker** (§17.2): a key or a suggestion that guesses the other person in a two-hander. The agreed flow is most recent first, and that's what ships.
+- **A paper look for the left pane, and page breaks drawn in it** (§17.2).
+- **Show marks while in Classic Mode**, a toggle (§17.2). Switching to Fountain Mode shows them in one click.
+- **A title-page form** (§17.2). The title page stays as text.
+- **Notes in a margin** (§8.3), **copy as a plain script** (§11), **search that skips hidden marks** (§8.1), and **Problems in Classic words** (§11) (§17.2).
+- **Guided starters written for Classic Mode** (§17.2). Their notes teach the element bar's buttons, which Classic Mode keeps.
+- **Production typing** (§17.2): revision mode, scene numbering, and the rest come with Production (v0.27.0), which must keep Classic Mode's rules. **Novel** (v0.26.0) has no Classic Mode. A **per-script mode** (§3.1) is rejected, not deferred, unless the file promise changes.
 - **Shift+Alt+M on other Mac keyboard layouts.** Classic Mode reads the Tab-focus key by its place on the keyboard (`KeyM`), as CodeMirror's own binding never runs on a Mac. On a layout where that key isn't M, the shortcut moves with the key, and in Classic Mode Option+Shift on that key no longer types its character. Read the layout (`navigator.keyboard.getLayoutMap()` where there is one) or offer a second key.
 - **Fountain Mode's Shift+Alt+M is still dead on a Mac.** CodeMirror's `Shift-Alt-m` matches the letter Option types, so Tab focus mode can't be turned on from the keyboard there in Fountain Mode (Esc then Tab still leaves the text). The Classic Mode fix is Classic's alone, as Fountain Mode doesn't change in this release.
 
