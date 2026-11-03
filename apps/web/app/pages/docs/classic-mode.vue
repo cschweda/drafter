@@ -26,8 +26,8 @@ useDocsHead({
     </p>
     <p>
       It works the way writers of apps like Final Draft expect: start a name, let it fill itself
-      in, and press <kbd>Tab</kbd> to go on. You don’t need to learn a single Fountain mark. The Script pane, exports, and everything else read
-      the same file as before.
+      in, and press <kbd>Tab</kbd> to go on. You don’t need to learn a single Fountain mark. The
+      Script pane, exports, and everything else read the same file as before.
     </p>
 
     <h2 id="switching">Switching</h2>
@@ -165,9 +165,9 @@ useDocsHead({
     <p>
       <strong>Action stays Action.</strong> A line of capitals typed as action, such as
       <code>BANG</code>, stays action: a name is reached with <kbd>Tab</kbd> or the chooser, never
-      by typing capitals. A line you start with <code>INT.</code> or <code>EXT.</code> becomes a
-      scene heading, straight after a speech too, and a line of capitals ending in
-      <code>TO:</code> becomes a transition, but only on a fresh line you’ve just reached.
+      by typing capitals. Only on a fresh line you’ve just reached, in a screenplay, does a line
+      you start with <code>INT.</code> or <code>EXT.</code> become a scene heading (straight after
+      a speech too), and a line of capitals ending in <code>TO:</code> become a transition.
     </p>
     <p>
       <strong>Names are typed in capitals.</strong> For a name with small letters in it, such as
@@ -185,9 +185,10 @@ useDocsHead({
         <strong>Names,</strong> the one who spoke most recently above the cursor first.
       </li>
       <li>
-        <strong>Scene headings:</strong> <code>INT.</code>, <code>EXT.</code>,
-        <code>INT./EXT.</code>, <code>EST.</code>, and <code>I/E</code>, then the places you’ve used,
-        most recent first. Taking a place offers the times of day, and taking a time writes it with
+        <strong>Scene headings:</strong> after you choose Scene heading (in the chooser, on the
+        element bar, or with <kbd>Tab</kbd>’s row), <code>INT.</code>, <code>EXT.</code>,
+        <code>INT./EXT.</code>, <code>EST.</code>, and <code>I/E</code>; then, once a heading has
+        its <code>INT.</code> or <code>EXT.</code>, the places you’ve used, most recent first. Taking a place offers the times of day, and taking a time writes it with
         its dash (<code>INT. KITCHEN - NIGHT</code>) and goes to Action. Close the list with
         <kbd>Esc</kbd> and there’s no dash left behind.
       </li>
@@ -207,8 +208,9 @@ useDocsHead({
       <kbd>↓</kbd> move in the list. Typing fast is fine: <code>JU</code> and <kbd>Tab</kbd> gives
       JUNE even before the list has drawn. <kbd>Esc</kbd> closes the list and writes nothing, and it
       stays closed until your next letter, so if you want <code>JO</code> and not JOHN, press
-      <kbd>Esc</kbd>, then <kbd>Tab</kbd>. <kbd>Ctrl+Space</kbd> opens the list anywhere. Nothing
-      is ever offered from outside your script.
+      <kbd>Esc</kbd>, then <kbd>Tab</kbd>. <kbd>Ctrl+Space</kbd> opens the list anywhere.
+      Suggestions come from your script and a short list of standard ones; nothing comes from the
+      internet.
     </p>
 
     <h2 id="chooser">The chooser</h2>
@@ -309,7 +311,7 @@ useDocsHead({
     <p>
       <strong>Yes.</strong> A script typed in Classic Mode is plain Fountain, the same as you could
       have typed in Fountain Mode, key for key. Nothing in the file says which mode wrote it, and a
-      switch never changes it. A script opened in Classic Mode is shown as it is, with nothing
+      switch changes nothing you’ve written. A script opened in Classic Mode is shown as it is, with nothing
       changed. Drafts, snapshots, exports, the command line, and Drafter for Claude all see the same
       text, and the file still opens in any app that reads Fountain.
     </p>
