@@ -26,7 +26,7 @@ import {
 } from './steps';
 import { draftText } from './store';
 import { closeTempTab, showTempTab, tempTabShown } from './tabs';
-import { useDrafts } from './use-drafts';
+import { draftSource, useDrafts } from './use-drafts';
 
 // Draft by draft's session (drafts-and-cuts design §2.4): the open script's steps, counted in the
 // history worker, a tab that exists only while open (placed as the Drafts list is), and opening a
@@ -88,7 +88,8 @@ function create(): StepsSession {
     editor.kind.value === 'markdown' ? 'markdown' : 'fountain',
   );
   const say = (message: string) => void sayOutline(message);
-  const text = () => editor.view.state.doc.toString();
+  // Now as a save would write it, as the drafts it's compared with were frozen.
+  const text = () => draftSource(editor.view.state);
 
   let reads = 0;
   async function load() {

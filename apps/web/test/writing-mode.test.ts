@@ -5,7 +5,12 @@ import { nextTick } from 'vue';
 import { classicNotice } from '../app/editor/element-notice';
 import { classicIsOn } from '../app/editor/extensions';
 import { useEditor } from '../app/editor/session';
-import { CLASSIC_NOTICE, FOUNTAIN_NOTICE, setWritingMode } from '../app/editor/writing-mode';
+import {
+  CLASSIC_NOTICE,
+  FOUNTAIN_NOTICE,
+  pickWritingMode,
+  setWritingMode,
+} from '../app/editor/writing-mode';
 import { useSettings } from '../app/settings/settings';
 
 // The switch's one action, on the real editor; only the panes, which are Nuxt state, are stood in for.
@@ -87,6 +92,22 @@ describe('setWritingMode', () => {
     expect(classicNotice.value).toBe(FOUNTAIN_NOTICE);
     expect(CLASSIC_NOTICE).toBe('Classic Mode. Enter and Tab move between elements.');
     expect(FOUNTAIN_NOTICE).toBe('Fountain Mode. You type the marks.');
+  });
+
+  test('clicking the mode already pressed says nothing again', async () => {
+    await useSettings().set('classicHintSeen', true);
+    expect(pickWritingMode('classic')).toBe(true);
+    await nextTick();
+    await nextTick();
+    expect(classicNotice.value).toBe(CLASSIC_NOTICE);
+    classicNotice.value = '';
+    const focus = vi.spyOn(useEditor().view, 'focus');
+    expect(pickWritingMode('classic')).toBe(false);
+    await nextTick();
+    await nextTick();
+    expect(classicNotice.value).toBe('');
+    expect(focus).not.toHaveBeenCalled();
+    expect(classicIsOn(useEditor().view.state)).toBe(true);
   });
 
   test('a switch gives focus to the editor', () => {

@@ -7,7 +7,7 @@ import DDialog from '~/components/ui/DDialog.vue';
 import { useCuts } from '~/cuts/use-cuts';
 import { compareLabel, draftName, draftWhen, milestoneLabel } from '~/drafts/labels';
 import type { DraftRow } from '~/drafts/store';
-import { useDrafts } from '~/drafts/use-drafts';
+import { draftSource, useDrafts } from '~/drafts/use-drafts';
 import { useEditor } from '~/editor/session';
 import { noticeWhileOpen, sayOutline } from '~/outline/notice';
 import {
@@ -226,11 +226,11 @@ async function versionOf(row: HistoryRow): Promise<Version | null> {
   return { label: snapshotTime(row.createdAt), at: row.createdAt, text };
 }
 
-/** Now: the editor's text as it is (Call 15). */
+/** Now: the editor's text as a save would write it (Call 15). */
 const nowVersion = (): Version => ({
   label: nowLabel(Date.now()),
   at: null,
-  text: editor.view.state.doc.toString(),
+  text: draftSource(editor.view.state),
 });
 
 function startCompare(a: Version, b: Version) {

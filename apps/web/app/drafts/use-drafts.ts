@@ -1,3 +1,5 @@
+import type { EditorState } from '@codemirror/state';
+import { savedText } from '@drafter/cm-fountain';
 import {
   type ComputedRef,
   computed,
@@ -287,6 +289,12 @@ export interface AppDrafts extends DraftsSession {
   onReplaced(listener: () => void): () => void;
 }
 
+/**
+ * The text a draft keeps, and the one an unchanged-since-the-last-draft check compares: what a save
+ * would write, so a line Classic Mode just made inside a speech isn't frozen into the draft.
+ */
+export const draftSource = (state: EditorState): string => savedText(state).toString();
+
 let shared: AppDrafts | undefined;
 
 function createApp(): AppDrafts {
@@ -303,7 +311,7 @@ function createApp(): AppDrafts {
   });
   const session = createDrafts({
     projectId: () => script.project.value?.id ?? null,
-    text: () => editor.view.state.doc.toString(),
+    text: () => draftSource(editor.view.state),
     readOnly: () =>
       historyReadOnly() ?? (editor.view.state.readOnly ? 'The script can’t be changed now.' : null),
     notKept: () => notKept.value,

@@ -345,7 +345,7 @@ async function run(asked: Asked, job?: StoryMapJob): Promise<'saved' | 'cancelle
           ? encodeFile(source, project?.lineBreak ?? '\n', project?.bom ?? false)
           : undefined;
       const request: ExportRequest = job
-        ? await storyMapRequest(asked, job, editor.view.state.doc.toString(), template, title)
+        ? await storyMapRequest(asked, job, source, template, title)
         : requestFor(asked, {
             source,
             template,

@@ -1,7 +1,7 @@
 import { isolateHistory } from '@codemirror/commands';
 import { Text, Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { onlyClearedBlock, savedText } from '@drafter/cm-fountain';
+import { classicLine, onlyClearedBlock, savedText } from '@drafter/cm-fountain';
 import {
   type ComputedRef,
   computed,
@@ -1153,8 +1153,12 @@ function create(): ScriptSession {
   editor.onState((state) => {
     if (loading || state.doc === lastDoc) return;
     if (guard.readOnly.value) return;
-    // Classic Mode's room above a blank script's metadata block isn't an edit of the writer's.
-    const unedited = baseline.value?.eq(lastDoc) && onlyClearedBlock(lastDoc, state.doc);
+    // Classic Mode's room above a blank script's metadata block isn't an edit of the writer's. Only
+    // in Classic Mode (its own field is in the state): Fountain Mode and Markdown count every change.
+    const unedited =
+      state.field(classicLine, false) !== undefined &&
+      baseline.value?.eq(lastDoc) &&
+      onlyClearedBlock(lastDoc, state.doc);
     lastDoc = state.doc;
     if (unedited) {
       baseline.value = state.doc;

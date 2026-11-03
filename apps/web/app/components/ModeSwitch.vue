@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useEditor } from '~/editor/session';
-import { CLASSIC_TIP, FOUNTAIN_TIP, setWritingMode } from '~/editor/writing-mode';
+import { CLASSIC_TIP, FOUNTAIN_TIP, pickWritingMode, setWritingMode } from '~/editor/writing-mode';
 import { useSettings, WRITING_MODES, type WritingMode } from '~/settings/settings';
 
 // Fountain | Classic (Classic Mode design §3.2), which stays in sight the whole time a script is
@@ -37,7 +37,7 @@ const next = computed<WritingMode>(() => (current.value === 'classic' ? 'fountai
         class="mode-button"
         :title="MODES[mode].tip"
         :aria-pressed="current === mode ? 'true' : 'false'"
-        @click="setWritingMode(mode)"
+        @click="pickWritingMode(mode)"
       >
         {{ MODES[mode].word }}
       </button>

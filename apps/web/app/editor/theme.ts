@@ -61,6 +61,8 @@ export const theme = EditorView.theme({
     to: { backgroundColor: 'var(--current-line)' },
   },
   '@media (prefers-reduced-motion: reduce)': { '.cm-revealed': { animation: 'none' } },
+  // Nothing moves in Classic Mode, in any motion setting (design §12): the line is marked, still.
+  '&.cm-classic .cm-revealed': { animation: 'none' },
   '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'calc(21px * var(--text-scale, 1))' },
   '.cm-content': { padding: '12px 0', caretColor: 'var(--focus)' },
   '.cm-line': { padding: '0 16px 0 8px' },

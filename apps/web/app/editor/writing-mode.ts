@@ -46,3 +46,13 @@ export function setWritingMode(mode: WritingMode): void {
   }
   view.focus();
 }
+
+/**
+ * The switch's buttons: a click on the mode already pressed does nothing, so a screen reader
+ * doesn't hear the notice again for a choice that changed nothing. Returns whether it switched.
+ */
+export function pickWritingMode(mode: WritingMode): boolean {
+  if (useSettings().settings.value.writingMode === mode) return false;
+  setWritingMode(mode);
+  return true;
+}

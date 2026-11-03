@@ -206,9 +206,16 @@ test.describe('the switch', () => {
       await settled(page);
       const control = width >= 1024 ? group(page) : one(page, 'Fountain');
       await expect(control, `at ${width}px`).toBeVisible();
-      const box = await control.boundingBox();
-      expect(box, `at ${width}px`).not.toBeNull();
-      expect((box?.x ?? 0) + (box?.width ?? 0), `at ${width}px`).toBeLessThanOrEqual(width);
+      // Inside the window once the bar has fitted itself, a frame or two after the resize.
+      await expect
+        .poll(
+          async () => {
+            const box = await control.boundingBox();
+            return box ? box.x + box.width : Number.POSITIVE_INFINITY;
+          },
+          { message: `at ${width}px` },
+        )
+        .toBeLessThanOrEqual(width);
       // Never folded: More actions has no writing mode in it.
       const more = page.getByRole('button', { name: 'More actions', exact: true });
       if (await more.isVisible()) {
@@ -240,28 +247,40 @@ test.describe('the switch', () => {
     }
   });
 
-  test('at 412px the top bar has the mark, Save, Export, and the switch’s word', async ({
-    page,
-  }) => {
-    // The maintainer's ruling for phones (Task 14): Save and Export stay on a Pixel 7's bar beside
-    // the switch, which keeps its word; the wordmark gives way to the mark below 480px.
-    await page.setViewportSize({ width: 412, height: 915 });
-    await start(page);
-    const bar = page.locator('header.toolbar');
-    const logo = bar.locator('.logo img');
-    await expect
-      .poll(() => logo.evaluate((img) => (img as HTMLImageElement).currentSrc))
-      .toMatch(/\/mark\.svg$/);
-    await expect(bar.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
-    await expect(bar.getByRole('button', { name: 'Export', exact: true })).toBeVisible();
-    await expect(one(page, 'Fountain')).toHaveText('Fountain');
-    await one(page, 'Fountain').click();
-    await expect(one(page, 'Classic')).toHaveText('Classic');
-    await expect(bar.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
-    await expect(bar.getByRole('button', { name: 'Export', exact: true })).toBeVisible();
-    const scrolls = await bar.evaluate((el) => el.scrollWidth - el.clientWidth);
-    expect(scrolls).toBe(0);
-  });
+  // The maintainer's rulings for phones: Save and Export stay on the bar beside the switch, which
+  // keeps its word, on a Pixel 7 (412px), an iPhone SE or mini (375px), and a small Android (360px),
+  // in both modes; the wordmark gives way to the mark below 480px. At 320px they may fold.
+  for (const width of [412, 375, 360]) {
+    test(`at ${width}px the top bar has the mark, Save, Export, and the switch’s word`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await start(page);
+      const bar = page.locator('header.toolbar');
+      const logo = bar.locator('.logo img');
+      await expect
+        .poll(() => logo.evaluate((img) => (img as HTMLImageElement).currentSrc))
+        .toMatch(/\/mark\.svg$/);
+      const save = bar.getByRole('button', { name: 'Save', exact: true });
+      const exportButton = bar.getByRole('button', { name: 'Export', exact: true });
+      for (const [now, then] of [
+        ['Fountain', 'Classic'],
+        ['Classic', 'Fountain'],
+      ] as const) {
+        await settled(page);
+        await expect(one(page, now)).toHaveText(now);
+        await expect(save, `${now} at ${width}px`).toBeVisible();
+        await expect(exportButton, `${now} at ${width}px`).toBeVisible();
+        await expect
+          .poll(() => bar.evaluate((el) => el.scrollWidth - el.clientWidth), {
+            message: `${now} at ${width}px`,
+          })
+          .toBe(0);
+        await one(page, now).click();
+        await expect(one(page, then)).toBeVisible();
+      }
+    });
+  }
 
   test('the switch shows in focus mode', async ({ page }) => {
     await classic(page, SCRIPT);
@@ -899,6 +918,25 @@ test.describe('colours and motion', () => {
       await page.keyboard.press('Enter');
       await expect(chooser(page)).toBeVisible();
       expect(await still('.cm-chooser')).toEqual([]);
+    });
+
+    test(`a line a note shows is marked, still (${motion})`, async ({ page }, info) => {
+      test.skip(isPhone(info.project.name), 'the Source and the Notes side by side');
+      await page.emulateMedia({ reducedMotion: motion });
+      await classic(page, `${SCRIPT} [[Check the hours]]`);
+      await runCommand(page, 'Show Notes');
+      await page
+        .getByRole('listbox', { name: 'Notes' })
+        .getByRole('option', { name: /^Check the hours/ })
+        .click();
+      const line = page.locator('.cm-line.cm-revealed');
+      await expect(line).toHaveCount(1);
+      const style = await line.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return { animation: s.animationName, shadow: s.boxShadow };
+      });
+      expect(style.animation).toBe('none');
+      expect(style.shadow).not.toBe('none');
     });
   }
 });
