@@ -12,6 +12,10 @@ describe('a paragraph with too many marks', () => {
     expect(denseMarks(`${half}\n\n${half}`)).toBe(false);
     expect(denseMarks(`${half}\n  \t\n${half}`)).toBe(false);
     expect(denseMarks(`${half}\n${half}`)).toBe(true);
+    // A Windows or old Mac line ending is one line ending, not a blank line between halves.
+    expect(denseMarks(`${half}\r\n${half}`)).toBe(true);
+    expect(denseMarks(`${half}\r${half}`)).toBe(true);
+    expect(denseMarks(`${half}\r\n\r\n${half}`)).toBe(false);
     expect(denseMarks(']'.repeat(MAX_BRACKETS))).toBe(false);
     expect(denseMarks(']'.repeat(MAX_BRACKETS + 1))).toBe(true);
     // Links and footnotes, however many, open what they close.

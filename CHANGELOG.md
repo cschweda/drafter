@@ -32,7 +32,7 @@ The red/blue team audit of 3 November 2026 ([the report](docs/redblue-audit-2026
 - **The desktop app asks before a page opens any address but Drafter's own links.** A page made to run code could have handed the browser an address holding the script, past the network block; now any other site shows a box from the app, naming it. A new app window always gets the app's own chrome.
 - **A Markdown paragraph thick with `*` and `_` no longer freezes the app.** 160 KB of `*_` held the tab for over 14 seconds, again on every reload, and stalled the Preview and every export. The Source pane reads such a paragraph as plain text, and the Preview and exports refuse it, with a new trap document.
 - **`drafter build` never writes through a link** planted where its output goes: it writes beside the target and renames over it.
-- **Drafter for Claude lists a folder even with a huge file in it:** a file of over 300,000 paragraphs is refused on its own.
+- **Drafter for Claude lists a folder even with a huge file in it:** a file of over 300,000 paragraphs is refused on its own. Both caps read LF, CR, and CRLF as line endings, so a file with Windows or old Mac line endings can't slip past them (found by the automated review of the fix).
 - **No text field fills the browser's form history** (the Story map's logline and contact, the synopses), with a test over every field.
 - **drafter.dev's security policy names only Plausible's one script and its one event address**, not all of plausible.io.
 - **Hide the script's title in the tab**, a new setting (off by default): browsers keep a tab's title in their history and sync open tabs.

@@ -140,17 +140,19 @@ async function imported(run: () => FdxImport | Promise<FdxImport>): Promise<FdxI
  */
 export const MAX_PARAGRAPHS = 300_000;
 
-/** Whether `text` has more than `max` paragraphs, counted in one pass without splitting it. */
+/** Whether `text` has more than `max` paragraphs (lines ending in LF, CR, or CRLF), in one pass. */
 export function moreParagraphsThan(text: string, max: number): boolean {
   let paragraphs = 0;
   let blank = true;
   let lineBlank = true;
   for (let i = 0; i < text.length; i++) {
     const code = text.charCodeAt(i);
-    if (code === 10) {
+    // LF, CR, and CRLF each end a line, as the parser reads them.
+    if (code === 10 || code === 13) {
+      if (code === 13 && text.charCodeAt(i + 1) === 10) i++;
       blank = lineBlank;
       lineBlank = true;
-    } else if (code !== 32 && code !== 9 && code !== 13 && lineBlank) {
+    } else if (code !== 32 && code !== 9 && lineBlank) {
       lineBlank = false;
       if (blank && ++paragraphs > max) return true;
       blank = false;

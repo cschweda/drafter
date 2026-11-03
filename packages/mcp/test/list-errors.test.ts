@@ -65,3 +65,16 @@ describe('list_scripts and a file with too many paragraphs', () => {
     expect(listing.files[1]?.refused).toContain('more than 300,000 paragraphs');
   });
 });
+
+describe('the paragraph count', () => {
+  it('reads LF, CR, and CRLF line endings alike, so none slips past the cap', async () => {
+    const { moreParagraphsThan } = await import('../src/inside');
+    for (const end of ['\n', '\r', '\r\n']) {
+      const text = `A${end}${end}`.repeat(11);
+      expect(moreParagraphsThan(text, 10), JSON.stringify(end)).toBe(true);
+      expect(moreParagraphsThan(text, 11), JSON.stringify(end)).toBe(false);
+    }
+    // Lines of one paragraph, whatever ends them, are one paragraph.
+    expect(moreParagraphsThan('A\r\nB\rC\nD', 1)).toBe(false);
+  });
+});

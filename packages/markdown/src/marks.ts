@@ -38,6 +38,8 @@ export function denseMarks(source: string): boolean {
   for (let i = 0; i < source.length; i++) {
     const code = source.charCodeAt(i);
     if (code === LF || code === CR) {
+      // CRLF is one line ending, as the parsers read it: two would make every line look blank.
+      if (code === CR && source.charCodeAt(i + 1) === LF) i++;
       if (lineBlank) {
         marks = 0;
         open = 0;
