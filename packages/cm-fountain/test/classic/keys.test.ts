@@ -683,9 +683,10 @@ describe('where the keys give way', () => {
     document.body.append(parent);
     const view = new EditorView({ state: classicEditor('One.|'), parent });
     try {
-      const press = (key: string) => {
+      const press = (key: string, isComposing = false) => {
         const event = new KeyboardEvent('keydown', {
           key,
+          isComposing,
           code: 'KeyM',
           keyCode: 77,
           altKey: true,
@@ -706,6 +707,9 @@ describe('where the keys give way', () => {
         view.contentDOM.dispatchEvent(event);
         return event.defaultPrevented;
       };
+      // Inside an input method's composition the key is the input method's.
+      expect(press('Â', true)).toBe(false);
+      expect(tab(), 'Tab is still Classic’s').toBe(true);
       expect(press('Â')).toBe(true);
       expect(tab(), 'Tab is the browser’s').toBe(false);
       expect(tab(), 'and stays so').toBe(false);

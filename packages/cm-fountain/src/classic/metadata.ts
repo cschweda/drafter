@@ -138,6 +138,46 @@ function roomNeeded(doc: Text, at: number, breaks: number): number {
 }
 
 /**
+ * The start of the one line left to type on when it's straight under the title page, or null. A new
+ * stage play is its title page, a blank line, and the block: the block keeps the two breaks before
+ * it, so the one line left to stand on is the title page's own blank line, and a letter there would
+ * be read as more of the title page.
+ */
+function roomUnderTitlePage(state: EditorState): number | null {
+  const parsed = state.field(parsedDoc);
+  const span = metadataSpan(parsed);
+  const title = parsed.titlePage;
+  if (!span || !title) return null;
+  const { doc } = state;
+  const line = doc.lineAt(blockStart(doc, span).from);
+  if (!isBlank(line.text) || line.number === 1) return null;
+  const above = doc.line(line.number - 1);
+  if (isBlank(above.text) || above.from < title.span.from || above.from > title.span.to)
+    return null;
+  return line.from;
+}
+
+/**
+ * The break a first letter on that line needs above it, in the letter's own transaction, so the
+ * play stands clear of the title page; or null. A switch or a focus writes nothing; the letter
+ * brings its own blank line, as a block with no break before it gets one (`roomNeeded`). A composed
+ * letter is settled through here once its composition ends (`settledComposition`).
+ */
+function roomFor(tr: Transaction, changes: ChangeSet): TransactionSpec | null {
+  const at = roomUnderTitlePage(tr.startState);
+  if (at === null) return null;
+  let typed = false;
+  changes.iterChanges((fromA, toA, _fromB, _toB, insert) => {
+    if (fromA === at && toA === at && insert.length > 0 && insert.line(1).length > 0) typed = true;
+  });
+  if (!typed) return null;
+  return {
+    changes: { from: changes.mapPos(at, -1), insert: tr.startState.lineBreak },
+    sequential: true,
+  };
+}
+
+/**
  * The backstop (§8.4): a writer's change that reaches the block is cut back to the part above it,
  * text with no blank line left before the block gets one, or it would no longer be a block, and
  * where the change sends the cursor stops above it.
@@ -158,6 +198,8 @@ export const keepMetadata: Extension = EditorState.transactionFilter.of((tr) => 
   if (!cut && selection) specs.push({ selection, sequential: true });
   const room = roomNeeded(final.apply(doc), at, line.number - doc.lineAt(from).number);
   if (room) specs.push({ changes: { from: at, insert: lineBreak.repeat(room) }, sequential: true });
+  const clear = roomFor(tr, final);
+  if (clear) specs.push(clear);
   return specs.length > 1 ? specs : (specs[0] as Transaction | TransactionSpec);
 });
 
@@ -192,52 +234,15 @@ export function matchAbove(tr: Transaction, limit: number): TransactionSpec {
   };
 }
 
-/**
- * Where a line break must go so the line left to type on isn't straight under the title page, or
- * null. A new stage play is its title page, a blank line, and the block: the block keeps the two
- * breaks before it, so the one line left to stand on is the title page's own blank line, and a
- * letter there would be read as more of the title page.
- */
-function roomUnderTitlePage(state: EditorState): number | null {
-  const parsed = state.field(parsedDoc);
-  const span = metadataSpan(parsed);
-  const title = parsed.titlePage;
-  if (!span || !title) return null;
-  const { doc } = state;
-  const line = doc.lineAt(blockStart(doc, span).from);
-  if (!isBlank(line.text) || line.number === 1) return null;
-  const above = doc.line(line.number - 1);
-  if (isBlank(above.text) || above.from < title.span.from || above.from > title.span.to)
-    return null;
-  return line.from;
-}
-
-/**
- * Puts the two breaks above a block with nothing above it, so nothing can land on its line, and a
- * break under a title page the block stands right below, so there's a line to type on of its own.
- */
+/** Puts the two breaks above a block with nothing above it, so nothing can land on its line. */
 function clearBlock(view: EditorView): void {
   const { state } = view;
-  if (state.readOnly || view.composing) return;
-  const annotations = [appChange.of(true), Transaction.addToHistory.of(false)];
-  if (isBlankScript(state, state.doc.line(1))) {
-    const from = firstColumn(state.doc);
-    view.dispatch({
-      changes: { from, insert: state.lineBreak.repeat(2) },
-      selection: { anchor: from },
-      annotations,
-    });
-    return;
-  }
-  const at = roomUnderTitlePage(state);
-  if (at === null) return;
-  const { head } = state.selection.main;
+  if (state.readOnly || view.composing || !isBlankScript(state, state.doc.line(1))) return;
+  const from = firstColumn(state.doc);
   view.dispatch({
-    changes: { from: at, insert: state.lineBreak },
-    ...(state.selection.ranges.length === 1 && head === at
-      ? { selection: { anchor: at + state.lineBreak.length } }
-      : null),
-    annotations,
+    changes: { from, insert: state.lineBreak.repeat(2) },
+    selection: { anchor: from },
+    annotations: [appChange.of(true), Transaction.addToHistory.of(false)],
   });
 }
 
@@ -271,23 +276,8 @@ export const blockKeptClear: Extension = ViewPlugin.define(
   },
 );
 
-/** Whether `doc` is `from` with one more break among those just before the block (under a title page). */
-function onlyRoomAdded(from: Text, doc: Text): boolean {
-  const text = from.toString();
-  const block = text.lastIndexOf('/* drafter');
-  if (block < 0) return false;
-  let at = block;
-  while (at > 0 && text[at - 1] === '\n') at--;
-  return (
-    doc.sliceString(0, at) === text.slice(0, at) &&
-    doc.sliceString(at, block + 1) === '\n'.repeat(block - at + 1) &&
-    doc.sliceString(block + 1) === text.slice(block)
-  );
-}
-
 /** Whether `doc` is `from` with only the breaks `blockKeptClear` adds, so nothing of the writer's has changed. */
 export function onlyClearedBlock(from: Text, doc: Text): boolean {
-  if (doc.length === from.length + 1) return onlyRoomAdded(from, doc);
   if (doc.length !== from.length + 2 || from.lines > doc.lines) return false;
   const at = firstColumn(from);
   return (

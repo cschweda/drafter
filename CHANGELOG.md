@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- In **Classic Mode** the first letter of a new stage play no longer joins the title page: the play gets a line of its own under the title page's blank line when the editor takes focus (as a blank script's block gets room), and the script isn't counted as changed for it.
+- In **Classic Mode** the first letter of a new stage play no longer joins the title page: it brings its own blank line, in the same step (a composed letter too, once its composition ends), and a switch or a focus still writes nothing.
 - In **Classic Mode** on a Mac, **Shift+Alt+M** turns on Tab moving focus, as Ctrl+M does elsewhere: CodeMirror's own key read the letter Option types and never ran.
 - On a phone the top bar keeps **Save** and **Export** beside the writing-mode switch: the wordmark gives way to the mark below 480px, and the switch's word sits in a tighter pill.
 - A Markdown quote nested thousands deep no longer stops the Source pane's next update (the Preview stayed on the old text): its marks stop nesting at the depth the Preview reads.

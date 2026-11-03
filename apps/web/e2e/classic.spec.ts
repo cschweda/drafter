@@ -3,9 +3,11 @@ import {
   closeSettings,
   editor,
   openSettings,
+  pasteText,
   pressToolbarButton,
   runCommand,
   settingsDialog,
+  settled,
   showSource,
   start,
   wholeText,
@@ -201,6 +203,7 @@ test.describe('the switch', () => {
     await start(page);
     for (const width of [1280, 1024, 800, 320]) {
       await page.setViewportSize({ width, height: 720 });
+      await settled(page);
       const control = width >= 1024 ? group(page) : one(page, 'Fountain');
       await expect(control, `at ${width}px`).toBeVisible();
       const box = await control.boundingBox();
@@ -218,17 +221,46 @@ test.describe('the switch', () => {
         await page.keyboard.press('Escape');
         await expect(menu).toBeHidden();
       }
-      const scrolls = await page.evaluate(() => {
-        const bar = document.querySelector('header.toolbar') as HTMLElement;
-        return (
-          document.documentElement.scrollWidth -
-          document.documentElement.clientWidth +
-          bar.scrollWidth -
-          bar.clientWidth
-        );
-      });
-      expect(scrolls, `at ${width}px`).toBe(0);
+      // The bar is fitted a frame after a resize: it settles with nothing scrolling sideways.
+      await expect
+        .poll(
+          () =>
+            page.evaluate(() => {
+              const bar = document.querySelector('header.toolbar') as HTMLElement;
+              return (
+                document.documentElement.scrollWidth -
+                document.documentElement.clientWidth +
+                bar.scrollWidth -
+                bar.clientWidth
+              );
+            }),
+          { message: `at ${width}px` },
+        )
+        .toBe(0);
     }
+  });
+
+  test('at 412px the top bar has the mark, Save, Export, and the switch’s word', async ({
+    page,
+  }) => {
+    // The maintainer's ruling for phones (Task 14): Save and Export stay on a Pixel 7's bar beside
+    // the switch, which keeps its word; the wordmark gives way to the mark below 480px.
+    await page.setViewportSize({ width: 412, height: 915 });
+    await start(page);
+    const bar = page.locator('header.toolbar');
+    const logo = bar.locator('.logo img');
+    await expect
+      .poll(() => logo.evaluate((img) => (img as HTMLImageElement).currentSrc))
+      .toMatch(/\/mark\.svg$/);
+    await expect(bar.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Export', exact: true })).toBeVisible();
+    await expect(one(page, 'Fountain')).toHaveText('Fountain');
+    await one(page, 'Fountain').click();
+    await expect(one(page, 'Classic')).toHaveText('Classic');
+    await expect(bar.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Export', exact: true })).toBeVisible();
+    const scrolls = await bar.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(scrolls).toBe(0);
   });
 
   test('the switch shows in focus mode', async ({ page }) => {
@@ -496,7 +528,7 @@ test.describe('the metadata block', () => {
     await expect.poll(() => wholeText(page)).toBe(before);
   });
 
-  test('cut and paste over all, the same', async ({ page, browserName, context }) => {
+  test('cut and paste over all, the same', async ({ page, browserName, context }, info) => {
     if (browserName === 'chromium') {
       await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     }
@@ -507,8 +539,8 @@ test.describe('the metadata block', () => {
     await expect.poll(() => wholeText(page)).not.toContain('A bare stage.');
     expect(await wholeText(page)).toMatch(META);
     // An emulated iPhone's cut takes a moment to settle: an Undo straight after it takes back the
-    // typing before it too, in Fountain Mode as well. A writer's Undo comes later than that.
-    await page.waitForTimeout(300);
+    // typing before it too, in Fountain Mode as well (the test below). A writer's Undo comes later.
+    if (info.project.name === 'phone-webkit') await page.waitForTimeout(300);
     await page.keyboard.press('ControlOrMeta+z');
     await expect.poll(() => wholeText(page)).toBe(before);
     // Pasted over all: the text goes in, and the block stays the last thing, once.
@@ -534,6 +566,27 @@ test.describe('the metadata block', () => {
     await page.keyboard.press('ControlOrMeta+z');
     await expect.poll(() => wholeText(page)).toBe(before);
   });
+});
+
+test('on an emulated iPhone an Undo straight after Cut takes the typing too, in Fountain Mode', async ({
+  page,
+}, info) => {
+  // Not Classic Mode's: the same keys in Fountain Mode, with no wait after the cut, take back the
+  // cut and the typing before it in one Undo. Pinned so a change in WebKit or CodeMirror shows, and
+  // so the wait in "cut and paste over all" stays the iPhone's alone.
+  test.skip(info.project.name !== 'phone-webkit', 'the emulated iPhone');
+  await start(page);
+  await newScript(page, 'New stage play');
+  await fountainOn(page);
+  await editor(page).focus();
+  const blank = await wholeText(page);
+  await page.keyboard.type('A bare stage.');
+  await expect.poll(() => wholeText(page)).toContain('A bare stage.');
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.press('ControlOrMeta+x');
+  await expect.poll(() => wholeText(page)).not.toContain('A bare stage.');
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect.poll(() => wholeText(page)).toBe(blank);
 });
 
 test.describe('capitals and Action', () => {
@@ -571,9 +624,10 @@ test.describe('capitals and Action', () => {
     await expect(page.locator('.cm-line').filter({ hasText: 'Glass falls.' })).toHaveClass(
       /cm-c-action/,
     );
-    // BANG stays Action in the file too: with a line under it, it carries its `!`.
-    const text = (await wholeText(page)) ?? '';
-    expect(text).toMatch(/\n\n!?BANG\n\nGlass falls\.$/);
+    // BANG stays Action in the file too. With a blank line under it the parser reads a line of
+    // capitals as Action, so it needs no `!` (§4.2: only a line read as a cue because of the line
+    // below takes one), and Classic Mode writes none.
+    expect(await wholeText(page)).toBe(`${SCRIPT}\n\nBANG\n\nGlass falls.`);
     await expect(bang).toHaveClass(/cm-c-action/);
   });
 });
@@ -651,52 +705,102 @@ test.describe('the left pane with the app’s CSS', () => {
     expect(await wholeText(page)).toBe(marked);
   });
 
-  test('a 100,000-character line with marks takes a keystroke and scrolls', async ({
+  test('a 100,000-character line with hidden marks takes a key and scrolls, its marks hidden', async ({
     page,
   }, info) => {
     test.setTimeout(120_000);
     test.skip(isPhone(info.project.name), 'a desktop’s keys');
-    const long = Array.from({ length: 5000 }, (_, i) => (i % 2 ? '**bold**' : 'word *it* ')).join(
-      ' ',
-    );
-    const text = `INT. DINER - DAY\n\n${long.slice(0, 100_000)}\n\nThe end.`;
+    // One line of action of exactly 100,000 characters: a `!` that Classic Mode hides at its start,
+    // and a note every few words, whose brackets it hides, drawn as rules.
+    const piece = 'Static hums on [[a note]] and on. ';
+    const notes = Math.floor((100_000 - 1) / piece.length);
+    const body = `!${piece.repeat(notes)}`;
+    const line = body + 'x'.repeat(100_000 - body.length);
+    expect(line).toHaveLength(100_000);
+    const text = `INT. DINER - DAY\n\n${line}\n\nThe end.`;
     await start(page);
-    await showSource(page);
-    await editor(page).focus();
-    await page.keyboard.press('ControlOrMeta+A');
-    await page.keyboard.insertText(text);
-    await expect.poll(() => wholeText(page), { timeout: 60_000 }).toBe(text);
+    await pasteText(page, text);
     await page.keyboard.press(switchKey);
     await classicOn(page);
     if (await hint(page).isVisible())
       await hint(page).getByRole('button', { name: 'Got it' }).click();
-    await editor(page).focus();
-    await page.keyboard.press('ControlOrMeta+Home');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('End');
-    const typed = await page.evaluate(async () => {
-      const t0 = performance.now();
-      return t0;
-    });
-    await page.keyboard.type('x');
+    const lineEnd = 18 + line.length;
+    // The editor's work for a key, timed around its dispatches, from the keydown to the frame after.
+    const timed = async (key: string) => {
+      await page.evaluate(() => {
+        type Linked = { view?: { dispatch: (...a: unknown[]) => void } };
+        const content = document.querySelector('.cm-content') as Element & {
+          cmTile?: Linked;
+          cmView?: Linked;
+        };
+        const view = (content.cmTile ?? content.cmView)?.view as {
+          dispatch: (...a: unknown[]) => void;
+        };
+        const w = window as unknown as { spent: number; own?: (...a: unknown[]) => void };
+        w.spent = 0;
+        if (!w.own) {
+          w.own = view.dispatch;
+          const own = w.own;
+          view.dispatch = function (this: unknown, ...args: unknown[]) {
+            const start = performance.now();
+            try {
+              own.apply(this, args);
+            } finally {
+              w.spent += performance.now() - start;
+            }
+          };
+        }
+      });
+      await page.keyboard.press(key);
+      await page.evaluate(
+        () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+      );
+      return page.evaluate(() => (window as unknown as { spent: number }).spent);
+    };
+    await select(page, lineEnd, lineEnd);
+    const typed = await timed('x');
     await expect.poll(async () => (await wholeText(page))?.length).toBe(text.length + 1);
-    const took = (await page.evaluate(() => performance.now())) - typed;
+    const deleted = await timed('Backspace');
+    await expect.poll(() => wholeText(page)).toBe(text);
     console.log(
-      `a keystroke on a 100,000-character line, ${info.project.name}: ${took.toFixed(0)} ms`,
+      `a key on a 100,000-character line with marks, ${info.project.name}: ${typed.toFixed(1)} ms typed, ${deleted.toFixed(1)} ms deleted`,
     );
-    expect(took).toBeLessThan(2000);
-    // Scrolled from end to start and back, the pane draws and the text stays.
+    // A decoration of the whole line took 900 ms a key (Task 6): the marks are worked out for the
+    // part in view, so a key is a small part of that.
+    expect(typed).toBeLessThan(300);
+    expect(deleted).toBeLessThan(300);
+    // Scrolled through the line, top to bottom and back: at each place the marks in view are
+    // hidden (no `!`, no brackets on the page), the notes show their rules, and nothing is written.
     const scroller = page.locator('.cm-scroller');
-    for (const y of [0, 20_000, 100_000, 0]) {
+    const height = await scroller.evaluate((el) => el.scrollHeight);
+    let checked = 0;
+    for (const share of [0, 0.25, 0.5, 0.75, 1, 0.5, 0]) {
       await scroller.evaluate((el, top) => {
         el.scrollTop = top;
-      }, y);
+      }, share * height);
       await page.evaluate(
-        () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+        () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
       );
-      await expect(page.locator('.cm-line').first()).toBeVisible();
+      const seen = await page.evaluate(() => {
+        const long = [...document.querySelectorAll('.cm-content .cm-line')].find(
+          (el) => (el.textContent?.length ?? 0) > 1000,
+        );
+        return {
+          drawn: !!long,
+          text: long?.textContent?.slice(0, 2000) ?? '',
+          brackets: /\[\[|\]\]/.test(long?.textContent ?? ''),
+          rules: long?.querySelectorAll('.cm-c-note-rule').length ?? 0,
+        };
+      });
+      if (!seen.drawn) continue;
+      expect(seen.brackets, `at ${share}`).toBe(false);
+      expect(seen.text.startsWith('!'), `at ${share}`).toBe(false);
+      expect(seen.rules, `at ${share}`).toBeGreaterThan(0);
+      checked++;
     }
-    expect((await wholeText(page))?.length).toBe(text.length + 1);
+    // The line fills the pane everywhere but at its two ends.
+    expect(checked).toBeGreaterThanOrEqual(4);
+    expect(await wholeText(page)).toBe(text);
   });
 
   test('Shift+Enter with a selection breaks the line as Fountain Mode does', async ({

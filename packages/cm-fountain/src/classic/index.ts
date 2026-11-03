@@ -154,7 +154,7 @@ const tabFocusKey = Prec.highest(
     keydown(event, view) {
       const mac = /Mac/.test(navigator.platform) || /iP(hone|ad|od)/.test(navigator.platform);
       if (!mac || event.code !== 'KeyM' || !event.altKey || !event.shiftKey) return false;
-      if (event.ctrlKey || event.metaKey) return false;
+      if (event.ctrlKey || event.metaKey || event.isComposing) return false;
       view.setTabFocusMode();
       return true;
     },

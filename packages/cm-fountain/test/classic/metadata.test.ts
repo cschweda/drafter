@@ -579,26 +579,38 @@ describe('a blank script is made ready', () => {
     view.destroy();
   });
 
-  test('a new stage play gets a line of its own under the title page, and its first letter stands there', async () => {
+  test('a new stage play written nothing at focus or on a switch, and its first letter clear of the title page', async () => {
     // The app's new stage play: a title page, its blank line, and the block, whose two breaks leave
     // only the title page's blank line to stand on, where a letter would be more of the title page.
     const title =
       'Title: Untitled Play\nCredit: Written by\nAuthor: Your Name\nDraft date: May 1, 2026\n\n';
     const doc = `${title}\n${BLOCK}\n`;
+    const changed: boolean[] = [];
     const view = new EditorView({
-      state: classicEditor(`${title}|\n${BLOCK}\n`, { template: STAGE, with: [history()] }),
+      state: classicEditor(`${title}|\n${BLOCK}\n`, {
+        template: STAGE,
+        with: [
+          history(),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) changed.push(true);
+          }),
+        ],
+      }),
       parent: document.body,
     });
     view.focus();
     await settled();
-    expect(view.state.sliceDoc()).toBe(`${title}\n\n${BLOCK}\n`);
-    expect(onlyClearedBlock(Text.of(doc.split('\n')), view.state.doc)).toBe(true);
-    // Moved onto the line made, and the letter typed there is a stage direction.
-    view.dispatch({ selection: { anchor: view.state.selection.main.head } });
+    view.contentDOM.blur();
+    view.focus();
+    await settled();
+    expect(changed, 'focus writes nothing').toEqual([]);
+    expect(view.state.sliceDoc()).toBe(doc);
+    // The first letter brings its own blank line, in its own step.
+    const at = view.state.selection.main.head;
     view.dispatch(
       view.state.update({
-        changes: { from: view.state.selection.main.head, insert: 'a' },
-        selection: { anchor: view.state.selection.main.head + 1 },
+        changes: { from: at, insert: 'a' },
+        selection: { anchor: at + 1 },
         userEvent: 'input.type',
       }),
     );
@@ -611,28 +623,32 @@ describe('a blank script is made ready', () => {
     ]);
     expect(view.state.field(parsedDoc).meta).toEqual(META);
     undo(view);
-    expect(view.state.sliceDoc()).toBe(`${title}\n\n${BLOCK}\n`);
+    expect(view.state.sliceDoc()).toBe(doc);
     view.destroy();
   });
 
-  test('a title page with a line of its own already, and Fountain Mode, are left alone', async () => {
+  test('typing on there through the keys keeps the play clear of the title page', () => {
+    const title = 'Title: Untitled Play\nDraft date: May 1, 2026\n\n';
+    const state = play(`${title}|\n${BLOCK}\n`);
+    const next = keys(state, 'a bare stage.', 'Enter', 'more.');
+    expect(next.sliceDoc()).toBe(`${title}a bare stage.\n\nmore.\n\n${BLOCK}\n`);
+    expect(next.field(parsedDoc).titlePage?.fields.map((f) => f.key)).toEqual([
+      'Title',
+      'Draft date',
+    ]);
+  });
+
+  test('a title page with a line of its own already, and Fountain Mode, are left alone', () => {
     const title = 'Title: Untitled Play\n\n';
-    const view = opened(`${title}One.\n\n${BLOCK}\n`);
-    view.focus();
-    await settled();
-    expect(view.state.sliceDoc()).toBe(`${title}One.\n\n${BLOCK}\n`);
-    view.destroy();
-    const fountainView = new EditorView({
-      state: EditorState.create({
-        doc: `${title}\n${BLOCK}\n`,
-        extensions: [fountain({ template: () => STAGE })],
-      }),
-      parent: document.body,
+    expect(type(play(`${title}One.|\n\n${BLOCK}\n`), 'x').sliceDoc()).toBe(
+      `${title}One.x\n\n${BLOCK}\n`,
+    );
+    const fountainState = EditorState.create({
+      doc: `${title}\n${BLOCK}\n`,
+      selection: { anchor: title.length - 1 },
+      extensions: [fountain({ template: () => STAGE })],
     });
-    fountainView.focus();
-    await settled();
-    expect(fountainView.state.sliceDoc()).toBe(`${title}\n${BLOCK}\n`);
-    fountainView.destroy();
+    expect(type(fountainState, 'x').sliceDoc()).toBe(`${title.slice(0, -1)}x\n\n${BLOCK}\n`);
   });
 
   test('onlyClearedBlock knows those two breaks from anything else', () => {
@@ -641,9 +657,8 @@ describe('a blank script is made ready', () => {
     expect(onlyClearedBlock(of(`${BOM}${BLOCK}`), of(`${BOM}\n\n${BLOCK}`))).toBe(true);
     expect(onlyClearedBlock(of(`${BLOCK}\n`), of(`x\n${BLOCK}\n`))).toBe(false);
     expect(onlyClearedBlock(of('One.'), of('One.ab'))).toBe(false);
-    expect(onlyClearedBlock(of(`T: x\n\n\n${BLOCK}`), of(`T: x\n\n\n\n${BLOCK}`))).toBe(true);
-    expect(onlyClearedBlock(of(`T: x\n\n\n${BLOCK}`), of(`T: x\n\nx\n${BLOCK}`))).toBe(false);
-    expect(onlyClearedBlock(of(`T: x\n\n\n${BLOCK}`), of(`T: x\n\n\n${BLOCK}x`))).toBe(false);
+    // A break more before the block is the writer's: an Enter there in Fountain Mode is an edit.
+    expect(onlyClearedBlock(of(`T: x\n\n\n${BLOCK}`), of(`T: x\n\n\n\n${BLOCK}`))).toBe(false);
   });
 });
 

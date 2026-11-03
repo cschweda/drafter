@@ -66,6 +66,18 @@ function composer(
 const tasks = () => vi.advanceTimersByTimeAsync(1);
 
 describe('§10, a composition', () => {
+  test('composed straight under a new stage play’s title page, it gets its blank line when it ends', async () => {
+    vi.useFakeTimers();
+    const title = 'Title: Untitled Play\nDraft date: May 1, 2026\n';
+    const { view, compose, end } = composer(`${title}|\n\n${BLOCK}\n`, { template: STAGE });
+    compose('あ');
+    end();
+    await tasks();
+    expect(view.state.sliceDoc()).toBe(`${title}\nあ\n\n${BLOCK}\n`);
+    expect(view.state.field(parsedDoc).titlePage?.fields).toHaveLength(2);
+    expect(view.state.field(parsedDoc).meta).toEqual({ v: 1, template: 'stage-play-standard' });
+  });
+
   test('a composition is never rewritten while it runs', async () => {
     vi.useFakeTimers();
     const { view, seen, compose } = composer('She waits.\n\n|', { kind: 'character' });
