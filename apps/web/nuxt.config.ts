@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DOWNLOAD_PAGE, HELP_PAGES } from './app/commands/data';
 import { findDuplicateIds, moduleFolders, moduleIconNames } from './scripts/modules.mjs';
+import { PLAUSIBLE_INIT, PLAUSIBLE_SRC } from './scripts/plausible.mjs';
 import { TOUR_ICONS } from './scripts/tour-icons.mjs';
 import { buildCommit, drafterVersion } from './scripts/version.mjs';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
@@ -35,11 +36,9 @@ const DESKTOP = process.env.DRAFTER_DESKTOP === '1';
 // drafter.dev counts visits with Plausible (the maintainer, 2026-11-02): no cookies, nothing about
 // the visitor or their script. Only the site's own build turns it on (`DRAFTER_ANALYTICS=plausible`
 // in netlify.toml): never the desktop app, a local or test build, or a self-hosted copy.
-// scripts/csp.mjs allows plausible.io in the policy only when a page loads it.
+// scripts/csp.mjs allows plausible.io in the policy only when a page loads it, and every event
+// is cut down to the page and the site before it goes (scripts/plausible.mjs).
 const PLAUSIBLE = process.env.DRAFTER_ANALYTICS === 'plausible' && !DESKTOP;
-const PLAUSIBLE_SRC = 'https://plausible.io/js/pa--lKXZsV2-N7mag-Pl4BV9.js';
-const PLAUSIBLE_INIT =
-  'window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()';
 const moduleIcons = await moduleIconNames(MODULES);
 // About Drafter (Help): the version (the desktop app's, which Electron reports there too) and the
 // commit being built, when git can say (scripts/version.mjs).

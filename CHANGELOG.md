@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Security
+
+- **drafter.dev's analytics no longer receive what a report says.** Plausible's script for the site counts clicks on outside links and sent each link's whole address, and Report a problem's **Open on GitHub** is a link whose address holds everything the writer typed in the report. Every Plausible event is now cut down before it is sent: whatever follows `?` or `#` is dropped from the page's address, the referrer, and every property. It happened only on drafter.dev, only when a report was opened on GitHub, and only with what that report said (which could include lines pasted into it); the script itself was never sent, and the desktop app and self-hosted copies never load Plausible. Found by the privacy audit of 2026-11-03.
+
 ### Changed
 
 - The desktop app's test of View → Show Scaffold waits for the Inspector's header to fit before it opens More tools, as the web app's tests do; a slow Mac runner clicked it as it refit.
