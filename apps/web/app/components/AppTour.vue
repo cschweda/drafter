@@ -4,6 +4,7 @@ import { isApple, matchesKey } from '~/commands/keys';
 import { useCommands } from '~/commands/registry';
 import { usePanes } from '~/composables/usePanes';
 import { useMatchMedia, useWideScreen } from '~/composables/useWideScreen';
+import { useEditor } from '~/editor/session';
 import { isFirstVisit, useScript } from '~/storage/script';
 import { announceTour } from '~/tour/announce';
 import { watchScrollFocus } from '~/tour/scroll-focus';
@@ -19,7 +20,7 @@ import {
 import { STATUS_BAR_QUERY } from '~/utils/panes';
 import { useToolbarFolded } from '~/utils/toolbar-fold';
 
-// The welcome dialog, the "Fountain in 30 seconds" card, and the ten steps (Phase 1 design §4.4),
+// The welcome dialog, the "Fountain in 30 seconds" card, and the eleven steps (Phase 1 design §4.4),
 // built from `nuxt-guided-tour`'s parts. The module keeps the steps, the highlight, the arrow keys,
 // the focus trap, and the screen-reader announcements; this adds what Drafter needs around it:
 // - the welcome only on a first visit that hasn't seen the tour, and the tour again only on request;
@@ -37,7 +38,12 @@ const apple = isApple();
 const statusBar = useMatchMedia(STATUS_BAR_QUERY);
 // A top-bar button folded into More actions on a phone (Task 9) has its step point there.
 const folded = useToolbarFolded();
-const steps = reactive<TourStep[]>(buildSteps(wide.value, statusBar.value, new Set(folded.value)));
+// Over a Markdown document there's no mode switch, and its step says where a script has one.
+const { kind } = useEditor();
+const script = computed(() => kind.value !== 'markdown');
+const steps = reactive<TourStep[]>(
+  buildSteps(wide.value, statusBar.value, new Set(folded.value), script.value),
+);
 const {
   isActive,
   currentStep,
@@ -180,8 +186,8 @@ watch(currentStep, (step) => reveal(step));
 
 // The steps are built for the screen's width (the template step points at the Drafter menu on
 // every width now; the status step at the status bar, or below 640px at the title).
-watch([wide, statusBar, folded], ([now, bar, items]) => {
-  steps.splice(0, steps.length, ...buildSteps(now, bar, new Set(items)));
+watch([wide, statusBar, folded, script], ([now, bar, items, isScript]) => {
+  steps.splice(0, steps.length, ...buildSteps(now, bar, new Set(items), isScript));
   reveal(currentStep.value);
 });
 

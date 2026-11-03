@@ -3,10 +3,10 @@
 // shortcuts page are one list, and its key comes from there. This file imports only plain data,
 // by relative paths, so a test can read it.
 
-import type { CursorElement, ElementStructure } from '@drafter/cm-fountain';
+import type { ClassicElement, CursorElement, ElementStructure } from '@drafter/cm-fountain';
 import { COMMAND_DATA } from '../commands/data';
 import { formatKeys } from '../commands/keys';
-import { ELEMENT_NAMES } from './element-names';
+import { classicElementName, ELEMENT_NAMES } from './element-names';
 
 type Kind = CursorElement['kind'];
 
@@ -270,8 +270,66 @@ export const markLine = (button: BarButton): string | null =>
 
 /** The tooltip, and the button's description: its sentence, and its key for this keyboard. */
 export function tipFor(button: BarButton, apple: boolean): string {
+  return withKey(button.tip, button, apple);
+}
+
+function withKey(words: string, button: BarButton, apple: boolean): string {
   const keys = COMMAND_DATA.find((c) => c.id === button.command)?.keys;
-  return keys ? `${button.tip} Shortcut: ${formatKeys(keys, apple)}.` : button.tip;
+  return keys ? `${words} Shortcut: ${formatKeys(keys, apple)}.` : words;
+}
+
+/** A button's words in Classic Mode, whose writer asked not to learn marks (design §9.2). */
+const CLASSIC_TIPS: Record<string, string | ((structure: ElementStructure) => string)> = {
+  'element-scene-heading': ({ headings }) =>
+    headings
+      ? 'Scene heading. Where and when a scene happens. Type INT. or EXT. on a new line, or Tab goes here from Transition.'
+      : 'Scene. The start of a scene of the play. Tab goes here from Act.',
+  'element-act':
+    'Act. The start of an act of the play. Tab goes here from Character on an empty line.',
+  'element-action': ({ stageDirections }) =>
+    stageDirections
+      ? 'Stage direction. What the audience sees and hears. Tab goes here from Scene.'
+      : 'Action. What we see and hear. Tab goes here from a Scene heading.',
+  'element-character': ({ stageDirections }) =>
+    `Character. The name above a speech. Tab goes here from ${stageDirections ? 'Stage direction' : 'Action'}.`,
+  'element-dialogue': 'Dialogue. What a character says. Tab goes here from Character.',
+  'element-parenthetical':
+    'Parenthetical. A short direction inside a speech. Tab goes here from Dialogue.',
+  'element-transition':
+    'Transition. How one scene gives way to the next. Tab goes here from Character on an empty line.',
+  'element-centered': 'Centered. A line in the middle of the page, such as THE END.',
+  'element-lyric': 'Lyric. A line that’s sung, printed in italics.',
+  'dual-dialogue':
+    'Dual dialogue. Two speeches side by side. Use it in the second speech; press again to take it off.',
+  'wrap-in-note': 'Note. A note to yourself, which never prints. It wraps the selection.',
+  'mark-setup':
+    'Setup. Marks something planted here, to pay off later. Give the payoff the same label.',
+  'mark-payoff': 'Payoff. Marks where a setup pays off. Use the setup’s label.',
+  'cut-to-boneyard':
+    'Boneyard. Text that’s cut but kept: it never prints, and you can bring it back. It wraps the selection.',
+  'element-section':
+    'Section. Names a part of the script, such as an act. It helps you find your way, and never prints.',
+  'element-synopsis': 'Synopsis. Sums up a scene or a section for you, and never prints.',
+  'element-page-break': 'Page break. Starts a new page.',
+  'emphasis-bold': 'Bold. Prints in bold.',
+  'emphasis-italic': 'Italic. Prints in italics.',
+  'emphasis-underline': 'Underline. Prints underlined.',
+};
+
+/** A button's sentence in Classic Mode: no `Mark:` line and no mark's character. */
+export function classicTip(button: BarButton, structure: ElementStructure): string {
+  const words = CLASSIC_TIPS[button.command];
+  if (words === undefined) return `${button.label}.`;
+  return typeof words === 'string' ? words : words(structure);
+}
+
+/** The tooltip in Classic Mode, and the button's description, with its key for this keyboard. */
+export function classicTipFor(
+  button: BarButton,
+  structure: ElementStructure,
+  apple: boolean,
+): string {
+  return withKey(classicTip(button, structure), button, apple);
 }
 
 /**
@@ -393,6 +451,23 @@ export function currentOf(
     name: ELEMENT_NAMES[kind],
     command: KIND_COMMANDS[kind],
     anchor: CHEAT_SHEET_ANCHORS[kind],
+  };
+}
+
+/**
+ * What the bar makes of the cursor's place in Classic Mode: as `currentOf`, from `element`, so a
+ * pending element has a name and a pressed button. The chip opens the Classic Mode help, not a
+ * section of the cheat sheet, so there's no anchor.
+ */
+export function classicHere(
+  element: ClassicElement,
+  structure: ElementStructure,
+): { name: string; command: string | null; anchor: null } {
+  const { kind } = element;
+  return {
+    name: classicElementName(element, structure),
+    command: kind === 'act' ? 'element-act' : KIND_COMMANDS[kind],
+    anchor: null,
   };
 }
 

@@ -1,11 +1,20 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto';
 import { history, undo } from '@codemirror/commands';
-import { EditorState } from '@codemirror/state';
+import { EditorSelection, EditorState, Prec } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
+import {
+  classic,
+  classicEnter,
+  elementStructure,
+  elementTemplate,
+  fountain,
+  structureOf,
+} from '@drafter/cm-fountain';
+import { builtins, type Template } from '@drafter/templates';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { draftFrom, draftText, freezeDraft, listDrafts } from '../app/drafts/store';
-import { createDrafts, type DraftsDeps } from '../app/drafts/use-drafts';
+import { createDrafts, type DraftsDeps, draftSource } from '../app/drafts/use-drafts';
 import { replaceText } from '../app/editor/replace-text';
 import { db } from '../app/storage/db';
 import { hashText } from '../app/storage/hash';
@@ -15,6 +24,10 @@ import { createProject } from '../app/storage/projects';
 // draft being written and moves to the next number; Restore as a new draft freezes first, then puts
 // the draft's text in as one change one undo takes back, and the new draft remembers where it came
 // from; Read opens a draft read-only.
+
+// jsdom has no layout; Classic Mode's view reads rects, as it would in a browser.
+Range.prototype.getClientRects ??= () => [] as unknown as DOMRectList;
+Range.prototype.getBoundingClientRect ??= () => new DOMRect();
 
 const ONE = 'INT. HALL - DAY\n\nMarra waits.\n';
 const TWO = 'INT. HALL - DAY\n\nMarra runs.\n';
@@ -215,5 +228,47 @@ describe('the drafts session', () => {
     expect(events.at(-1)).toBe('reader');
     drafts.closeReader();
     expect(drafts.reading.value).toBeNull();
+  });
+});
+
+describe('a draft in Classic Mode', () => {
+  test('Start new draft on a just-made line freezes the tidy text, and the same text matches', async () => {
+    const text = 'JUNE\nOne.\nTwo.\n';
+    const template = builtins['us-screenplay'] as Template;
+    const p = await createProject({ source: text });
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: text,
+        selection: EditorSelection.cursor('JUNE\nOne.'.length),
+        extensions: [
+          history(),
+          fountain(),
+          elementStructure.of(() => structureOf(template)),
+          elementTemplate.of(() => template),
+          Prec.high(classic()),
+        ],
+      }),
+      parent: document.body,
+    });
+    views.push(view);
+    const drafts = createDrafts({
+      projectId: () => p.id,
+      text: () => draftSource(view.state),
+      readOnly: () => null,
+      notKept: () => null,
+      replace: (target) => replaceText(view, target),
+      before: () => {},
+      replaced: () => {},
+      say: () => {},
+      showReader: () => {},
+    });
+    await drafts.load();
+    expect(classicEnter(view)).toBe(true);
+    // The editor holds the line Enter made, for the writer's next letter.
+    expect(view.state.doc.toString()).toBe('JUNE\nOne.\n\nTwo.\n');
+    expect(await drafts.start('')).toBe(true);
+    expect(await draftText(p.id, 1)).toBe(text);
+    expect(drafts.rows.value[0]?.id).toBe(await hashText(text));
+    expect((await drafts.sameAs())?.n).toBe(1);
   });
 });

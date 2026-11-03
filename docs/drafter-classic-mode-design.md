@@ -1,6 +1,6 @@
 # Classic Mode — Design
 
-**Status:** designed 2026-11-02, the maintainer's five decisions in, planned for v0.25.0. The flow below is the one the maintainer agreed to ("yes that's it"). It comes after Self-hosting (v0.24.3) and before Novel (v0.26.0) and Production (v0.27.0). The roadmap entry is in [ROADMAP.md](ROADMAP.md), and the first decision is in [DECISIONS](DECISIONS.md), "Classic Mode".
+**Status:** designed 2026-11-02, the maintainer's five decisions in; **built 2026-11-03** on the `classic-design` branch, for v0.25.0, waiting for the maintainer's checks by hand (§15.5) and the release. The plan is [docs/plans/2026-11-02-classic-mode.md](plans/2026-11-02-classic-mode.md), and what was built where the code or the maintainer changed a Call is in [DECISIONS](DECISIONS.md), "Classic Mode". The flow below is the one the maintainer agreed to ("yes that's it"). It comes after Self-hosting (v0.24.3) and before Novel (v0.26.0) and Production (v0.27.0). The roadmap entry is in [ROADMAP.md](ROADMAP.md), and the first decision is in [DECISIONS](DECISIONS.md), "Classic Mode".
 
 **Asked for (maintainer), in their words:**
 - 2026-11-01: "is it worth adding a final draft mode (instead of a fountain mode) for people who might be used to final draft? There's still source on the left, rendered script on the right -- but the way to type the script it would be more familiar for people who don't know fountain marks but are used to final draft."
@@ -130,7 +130,7 @@ Everything uses `state.lineBreak`, so a file with CRLF stays CRLF, and a byte-or
 
 ### 4.2 Forcing marks
 
-Each line in Classic Mode has an element (§5). After every keystroke on the line, in the **same transaction**, Classic Mode asks: would the parser read this text as this element? If yes, no mark. If no, it adds the mark, which is hidden. So the file is right at every moment, including at an autosave, the Script pane never disagrees for a moment, and one undo takes the letter and its mark together.
+Each line in Classic Mode has an element (§5). After every keystroke on the line, in the **same transaction**, Classic Mode asks: would the parser read this text as this element? If yes, no mark. If no, it adds the mark, which is hidden. So the file is right at every moment, including at an autosave, the Script pane never disagrees for a moment, and one undo takes the letter and its mark together. **One exception (maintainer, 2026-11-02):** a line made by Enter or Tab inside a speech, while the cursor is on it. Until a letter is typed there, the text under it reads as Action. The first letter heals that, as the line then continues the speech with one break, and leaving takes the line away (§4.4). The mode switch and the save paths should tidy such a line too (Tasks 10 and 12).
 
 | The writer is in | And types | The parser alone reads | Written |
 |---|---|---|---|
@@ -352,7 +352,7 @@ CodeMirror already gives the list `role="listbox"`, and the editor `aria-autocom
 
 - **What is drawn:** the stored element on the line the cursor is on (§5), and what the parser reads everywhere else. **Call:** so typing `BANG` on Action never jumps to the Character indent, and an opened file draws exactly what the parser says.
 - **How:** a line decoration per element, `cm-c-character` and so on, with `padding-left` and a `max-width` in `ch`, set from the template as CSS variables on the editor. No character is added to the text.
-- **Narrow panes.** The indents shrink with the pane, `min(<indent>ch, <share of the width>)`, so nothing scrolls sideways, down to a 320px phone (WCAG 1.4.10). **Call:** the left pane's lines match the page's when the pane is at least 60 characters wide, and aren't promised to when it's narrower. The Script pane stays the true page.
+- **Narrow panes.** The indents shrink with the pane, `min(<indent>ch, <share of the width>)`, so nothing scrolls sideways, down to a 320px phone (WCAG 1.4.10). **Call:** the left pane's lines match the page's when the pane is at least 89 characters wide (the Transition's 40 at its 45%; Character needs 74, the others 63), and aren't promised to when it's narrower. The Script pane stays the true page.
 - **Blank lines stay.** They're the space on the page, so the left pane reads like one. A second blank before a scene heading isn't drawn; a small margin stands for it.
 - **Colour.** **Call: no colour per element.** Text in `--text`, headings bold. The script reads as a script. Notes and boneyard keep their colours, so they can't be mistaken for what prints. `--bg` and the dark default stay; the left pane doesn't turn into paper.
 - **Focus bar and current line:** as they are. The theme's `inset` bar is on `.cm-line`, so it isn't moved by the indent.
@@ -388,7 +388,7 @@ CodeMirror already gives the list `role="listbox"`, and the editor `aria-autocom
 
 | Writer does | Result |
 |---|---|
-| Select All, Delete | The script's text goes; the block stays, with an empty line above it for the cursor. The template holds |
+| Select All, Delete | The script's text goes; the block stays, under an empty line for the cursor and the blank line that keeps the block apart, so two empty lines are drawn. The template holds |
 | Undo after that | One step brings the text back, byte for byte. The block was never touched |
 | Select All, Cut | The clipboard has the text without the block, and the text goes; the block stays |
 | Select All, Copy | The text without the block. To carry a whole file, Save As does that (§11, Copy) |
@@ -396,6 +396,8 @@ CodeMirror already gives the list `role="listbox"`, and the editor `aria-autocom
 | Paste over all of text that ends in its own metadata block | Paste is what was copied, so it goes in; the kept block stays last and wins, and the pasted one shows as a boneyard the writer can delete. **Call:** rare, and nothing is lost |
 | Select All, type | The first letter replaces the text, above the block |
 | Switch to Fountain Mode | The block shows as it always has, and there it can be selected and deleted |
+
+**Decided (maintainer, 2026-11-02): a blank script is made ready before a first letter can come.** A script that's nothing but the block has no line above it, and an input method's text can't be rewritten (§10), so `x/* drafter` would lose the template. When Classic Mode starts, when the editor takes focus, and when the text changes under a focused editor, two line breaks go in above the block, as an `appChange` outside the undo history. It's the one exception to "switching and moving write nothing" (§3.4). The app counts it as no edit: the unchanged baseline moves with it, and no recovery copy is written. Fountain Mode never does it.
 
 ## 9. The chooser, the element bar, and teaching
 
@@ -666,3 +668,8 @@ Built from the shared screenwriting convention (what comes after what on a page)
 39. **A line in Action stays Action:** Character is reached by Tab or the chooser, never by typing capitals; a cue-only-by-what-follows line gets `!` on the line the writer is on (§4.2).
 40. **Drawing follows the stored element while the cursor is on the line,** and the parser elsewhere; opened files draw what the parser says (§8.2).
 41. **Decided: the metadata block is protected:** selections stop above it, a transaction filter keeps its range as a backstop, undo and app changes pass, and Fountain Mode is unchanged (§8.4).
+
+## Added after planning (maintainer, 2026-11-02)
+
+- A worked-out pending Character is soft for heading prefixes only: `INT.` typed straight after a speech starts a Scene heading.
+- The Beat Board block stays unprotected for this release (in DEFERRED): Select All then Delete removes it, and Undo restores it.

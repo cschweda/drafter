@@ -8,7 +8,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
-- The design for **Classic Mode** (`docs/drafter-classic-mode-design.md`) is in the repository, for the maintainer’s review: Enter and Tab typing, autofill, and a Fountain or Classic switch in the top bar, for v0.25.0, over a file that stays plain Fountain.
+- **Classic Mode**, for writers who'd rather not type Fountain's marks. Click **Classic** in the top bar's **Fountain | Classic** switch (or use Settings, the palette, or **Mod+Alt+0**), and the script types the way many screenwriting apps work:
+  - **Enter and Tab move element by element.** Enter after a heading gives Action, after a name gives Dialogue, after a speech gives the next name; Tab turns Action into a name and a speech into a parenthetical. Shift+Enter keeps a break inside an element. Enter on an empty line opens a chooser of elements, each with an underlined letter, and the element keys (**Mod+Alt+1** to **7**) and the element bar set the next element too.
+  - **Autofill from the first letter.** Names, places, times, transitions, extensions, and a stage play's scenes are offered as you type, places most recent first; Tab or Enter takes the top match even before the list has drawn, and Escape keeps what you typed. Only what you're typing is finished: text you merely moved to is left alone.
+  - **Capitals and marks are done for you.** Headings, names, and transitions capitalise themselves, and the `@`, `!`, `.`, or `>` a line needs is written with the letter that needs it, in the same undo step.
+  - **The left pane looks like a script.** Marks are hidden and each element sits where the template puts it; notes and cuts have a thin rule at each end, a page break is a rule with its words, and a dual cue has a small tag. The caret steps over hidden marks and the blank lines between elements, Backspace and Delete join elements in one press, and the hidden metadata block stays put under Select All, Cut, paste, and Find and Replace.
+  - **It says where you are.** The element bar's chip names the element (and an empty line's next one), the status bar has a quiet key line ("Enter: Character · Tab: Parenthetical"), and a screen reader hears every Enter, Tab, list, and highlight. The text box says how to leave it: Esc then Tab, Ctrl+M (Shift+Alt+M on a Mac), F6, or **Mod+K**. A first-run hint under the top bar explains the switch, and the tour has a step on it.
+  - **Phones and input methods.** Over a phone's keyboard the element row starts with a **Next** button that does what Tab does; the chooser and the autofill list open above the keyboard. With an Android keyboard or an input method for Chinese, Japanese, or Korean, capitals and marks arrive in one step when the word is done. A pasted line takes the element of the line it lands on, or keeps a mark of its own.
+  - **Your file stays Fountain.** It holds exactly what a writer could have typed by hand, and nothing about the mode goes into a file, a draft, a snapshot, or an export. A switch changes nothing you've written and keeps your undo history and your place. An empty line or `()` you made and didn't use is taken away when you leave it, and a save, a draft, a snapshot, or an export leaves it out even while your cursor is still on it. Fountain Mode stays the default and is unchanged, and a Markdown document has no switch.
+  - **Help.** A help page (**Help → Classic Mode**), a section in Keyboard shortcuts, a line in the Fountain cheat sheet, a What's new banner, and a share image, **Fountain or Classic.**, with the same scene typed both ways.
+- For contributors: Classic Mode's design (`docs/drafter-classic-mode-design.md`) and plan (`docs/plans/2026-11-02-classic-mode.md`); its byte promise tested against an oracle written from the design and by property; a `classic` trap entry point that runs every Fountain trap through Classic Mode, with 15 traps of its own; and browser tests in all five projects, with release budgets for a keystroke at 120 pages against Fountain Mode.
+
+### Changed
+
+- `appChange`, the annotation that marks a change made by the app rather than the writer, moved from the web app's `editor/typewriter.ts` to `@drafter/cm-fountain`, so the editor package's filters can step back for it; `typewriter.ts` re-exports it, so nothing that imports it changed.
+- On a phone narrower than 480px the top bar shows Drafter's mark in place of the wordmark, so **Save** and **Export** stay on the bar beside the writing-mode switch.
+- Every pull request, and the release gates, now typecheck each package (`pnpm -r --filter "./packages/*" typecheck`), not only the web app.
+- The browser test that walks the Help menu by keyboard to every help page is marked slow, as it now opens sixteen pages.
+- On CI, the trap test that walks every trap in Classic Mode allows twice each trap's time, as its walk is thousands of moves; locally it keeps the trap's own time.
+- Drafter for Claude's timing test for a thousand long names is named like the other timing tests, so CI's slower runners skip it, as they skip the rest; it still runs locally.
+
+### Fixed
+
+- A Markdown quote nested thousands deep no longer stops the Source pane's next update (the Preview stayed on the old text): its marks stop nesting at the depth the Preview reads.
 
 ## [0.24.3] - 2026-11-02
 

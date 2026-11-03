@@ -555,6 +555,119 @@ for (const theme of THEMES) {
     });
   });
 
+  test.describe(`Classic Mode in the ${theme} theme`, () => {
+    const NAMED = 'INT. DINER - DAY\n\nThe lights hum. [[A note.]]\n\nJUNE\nStill open?';
+
+    test.beforeEach(async ({ page }) => {
+      await useTheme(page, theme);
+      await start(page);
+      await inTheme(page, theme);
+      await setText(page, NAMED);
+      if (wide(page)) {
+        await page
+          .getByRole('group', { name: 'Writing mode' })
+          .getByRole('button', { name: 'Classic' })
+          .click();
+      } else {
+        await page.getByRole('button', { name: /^Writing mode: Fountain\./ }).click();
+      }
+      await expect(editor(page)).toHaveAttribute('aria-label', 'Source, Classic Mode');
+    });
+
+    test(`has no accessibility violations in Classic Mode with the list, the chooser, and the hint open (${theme})`, async ({
+      page,
+    }, info) => {
+      const hint = page.locator('[data-classic-hint]');
+      await expect(hint).toBeVisible();
+      await clean(page, 'Classic Mode, with its hint');
+      await hint.getByRole('button', { name: 'Got it' }).click();
+      await showSource(page);
+      await editor(page).focus();
+      // At the end of the speech: Enter is a pending Character, and Enter again the chooser.
+      await page.keyboard.press('ControlOrMeta+End');
+      await page.keyboard.press('Enter');
+      await expect(editor(page)).toContainText('Still open?');
+      if (info.project.name === 'phone') await page.waitForTimeout(100);
+      await page.keyboard.press('Enter');
+      const chooser = page.getByRole('listbox', { name: 'Choose an element' });
+      await expect(chooser).toBeVisible();
+      await clean(page, 'Classic Mode, with the chooser');
+      await page.keyboard.press('Escape');
+      await expect(chooser).toBeHidden();
+      // The pending Character's list of names.
+      await page.keyboard.type('JU');
+      await expect(page.locator('.cm-tooltip-autocomplete')).toBeVisible();
+      await clean(page, 'Classic Mode, with the list of names');
+    });
+
+    test(`holds the contrast of a note and muted text on the current line, and of the key line, in Classic Mode (${theme})`, async ({
+      page,
+    }) => {
+      const hint = page.locator('[data-classic-hint]');
+      if (await hint.isVisible()) await hint.getByRole('button', { name: 'Got it' }).click();
+      await showSource(page);
+      await editor(page).focus();
+      await page.keyboard.press('ControlOrMeta+End');
+      // Worked out from the tokens as drawn: `--current-line` is a tint over the editor's ground.
+      const ratios = await page.evaluate(() => {
+        const rgb = (value: string) => {
+          const n = value.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0, 1];
+          return { r: n[0] ?? 0, g: n[1] ?? 0, b: n[2] ?? 0, a: n[3] ?? 1 };
+        };
+        const resolve = (token: string, property: 'color' | 'backgroundColor') => {
+          const probe = document.createElement('span');
+          probe.style[property] = `var(${token})`;
+          document.querySelector('.cm-editor')?.append(probe);
+          const value = getComputedStyle(probe)[property];
+          probe.remove();
+          return rgb(value);
+        };
+        const over = (top: ReturnType<typeof rgb>, under: ReturnType<typeof rgb>) => ({
+          r: top.r * top.a + under.r * (1 - top.a),
+          g: top.g * top.a + under.g * (1 - top.a),
+          b: top.b * top.a + under.b * (1 - top.a),
+          a: 1,
+        });
+        const luminance = ({ r, g, b }: ReturnType<typeof rgb>) => {
+          const [R, G, B] = [r, g, b].map((c) => {
+            const s = c / 255;
+            return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * (R ?? 0) + 0.7152 * (G ?? 0) + 0.0722 * (B ?? 0);
+        };
+        const ratio = (a: ReturnType<typeof rgb>, b: ReturnType<typeof rgb>) => {
+          const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+          return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05);
+        };
+        const ground = over(
+          resolve('--current-line', 'backgroundColor'),
+          resolve('--bg', 'backgroundColor'),
+        );
+        const rule = document.querySelector('.cm-c-note-rule');
+        const keys = document.querySelector('[data-item="keys"]');
+        const groundOf = (el: Element) => {
+          for (let node: Element | null = el; node; node = node.parentElement) {
+            const bg = rgb(getComputedStyle(node).backgroundColor);
+            if (bg.a > 0) return bg;
+          }
+          return rgb('rgb(255, 255, 255)');
+        };
+        return {
+          note: ratio(resolve('--note', 'color'), ground),
+          muted: ratio(resolve('--muted', 'color'), ground),
+          rule: rule ? ratio(rgb(getComputedStyle(rule).borderLeftColor), ground) : null,
+          keys: keys ? ratio(rgb(getComputedStyle(keys).color), groundOf(keys)) : null,
+        };
+      });
+      expect(ratios.note, '--note on --current-line').toBeGreaterThanOrEqual(4.5);
+      expect(ratios.muted, '--muted on --current-line').toBeGreaterThanOrEqual(4.5);
+      expect(ratios.rule, 'a note’s rule').not.toBeNull();
+      expect(ratios.rule ?? 0, 'a note’s rule').toBeGreaterThanOrEqual(3);
+      // The key line is in the status bar on a wide screen only.
+      if (wide(page)) expect(ratios.keys ?? 0, 'the key line').toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
   test.describe(`the first visit and the tour in the ${theme} theme`, () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -580,8 +693,8 @@ for (const theme of THEMES) {
       await expect(step).toBeVisible();
       // The intro card fades out over the first step; it is measured once it has gone.
       await expect(intro).toBeHidden();
-      for (let index = 1; index <= 10; index++) {
-        await expect(step).toContainText(`${index} / 10`);
+      for (let index = 1; index <= 11; index++) {
+        await expect(step).toContainText(`${index} / 11`);
         // The step's own fade has settled before it is measured.
         await expect(step).toHaveCSS('opacity', '1');
         await clean(page, `tour step ${index}`);
@@ -599,6 +712,7 @@ for (const theme of THEMES) {
       '/docs/why/',
       '/docs/download/',
       '/docs/fountain/',
+      '/docs/classic-mode/',
       '/docs/saving/',
       '/docs/story-map/',
       '/docs/drafter-for-claude/',

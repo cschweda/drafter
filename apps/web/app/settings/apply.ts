@@ -9,7 +9,7 @@ import { useSettings } from './settings';
  * settings table has been read, so the first paint is not undone by the defaults. Call it from
  * the page's setup; it returns the function that stops it.
  *
- * - Spellcheck (the spelling marks), line numbers, typewriter scrolling, and Strict Fountain's lint
+ * - Spellcheck (the spelling marks), line numbers, typewriter scrolling, the writing mode, and Strict Fountain's lint
  *   go to the editor (`applyEditorSettings`; `load` does the same for a script that is opened). The
  *   spellcheck's language, Check notes and boneyard, and My dictionary are the spellcheck's own to
  *   watch (`spell/use-spell.ts`): each one checks the text again in its worker.
@@ -26,7 +26,7 @@ import { useSettings } from './settings';
  */
 export function applySettings(): () => void {
   const { settings, set, ready, read } = useSettings();
-  const { view } = useEditor();
+  const { view, kind } = useEditor();
   const colorMode = useColorMode();
   const stops: Array<() => void> = [];
   let stopped = false;
@@ -41,8 +41,9 @@ export function applySettings(): () => void {
           settings.value.lineNumbers,
           settings.value.strict,
           settings.value.typewriter,
+          settings.value.writingMode,
         ],
-        () => applyEditorSettings(view, settings.value),
+        () => applyEditorSettings(view, settings.value, kind.value),
         { immediate: true },
       ),
       // Compare's Changes view takes its colors from tokens chosen by this attribute.

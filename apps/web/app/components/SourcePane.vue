@@ -65,6 +65,8 @@ onBeforeUnmount(() => {
     <ElementBar v-if="props.bar" />
     <div ref="host" class="host" />
     <ElementAnnouncer />
+    <!-- What the text box's `aria-describedby` names in Classic Mode (design §12). -->
+    <span id="classic-leave" class="sr-only">To leave the text, press Escape, then Tab. If a list is open, press Escape twice.</span>
   </div>
 </template>
 

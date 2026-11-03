@@ -1,5 +1,5 @@
 // The guided tour (Phase 1 design §4.4): the welcome's words, the "Fountain in 30 seconds" card, and
-// the ten steps. The steps point at the `data-tour` attributes on the toolbar, the status bar, the
+// the eleven steps. The steps point at the `data-tour` attributes on the toolbar, the status bar, the
 // app menu's mark, and each pane's panel (`AppPane.vue` sets a panel's to its tab's id).
 import type { IntroSlide, TourStep } from 'nuxt-guided-tour/types';
 
@@ -12,7 +12,7 @@ export const WELCOME = {
   // Drafter™ at its first prominent use; the name is a trademark (the About dialog says so).
   title: 'Welcome to Drafter™',
   description:
-    'A Fountain-first writing app: screenplays and stage plays in Fountain, and anything else, from a treatment to a novel, in Markdown. Want a two-minute tour?',
+    'A Fountain-first writing app: screenplays and stage plays in Fountain, and anything else, from a treatment to a novel, in Markdown. Classic Mode is there too, if you’d rather not type marks. Want a two-minute tour?',
   // What Drafter promises, as the README's "Free, no login, private" says it, in two short lines.
   subdescription:
     'Free, with no catch, and no login, ever. Private (no cookies, no tracking), it works offline, and Final Draft files go in and out.',
@@ -50,7 +50,7 @@ const target = (name: string) => `[data-tour="${name}"]`;
 const FOLDED_TARGET = target('toolbar-more');
 
 /**
- * The ten steps. The template step points at the Drafter menu's mark on every screen (fresh-look
+ * The eleven steps. The template step points at the Drafter menu's mark on every screen (fresh-look
  * design §10): the template chip has left the top bar, and the menu's Template section chooses it.
  * `wide` is kept for the steps that will differ by screen. The status step points at the status bar
  * from 640px up and, below that (where there is none, Task 6), at the title, whose red dot says
@@ -62,6 +62,7 @@ export function buildSteps(
   _wide: boolean,
   statusBar = true,
   folded: ReadonlySet<string> = new Set(),
+  script = true,
 ): TourStep[] {
   const at = (name: string) => (folded.has(name) ? FOLDED_TARGET : target(name));
   const where = (name: string) =>
@@ -86,6 +87,15 @@ export function buildSteps(
       title: 'Names and places come up',
       content:
         'Tab on a blank line starts a character, and names you have used come up as you type. After INT. or EXT., so do your locations. Enter moves on.',
+    },
+    {
+      id: 'mode',
+      target: target('mode'),
+      title: 'Fountain or Classic',
+      // A Markdown document has no switch on screen, so the step can't point at it.
+      content: script
+        ? 'Don’t want to type marks? Switch to Classic here: Enter and Tab move through the script, and the file stays Fountain.'
+        : 'Don’t want to type marks? A script has a Fountain | Classic switch in the top bar. In Classic, Enter and Tab move through it, and the file stays Fountain.',
     },
     {
       id: 'problems',

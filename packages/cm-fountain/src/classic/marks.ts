@@ -1,0 +1,871 @@
+import { isolateHistory } from '@codemirror/commands';
+import {
+  Annotation,
+  type AnnotationType,
+  ChangeSet,
+  EditorState,
+  type Extension,
+  type Line,
+  type Text,
+  Transaction,
+  type TransactionSpec,
+} from '@codemirror/state';
+import { type Block, blockAt, type Doc, parse, reparse, type Span } from '@drafter/fountain';
+import {
+  blocked,
+  type ElementStructure,
+  elementStructure,
+  HEADING_START,
+  isBlank,
+  underSpeech,
+} from '../elements';
+import { inNote, upperFix } from '../input';
+import { BOM } from '../keymap';
+import { appChange, insideRegion, parsedDoc } from '../state';
+import { isBlankScript } from './hidden';
+import {
+  BLANK_SPEECH,
+  type ClassicKind,
+  classicEdit,
+  classicLine,
+  clearOf,
+  lineKindAt,
+  mapSpan,
+  parsedKindAt,
+  pendingAt,
+  pickedElement,
+  type StoredLine,
+  setStored,
+  WRITES,
+} from './line';
+
+// Classic Mode's marks (design §4.2). After every keystroke, in the transaction that types it, the
+// parser is asked whether the line reads as the element the writer is in. If it doesn't, the mark
+// goes on, and one this stay added comes off when it stops being needed. So the file is right at
+// every moment, and one undo takes the letter and its mark together.
+
+/**
+ * The most of a paragraph a keystroke asks the parser about. A paragraph past this keeps the marks
+ * it has and gets no new one, as a keystroke's cost mustn't follow the paragraph.
+ */
+export const MAX_RUN = { lines: 64, chars: 8192 } as const;
+
+/** The elements typed in capitals. */
+export const CAPITALS: ReadonlySet<ClassicKind> = new Set<ClassicKind>([
+  'scene_heading',
+  'character',
+  'transition',
+  'act',
+]);
+
+/** A line starting with one of a mark's characters, which the writer means as words. */
+const MARK_START = /^\s*[!@~>.#=]/;
+const HAS_UPPER = /\p{Lu}/u;
+const HAS_LOWER = /\p{Ll}/u;
+
+/** The paragraph around a line, with the line left out, or null past the cap. */
+function runAround(
+  state: EditorState,
+  line: Line,
+  length: number,
+): { above: string; below: string } | null {
+  const { doc } = state;
+  let count = 1;
+  let chars = length;
+  if (chars > MAX_RUN.chars) return null;
+  const reach = (from: number, step: 1 | -1) => {
+    let edge = from;
+    for (;;) {
+      const next = edge + step;
+      if (next < 1 || next > doc.lines) return edge;
+      const other = doc.line(next);
+      if (other.length <= MAX_RUN.chars && isBlank(other.text)) return edge;
+      chars += other.length + 1;
+      if (++count > MAX_RUN.lines || chars > MAX_RUN.chars) return null;
+      edge = next;
+    }
+  };
+  const first = reach(line.number, -1);
+  const last = first === null ? null : reach(line.number, 1);
+  if (first === null || last === null) return null;
+  return {
+    above: first < line.number ? doc.sliceString(doc.line(first).from, line.from) : '',
+    below: last > line.number ? doc.sliceString(line.to, doc.line(last).to) : '',
+  };
+}
+
+/** Whether a block is what the template calls `kind`, as the parser reads it. */
+function blockIs(block: Block, kind: ClassicKind, structure: ElementStructure): boolean {
+  const { actDepth, sceneDepth, headings } = structure;
+  if (block.kind === 'section') {
+    const { depth } = block.sem;
+    if (kind === 'act') return depth === actDepth;
+    if (kind === 'scene_heading') return !headings && depth === sceneDepth;
+    return kind === 'section' && depth !== actDepth && depth !== sceneDepth;
+  }
+  if (kind === 'scene_heading') return headings && block.kind === 'scene_heading';
+  return block.kind === kind;
+}
+
+/** The words a line of a block prints: its text without the mark that made it the block's kind. */
+function printed(block: Block, at: number): string {
+  const found = block.lines.find((line) => line.span.from === at);
+  const text = (found?.raw ?? '').trim();
+  switch (block.kind) {
+    case 'lyric':
+      return text.slice(1);
+    case 'centered':
+      return text.slice(1, -1).trim();
+    case 'section':
+      return text.replace(/^#+/, '').trimStart();
+    case 'synopsis':
+      return text.slice(1).trimStart();
+    default:
+      return block.forced && found === block.lines[0] ? text.slice(1) : text;
+  }
+}
+
+/** The last full parse of line 1, by the parse it was made from, as one key asks twice. */
+const lastFirstLine = new WeakMap<Doc, { text: string; doc: Doc }>();
+
+/** The parse of the script with `text` as line 1, for what only a full parse can see. */
+function withFirstLine(state: EditorState, line: Line, text: string): Doc {
+  const parsed = state.field(parsedDoc);
+  const known = lastFirstLine.get(parsed);
+  if (known?.text === text) return known.doc;
+  const doc = reparse(parsed, [{ from: line.from, to: line.to, insert: text }]);
+  lastFirstLine.set(parsed, { text, doc });
+  return doc;
+}
+
+/**
+ * Would the parser read `text` at this line as `kind`, printing `words`? A mark's character the
+ * writer typed would otherwise vanish from the page. Character and Scene heading don't compare
+ * words: a typed `@` and `.` are the same mark (§4.2), and those lines print what the parser makes
+ * of them. It parses `\n` and the run, as a paragraph on its own
+ * would read as a title page; line 1 with a colon can be one, so it asks the full parse. Past the
+ * cap the answer is yes, so no new mark is written.
+ */
+export function readsAs(
+  state: EditorState,
+  line: Line,
+  text: string,
+  kind: ClassicKind,
+  words: string,
+): boolean {
+  const run = runAround(state, line, text.length);
+  if (!run) return true;
+  // A name is a cue only with a line under it, and a name just typed may not have one yet.
+  const under = kind === 'character' && !run.below ? '\nx' : '';
+  const whole = line.number === 1 && text.includes(':');
+  const doc = whole
+    ? withFirstLine(state, line, text + under)
+    : parse(`\n${run.above}${text}${run.below}${under}`);
+  const at = whole ? line.from : 1 + run.above.length;
+  const block = blockAt(doc, at)?.block;
+  if (!block) return false;
+  // A line that's all note or boneyard is no element, and a mark would make it one.
+  if (block.kind === 'note' || block.kind === 'boneyard') return true;
+  if (!blockIs(block, kind, state.facet(elementStructure)())) return false;
+  if (kind === 'character' || block.kind === 'scene_heading') return true;
+  return printed(block, at) === words.trim();
+}
+
+/** The worked-out element of a line typed in this stay, not one chosen. */
+const isWorkedOut = (own: StoredLine) => own.beganEmpty && !own.chosen;
+
+/** Whether the line is soft Action: an element named on a soft line ends that. */
+const isSoft = (own: StoredLine) => own.soft && own.arrivedAs === 'action';
+
+/** Whether a line starts its paragraph, where alone a shape can read as one to the parser. */
+const opensParagraph = (state: EditorState, line: Line) =>
+  line.number === 1 || isBlank(state.doc.line(line.number - 1).text);
+
+/** A heading's or a transition's shape, for a line typed on in this stay (§4.2). */
+function headingOrTransition(
+  state: EditorState,
+  line: Line,
+  text: string,
+  own: StoredLine,
+): 'scene_heading' | 'transition' | null {
+  if (!isWorkedOut(own) || MARK_START.test(text) || !opensParagraph(state, line)) return null;
+  const words = text.trimStart();
+  // The maintainer's ruling: a prefix is no plausible name, so after a speech it starts a scene.
+  if (
+    state.facet(elementStructure)().headings &&
+    HEADING_START.test(words) &&
+    (isSoft(own) || own.arrivedAs === 'character')
+  ) {
+    return 'scene_heading';
+  }
+  const transition = isSoft(own) && text.endsWith('TO:') && HAS_UPPER.test(text);
+  return transition && !HAS_LOWER.test(text) ? 'transition' : null;
+}
+
+/** As `shapeOf`, for a stored line given. */
+function shapeWith(
+  state: EditorState,
+  line: Line,
+  text: string,
+  own: StoredLine,
+): 'scene_heading' | 'transition' | 'title_page' | null {
+  const body = text.startsWith(BOM) ? text.slice(1) : text;
+  const shape = headingOrTransition(state, line, body, own);
+  if (shape || !isSoft(own) || line.number !== 1 || !body.includes(':')) return shape;
+  if (MARK_START.test(body) || !runAround(state, line, text.length)) return null;
+  return withFirstLine(state, line, text).titlePage ? 'title_page' : null;
+}
+
+/** A stored line with nothing to remember. */
+export const NO_LINE: Omit<StoredLine, 'from' | 'kind' | 'arrivedAs'> = {
+  soft: false,
+  chosen: false,
+  added: [],
+  made: null,
+  dismissed: false,
+  beganEmpty: false,
+};
+
+/**
+ * A heading's or a transition's shape, or a title page's on line 1 (§4.2), on a line the cursor is
+ * on and that's soft. A heading's prefix counts on a worked-out Character too.
+ */
+export function shapeOf(
+  state: EditorState,
+  line: Line,
+  text: string,
+): 'scene_heading' | 'transition' | 'title_page' | null {
+  const own = state.field(classicLine, false);
+  return own?.from === line.from ? shapeWith(state, line, text, own) : null;
+}
+
+/** What the mark is for each element: what goes before the words, and after. */
+export function markOf(
+  kind: ClassicKind,
+  { actDepth, sceneDepth, headings }: ElementStructure,
+): readonly [string, string] | null {
+  const section = (depth: number | null) => (depth ? `${'#'.repeat(depth)} ` : null);
+  const lead = (open: string | null) => (open ? ([open, ''] as const) : null);
+  switch (kind) {
+    case 'action':
+      return ['!', ''];
+    case 'scene_heading':
+      return lead(headings ? '.' : section(sceneDepth));
+    case 'act':
+      return lead(section(actDepth));
+    case 'character':
+      return ['@', ''];
+    case 'transition':
+      return ['>', ''];
+    case 'lyric':
+      return ['~', ''];
+    case 'centered':
+      return ['>', '<'];
+    case 'section':
+      return ['# ', ''];
+    case 'synopsis':
+      return ['= ', ''];
+    default:
+      return null;
+  }
+}
+
+/** The text without the spans, which are in positions of a line starting at `from`. */
+function without(text: string, from: number, spans: readonly Span[]): string {
+  let out = '';
+  let at = 0;
+  for (const span of spans) {
+    out += text.slice(at, span.from - from);
+    at = span.to - from;
+  }
+  return out + text.slice(at);
+}
+
+/** The heading's prefix in capitals, and nothing else. */
+function upperPrefix(body: string): string {
+  const lead = body.length - body.trimStart().length;
+  const prefix = HEADING_START.exec(body.slice(lead));
+  if (!prefix) return body;
+  const end = lead + prefix[0].length;
+  return body.slice(0, end).toUpperCase() + body.slice(end);
+}
+
+/**
+ * The line's text with the mark it needs for its element, and the marks it had that this stay
+ * added taken off. `stored.added` is in the positions of `text`, on a line starting at `line.from`,
+ * and so is what comes back. `line` is the line in `state`, which gives what's around it.
+ * `verbatim`: the text was pasted, so a heading's prefix keeps its case (§11).
+ */
+export function settleLine(
+  state: EditorState,
+  line: Line,
+  text: string,
+  stored: StoredLine,
+  { verbatim = false }: { verbatim?: boolean } = {},
+): { text: string; kind: ClassicKind; added: readonly Span[] } {
+  const bare = without(text, line.from, stored.added);
+  const bom = bare.startsWith(BOM) ? BOM : '';
+  const shape = shapeWith(state, line, bare, stored);
+  const kind = shape === 'title_page' ? 'action' : (shape ?? stored.arrivedAs);
+  const capitals = shape === 'scene_heading' && !verbatim;
+  const body = capitals ? bom + upperPrefix(bare.slice(bom.length)) : bare;
+  const words = body.slice(bom.length);
+  const asTyped = { text: body, kind, added: [] };
+  if (shape || /^\s*$/.test(words)) return asTyped;
+  if (!runAround(state, line, text.length)) return { text, kind, added: stored.added };
+  const structure = state.facet(elementStructure)();
+  const mark = markOf(kind, structure);
+  if (!mark) return asTyped;
+  const [open, close] = mark;
+  // A mark that was there before this keystroke and isn't ours came with the file.
+  if (!stored.added.length && line.text.trimStart().startsWith(open.trimEnd())) return asTyped;
+  const heading = kind === 'scene_heading' && structure.headings;
+  // A typed `.` is the same mark.
+  if (heading && words.trimStart().startsWith('.')) return asTyped;
+  // Some lines no mark can make the element: `.` needs a letter or number after it, and `>…<` is
+  // Centered. They stay the writer's words, as Action.
+  if (
+    (heading && !/^\s*[\p{L}\p{N}]/u.test(words)) ||
+    (kind === 'transition' && words.trimEnd().endsWith('<'))
+  ) {
+    return readsAs(state, line, body, 'action', body) ? asTyped : marked('!', '');
+  }
+  return readsAs(state, line, body, kind, body) ? asTyped : marked(open, close);
+
+  function marked(lead: string, tail: string) {
+    const start = line.from + bom.length;
+    const end = start + lead.length + words.length;
+    return {
+      text: bom + lead + words + tail,
+      kind,
+      added: [
+        { from: start, to: start + lead.length },
+        ...(tail ? [{ from: end, to: end + tail.length }] : []),
+      ],
+    };
+  }
+}
+
+/** On a move that took a made line with it, so the place it lands is read from the new text. */
+export const classicTidied: AnnotationType<true> = Annotation.define<true>();
+
+/** The one change that turns `from` into `to`, in a text where they start at `at`. */
+export function difference(from: string, to: string, at: number) {
+  const most = Math.min(from.length, to.length);
+  let start = 0;
+  while (start < most && from[start] === to[start]) start++;
+  let end = 0;
+  while (end < most - start && from[from.length - 1 - end] === to[to.length - 1 - end]) end++;
+  return {
+    from: at + start,
+    to: at + from.length - end,
+    insert: to.slice(start, to.length - end),
+  };
+}
+
+/**
+ * The line a transaction's changes are on, if it's one line: where they start in the old text
+ * (`at`), and the range they make in the new.
+ */
+function typedOnLine(tr: Transaction): { line: Line; at: number; from: number; to: number } | null {
+  const { doc } = tr.startState;
+  let first = -1;
+  let last = -1;
+  let start = -1;
+  let end = -1;
+  let single = true;
+  tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+    if (first < 0) {
+      first = fromA;
+      start = fromB;
+    }
+    last = toA;
+    end = toB;
+    if (inserted.lines > 1) single = false;
+  });
+  if (first < 0 || !single) return null;
+  const line = doc.lineAt(first);
+  return last > line.to ? null : { line, at: first, from: start, to: end };
+}
+
+/**
+ * What's made goes with the line it made, and anything but words left on it. Breaks made above a
+ * blank line of the file, which the cursor went on to, are all that's made: that line stays.
+ */
+function withItsLine(made: Span, line: Line): Span {
+  return { from: made.from, to: made.to >= line.from ? Math.max(made.to, line.to) : made.to };
+}
+
+/**
+ * Takes away the empty line or `()` this stay made, in the transaction that leaves it (§4.4). It
+ * stands back for what isn't the writer's own move: a replace-all, undo and redo, and a change the
+ * app makes on the line. An app change somewhere else that takes the cursor away (a cut put back,
+ * a spelling fix, an Outline move) leaves the line as surely as a click, so it tidies too. An empty
+ * line at the end of the file is no trouble to anyone, so it stays.
+ */
+export const tidyLeft: Extension = EditorState.transactionFilter.of((tr) => {
+  const held = tr.startState.field(classicLine, false);
+  if (!held?.made) return tr;
+  if (tr.annotation(appChange)) {
+    if (!clearOf(held, tr)) return tr;
+  } else {
+    const event = tr.annotation(Transaction.userEvent);
+    // A bare selection is a move (`goto`, `reveal`); a bare change is the app's.
+    if (event ? /^(?:input\.replace|undo|redo)/.test(event) : tr.docChanged) return tr;
+  }
+  const from = tr.changes.mapPos(held.from, -1);
+  if (tr.newDoc.lineAt(tr.newSelection.main.head).from === tr.newDoc.lineAt(from).from) return tr;
+  const made = mapSpan(held.made, tr.changes);
+  if (!made) return tr;
+  const line = tr.newDoc.lineAt(from);
+  const empty = !line.text.trim() && line.number < tr.newDoc.lines;
+  if (!empty && line.text.trim() !== '()') return tr;
+  const mark = held.madeMark && mapSpan(held.madeMark, tr.changes);
+  return [
+    tr,
+    {
+      changes: [withItsLine(made, line), ...(mark ? [mark] : [])],
+      annotations: classicTidied.of(true),
+      sequential: true,
+    },
+  ];
+});
+
+/**
+ * The change that takes what this stay made and left unused, or null with none: an empty `()`,
+ * which would print, or the empty line in the middle of a speech. While the cursor stands on that
+ * line the text under it reads as Action (§4.2), which is one thing in a stay and another once
+ * Classic Mode has gone. A blank that cuts nothing stays under the cursor, as a switch writes
+ * nothing it can avoid.
+ */
+export function tidiedSpeech(state: EditorState): TransactionSpec | null {
+  const held = state.field(classicLine, false);
+  if (!held?.made || state.readOnly) return null;
+  const { doc } = state;
+  const line = doc.lineAt(held.from);
+  const text = line.text.trim();
+  const cuts =
+    !text &&
+    line.number < doc.lines &&
+    !isBlank(doc.line(line.number + 1).text) &&
+    underSpeech(state, line.from);
+  if (text !== '()' && !cuts) return null;
+  const mark = held.madeMark;
+  return {
+    changes: [withItsLine(held.made, line), ...(mark ? [mark] : [])],
+    // A step of its own, or history joins it to the key that made the line, and Undo shows nothing.
+    annotations: [appChange.of(true), isolateHistory.of('full')],
+  };
+}
+
+/**
+ * The text a save writes (§4.2's one exception): with what `tidiedSpeech` would take out left out,
+ * and the editor as it is. A save never moves the writer: the made line under the cursor is where
+ * their next letter goes, and that letter heals it, or leaving takes it away. Only the file gets the
+ * text as it will be either way, so a save, or the recovery copy, never holds a speech cut in two.
+ */
+export function savedText(state: EditorState): Text {
+  const tidy = tidiedSpeech(state);
+  if (!tidy?.changes) return state.doc;
+  return ChangeSet.of(tidy.changes, state.doc.length, state.lineBreak).apply(state.doc);
+}
+
+const kindsOf = (kind: ClassicKind) => ({ kind, arrivedAs: kind });
+
+const sameSpans = (a: readonly Span[], b: readonly Span[]) =>
+  a.length === b.length && a.every((span, i) => span.from === b[i]?.from && span.to === b[i]?.to);
+
+/** The stored line, or what a line the cursor has no stored line for is. */
+export function ownLine(state: EditorState, line: Line): StoredLine {
+  const held = state.field(classicLine, false);
+  if (held?.from === line.from) return held;
+  const kind = lineKindAt(state, line) ?? pendingAt(state, line.from);
+  return { ...NO_LINE, from: line.from, ...kindsOf(kind) };
+}
+
+/**
+ * Writes the marks and the capitals, on the writer's typing on the cursor's line. Everything else
+ * passes: a change the app makes, text still being composed, a replace-all, undo and redo, and a
+ * paste, which isn't typing. It runs after `upperCaseTyping`, so it sees what that made.
+ */
+export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || !tr.isUserEvent('input.type') || tr.isUserEvent('input.type.compose')) {
+    return tr;
+  }
+  if (tr.annotation(appChange)) return tr;
+  const start = tr.startState;
+  if (start.selection.ranges.length > 1 || tr.newSelection.ranges.length > 1) return tr;
+  const typed = typedOnLine(tr);
+  const head = start.selection.main.head;
+  if (!typed || head < typed.line.from || head > typed.line.to) return tr;
+  // The first letter of a blank script is read as it will stand, on its own line above the block.
+  const state = isBlankScript(start, typed.line) ? withRoomAbove(start) : start;
+  const line = state === start ? typed.line : state.doc.line(1);
+  if (blocked(state, line.from)) return tr;
+  // A `)` typed against the `)` that's there goes past it (§6.4).
+  if (typed.from === head && tr.newDoc.sliceString(typed.from, typed.to) === ')') {
+    if (state.sliceDoc(head, head + 1) === ')' && state.selection.main.empty) {
+      return { selection: { anchor: head + 1 }, annotations: classicEdit.of(true) };
+    }
+  }
+
+  const own = ownLine(start, line);
+  // The capitals, on the typed text alone, then the mark for the text they make.
+  const rawText = tr.newDoc.sliceString(
+    line.from,
+    line.to + tr.changes.newLength - tr.changes.length,
+  );
+  // Words typed on a blank speech line take its place, wherever the caret stood in the two spaces,
+  // and a space does nothing, as a third would make it a blank line that cuts the speech.
+  const blankSpeech = line.text === BLANK_SPEECH;
+  if (blankSpeech && !rawText.trim()) return {};
+  const spaces = blankSpeech
+    ? [line.from, line.from + 1].map((from) => ({ from, to: from + 1 }))
+    : own.added;
+  const added = spaces.flatMap((span) => mapSpan(span, tr.changes) ?? []);
+  const bare = without(rawText, line.from, added);
+  const element = headingOrTransition(state, line, bare, own) ?? own.arrivedAs;
+  const fix =
+    CAPITALS.has(element) && !inNote(state, line, typed.at)
+      ? upperFix(tr.newDoc, typed.from, tr.newDoc.sliceString(typed.from, typed.to))
+      : null;
+  return applySettled(tr, line, own, added, fix, rawText, state);
+});
+
+/** The elements of a speech's lines, which a name above is for. */
+const SPEECH_LINES: ReadonlySet<ClassicKind> = new Set(['dialogue', 'parenthetical', 'lyric']);
+
+/**
+ * A line of capitals the cursor came back to is Action (§4.2, and the maintainer's ruling on
+ * Task 13), though the empty line under it is pending Dialogue, as under a name. What the writer
+ * types there (a letter, Shift+Enter's two spaces, Tab's `()`) would make it a cue, so the line
+ * above gets its `!` in the same transaction, as `settleBreaks` gives one. A line stored as a line
+ * of speech (Enter or Tab from a name), or a speech element picked, is the writer's, and the name
+ * is left a name. It runs ahead of `classicMarks`, which then reads the typing with the `!` above.
+ */
+export const keepActionAbove: Extension = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || tr.annotation(appChange)) return tr;
+  const typing = tr.isUserEvent('input.type') && !tr.isUserEvent('input.type.compose');
+  const key =
+    tr.annotation(Transaction.userEvent) === 'input' && tr.annotation(classicEdit) === true;
+  if (!typing && !key) return tr;
+  const start = tr.startState;
+  if (start.selection.ranges.length > 1) return tr;
+  const line = start.doc.lineAt(start.selection.main.head);
+  if (!isBlank(line.text) || line.number < 2) return tr;
+  // A speech stored or picked on the line means the name above: Enter from it, the chooser.
+  const held = start.field(classicLine, false);
+  if (held?.from === line.from && SPEECH_LINES.has(held.kind)) return tr;
+  if (tr.effects.some((effect) => effect.is(pickedElement))) return tr;
+  const above = start.doc.line(line.number - 1);
+  if (isBlank(above.text) || parsedKindAt(start, above) !== 'action') return tr;
+  const state = tr.state;
+  const upper = state.doc.lineAt(tr.changes.mapPos(above.from, -1));
+  const change = markFor(state, upper, 'action');
+  if (!change) return tr;
+  const marks = ChangeSet.of(change, tr.newDoc.length);
+  const here = marks.mapPos(tr.newSelection.main.head, 1);
+  const parens = tr.newDoc.lineAt(tr.newSelection.main.head).text.trim() === '()';
+  return [
+    tr,
+    {
+      changes: marks,
+      selection: { anchor: here },
+      effects: parens
+        ? []
+        : setStored.of({
+            from: marks.mapPos(tr.newDoc.lineAt(tr.newSelection.main.head).from, 1),
+            kind: 'action',
+          }),
+      annotations: classicEdit.of(true),
+      sequential: true,
+    },
+  ];
+});
+
+/** The text with the two breaks `keepMetadata` will add above the block. */
+const withRoomAbove = (state: EditorState) => {
+  const from = state.doc.line(1).text.startsWith(BOM) ? 1 : 0;
+  const insert = state.lineBreak.repeat(2);
+  return state.update({ changes: { from, insert }, filter: false }).state;
+};
+
+/**
+ * A delete is a keystroke too (§4.2): what's left of the line may read as something else, or may no
+ * longer need its mark, and that's settled in the same transaction.
+ */
+export const settleDeletes: Extension = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || !tr.isUserEvent('delete') || tr.annotation(appChange)) return tr;
+  const state = tr.startState;
+  if (state.selection.ranges.length > 1) return tr;
+  const typed = typedOnLine(tr);
+  if (!typed) return tr;
+  const { line } = typed;
+  const own = ownLine(state, line);
+  const added = own.added.flatMap((span) => mapSpan(span, tr.changes) ?? []);
+  const end = line.to + tr.changes.newLength - tr.changes.length;
+  const text = tr.newDoc.sliceString(line.from, end);
+  const settled = blocked(state, line.from) ? tr : applySettled(tr, line, own, added, null, text);
+  const specs: (Transaction | TransactionSpec)[] = Array.isArray(settled) ? settled : [tr];
+  const kept = keptOnLine(state, line, own, text);
+  return kept ? [...specs, { effects: kept, sequential: true }] : settled;
+});
+
+/**
+ * What a delete must store for the line (§4.2, §5): the element it was, so words retyped are the
+ * same element; and a line of a speech emptied with more of the speech under it is made, as Enter's
+ * is, so a letter goes on with the speech and leaving takes the line.
+ */
+function keptOnLine(state: EditorState, line: Line, own: StoredLine, text: string) {
+  if (insideRegion(state.field(parsedDoc), line.from)) return null;
+  const { doc } = state;
+  const under = line.number < doc.lines && !isBlank(doc.line(line.number + 1).text);
+  if (isBlank(text) && under && line.number > 1 && underSpeech(state, line.from)) {
+    const made = own.made ?? { from: line.from - 1, to: line.from };
+    return setStored.of({ from: line.from, kind: 'dialogue', made });
+  }
+  if (own.kind === 'action' || state.field(classicLine, false)?.from === line.from) return null;
+  return setStored.of({ from: line.from, kind: own.kind, arrivedAs: own.arrivedAs });
+}
+
+/** The change a line needs to read as `kind`, in a state, or null. */
+export function markFor(state: EditorState, line: Line, kind: ClassicKind) {
+  if (blocked(state, line.from)) return null;
+  const own = { ...NO_LINE, from: line.from, ...kindsOf(kind) };
+  const { text } = settleLine(state, line, line.text, own);
+  return text === line.text ? null : difference(line.text, text, line.from);
+}
+
+/** The lines a change left next to something new, in the new text: those it ended on, and around. */
+function touched(tr: Transaction, crossed: boolean): Line[] {
+  const { newDoc: doc } = tr;
+  const line = doc.lineAt(tr.newSelection.main.head);
+  let first = line.number;
+  tr.changes.iterChanges((_fromA, _toA, fromB) => {
+    first = Math.min(first, doc.lineAt(fromB).number);
+  });
+  const lines: Line[] = [];
+  for (let n = Math.max(first - (crossed ? 1 : 0), 1); n <= first + 1 && n <= doc.lines; n++) {
+    const other = doc.line(n);
+    if (!isBlank(other.text) && (crossed || n > line.number)) lines.push(other);
+  }
+  return lines;
+}
+
+/**
+ * A delete across a break, or one that empties a line, changes what's around it: a line can come to
+ * stand over text, and read as a cue (§4.2). Each line touched is asked whether it still reads as
+ * what it was, the joined line as the upper line's element, and a mark goes on in the same
+ * transaction. A selection across lines is Fountain Mode's (§6.4).
+ */
+export const settleBreaks: Extension = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || !tr.isUserEvent('delete') || tr.annotation(appChange)) return tr;
+  const start = tr.startState;
+  if (start.selection.ranges.length > 1) return tr;
+  // A made line isn't the file's: the break it takes back was never a cut.
+  const held = start.field(classicLine, false);
+  if (held?.made && held.from === start.doc.lineAt(start.selection.main.head).from) return tr;
+  const crossed = typedOnLine(tr) === null;
+  if (crossed && (tr.isUserEvent('delete.selection') || tr.isUserEvent('delete.cut'))) return tr;
+  const here = tr.newDoc.lineAt(tr.newSelection.main.head);
+  if (!crossed && !isBlank(here.text)) return tr;
+  const back = tr.changes.invertedDesc;
+  const state = tr.state;
+  // Top down, and one mark: a line marked no longer makes the one under it a speech.
+  for (const line of touched(tr, crossed)) {
+    const was = start.doc.lineAt(back.mapPos(line.from, 1));
+    const kind = wasKind(start, was);
+    const change = kind && markFor(state, line, kind);
+    if (!change) continue;
+    const marks = ChangeSet.of(change, tr.newDoc.length);
+    const selection = { anchor: marks.mapPos(tr.newSelection.main.head, 1) };
+    return [tr, { changes: marks, selection, sequential: true }];
+  }
+  return tr;
+});
+
+/**
+ * What a line was: the stored element on the cursor's line, and the parser's elsewhere, as a lone
+ * name draws as a Character only while its Dialogue is pending under the cursor (§4.3).
+ */
+function wasKind(state: EditorState, line: Line): ClassicKind | null {
+  const on = state.doc.lineAt(state.selection.main.head).from === line.from;
+  return on ? lineKindAt(state, line) : parsedKindAt(state, line);
+}
+
+/** What the filter adds to the typing: the capitals, the mark, the cursor, and what's stored. */
+function applySettled(
+  tr: Transaction,
+  line: Line,
+  own: StoredLine,
+  added: readonly Span[],
+  fix: { from: number; to: number; insert: string } | null,
+  rawText: string,
+  state: EditorState = tr.startState,
+) {
+  const capitals = fix ? ChangeSet.of(fix, tr.newDoc.length) : null;
+  const text = fix
+    ? rawText.slice(0, fix.from - line.from) + fix.insert + rawText.slice(fix.to - line.from)
+    : rawText;
+  const spans = capitals ? added.flatMap((span) => mapSpan(span, capitals) ?? []) : added;
+  const settled = settleLine(state, line, text, { ...own, added: spans });
+
+  const head = capitals ? capitals.mapPos(tr.newSelection.main.head, 1) : tr.newSelection.main.head;
+  const [lead] = settled.added;
+  const gone = spans.reduce((sum, span) => sum + (span.to <= head ? span.to - span.from : 0), 0);
+  const changed = settled.text !== text;
+  const noted = settled.kind !== own.kind || !sameSpans(settled.added, spans);
+  const specs: TransactionSpec[] = [];
+  if (fix) specs.push({ changes: fix, sequential: true });
+  if (changed || noted) {
+    specs.push({
+      ...(changed ? { changes: difference(text, settled.text, line.from) } : null),
+      ...(changed
+        ? { selection: { anchor: head - gone + (lead ? lead.to - lead.from : 0) } }
+        : null),
+      effects: noted
+        ? setStored.of({
+            from: line.from,
+            kind: settled.kind,
+            added: settled.added,
+            arrivedAs: own.arrivedAs,
+          })
+        : [],
+      sequential: true,
+    });
+  }
+  return specs.length ? [tr, ...specs] : tr;
+}
+
+/** The one change of a paste or a drop, if it's one: a drop that moves text is two, and is left as it is. */
+function onlyChange(tr: Transaction) {
+  const found: { fromA: number; toA: number; fromB: number; toB: number; text: Text }[] = [];
+  tr.changes.iterChanges((fromA, toA, fromB, toB, text) => {
+    found.push({ fromA, toA, fromB, toB, text });
+  });
+  return found.length === 1 ? (found[0] ?? null) : null;
+}
+
+/**
+ * Whether a paste on the empty line `line` needs a blank line above it and below it, so it can't
+ * run into a neighbour (§11), by the rule the chooser follows for a pick (§6.1): a line of a speech
+ * goes on with the speech, and a line of Action goes on with the Action above it. Several lines
+ * stand apart from everything but a speech. Pasted text that starts or ends with a blank line
+ * brings its own.
+ */
+function breaksAround(state: EditorState, line: Line, kind: ClassicKind, text: Text) {
+  const { doc } = state;
+  const several = text.lines > 1;
+  const above = line.number > 1 ? doc.line(line.number - 1) : null;
+  const under = line.number < doc.lines ? doc.line(line.number + 1) : null;
+  const inSpeech = underSpeech(state, line.from);
+  const staysIn = inSpeech
+    ? several || WRITES.by[kind] !== 'blank'
+    : !several && kind === 'action' && !!above && parsedKindAt(state, above) === 'action';
+  return {
+    above: !!above && !isBlank(above.text) && !isBlank(text.line(1).text) && !staysIn,
+    under:
+      !!under &&
+      !isBlank(under.text) &&
+      !blocked(state, under.from) &&
+      !isBlank(text.line(text.lines).text) &&
+      !(staysIn && inSpeech),
+  };
+}
+
+/**
+ * Paste and drop (§11). What was copied goes in as it was, never in capitals. One line takes the
+ * element of the line it lands on, as typing would, and gets a mark only if that line needs one:
+ * `june` pasted on a Character is `@june`. Several lines are the parser's, with no marks, so a
+ * script pasted in comes out as it was. On an empty line a paste gets the blank lines it needs,
+ * and on a blank speech line it takes the two spaces' place. A replace-all (`input.replace`) and a
+ * drop that moves text are left alone.
+ */
+export const settlePaste: Extension = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || tr.annotation(appChange)) return tr;
+  if (!tr.isUserEvent('input.paste') && !tr.isUserEvent('input.drop')) return tr;
+  const start = tr.startState;
+  if (start.selection.ranges.length > 1 || tr.newSelection.ranges.length > 1) return tr;
+  const pasted = onlyChange(tr);
+  if (!pasted?.text.length) return tr;
+  const old = start.doc.lineAt(pasted.fromA);
+  if (pasted.toA > old.to || isBlankScript(start, old) || blocked(start, old.from)) return tr;
+  const own = ownLine(start, old);
+  const held = start.field(classicLine, false)?.from === old.from;
+
+  // First the blank lines and the spaces, in the new text's positions.
+  const from = tr.changes.mapPos(old.from, -1);
+  const spaces = old.text === BLANK_SPEECH && pasted.text.toString().trim() !== '';
+  const breaks = isBlank(old.text)
+    ? breaksAround(start, old, own.kind, pasted.text)
+    : { above: false, under: false };
+  const { lineBreak } = start;
+  const around = [
+    ...(breaks.above ? [{ from, insert: lineBreak }] : []),
+    // Each space on its own: the paste may have gone in between them.
+    ...(spaces
+      ? [old.from, old.from + 1].flatMap(
+          (at) => mapSpan({ from: at, to: at + 1 }, tr.changes) ?? [],
+        )
+      : []),
+    ...(breaks.under ? [{ from: tr.newDoc.lineAt(pasted.toB).to, insert: lineBreak }] : []),
+  ];
+  const room = around.length ? ChangeSet.of(around, tr.newDoc.length, lineBreak) : null;
+  const specs: (Transaction | TransactionSpec)[] = [tr];
+  if (room) specs.push({ changes: room, sequential: true });
+  if (pasted.text.lines > 1) return specs.length > 1 ? specs : tr;
+
+  // Then the one line's element, read in the text with its room around it.
+  const state = room ? tr.state.update({ changes: room, filter: false }).state : tr.state;
+  const line = state.doc.lineAt(room ? room.mapPos(from, 1) : from);
+  const through = (span: Span): Span | null => {
+    const mapped = mapSpan(span, tr.changes);
+    return mapped && room ? mapSpan(mapped, room) : mapped;
+  };
+  const added = spaces ? [] : own.added.flatMap((span) => through(span) ?? []);
+  // A line that brings a mark of its own onto an empty line is what its mark says (§11): `@McGRAW`
+  // stays as it is, and the line is a Character, whatever was pending there.
+  if (isBlank(old.text) && MARK_START.test(line.text)) {
+    const read = line.text.trimStart().startsWith('@') ? 'character' : parsedKindAt(state, line);
+    const kind = read ?? own.kind;
+    specs.push({
+      effects: setStored.of({
+        ...own,
+        from: line.from,
+        kind,
+        arrivedAs: kind,
+        added: [],
+        soft: false,
+        made: own.made && through(own.made),
+        madeMark: own.madeMark && through(own.madeMark),
+      }),
+      annotations: classicEdit.of(true),
+      sequential: true,
+    });
+    return specs;
+  }
+  const settled = settleLine(state, line, line.text, { ...own, added }, { verbatim: true });
+  const changed = settled.text !== line.text;
+  const noted = settled.kind !== own.kind || !sameSpans(settled.added, added);
+  if (changed || noted || held) {
+    specs.push({
+      ...(changed ? { changes: difference(line.text, settled.text, line.from) } : null),
+      effects:
+        noted || held
+          ? setStored.of({
+              // Whole, as a blank line put in above moves the line's start past what's mapped.
+              ...own,
+              from: line.from,
+              kind: settled.kind,
+              added: settled.added,
+              made: own.made && through(own.made),
+              madeMark: own.madeMark && through(own.madeMark),
+            })
+          : [],
+      // The stored line goes on through the paste, as through typing.
+      annotations: classicEdit.of(true),
+      sequential: true,
+    });
+  }
+  return specs.length > 1 ? specs : tr;
+});

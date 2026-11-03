@@ -14,7 +14,7 @@ import {
   wordsOf,
 } from '~/drafts/labels';
 import { type DraftRow, isIdPrefix, NOTE_MAX } from '~/drafts/store';
-import { useDrafts } from '~/drafts/use-drafts';
+import { draftSource, useDrafts } from '~/drafts/use-drafts';
 import { useDraftSteps } from '~/drafts/use-steps';
 import { useEditor } from '~/editor/session';
 import { sayOutline } from '~/outline/notice';
@@ -75,7 +75,8 @@ async function compareNow(row: DraftRow) {
   compare.open(version, {
     label: nowLabel(Date.now()),
     at: null,
-    text: editor.view.state.doc.toString(),
+    // Now as a save would write it: a line Classic Mode just made in a speech isn't a change.
+    text: draftSource(editor.view.state),
   });
 }
 

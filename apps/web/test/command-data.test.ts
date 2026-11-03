@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'vitest';
-import { COMMAND_DATA, HELP_PAGES, helpCommandTitle, helpHref } from '../app/commands/data';
+import {
+  COMMAND_DATA,
+  HELP_PAGES,
+  helpCommandTitle,
+  helpHref,
+  modeSwitchApplies,
+} from '../app/commands/data';
 import { formatKeys } from '../app/commands/keys';
 import { shortcutGroups } from '../app/commands/shortcuts';
 import { EXPORTS, exportApplies } from '../app/storage/export';
@@ -55,6 +61,44 @@ describe('the command data', () => {
     expect(places).toMatchObject({ title: 'Show the places', group: 'View' });
     expect(cast?.keys).toBeUndefined();
     expect(places?.keys).toBeUndefined();
+  });
+
+  describe('the writing mode', () => {
+    const command = (id: string) => COMMAND_DATA.find((c) => c.id === id);
+
+    test('Mod-Alt-0 is free, and is the switch’s', () => {
+      expect(COMMAND_DATA.filter((c) => c.keys === 'Mod-Alt-0').map((c) => c.id)).toEqual([
+        'switch-writing-mode',
+      ]);
+      expect(command('switch-writing-mode')).toMatchObject({
+        title: 'Switch writing mode',
+        group: 'View',
+        global: true,
+      });
+    });
+
+    test('all three are found by the words a writer would try', () => {
+      expect(command('switch-to-classic')).toMatchObject({
+        title: 'Switch to Classic Mode',
+        group: 'View',
+      });
+      expect(command('switch-to-fountain')).toMatchObject({
+        title: 'Switch to Fountain Mode',
+        group: 'View',
+      });
+      for (const id of ['switch-to-classic', 'switch-to-fountain', 'switch-writing-mode']) {
+        expect(command(id)?.keywords).toEqual(['final draft', 'mode', 'typing']);
+      }
+    });
+
+    test('the two switches are enabled only when they’d do something', () => {
+      expect(modeSwitchApplies('classic', 'fountain', 'fountain')).toBe(true);
+      expect(modeSwitchApplies('classic', 'classic', 'fountain')).toBe(false);
+      expect(modeSwitchApplies('fountain', 'classic', 'fountain')).toBe(true);
+      expect(modeSwitchApplies('fountain', 'fountain', 'fountain')).toBe(false);
+      expect(modeSwitchApplies('classic', 'fountain', 'markdown')).toBe(false);
+      expect(modeSwitchApplies('fountain', 'classic', 'markdown')).toBe(false);
+    });
   });
 
   test('has no key twice, and no key it cannot format', () => {
@@ -130,11 +174,12 @@ describe('the command data', () => {
     for (const c of COMMAND_DATA.filter((c) => c.global)) expect(c.keys, c.id).toBeTruthy();
   });
 
-  test('has the fourteen help pages, in the Help group', () => {
+  test('has the fifteen help pages, in the Help group', () => {
     expect(HELP_PAGES.map((p) => p.path)).toEqual([
       '/docs/what-is-drafter',
       '/docs/why',
       '/docs/fountain',
+      '/docs/classic-mode',
       '/docs/saving',
       '/docs/drafts-and-cuts',
       '/docs/story-map',
@@ -198,6 +243,7 @@ describe('the command data', () => {
       '/docs/what-is-drafter/',
       '/docs/why/',
       '/docs/fountain/',
+      '/docs/classic-mode/',
       '/docs/saving/',
       '/docs/drafts-and-cuts/',
       '/docs/story-map/',

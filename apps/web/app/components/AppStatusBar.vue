@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { structureOf } from '@drafter/cm-fountain';
 import { commandById } from '~/commands/registry';
 import { draftName } from '~/drafts/labels';
 import { useDrafts } from '~/drafts/use-drafts';
+import { keyLine } from '~/editor/classic-key-line';
 import { useLayout } from '~/editor/layout';
 import { pageLabel } from '~/editor/pages';
 import { problemsLabel, useProblems } from '~/editor/problems';
@@ -33,7 +35,7 @@ import { useStorageNotice } from '~/storage/storage-notice';
 // so the bar says it only while the Script is out of sight.
 // Below 640px the bar is hidden, but for what can't wait: the recovery copy's warning, an error,
 // a running sprint, and the Counts panel opened from the palette.
-const { kind } = useEditor();
+const { element, kind, template } = useEditor();
 const { project, ready } = useScript();
 const { count } = useProblems();
 const { steady } = useCounts();
@@ -52,6 +54,8 @@ const showWords = computed(
   () => writtenToday.value?.words != null && !(progress.value && goal.value?.unit === 'words'),
 );
 const markdown = computed(() => kind.value === 'markdown');
+/** What Enter and Tab do here, in Classic Mode (design §9.3). It changes with the element, not with each letter. */
+const keys = computed(() => keyLine(element.value, structureOf(template.value)));
 
 // ---- The file -------------------------------------------------------------------------------
 
@@ -269,6 +273,7 @@ const urgent = computed(
           {{ RECOVERY[warning].label }}
         </button>
         <span class="spacer" />
+        <span v-if="keys" class="keys wide-only" data-item="keys">{{ keys }}</span>
         <span v-if="progress" class="wide-only" data-item="goal">{{ progressLabel(progress) }}</span>
         <!-- Not live regions: a screen reader reads them when asked, not at every change. -->
         <template v-if="writtenToday">
@@ -340,6 +345,12 @@ const urgent = computed(
 }
 .row > span:not(.spacer, .counts-wrap, .template) {
   padding: 0 6px;
+}
+.keys {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* Borderless buttons that fill on hover (design §3.4, §5). */
 .item {

@@ -1,6 +1,7 @@
 import { isolateHistory } from '@codemirror/commands';
 import { Text, Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
+import { classicLine, onlyClearedBlock, savedText } from '@drafter/cm-fountain';
 import {
   type ComputedRef,
   computed,
@@ -311,9 +312,11 @@ function create(): ScriptSession {
 
   const guard = useGuard();
 
+  // In Classic Mode the text a save writes leaves out a line just made inside a speech, which the
+  // writer's next letter heals (savedText): a script whose only difference is that line is saved.
   const dirty = computed(() => {
     editor.doc.value; // the text changed
-    return baseline.value === null || !view.state.doc.eq(baseline.value);
+    return baseline.value === null || !savedText(view.state).eq(baseline.value);
   });
 
   const lastSaved = computed(() => {
@@ -393,7 +396,7 @@ function create(): ScriptSession {
     // Not a success: the text was not written, and the writer must keep it.
     if (gone) throw new Error(`There is no script ${id} to write to.`);
     // What a closing page left behind is written, unless newer text has been typed since.
-    if (view.state.doc.toString() === source) clearStash(id);
+    if (savedText(view.state).toString() === source) clearStash(id);
     if (failing) {
       failing = false;
       clearTimeout(retry);
@@ -408,7 +411,7 @@ function create(): ScriptSession {
     // handing the script over is read-only but still has its writer, and the text it hasn't
     // written yet is still its to leave.
     if (!writer) return;
-    if (writer.pending && project.value) stash(project.value.id, view.state.doc.toString());
+    if (writer.pending && project.value) stash(project.value.id, savedText(view.state).toString());
     void writer.flush().catch(() => {});
   };
 
@@ -435,9 +438,8 @@ function create(): ScriptSession {
     const id = next.id;
     writer = writable ? createWriter((source) => persist(id, source)) : undefined;
     // Text typed while the script was being read.
-    if (writer && fromEditor && view.state.doc.toString() !== next.source) {
-      writer.schedule(view.state.doc.toString());
-    }
+    const source = savedText(view.state).toString();
+    if (writer && fromEditor && source !== next.source) writer.schedule(source);
   }
 
   /**
@@ -848,7 +850,7 @@ function create(): ScriptSession {
   }
 
   async function saved({
-    text: savedText,
+    text: written,
     fileName,
     ref,
     id,
@@ -865,20 +867,20 @@ function create(): ScriptSession {
     // The writer switched scripts while the file was being written: the record is the starting
     // script's, and the open one is left as it is.
     if (id !== undefined && project.value?.id !== id)
-      return savedElsewhere(id, savedText, fileName, ref);
+      return savedElsewhere(id, written, fileName, ref);
     const format = {
       ...(lineBreak === undefined ? {} : { lineBreak }),
       ...(bom === undefined ? {} : { bom }),
     };
     // The file has this text, whatever happens to the record of it.
-    baseline.value = text(savedText);
+    baseline.value = text(written);
     const current = project.value;
     // No script is kept in this browser (the database is down): the file is all there is.
     if (!current) return;
     try {
       // The text that was written is kept as the recovery copy too, before the record points at it.
       await writer?.flush().catch(() => {});
-      const hash = await hashText(savedText);
+      const hash = await hashText(written);
       const savedAt = Date.now();
       if (current.sample) {
         const handleId = ref ? await putHandle(crypto.randomUUID(), ref) : undefined;
@@ -898,7 +900,7 @@ function create(): ScriptSession {
             // with the text.
             const { exportOptions, timing } = project.value;
             const created = await createProject({
-              source: savedText,
+              source: written,
               fileName,
               savedHash: hash,
               savedAt,
@@ -907,7 +909,7 @@ function create(): ScriptSession {
               ...(exportOptions ? { exportOptions } : {}),
               ...(timing ? { timing } : {}),
             });
-            await setSavedText(created.id, savedText);
+            await setSavedText(created.id, written);
             made = created.id;
             return created;
           },
@@ -917,14 +919,14 @@ function create(): ScriptSession {
         });
         if (moved) {
           if (handleId) await db.handles.delete(handleId).catch(() => {});
-          await savedElsewhere(current.id, savedText, fileName, ref);
-        } else if (made) recorded({ kind: 'saved', id: made, text: savedText, fileName });
+          await savedElsewhere(current.id, written, fileName, ref);
+        } else if (made) recorded({ kind: 'saved', id: made, text: written, fileName });
         return;
       }
       const fsHandleId = ref
         ? await putHandle(current.fsHandleId ?? crypto.randomUUID(), ref)
         : current.fsHandleId;
-      await setSavedText(current.id, savedText);
+      await setSavedText(current.id, written);
       await patch(current.id, {
         savedHash: hash,
         savedAt,
@@ -932,7 +934,7 @@ function create(): ScriptSession {
         ...format,
         ...(fsHandleId ? { fsHandleId } : {}),
       });
-      recorded({ kind: 'saved', id: current.id, text: savedText, fileName });
+      recorded({ kind: 'saved', id: current.id, text: written, fileName });
     } catch {
       // The file was written; the recovery copy's state says if the database is the problem.
     }
@@ -941,12 +943,12 @@ function create(): ScriptSession {
   /** Records a save against script `id`, which is not the one open. */
   async function savedElsewhere(
     id: string,
-    savedText: string,
+    written: string,
     fileName: string,
     ref: FileRef | null,
   ) {
     try {
-      const hash = await hashText(savedText);
+      const hash = await hashText(written);
       const savedAt = Date.now();
       const on = await exclusive(async (): Promise<string | null> => {
         const stored = await getProject(id);
@@ -956,7 +958,7 @@ function create(): ScriptSession {
           // The sample stays as it was; a script of the writer's own takes the text, without being opened.
           const handleId = ref ? await putHandle(crypto.randomUUID(), ref) : undefined;
           const created = await createProject({
-            source: savedText,
+            source: written,
             fileName,
             savedHash: hash,
             savedAt,
@@ -964,13 +966,13 @@ function create(): ScriptSession {
             ...(stored.exportOptions ? { exportOptions: stored.exportOptions } : {}),
             ...(stored.timing ? { timing: stored.timing } : {}),
           });
-          await setSavedText(created.id, savedText);
+          await setSavedText(created.id, written);
           return created.id;
         }
         const fsHandleId = ref
           ? await putHandle(stored.fsHandleId ?? crypto.randomUUID(), ref)
           : stored.fsHandleId;
-        await setSavedText(id, savedText);
+        await setSavedText(id, written);
         await updateProject(id, {
           savedHash: hash,
           savedAt,
@@ -979,7 +981,7 @@ function create(): ScriptSession {
         });
         return id;
       });
-      if (on !== null) recorded({ kind: 'saved', id: on, text: savedText, fileName });
+      if (on !== null) recorded({ kind: 'saved', id: on, text: written, fileName });
     } catch {
       // The file was written; the recovery copy's state says if the database is the problem.
     }
@@ -1151,8 +1153,19 @@ function create(): ScriptSession {
   editor.onState((state) => {
     if (loading || state.doc === lastDoc) return;
     if (guard.readOnly.value) return;
+    // Classic Mode's room above a blank script's metadata block isn't an edit of the writer's. Only
+    // in Classic Mode (its own field is in the state): Fountain Mode and Markdown count every change.
+    const unedited =
+      state.field(classicLine, false) !== undefined &&
+      baseline.value?.eq(lastDoc) &&
+      onlyClearedBlock(lastDoc, state.doc);
     lastDoc = state.doc;
-    writer?.schedule(state.doc.toString());
+    if (unedited) {
+      baseline.value = state.doc;
+      return;
+    }
+    // The recovery copy is what a save would write.
+    writer?.schedule(savedText(state).toString());
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flushQuietly();

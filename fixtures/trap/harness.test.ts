@@ -182,9 +182,12 @@ function manifestMarkdown(): string {
       '| --- | --- | --- | --- |',
     );
     for (const trap of TRAPS.filter((t) => t.format === format)) {
-      const outcomes = via(trap)
-        .map((entry) => `**${entry}**: ${said(trap.expect[entry] as Outcome)}`)
-        .join('<br>');
+      const outcomes = [
+        ...via(trap).map((entry) => `**${entry}**: ${said(trap.expect[entry] as Outcome)}`),
+        ...Object.entries(trap.keptOut ?? {}).map(
+          ([entry, why]) => `kept out of **${entry}**, as ${why}`,
+        ),
+      ].join('<br>');
       out.push(
         `| \`${trap.id}\` | \`${cell(trap.name)}\`${trap.large ? ' (generated, large)' : ''} | ${cell(trap.tests)} | ${cell(outcomes)} |`,
       );
@@ -615,10 +618,14 @@ describe('mcp: every trap through Drafter for Claude', () => {
     expect(answer.mcp?.guard).toEqual([]);
   });
 
-  test('every trap of a format the server reads goes through it', () => {
+  test('every trap of a format the server reads goes through it, but one kept out with its reason', () => {
     const read = TRAPS.filter((t) => MCP_FORMATS.has(t.format));
     expect(read.length).toBeGreaterThan(200);
-    for (const trap of read) expect(trap.expect.mcp, trap.id).toBeDefined();
+    for (const trap of read) {
+      if (trap.keptOut?.mcp) expect(trap.expect.mcp, trap.id).toBeUndefined();
+      else expect(trap.expect.mcp, trap.id).toBeDefined();
+    }
+    expect(read.filter((t) => t.keptOut?.mcp).map((t) => t.id)).toEqual(['classic-5mb']);
   });
 
   test.for(trapsFor('mcp').map((t) => [t.id, t] as const))('%s', async ([, trap], { skip }) => {

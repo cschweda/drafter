@@ -1,3 +1,4 @@
+import { savedText } from '@drafter/cm-fountain';
 import type { MapOptions } from '@drafter/story-map';
 import type { Template } from '@drafter/templates';
 import { ref } from 'vue';
@@ -261,7 +262,7 @@ async function run(asked: Asked, job?: StoryMapJob): Promise<'saved' | 'cancelle
   await whenIdle(script.busy);
   // The name, the text, the template, and the export options are taken together, here, so they
   // are one script's: never the options of the script that was open before a switch.
-  const source = editor.view.state.doc.toString();
+  const source = savedText(editor.view.state).toString();
   const template = editor.template.value;
   const markdown = editor.kind.value === 'markdown';
   const options = exportOptionsOf(script.project.value);
@@ -344,7 +345,7 @@ async function run(asked: Asked, job?: StoryMapJob): Promise<'saved' | 'cancelle
           ? encodeFile(source, project?.lineBreak ?? '\n', project?.bom ?? false)
           : undefined;
       const request: ExportRequest = job
-        ? await storyMapRequest(asked, job, editor.view.state.doc.toString(), template, title)
+        ? await storyMapRequest(asked, job, source, template, title)
         : requestFor(asked, {
             source,
             template,
@@ -437,7 +438,7 @@ function askedFor(kind: ExportKind, job?: StoryMapJob): Asked {
   return {
     kind,
     script: project?.id ?? project,
-    source: editor.view.state.doc.toString(),
+    source: savedText(editor.view.state).toString(),
     template: editor.template.value,
     sceneNumbers: options.sceneNumbers,
     titlePage: options.titlePage,

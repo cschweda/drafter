@@ -21,6 +21,9 @@ const stage = CHEAT_SHEET.filter((entry) => entry.part === 'stage');
 <template>
   <article>
     <h1>{{ page.title }}</h1>
+    <p>
+      Don’t want to learn marks? Try <a href="/docs/classic-mode/">Classic Mode</a>.
+    </p>
     <p class="docs-lead">
       A Fountain script is plain text: what a line looks like decides what it is. Most elements need
       no mark at all, and a mark at the start of a line forces it to be one thing when it would

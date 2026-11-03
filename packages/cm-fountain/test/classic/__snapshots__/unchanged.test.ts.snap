@@ -1,0 +1,2095 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in apps/web/scripts/ui-shots-script.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+1669 Enter: took 1669: "" => "\\n"
+1669 Tab: left same
+1669 Shift-Tab: left same
+3338 Enter: took 3338: "" => "\\n"
+3338 Tab: left same
+3338 Shift-Tab: left same
+5007 Enter: took 5007: "" => "\\n"
+5007 Tab: took 4937: "Glass walls, a framed photograph of the old station. Eli waits by the |desk, too polite to sit. Marcus comes in, distracted" => "@GLASS WALLS, A FRAMED PHOTOGRAPH OF THE OLD STATION. ELI WAITS BY THE |DESK, TOO POLITE TO SIT. MARCUS COMES IN, DISTRACTED"
+5007 Shift-Tab: left same
+6677 Enter: took 6677: "" => "\\n"
+6677 Tab: took 6677: "|" => "(|)"
+6677 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/01-page-break.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|Margaret waits" => "@|MARGARET WAITS"
+0 Shift-Tab: left same
+9 Enter: took 9: "" => "\\n"
+9 Tab: took 0: "Margaret |waits" => "@MARGARET |WAITS"
+9 Shift-Tab: left same
+18 Enter: took 18: "" => "\\n"
+18 Tab: left same
+18 Shift-Tab: left same
+27 Enter: took 27: "" => "\\n"
+27 Tab: took 22: "Morni|ng comes" => "@MORNI|NG COMES"
+27 Shift-Tab: left same
+37 Enter: took 37: "" => "\\n"
+37 Tab: left same
+37 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/02-section.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+17 Enter: took 17: "" => "\\n"
+17 Tab: left same
+17 Shift-Tab: left same
+34 Enter: took 34: "" => "\\n"
+34 Tab: left same
+34 Shift-Tab: left same
+51 Enter: took 51: "" => "\\n"
+51 Tab: left same
+51 Shift-Tab: left same
+68 Enter: took 68: "" => "\\n"
+68 Tab: left same
+68 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/03-synopsis.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+24 Enter: took 24: "" => "\\n"
+24 Tab: left same
+24 Shift-Tab: left same
+48 Enter: took 48: "" => "\\n"
+48 Tab: left same
+48 Shift-Tab: left same
+72 Enter: took 72: "" => "\\n"
+72 Tab: took 69: "Mar|garet sits at the table" => "@MAR|GARET SITS AT THE TABLE"
+72 Shift-Tab: left same
+97 Enter: took 97: "" => "\\n"
+97 Tab: left same
+97 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/04-forced-action.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|!" => "@|"
+0 Shift-Tab: left same
+6 Enter: took 6: "" => "\\n"
+6 Tab: took 0: "!" => "@"
+6 Shift-Tab: left same
+13 Enter: took 13: "" => "\\n"
+13 Tab: took 10: "Jus|t the clock" => "@JUS|T THE CLOCK"
+13 Shift-Tab: left same
+19 Enter: took 19: "" => "\\n"
+19 Tab: took 10: "Just the |clock" => "@JUST THE |CLOCK"
+19 Shift-Tab: left same
+26 Enter: took 26: "" => "\\n"
+26 Tab: left same
+26 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/05-forced-character.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 9: "" => " (V.O.)"
+0 Shift-Tab: took 1: "@McBRIDE" => "Mcbride"
+5 Enter: took 5: "" => "\\n"
+5 Tab: took 9: "" => " (V.O.)"
+5 Shift-Tab: took 0: "@McBR|IDE" => "Mcbr|ide"
+11 Enter: took 11: "" => "\\n"
+11 Tab: left same
+11 Shift-Tab: left same
+16 Enter: took 16: "" => "\\n"
+16 Tab: left same
+16 Shift-Tab: left same
+22 Enter: took 22: "" => "\\n"
+22 Tab: took 22: "|" => "(|)"
+22 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/06-lyric.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+18 Enter: took 18: "" => "\\n"
+18 Tab: left same
+18 Shift-Tab: left same
+36 Enter: took 36: "" => "\\n"
+36 Tab: left same
+36 Shift-Tab: left same
+54 Enter: took 54: "" => "\\n"
+54 Tab: left same
+54 Shift-Tab: left same
+72 Enter: took 72: "" => "\\n"
+72 Tab: left same
+72 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/07-centered.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+11 Enter: took 11: "" => "\\n"
+11 Tab: left same
+11 Shift-Tab: left same
+23 Enter: took 23: "" => "\\n"
+23 Tab: left same
+23 Shift-Tab: left same
+34 Enter: took 34: "" => "\\n"
+34 Tab: left same
+34 Shift-Tab: left same
+46 Enter: took 46: "" => "\\n"
+46 Tab: left same
+46 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/08-forced-transition.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|Margaret turns out the light" => "@|MARGARET TURNS OUT THE LIGHT"
+0 Shift-Tab: left same
+12 Enter: took 12: "" => "\\n"
+12 Tab: took 0: "Margaret tur|ns out the light" => "@MARGARET TUR|NS OUT THE LIGHT"
+12 Shift-Tab: left same
+24 Enter: took 24: "" => "\\n"
+24 Tab: took 0: "Margaret turns out the l|ight" => "@MARGARET TURNS OUT THE L|IGHT"
+24 Shift-Tab: left same
+36 Enter: took 36: "" => "\\n"
+36 Tab: left same
+36 Shift-Tab: left same
+48 Enter: took 48: "" => "\\n"
+48 Tab: left same
+48 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/09-forced-heading.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+10 Enter: took 10: "" => "\\n\\n"
+10 Tab: left same
+10 Shift-Tab: left same
+20 Enter: took 20: "" => "\\n"
+20 Tab: took 12: "...and t|hen the phone rang" => "@...AND T|HEN THE PHONE RANG"
+20 Shift-Tab: left same
+30 Enter: took 30: "" => "\\n"
+30 Tab: took 12: "...and then the ph|one rang" => "@...AND THEN THE PH|ONE RANG"
+30 Shift-Tab: left same
+40 Enter: took 40: "" => "\\n"
+40 Tab: left same
+40 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/10-transition.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|Margaret hangs up" => "@|MARGARET HANGS UP"
+0 Shift-Tab: left same
+14 Enter: took 14: "" => "\\n"
+14 Tab: took 0: "Margaret hangs| up" => "@MARGARET HANGS| UP"
+14 Shift-Tab: left same
+29 Enter: took 29: "" => "\\n"
+29 Tab: took 29: "|Danny on the porch" => "@|DANNY ON THE PORCH"
+29 Shift-Tab: left same
+44 Enter: took 44: "" => "\\n"
+44 Tab: took 29: "Danny on the po|rch" => "@DANNY ON THE PO|RCH"
+44 Shift-Tab: left same
+59 Enter: took 59: "" => "\\n"
+59 Tab: took 59: "|" => "(|)"
+59 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/11-scene-heading.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+36 Enter: took 36: "" => "\\n"
+36 Tab: left same
+36 Shift-Tab: left same
+73 Enter: took 73: "" => "\\n"
+73 Tab: left same
+73 Shift-Tab: left same
+109 Enter: took 109: "" => "\\n"
+109 Tab: left same
+109 Shift-Tab: left same
+146 Enter: took 146: "" => "\\n"
+146 Tab: left same
+146 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/12-character.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 9: "" => " (V.O.)"
+0 Shift-Tab: took 2: "ARGARET" => "argaret"
+7 Enter: took 7: "" => "\\n"
+7 Tab: took 9: "" => " (V.O.)"
+7 Shift-Tab: took 1: "ARGARE|T" => "argare|t"
+15 Enter: took 15: "" => "\\n"
+15 Tab: left same
+15 Shift-Tab: left same
+22 Enter: took 22: "" => "\\n"
+22 Tab: left same
+22 Shift-Tab: left same
+30 Enter: took 30: "" => "\\n"
+30 Tab: took 30: "|" => "(|)"
+30 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/13-action.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|Margaret sits at the table, not eating" => "@|MARGARET SITS AT THE TABLE, NOT EATING"
+0 Shift-Tab: left same
+17 Enter: took 17: "" => "\\n"
+17 Tab: took 0: "Margaret sits at |the table, not eating" => "@MARGARET SITS AT |THE TABLE, NOT EATING"
+17 Shift-Tab: left same
+35 Enter: took 35: "" => "\\n"
+35 Tab: took 0: "Margaret sits at the table, not eat|ing" => "@MARGARET SITS AT THE TABLE, NOT EAT|ING"
+35 Shift-Tab: left same
+52 Enter: took 52: "" => "\\n"
+52 Tab: took 40: "The clock ti|cks" => "@THE CLOCK TI|CKS"
+52 Shift-Tab: left same
+70 Enter: took 70: "" => "\\n"
+70 Tab: left same
+70 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/14-uppercase-action.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|The phone rings" => "@|THE PHONE RINGS"
+0 Shift-Tab: left same
+8 Enter: took 8: "" => "\\n"
+8 Tab: took 0: "The phon|e rings" => "@THE PHON|E RINGS"
+8 Shift-Tab: left same
+17 Enter: took 17: "" => "\\n"
+17 Tab: left same
+17 Shift-Tab: left same
+25 Enter: took 25: "" => "\\n"
+25 Tab: took 25: "|Silence" => "@|SILENCE"
+25 Shift-Tab: left same
+34 Enter: took 34: "" => "\\n"
+34 Tab: left same
+34 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/15-int-sentence.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+28 Enter: took 28: "" => "\\n"
+28 Tab: took 28: "|!INT is short for interior" => "@|INT IS SHORT FOR INTERIOR"
+28 Shift-Tab: left same
+57 Enter: took 57: "" => "\\n"
+57 Tab: took 57: "|Int is short for interior" => "@|INT IS SHORT FOR INTERIOR"
+57 Shift-Tab: left same
+86 Enter: took 86: "" => "\\n"
+86 Tab: took 84: "It| means the scene is indoors" => "@IT| MEANS THE SCENE IS INDOORS"
+86 Shift-Tab: left same
+115 Enter: took 115: "" => "\\n"
+115 Tab: left same
+115 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/16-heading-no-blank-after.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+19 Enter: took 19: "" => "\\n"
+19 Tab: left same
+19 Shift-Tab: left same
+39 Enter: took 39: "" => "\\n"
+39 Tab: took 21: "Margaret waits by |the phone" => "@MARGARET WAITS BY |THE PHONE"
+39 Shift-Tab: left same
+58 Enter: took 58: "" => "\\n\\n"
+58 Tab: left same
+58 Shift-Tab: left same
+78 Enter: took 78: "" => "\\n"
+78 Tab: left same
+78 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/17-lone-transition.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|Margaret switches off the lamp" => "@|MARGARET SWITCHES OFF THE LAMP"
+0 Shift-Tab: left same
+20 Enter: took 20: "" => "\\n"
+20 Tab: took 0: "Margaret switches of|f the lamp" => "@MARGARET SWITCHES OF|F THE LAMP"
+20 Shift-Tab: left same
+41 Enter: took 41: "" => "\\n"
+41 Tab: left same
+41 Shift-Tab: left same
+61 Enter: took 61: "" => "\\n"
+61 Tab: took 59: "" => "@"
+61 Shift-Tab: left same
+82 Enter: took 82: "" => "\\n"
+82 Tab: left same
+82 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/18-lowercase-extension.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: took 2: "ANS" => "ans"
+26 Enter: took 26: "" => "\\n"
+26 Tab: left same
+26 Shift-Tab: left same
+53 Enter: took 53: "" => "\\n"
+53 Tab: left same
+53 Shift-Tab: left same
+80 Enter: took 80: "" => "\\n"
+80 Tab: left same
+80 Shift-Tab: took 69: "ANNY (V.O.)| (CONT'D" => "anny (v.o.)| (cont'd"
+107 Enter: took 107: "" => "\\n"
+107 Tab: took 107: "|" => "(|)"
+107 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/19-dual-dialogue.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 9: "" => " (V.O.)"
+0 Shift-Tab: took 2: "ARGARET" => "argaret"
+18 Enter: took 18: "" => "\\n"
+18 Tab: left same
+18 Shift-Tab: left same
+36 Enter: took 36: "" => "\\n"
+36 Tab: left same
+36 Shift-Tab: left same
+54 Enter: took 54: "" => "\\n"
+54 Tab: left same
+54 Shift-Tab: left same
+73 Enter: took 73: "" => "\\n"
+73 Tab: took 73: "|" => "(|)"
+73 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/20-forced-markers.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+28 Enter: took 28: "" => "\\n"
+28 Tab: took 21: "The ket|tle boils over" => "@THE KET|TLE BOILS OVER"
+28 Shift-Tab: left same
+57 Enter: took 57: "" => "\\n"
+57 Tab: left same
+57 Shift-Tab: left same
+85 Enter: took 85: "" => "\\n"
+85 Tab: left same
+85 Shift-Tab: left same
+114 Enter: took 114: "" => "\\n"
+114 Tab: left same
+114 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/21-scene-numbers.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+12 Enter: took 12: "" => "\\n"
+12 Tab: left same
+12 Shift-Tab: left same
+25 Enter: took 25: "" => "\\n"
+25 Tab: left same
+25 Shift-Tab: left same
+37 Enter: took 37: "" => "\\n"
+37 Tab: left same
+37 Shift-Tab: left same
+50 Enter: took 50: "" => "\\n"
+50 Tab: left same
+50 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/22-multiline-parenthetical.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 9: "" => " (V.O.)"
+0 Shift-Tab: took 2: "ARGARET" => "argaret"
+31 Enter: took 31: "" => "\\n"
+31 Tab: left same
+31 Shift-Tab: left same
+63 Enter: took 63: "" => "\\n"
+63 Tab: left same
+63 Shift-Tab: left same
+95 Enter: took 95: "" => "\\n"
+95 Tab: left same
+95 Shift-Tab: left same
+127 Enter: took 127: "" => "\\n"
+127 Tab: took 127: "|" => "(|)"
+127 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/23-paren-stays-dialogue.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 7: "" => " (V.O.)"
+0 Shift-Tab: took 2: "AMLET" => "amlet"
+11 Enter: took 11: "" => "\\n"
+11 Tab: left same
+11 Shift-Tab: left same
+22 Enter: took 22: "" => "\\n"
+22 Tab: left same
+22 Shift-Tab: left same
+33 Enter: took 33: "" => "\\n"
+33 Tab: left same
+33 Shift-Tab: left same
+44 Enter: took 44: "" => "\\n"
+44 Tab: took 44: "|" => "(|)"
+44 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/24-lyric-in-speech.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 9: "" => " (V.O.)"
+0 Shift-Tab: took 2: "ARGARET" => "argaret"
+27 Enter: took 27: "" => "\\n"
+27 Tab: left same
+27 Shift-Tab: left same
+54 Enter: took 54: "" => "\\n"
+54 Tab: left same
+54 Shift-Tab: left same
+81 Enter: took 81: "" => "\\n"
+81 Tab: left same
+81 Shift-Tab: left same
+109 Enter: took 109: "" => "\\n"
+109 Tab: took 109: "|" => "(|)"
+109 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/25-act-then-synopsis.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+17 Enter: took 17: "" => "\\n"
+17 Tab: left same
+17 Shift-Tab: left same
+35 Enter: took 35: "" => "\\n"
+35 Tab: left same
+35 Shift-Tab: left same
+52 Enter: took 52: "" => "\\n"
+52 Tab: left same
+52 Shift-Tab: left same
+70 Enter: took 70: "" => "\\n"
+70 Tab: left same
+70 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/26-two-space-line.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 9: "" => " (V.O.)"
+0 Shift-Tab: took 2: "ARGARET" => "argaret"
+21 Enter: took 21: "" => "\\n"
+21 Tab: left same
+21 Shift-Tab: left same
+42 Enter: took 42: "" => "\\n"
+42 Tab: took 42: "|" => "(|)"
+42 Shift-Tab: left same
+63 Enter: took 63: "" => "\\n"
+63 Tab: took 61: "Ma|rgaret doesn't move" => "@MA|RGARET DOESN'T MOVE"
+63 Shift-Tab: left same
+84 Enter: took 84: "" => "\\n"
+84 Tab: left same
+84 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/27-note-closes.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+37 Enter: took 37: "" => "\\n"
+37 Tab: left same
+37 Shift-Tab: left same
+75 Enter: took 75: "" => "\\n"
+75 Tab: took 74: "M|argaret waits.[[She has been waiting since nine.]] The phone stays silent" => "@M|ARGARET WAITS.[[SHE HAS BEEN WAITING SINCE NINE.]] THE PHONE STAYS SILENT"
+75 Shift-Tab: left same
+112 Enter: took 112: "" => "\\n"
+112 Tab: left same
+112 Shift-Tab: left same
+150 Enter: took 150: "" => "\\n"
+150 Tab: left same
+150 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/28-unclosed-note.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|Margaret waits. [[Check the time on the clock" => "@|MARGARET WAITS. [[CHECK THE TIME ON THE CLOCK"
+0 Shift-Tab: left same
+16 Enter: took 16: "" => "\\n"
+16 Tab: took 0: "Margaret waits. |[[Check the time on the clock" => "@MARGARET WAITS. |[[CHECK THE TIME ON THE CLOCK"
+16 Shift-Tab: left same
+32 Enter: took 32: "" => "\\n"
+32 Tab: took 0: "Margaret waits. [[Check the time| on the clock" => "@MARGARET WAITS. [[CHECK THE TIME| ON THE CLOCK"
+32 Shift-Tab: left same
+48 Enter: took 48: "" => "\\n"
+48 Tab: took 48: "|The phone rings" => "@|THE PHONE RINGS"
+48 Shift-Tab: left same
+65 Enter: took 65: "" => "\\n"
+65 Tab: left same
+65 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/29-unclosed-boneyard.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|Margaret waits" => "@|MARGARET WAITS"
+0 Shift-Tab: left same
+18 Enter: took 18: "" => "\\n"
+18 Tab: left same
+18 Shift-Tab: left same
+37 Enter: took 37: "" => "\\n"
+37 Tab: left same
+37 Shift-Tab: left same
+55 Enter: took 55: "" => "\\n"
+55 Tab: left same
+55 Shift-Tab: left same
+74 Enter: took 74: "" => "\\n"
+74 Tab: left same
+74 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/30-crlf-bom.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+12 Enter: took 12: "" => "\\n"
+12 Tab: left same
+12 Shift-Tab: left same
+24 Enter: took 24: "" => "\\n"
+24 Tab: took 23: "M|argaret waits" => "@M|ARGARET WAITS"
+24 Shift-Tab: left same
+36 Enter: took 36: "" => "\\n"
+36 Tab: took 23: "Margaret wait|s" => "@MARGARET WAIT|S"
+36 Shift-Tab: left same
+48 Enter: took 48: "" => "\\n"
+48 Tab: left same
+48 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/31-title-page.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+36 Enter: took 36: "" => "\\n"
+36 Tab: left same
+36 Shift-Tab: left same
+73 Enter: took 73: "" => "\\n"
+73 Tab: left same
+73 Shift-Tab: left same
+109 Enter: took 109: "" => "\\n"
+109 Tab: left same
+109 Shift-Tab: left same
+146 Enter: took 146: "" => "\\n"
+146 Tab: left same
+146 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/32-meta-block.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+24 Enter: took 24: "" => "\\n"
+24 Tab: took 22: "Ma|rgaret waits" => "@MA|RGARET WAITS"
+24 Shift-Tab: left same
+49 Enter: took 49: "" => "\\n"
+49 Tab: left same
+49 Shift-Tab: left same
+74 Enter: took 74: "" => "\\n"
+74 Tab: left same
+74 Shift-Tab: left same
+99 Enter: took 99: "" => "\\n"
+99 Tab: left same
+99 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/33-note-in-speech.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 9: "" => " (V.O.)"
+0 Shift-Tab: took 2: "ARGARET" => "argaret"
+13 Enter: took 13: "" => "\\n"
+13 Tab: left same
+13 Shift-Tab: left same
+27 Enter: took 27: "" => "\\n"
+27 Tab: left same
+27 Shift-Tab: left same
+41 Enter: took 41: "" => "\\n"
+41 Tab: left same
+41 Shift-Tab: left same
+55 Enter: took 55: "" => "\\n"
+55 Tab: took 55: "|" => "(|)"
+55 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/34-cue-shaped-action.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|MARGARET (60s), cardigan buttoned wrong" => "@|MARGARET (60S), CARDIGAN BUTTONED WRONG"
+0 Shift-Tab: left same
+21 Enter: took 21: "" => "\\n"
+21 Tab: took 0: "MARGARET (60s), cardi|gan buttoned wrong" => "@MARGARET (60S), CARDI|GAN BUTTONED WRONG"
+21 Shift-Tab: left same
+43 Enter: took 43: "" => "\\n"
+43 Tab: took 41: "si|ts at the table" => "@SI|TS AT THE TABLE"
+43 Shift-Tab: left same
+65 Enter: took 65: "" => "\\n"
+65 Tab: left same
+65 Shift-Tab: took 62: "ARG|ARET" => "arg|aret"
+87 Enter: took 87: "" => "\\n"
+87 Tab: took 87: "|" => "(|)"
+87 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/35-invalid-meta.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|Margaret waits" => "@|MARGARET WAITS"
+0 Shift-Tab: left same
+13 Enter: took 13: "" => "\\n"
+13 Tab: took 0: "Margaret wait|s" => "@MARGARET WAIT|S"
+13 Shift-Tab: left same
+27 Enter: took 27: "" => "\\n"
+27 Tab: left same
+27 Shift-Tab: left same
+41 Enter: took 41: "" => "\\n"
+41 Tab: left same
+41 Shift-Tab: left same
+55 Enter: took 55: "" => "\\n"
+55 Tab: left same
+55 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/36-boneyard-block.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+28 Enter: took 28: "" => "\\n"
+28 Tab: left same
+28 Shift-Tab: left same
+56 Enter: took 56: "" => "\\n"
+56 Tab: left same
+56 Shift-Tab: left same
+84 Enter: took 84: "" => "\\n"
+84 Tab: took 84: "|Margaret hands him a towel" => "@|MARGARET HANDS HIM A TOWEL"
+84 Shift-Tab: left same
+112 Enter: took 112: "" => "\\n"
+112 Tab: left same
+112 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/37-meta-not-last.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+10 Enter: took 10: "" => "\\n"
+10 Tab: left same
+10 Shift-Tab: left same
+21 Enter: took 21: "" => "\\n"
+21 Tab: left same
+21 Shift-Tab: left same
+31 Enter: took 31: "" => "\\n"
+31 Tab: took 26: "Marga|ret waits" => "@MARGA|RET WAITS"
+31 Shift-Tab: left same
+42 Enter: took 42: "" => "\\n"
+42 Tab: left same
+42 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/38-action-then-section.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|Margaret waits" => "@|MARGARET WAITS"
+0 Shift-Tab: left same
+10 Enter: took 10: "" => "\\n"
+10 Tab: took 0: "Margaret w|aits" => "@MARGARET W|AITS"
+10 Shift-Tab: left same
+20 Enter: took 20: "" => "\\n"
+20 Tab: left same
+20 Shift-Tab: left same
+30 Enter: took 30: "" => "\\n"
+30 Tab: took 26: "Dann|y arrives" => "@DANN|Y ARRIVES"
+30 Shift-Tab: left same
+41 Enter: took 41: "" => "\\n"
+41 Tab: left same
+41 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/39-mixed-case-heading-with-text.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|INT. Mc" => "@|INT. MC"
+0 Shift-Tab: left same
+11 Enter: took 11: "" => "\\n"
+11 Tab: took 0: "INT. Mc" => "@INT. MC"
+11 Shift-Tab: left same
+23 Enter: took 23: "" => "\\n"
+23 Tab: took 22: "M|argaret orders coffee" => "@M|ARGARET ORDERS COFFEE"
+23 Shift-Tab: left same
+34 Enter: took 34: "" => "\\n"
+34 Tab: took 22: "Margaret ord|ers coffee" => "@MARGARET ORD|ERS COFFEE"
+34 Shift-Tab: left same
+46 Enter: took 46: "" => "\\n"
+46 Tab: left same
+46 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/40-note-cannot-span-blank-line.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 0: "|[[A note" => "@|[[A NOTE"
+0 Shift-Tab: left same
+11 Enter: took 11: "" => "\\n"
+11 Tab: took 10: "t|hat tries to span a blank line" => "@T|HAT TRIES TO SPAN A BLANK LINE"
+11 Shift-Tab: left same
+22 Enter: took 22: "" => "\\n"
+22 Tab: took 10: "that tries t|o span a blank line" => "@THAT TRIES T|O SPAN A BLANK LINE"
+22 Shift-Tab: left same
+33 Enter: took 33: "" => "\\n"
+33 Tab: took 10: "that tries to span a bl|ank line" => "@THAT TRIES TO SPAN A BL|ANK LINE"
+33 Shift-Tab: left same
+45 Enter: took 45: "" => "\\n"
+45 Tab: left same
+45 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in fixtures/classification/41-paren-interrupted.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: took 7: "" => " (V.O.)"
+0 Shift-Tab: took 2: "AMLET" => "amlet"
+15 Enter: took 15: "" => "\\n"
+15 Tab: left same
+15 Shift-Tab: left same
+31 Enter: took 31: "" => "\\n"
+31 Tab: left same
+31 Shift-Tab: left same
+46 Enter: took 46: "" => "\\n"
+46 Tab: left same
+46 Shift-Tab: left same
+62 Enter: took 62: "" => "\\n"
+62 Tab: took 62: "|" => "(|)"
+62 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in samples/screenplay.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+696 Enter: took 696: "" => "\\n"
+696 Tab: took 649: "A small kitchen, cleaner than it needs to be. T|he wall clock reads" => "@A SMALL KITCHEN, CLEANER THAN IT NEEDS TO BE. T|HE WALL CLOCK READS"
+696 Shift-Tab: left same
+1393 Enter: took 1393: "" => "\\n"
+1393 Tab: left same
+1393 Shift-Tab: left same
+2089 Enter: took 2089: "" => "\\n"
+2089 Tab: left same
+2089 Shift-Tab: left same
+2786 Enter: took 2786: "" => "\\n"
+2786 Tab: left same
+2786 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > Enter, Tab, and Shift-Tab in samples/stage-play.fountain 1`] = `
+"0 Enter: took 0: "" => "\\n"
+0 Tab: left same
+0 Shift-Tab: left same
+602 Enter: took 602: "" => "\\n"
+602 Tab: took 593: "MARGARET,| in her sixties, sits at the table in front of a plate she hasn't touched. She watches the telephone" => "@MARGARET,| IN HER SIXTIES, SITS AT THE TABLE IN FRONT OF A PLATE SHE HASN'T TOUCHED. SHE WATCHES THE TELEPHONE"
+602 Shift-Tab: left same
+1205 Enter: took 1205: "" => "\\n"
+1205 Tab: took 1123: "She opens the door. DANNY, in his thirties and soaked through, holds out a bakery |box gone soft in the rain" => "@SHE OPENS THE DOOR. DANNY, IN HIS THIRTIES AND SOAKED THROUGH, HOLDS OUT A BAKERY |BOX GONE SOFT IN THE RAIN"
+1205 Shift-Tab: left same
+1808 Enter: took 1808: "" => "\\n"
+1808 Tab: took 1798: "He sits. S|he hands him a dish towel and, after a long moment, a fork. The lights fade" => "@HE SITS. S|HE HANDS HIM A DISH TOWEL AND, AFTER A LONG MOMENT, A FORK. THE LIGHTS FADE"
+1808 Shift-Tab: left same
+2411 Enter: took 2411: "" => "\\n"
+2411 Tab: left same
+2411 Shift-Tab: left same"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of apps/web/scripts/ui-shots-script.fountain 1`] = `
+"0-0 cm-f-title
+0-6 cm-f-title-key
+19-19 cm-f-title
+19-26 cm-f-title-key
+38-38 cm-f-title
+38-45 cm-f-title-key
+56-56 cm-f-title
+56-67 cm-f-title-key
+83-83 cm-f-note
+83-217 cm-f-note
+219-219 cm-f-section
+219-220 cm-f-marker
+230-230 cm-f-scene_heading
+259-259 cm-f-synopsis
+259-260 cm-f-marker
+306-306 cm-f-note
+306-321 cm-f-note
+323-323 cm-f-action
+480-480 cm-f-action
+528-528 cm-f-character
+545-545 cm-f-dialogue
+609-609 cm-f-action
+680-680 cm-f-character
+685-685 cm-f-parenthetical
+700-700 cm-f-dialogue
+737-737 cm-f-character
+754-754 cm-f-dialogue
+811-811 cm-f-action
+895-895 cm-f-scene_heading
+920-920 cm-f-synopsis
+920-921 cm-f-marker
+955-955 cm-f-note
+955-969 cm-f-note
+971-971 cm-f-action
+1101-1101 cm-f-action
+1168-1168 cm-f-character
+1172-1172 cm-f-dialogue
+1197-1197 cm-f-character
+1202-1202 cm-f-dialogue
+1227-1227 cm-f-character
+1231-1231 cm-f-dialogue
+1250-1250 cm-f-character
+1255-1255 cm-f-dialogue
+1281-1281 cm-f-action
+1333-1333 cm-f-scene_heading
+1364-1364 cm-f-synopsis
+1364-1365 cm-f-marker
+1417-1417 cm-f-note
+1417-1431 cm-f-note
+1433-1433 cm-f-action
+1558-1558 cm-f-character
+1562-1562 cm-f-dialogue
+1586-1586 cm-f-character
+1591-1591 cm-f-dialogue
+1607-1607 cm-f-character
+1611-1611 cm-f-dialogue
+1672-1672 cm-f-character
+1676-1676 cm-f-dialogue
+1692-1692 cm-f-character
+1696-1696 cm-f-dialogue
+1720-1720 cm-f-note
+1720-1794 cm-f-note
+1796-1796 cm-f-scene_heading
+1823-1823 cm-f-synopsis
+1823-1824 cm-f-marker
+1883-1883 cm-f-note
+1883-1898 cm-f-note
+1900-1900 cm-f-action
+2028-2028 cm-f-character
+2032-2032 cm-f-dialogue
+2110-2110 cm-f-character
+2115-2115 cm-f-dialogue
+2141-2141 cm-f-character
+2145-2145 cm-f-dialogue
+2179-2179 cm-f-character
+2184-2184 cm-f-dialogue
+2225-2225 cm-f-action
+2272-2272 cm-f-character
+2276-2276 cm-f-dialogue
+2301-2301 cm-f-section
+2301-2302 cm-f-marker
+2312-2312 cm-f-scene_heading
+2336-2336 cm-f-synopsis
+2336-2337 cm-f-marker
+2393-2393 cm-f-note
+2393-2409 cm-f-note
+2411-2411 cm-f-action
+2575-2575 cm-f-action
+2623-2623 cm-f-character
+2629-2629 cm-f-dialogue
+2663-2663 cm-f-character
+2667-2667 cm-f-dialogue
+2681-2681 cm-f-character
+2687-2687 cm-f-dialogue
+2775-2775 cm-f-character
+2779-2779 cm-f-dialogue
+2814-2814 cm-f-character
+2820-2820 cm-f-dialogue
+2832-2832 cm-f-scene_heading
+2858-2858 cm-f-synopsis
+2858-2859 cm-f-marker
+2919-2919 cm-f-note
+2919-2935 cm-f-note
+2937-2937 cm-f-action
+3060-3060 cm-f-character
+3066-3066 cm-f-dialogue
+3141-3141 cm-f-character
+3145-3145 cm-f-dialogue
+3166-3166 cm-f-character
+3172-3172 cm-f-dialogue
+3226-3226 cm-f-character
+3230-3230 cm-f-dialogue
+3236-3236 cm-f-character
+3242-3242 cm-f-dialogue
+3269-3269 cm-f-scene_heading
+3298-3298 cm-f-synopsis
+3298-3299 cm-f-marker
+3343-3343 cm-f-note
+3343-3360 cm-f-note
+3362-3362 cm-f-action
+3464-3464 cm-f-character
+3468-3468 cm-f-dialogue
+3506-3506 cm-f-character
+3512-3512 cm-f-dialogue
+3555-3555 cm-f-character
+3559-3559 cm-f-dialogue
+3624-3624 cm-f-character
+3629-3629 cm-f-dialogue
+3673-3673 cm-f-action
+3714-3714 cm-f-character
+3718-3718 cm-f-dialogue
+3752-3752 cm-f-scene_heading
+3776-3776 cm-f-synopsis
+3776-3777 cm-f-marker
+3825-3825 cm-f-note
+3825-3842 cm-f-note
+3844-3844 cm-f-action
+3984-3984 cm-f-character
+3991-3991 cm-f-dialogue
+4068-4068 cm-f-action
+4122-4122 cm-f-character
+4138-4138 cm-f-dialogue
+4179-4179 cm-f-character
+4184-4184 cm-f-dialogue
+4209-4209 cm-f-character
+4216-4216 cm-f-dialogue
+4233-4233 cm-f-action
+4286-4286 cm-f-scene_heading
+4315-4315 cm-f-synopsis
+4315-4316 cm-f-marker
+4376-4376 cm-f-note
+4376-4391 cm-f-note
+4393-4393 cm-f-action
+4470-4470 cm-f-character
+4487-4487 cm-f-dialogue
+4568-4568 cm-f-character
+4572-4572 cm-f-dialogue
+4644-4644 cm-f-character
+4648-4648 cm-f-dialogue
+4681-4681 cm-f-character
+4686-4686 cm-f-dialogue
+4738-4738 cm-f-note
+4738-4827 cm-f-note
+4829-4829 cm-f-section
+4829-4830 cm-f-marker
+4842-4842 cm-f-scene_heading
+4870-4870 cm-f-synopsis
+4870-4871 cm-f-marker
+4918-4918 cm-f-note
+4918-4935 cm-f-note
+4937-4937 cm-f-action
+5062-5062 cm-f-character
+5069-5069 cm-f-dialogue
+5094-5094 cm-f-character
+5098-5098 cm-f-dialogue
+5134-5134 cm-f-character
+5141-5141 cm-f-dialogue
+5174-5174 cm-f-character
+5178-5178 cm-f-dialogue
+5208-5208 cm-f-action
+5278-5278 cm-f-character
+5285-5285 cm-f-dialogue
+5332-5332 cm-f-scene_heading
+5358-5358 cm-f-synopsis
+5358-5359 cm-f-marker
+5398-5398 cm-f-note
+5398-5412 cm-f-note
+5414-5414 cm-f-action
+5554-5554 cm-f-action
+5627-5627 cm-f-character
+5631-5631 cm-f-dialogue
+5661-5661 cm-f-character
+5668-5668 cm-f-dialogue
+5697-5697 cm-f-character
+5702-5702 cm-f-dialogue
+5728-5728 cm-f-character
+5735-5735 cm-f-dialogue
+5762-5762 cm-f-character
+5768-5768 cm-f-parenthetical
+5778-5778 cm-f-dialogue
+5805-5805 cm-f-scene_heading
+5833-5833 cm-f-synopsis
+5833-5834 cm-f-marker
+5900-5900 cm-f-note
+5900-5915 cm-f-note
+5917-5917 cm-f-action
+6032-6032 cm-f-character
+6049-6049 cm-f-dialogue
+6107-6107 cm-f-action
+6164-6164 cm-f-character
+6168-6168 cm-f-dialogue
+6183-6183 cm-f-character
+6187-6187 cm-f-dialogue
+6199-6199 cm-f-character
+6204-6204 cm-f-dialogue
+6214-6214 cm-f-action
+6288-6288 cm-f-scene_heading
+6312-6312 cm-f-synopsis
+6312-6313 cm-f-marker
+6365-6365 cm-f-note
+6365-6381 cm-f-note
+6383-6383 cm-f-action
+6467-6467 cm-f-character
+6471-6471 cm-f-dialogue
+6502-6502 cm-f-character
+6507-6507 cm-f-dialogue
+6543-6543 cm-f-action
+6667-6667 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/01-page-break.fountain 1`] = `
+"0-0 cm-f-action
+17-17 cm-f-page_break
+17-20 cm-f-marker
+22-22 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/02-section.fountain 1`] = `
+"0-0 cm-f-section
+0-1 cm-f-marker
+11-11 cm-f-section
+11-13 cm-f-marker
+27-27 cm-f-section
+27-30 cm-f-marker
+47-47 cm-f-scene_heading"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/03-synopsis.fountain 1`] = `
+"0-0 cm-f-scene_heading
+22-22 cm-f-synopsis
+22-23 cm-f-marker
+69-69 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/04-forced-action.fountain 1`] = `
+"0-0 cm-f-action
+0-1 cm-f-marker
+10-10 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/05-forced-character.fountain 1`] = `
+"0-0 cm-f-character
+0-1 cm-f-marker
+9-9 cm-f-dialogue"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/06-lyric.fountain 1`] = `
+"0-0 cm-f-lyric
+0-1 cm-f-marker
+43-43 cm-f-lyric
+43-44 cm-f-marker"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/07-centered.fountain 1`] = `
+"0-0 cm-f-centered
+0-1 cm-f-marker
+10-11 cm-f-marker
+13-13 cm-f-centered
+13-14 cm-f-marker
+26-27 cm-f-marker
+28-28 cm-f-centered
+28-29 cm-f-marker
+44-45 cm-f-marker"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/08-forced-transition.fountain 1`] = `
+"0-0 cm-f-action
+31-31 cm-f-transition
+31-32 cm-f-marker"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/09-forced-heading.fountain 1`] = `
+"0-0 cm-f-scene_heading
+0-1 cm-f-marker
+12-12 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/10-transition.fountain 1`] = `
+"0-0 cm-f-action
+20-20 cm-f-transition
+29-29 cm-f-action
+50-50 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/11-scene-heading.fountain 1`] = `
+"0-0 cm-f-scene_heading
+22-22 cm-f-scene_heading
+47-47 cm-f-scene_heading
+77-77 cm-f-scene_heading
+99-99 cm-f-scene_heading
+125-125 cm-f-scene_heading"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/12-character.fountain 1`] = `
+"0-0 cm-f-character
+9-9 cm-f-dialogue"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/13-action.fountain 1`] = `
+"0-0 cm-f-action
+40-40 cm-f-action
+58-58 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/14-uppercase-action.fountain 1`] = `
+"0-0 cm-f-action
+18-18 cm-f-action
+25-25 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/15-int-sentence.fountain 1`] = `
+"0-0 cm-f-scene_heading
+28-28 cm-f-action
+28-29 cm-f-marker
+57-57 cm-f-action
+84-84 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/16-heading-no-blank-after.fountain 1`] = `
+"0-0 cm-f-scene_heading
+21-21 cm-f-action
+51-51 cm-f-transition
+59-59 cm-f-scene_heading"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/17-lone-transition.fountain 1`] = `
+"0-0 cm-f-action
+33-33 cm-f-transition
+48-48 cm-f-action
+59-59 cm-f-action
+70-70 cm-f-transition
+70-71 cm-f-marker"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/18-lowercase-extension.fountain 1`] = `
+"0-0 cm-f-character
+20-20 cm-f-dialogue
+39-39 cm-f-character
+51-51 cm-f-dialogue
+68-68 cm-f-character
+90-90 cm-f-dialogue"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/19-dual-dialogue.fountain 1`] = `
+"0-0 cm-f-character
+9-9 cm-f-dialogue
+46-46 cm-f-character
+52-53 cm-f-marker
+54-54 cm-f-dialogue"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/20-forced-markers.fountain 1`] = `
+"0-0 cm-f-scene_heading
+0-1 cm-f-marker
+10-10 cm-f-action
+10-11 cm-f-marker
+21-21 cm-f-action
+45-45 cm-f-character
+45-46 cm-f-marker
+50-50 cm-f-dialogue
+74-74 cm-f-lyric
+74-75 cm-f-marker
+85-85 cm-f-transition
+85-86 cm-f-marker
+102-102 cm-f-centered
+102-103 cm-f-marker
+112-113 cm-f-marker"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/21-scene-numbers.fountain 1`] = `
+"0-0 cm-f-scene_heading
+21-24 cm-f-marker
+26-26 cm-f-scene_heading
+44-49 cm-f-marker"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/22-multiline-parenthetical.fountain 1`] = `
+"0-0 cm-f-character
+9-9 cm-f-parenthetical
+49-49 cm-f-parenthetical
+86-86 cm-f-dialogue"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/23-paren-stays-dialogue.fountain 1`] = `
+"0-0 cm-f-character
+7-7 cm-f-dialogue
+26-26 cm-f-dialogue"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/24-lyric-in-speech.fountain 1`] = `
+"0-0 cm-f-character
+9-9 cm-f-parenthetical
+19-19 cm-f-lyric
+19-20 cm-f-marker
+51-51 cm-f-lyric
+51-52 cm-f-marker
+90-90 cm-f-dialogue"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/25-act-then-synopsis.fountain 1`] = `
+"0-0 cm-f-section
+0-1 cm-f-marker
+10-10 cm-f-synopsis
+10-11 cm-f-marker
+49-49 cm-f-scene_heading"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/26-two-space-line.fountain 1`] = `
+"0-0 cm-f-character
+9-9 cm-f-dialogue
+14-14 cm-f-dialogue
+17-17 cm-f-dialogue
+43-43 cm-f-action
+61-61 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/27-note-closes.fountain 1`] = `
+"0-0 cm-f-note
+0-72 cm-f-note
+40-40 cm-f-note
+74-74 cm-f-action
+89-125 cm-f-note"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/28-unclosed-note.fountain 1`] = `
+"0-0 cm-f-action
+48-48 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/29-unclosed-boneyard.fountain 1`] = `
+"0-0 cm-f-action
+17-17 cm-f-boneyard
+17-74 cm-f-boneyard
+38-38 cm-f-boneyard
+39-39 cm-f-boneyard
+60-60 cm-f-boneyard
+61-61 cm-f-boneyard"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/30-crlf-bom.fountain 1`] = `
+"0-0 cm-f-scene_heading
+23-23 cm-f-action
+40-40 cm-f-transition"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/31-title-page.fountain 1`] = `
+"0-0 cm-f-title
+0-6 cm-f-title-key
+16-16 cm-f-title
+16-23 cm-f-title-key
+35-35 cm-f-title
+35-42 cm-f-title-key
+53-53 cm-f-title
+53-64 cm-f-title-key
+78-78 cm-f-title
+78-86 cm-f-title-key
+87-87 cm-f-title
+101-101 cm-f-title
+125-125 cm-f-scene_heading"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/32-meta-block.fountain 1`] = `
+"0-0 cm-f-scene_heading
+22-22 cm-f-action
+39-39 cm-f-boneyard
+39-98 cm-f-boneyard
+50-50 cm-f-boneyard
+96-96 cm-f-boneyard"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/33-note-in-speech.fountain 1`] = `
+"0-0 cm-f-character
+9-9 cm-f-character
+9-33 cm-f-note
+34-34 cm-f-dialogue"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/34-cue-shaped-action.fountain 1`] = `
+"0-0 cm-f-action
+41-41 cm-f-action
+61-61 cm-f-character
+80-80 cm-f-dialogue"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/35-invalid-meta.fountain 1`] = `
+"0-0 cm-f-action
+17-17 cm-f-boneyard
+17-54 cm-f-boneyard
+28-28 cm-f-boneyard
+52-52 cm-f-boneyard"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/36-boneyard-block.fountain 1`] = `
+"0-0 cm-f-scene_heading
+22-22 cm-f-boneyard
+22-82 cm-f-boneyard
+34-34 cm-f-boneyard
+66-66 cm-f-boneyard
+67-67 cm-f-boneyard
+73-73 cm-f-boneyard
+84-84 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/37-meta-not-last.fountain 1`] = `
+"0-0 cm-f-boneyard
+0-24 cm-f-boneyard
+11-11 cm-f-boneyard
+22-22 cm-f-boneyard
+26-26 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/38-action-then-section.fountain 1`] = `
+"0-0 cm-f-action
+16-16 cm-f-section
+16-17 cm-f-marker
+26-26 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/39-mixed-case-heading-with-text.fountain 1`] = `
+"0-0 cm-f-action
+22-22 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/40-note-cannot-span-blank-line.fountain 1`] = `
+"0-0 cm-f-action
+10-10 cm-f-action"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of fixtures/classification/41-paren-interrupted.fountain 1`] = `
+"0-0 cm-f-character
+7-7 cm-f-dialogue
+31-31 cm-f-parenthetical
+38-38 cm-f-dialogue
+55-55 cm-f-dialogue"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of samples/screenplay.fountain 1`] = `
+"0-0 cm-f-title
+0-6 cm-f-title-key
+16-16 cm-f-title
+16-23 cm-f-title-key
+35-35 cm-f-title
+35-42 cm-f-title-key
+53-53 cm-f-title
+53-64 cm-f-title-key
+78-78 cm-f-title
+78-86 cm-f-title-key
+87-87 cm-f-title
+101-101 cm-f-title
+125-125 cm-f-note
+125-358 cm-f-note
+360-360 cm-f-section
+360-361 cm-f-marker
+371-371 cm-f-synopsis
+371-372 cm-f-marker
+421-421 cm-f-note
+421-540 cm-f-note
+542-542 cm-f-scene_heading
+564-564 cm-f-note
+564-647 cm-f-note
+649-649 cm-f-action
+724-724 cm-f-action
+859-859 cm-f-action
+859-860 cm-f-marker
+869-869 cm-f-action
+886-886 cm-f-note
+886-1013 cm-f-note
+1015-1015 cm-f-character
+1024-1024 cm-f-parenthetical
+1034-1034 cm-f-dialogue
+1056-1056 cm-f-note
+1056-1207 cm-f-note
+1209-1209 cm-f-action
+1297-1297 cm-f-action
+1324-1324 cm-f-character
+1337-1337 cm-f-dialogue
+1369-1369 cm-f-note
+1369-1430 cm-f-note
+1432-1432 cm-f-action
+1456-1456 cm-f-character
+1465-1465 cm-f-dialogue
+1485-1485 cm-f-action
+1581-1581 cm-f-character
+1587-1587 cm-f-dialogue
+1589-1590 cm-f-marker
+1590-1593 cm-f-i
+1593-1594 cm-f-marker
+1668-1668 cm-f-character
+1677-1677 cm-f-dialogue
+1731-1731 cm-f-action
+1814-1814 cm-f-note
+1814-1932 cm-f-note
+1934-1934 cm-f-character
+1943-1943 cm-f-dialogue
+1960-1960 cm-f-character
+1966-1966 cm-f-dialogue
+1982-1982 cm-f-action
+2016-2016 cm-f-note
+2016-2077 cm-f-note
+2079-2079 cm-f-character
+2088-2088 cm-f-dialogue
+2131-2131 cm-f-character
+2137-2138 cm-f-marker
+2139-2139 cm-f-dialogue
+2171-2171 cm-f-boneyard
+2171-2234 cm-f-boneyard
+2183-2183 cm-f-boneyard
+2236-2236 cm-f-note
+2236-2322 cm-f-note
+2324-2324 cm-f-action
+2407-2407 cm-f-transition
+2416-2416 cm-f-scene_heading
+2441-2441 cm-f-action
+2546-2546 cm-f-character
+2552-2552 cm-f-dialogue
+2552-2553 cm-f-marker
+2553-2557 cm-f-u
+2557-2558 cm-f-marker
+2592-2592 cm-f-character
+2601-2601 cm-f-dialogue
+2601-2603 cm-f-marker
+2603-2607 cm-f-b
+2607-2609 cm-f-marker
+2638-2638 cm-f-note
+2638-2766 cm-f-note
+2768-2768 cm-f-centered
+2768-2769 cm-f-marker
+2784-2785 cm-f-marker"
+`;
+
+exports[`Fountain Mode is unchanged > the decorations of samples/stage-play.fountain 1`] = `
+"0-0 cm-f-title
+0-6 cm-f-title-key
+16-16 cm-f-title
+16-23 cm-f-title-key
+45-45 cm-f-title
+45-52 cm-f-title-key
+63-63 cm-f-title
+63-74 cm-f-title-key
+88-88 cm-f-title
+88-96 cm-f-title-key
+97-97 cm-f-title
+111-111 cm-f-title
+135-135 cm-f-note
+135-277 cm-f-note
+279-279 cm-f-section
+279-280 cm-f-marker
+290-290 cm-f-section
+290-292 cm-f-marker
+302-302 cm-f-note
+302-482 cm-f-note
+484-484 cm-f-action
+593-593 cm-f-action
+705-705 cm-f-note
+705-846 cm-f-note
+848-848 cm-f-character
+857-857 cm-f-parenthetical
+867-867 cm-f-dialogue
+889-889 cm-f-action
+963-963 cm-f-character
+980-980 cm-f-dialogue
+1012-1012 cm-f-note
+1012-1092 cm-f-note
+1094-1094 cm-f-character
+1103-1103 cm-f-dialogue
+1123-1123 cm-f-action
+1233-1233 cm-f-character
+1239-1239 cm-f-dialogue
+1241-1242 cm-f-marker
+1242-1245 cm-f-i
+1245-1246 cm-f-marker
+1320-1320 cm-f-character
+1329-1329 cm-f-parenthetical
+1369-1369 cm-f-parenthetical
+1406-1406 cm-f-dialogue
+1460-1460 cm-f-note
+1460-1613 cm-f-note
+1615-1615 cm-f-character
+1621-1621 cm-f-dialogue
+1635-1635 cm-f-action
+1655-1655 cm-f-character
+1664-1664 cm-f-dialogue
+1681-1681 cm-f-character
+1687-1687 cm-f-dialogue
+1703-1703 cm-f-action
+1748-1748 cm-f-character
+1757-1757 cm-f-dialogue
+1798-1798 cm-f-action
+1886-1886 cm-f-note
+1886-1990 cm-f-note
+1992-1992 cm-f-section
+1992-1994 cm-f-marker
+2004-2004 cm-f-action
+2111-2111 cm-f-character
+2117-2117 cm-f-dialogue
+2155-2155 cm-f-character
+2164-2164 cm-f-dialogue
+2197-2197 cm-f-action
+2208-2208 cm-f-centered
+2208-2209 cm-f-marker
+2224-2225 cm-f-marker
+2227-2227 cm-f-note
+2227-2349 cm-f-note
+2351-2351 cm-f-boneyard
+2351-2410 cm-f-boneyard
+2362-2362 cm-f-boneyard
+2408-2408 cm-f-boneyard"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in apps/web/scripts/ui-shots-script.fountain 1`] = `
+"0 typing: none
+0 asked: 0: JUNE | ELI | AMARA | MARCUS | WES | RAY | ANNOUNCER
+1669 typing: none
+1669 asked: none
+3338 typing: none
+3338 asked: none
+5007 typing: none
+5007 asked: 5007: JUNE | ELI | RAY | ANNOUNCER | MARCUS | WES | AMARA
+6677 typing: none
+6677 asked: 6677: JUNE | ELI | RAY | ANNOUNCER | AMARA | MARCUS | WES"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/01-page-break.fountain 1`] = `
+"0 typing: none
+0 asked: none
+9 typing: none
+9 asked: none
+18 typing: none
+18 asked: none
+27 typing: none
+27 asked: none
+37 typing: none
+37 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/02-section.fountain 1`] = `
+"0 typing: none
+0 asked: none
+17 typing: none
+17 asked: none
+34 typing: none
+34 asked: none
+51 typing: none
+51 asked: none
+68 typing: none
+68 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/03-synopsis.fountain 1`] = `
+"0 typing: none
+0 asked: none
+24 typing: none
+24 asked: 24: (V.O.) | (O.S.)
+48 typing: none
+48 asked: none
+72 typing: none
+72 asked: none
+97 typing: none
+97 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/04-forced-action.fountain 1`] = `
+"0 typing: none
+0 asked: none
+6 typing: none
+6 asked: none
+13 typing: none
+13 asked: none
+19 typing: none
+19 asked: none
+26 typing: none
+26 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/05-forced-character.fountain 1`] = `
+"0 typing: none
+0 asked: none
+5 typing: none
+5 asked: none
+11 typing: none
+11 asked: none
+16 typing: none
+16 asked: none
+22 typing: none
+22 asked: 22: McBRIDE"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/06-lyric.fountain 1`] = `
+"0 typing: none
+0 asked: none
+18 typing: none
+18 asked: none
+36 typing: none
+36 asked: none
+54 typing: none
+54 asked: none
+72 typing: none
+72 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/07-centered.fountain 1`] = `
+"0 typing: none
+0 asked: none
+11 typing: none
+11 asked: none
+23 typing: none
+23 asked: none
+34 typing: none
+34 asked: none
+46 typing: none
+46 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/08-forced-transition.fountain 1`] = `
+"0 typing: none
+0 asked: none
+12 typing: none
+12 asked: none
+24 typing: none
+24 asked: none
+36 typing: 33: FADE OUT.
+36 asked: 33: FADE OUT.
+48 typing: none
+48 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/09-forced-heading.fountain 1`] = `
+"0 typing: none
+0 asked: none
+10 typing: none
+10 asked: none
+20 typing: none
+20 asked: none
+30 typing: none
+30 asked: none
+40 typing: none
+40 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/10-transition.fountain 1`] = `
+"0 typing: none
+0 asked: none
+14 typing: none
+14 asked: none
+29 typing: none
+29 asked: none
+44 typing: none
+44 asked: none
+59 typing: none
+59 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/11-scene-heading.fountain 1`] = `
+"0 typing: none
+0 asked: none
+36 typing: none
+36 asked: none
+73 typing: none
+73 asked: 72: DAWN | DAY
+109 typing: none
+109 asked: none
+146 typing: none
+146 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/12-character.fountain 1`] = `
+"0 typing: none
+0 asked: none
+7 typing: none
+7 asked: none
+15 typing: none
+15 asked: none
+22 typing: none
+22 asked: none
+30 typing: none
+30 asked: 30: MARGARET"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/13-action.fountain 1`] = `
+"0 typing: none
+0 asked: none
+17 typing: none
+17 asked: none
+35 typing: none
+35 asked: none
+52 typing: none
+52 asked: none
+70 typing: none
+70 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/14-uppercase-action.fountain 1`] = `
+"0 typing: none
+0 asked: none
+8 typing: none
+8 asked: none
+17 typing: none
+17 asked: none
+25 typing: none
+25 asked: none
+34 typing: none
+34 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/15-int-sentence.fountain 1`] = `
+"0 typing: none
+0 asked: none
+28 typing: none
+28 asked: none
+57 typing: none
+57 asked: none
+86 typing: none
+86 asked: none
+115 typing: none
+115 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/16-heading-no-blank-after.fountain 1`] = `
+"0 typing: none
+0 asked: none
+19 typing: 15: NIGHT
+19 asked: 15: NIGHT
+39 typing: none
+39 asked: none
+58 typing: none
+58 asked: none
+78 typing: none
+78 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/17-lone-transition.fountain 1`] = `
+"0 typing: none
+0 asked: none
+20 typing: none
+20 asked: none
+41 typing: none
+41 asked: none
+61 typing: none
+61 asked: none
+82 typing: none
+82 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/18-lowercase-extension.fountain 1`] = `
+"0 typing: none
+0 asked: 0: MOM | DANNY
+26 typing: none
+26 asked: 25: DANNY
+53 typing: none
+53 asked: none
+80 typing: none
+80 asked: none
+107 typing: none
+107 asked: 107: DANNY | MOM | HANS"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/19-dual-dialogue.fountain 1`] = `
+"0 typing: none
+0 asked: 0: DANNY
+18 typing: none
+18 asked: none
+36 typing: none
+36 asked: 35: MARGARET
+54 typing: none
+54 asked: 54: DANNY | MARGARET
+73 typing: none
+73 asked: 73: DANNY | MARGARET"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/20-forced-markers.fountain 1`] = `
+"0 typing: none
+0 asked: 0: dad
+28 typing: none
+28 asked: none
+57 typing: none
+57 asked: none
+85 typing: none
+85 asked: 85: dad
+114 typing: none
+114 asked: 114: dad"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/21-scene-numbers.fountain 1`] = `
+"0 typing: none
+0 asked: none
+12 typing: none
+12 asked: none
+25 typing: none
+25 asked: none
+37 typing: none
+37 asked: none
+50 typing: none
+50 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/22-multiline-parenthetical.fountain 1`] = `
+"0 typing: none
+0 asked: none
+31 typing: none
+31 asked: none
+63 typing: none
+63 asked: none
+95 typing: none
+95 asked: none
+127 typing: none
+127 asked: 127: MARGARET"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/23-paren-stays-dialogue.fountain 1`] = `
+"0 typing: none
+0 asked: none
+11 typing: none
+11 asked: 11: HAMLET
+22 typing: none
+22 asked: none
+33 typing: none
+33 asked: none
+44 typing: none
+44 asked: 44: HAMLET"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/24-lyric-in-speech.fountain 1`] = `
+"0 typing: none
+0 asked: none
+27 typing: none
+27 asked: none
+54 typing: none
+54 asked: none
+81 typing: none
+81 asked: none
+109 typing: none
+109 asked: 109: MARGARET"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/25-act-then-synopsis.fountain 1`] = `
+"0 typing: none
+0 asked: none
+17 typing: none
+17 asked: none
+35 typing: none
+35 asked: none
+52 typing: none
+52 asked: none
+70 typing: none
+70 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/26-two-space-line.fountain 1`] = `
+"0 typing: none
+0 asked: none
+21 typing: none
+21 asked: none
+42 typing: none
+42 asked: 42: MARGARET
+63 typing: none
+63 asked: 61: MARGARET
+84 typing: none
+84 asked: 84: MARGARET"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/27-note-closes.fountain 1`] = `
+"0 typing: none
+0 asked: none
+37 typing: none
+37 asked: none
+75 typing: none
+75 asked: none
+112 typing: none
+112 asked: none
+150 typing: none
+150 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/28-unclosed-note.fountain 1`] = `
+"0 typing: none
+0 asked: none
+16 typing: none
+16 asked: none
+32 typing: none
+32 asked: none
+48 typing: none
+48 asked: none
+65 typing: none
+65 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/29-unclosed-boneyard.fountain 1`] = `
+"0 typing: none
+0 asked: none
+18 typing: none
+18 asked: none
+37 typing: none
+37 asked: none
+55 typing: none
+55 asked: 54: NIGHT
+74 typing: none
+74 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/30-crlf-bom.fountain 1`] = `
+"0 typing: none
+0 asked: none
+12 typing: none
+12 asked: none
+24 typing: none
+24 asked: none
+36 typing: none
+36 asked: none
+48 typing: none
+48 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/31-title-page.fountain 1`] = `
+"0 typing: none
+0 asked: none
+36 typing: none
+36 asked: none
+73 typing: none
+73 asked: none
+109 typing: none
+109 asked: none
+146 typing: none
+146 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/32-meta-block.fountain 1`] = `
+"0 typing: none
+0 asked: none
+24 typing: none
+24 asked: none
+49 typing: none
+49 asked: none
+74 typing: none
+74 asked: none
+99 typing: none
+99 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/33-note-in-speech.fountain 1`] = `
+"0 typing: none
+0 asked: none
+13 typing: none
+13 asked: none
+27 typing: none
+27 asked: none
+41 typing: none
+41 asked: none
+55 typing: none
+55 asked: 55: MARGARET"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/34-cue-shaped-action.fountain 1`] = `
+"0 typing: none
+0 asked: 0: MARGARET
+21 typing: none
+21 asked: none
+43 typing: none
+43 asked: none
+65 typing: none
+65 asked: none
+87 typing: none
+87 asked: 87: MARGARET"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/35-invalid-meta.fountain 1`] = `
+"0 typing: none
+0 asked: none
+13 typing: none
+13 asked: none
+27 typing: none
+27 asked: none
+41 typing: none
+41 asked: none
+55 typing: none
+55 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/36-boneyard-block.fountain 1`] = `
+"0 typing: none
+0 asked: none
+28 typing: none
+28 asked: none
+56 typing: none
+56 asked: none
+84 typing: none
+84 asked: none
+112 typing: none
+112 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/37-meta-not-last.fountain 1`] = `
+"0 typing: none
+0 asked: none
+10 typing: none
+10 asked: none
+21 typing: none
+21 asked: none
+31 typing: none
+31 asked: none
+42 typing: none
+42 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/38-action-then-section.fountain 1`] = `
+"0 typing: none
+0 asked: none
+10 typing: none
+10 asked: none
+20 typing: none
+20 asked: none
+30 typing: none
+30 asked: none
+41 typing: none
+41 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/39-mixed-case-heading-with-text.fountain 1`] = `
+"0 typing: none
+0 asked: none
+11 typing: none
+11 asked: none
+23 typing: none
+23 asked: none
+34 typing: none
+34 asked: none
+46 typing: none
+46 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/40-note-cannot-span-blank-line.fountain 1`] = `
+"0 typing: none
+0 asked: none
+11 typing: none
+11 asked: none
+22 typing: none
+22 asked: none
+33 typing: none
+33 asked: none
+45 typing: none
+45 asked: none"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in fixtures/classification/41-paren-interrupted.fountain 1`] = `
+"0 typing: none
+0 asked: none
+15 typing: none
+15 asked: none
+31 typing: none
+31 asked: 31: HAMLET
+46 typing: none
+46 asked: none
+62 typing: none
+62 asked: 62: HAMLET"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in samples/screenplay.fountain 1`] = `
+"0 typing: none
+0 asked: 0: MARGARET | DANNY
+696 typing: none
+696 asked: none
+1393 typing: none
+1393 asked: none
+2089 typing: none
+2089 asked: none
+2786 typing: none
+2786 asked: 2786: MARGARET | DANNY"
+`;
+
+exports[`Fountain Mode is unchanged > what completion offers in samples/stage-play.fountain 1`] = `
+"0 typing: none
+0 asked: 0: MARGARET | DANNY
+602 typing: none
+602 asked: none
+1205 typing: none
+1205 asked: 1205: MARGARET | DANNY
+1808 typing: none
+1808 asked: none
+2411 typing: none
+2411 asked: 2411: MARGARET | DANNY"
+`;

@@ -45,6 +45,16 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // Unreleased: its version is the next release's, and the release sets its date (a test lets an
   // entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.25.0-classic-mode',
+    date: '2026-11-03',
+    version: '0.25.0',
+    kind: 'New',
+    title: 'Classic Mode: type the way many screenwriters expect',
+    text: 'Enter and Tab move through the script, names and places fill themselves in, and your file stays Fountain.',
+    link: { href: '/docs/classic-mode/', label: 'Classic Mode' },
+    banner: true,
+  },
+  {
     id: 'v0.24.3-self-hosting',
     date: '2026-11-02',
     version: '0.24.3',

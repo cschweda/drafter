@@ -7,7 +7,7 @@ definePageMeta({ layout: 'docs' });
 useDocsHead({
   title: 'Help',
   description:
-    'Help for Drafter: what it is, why Drafter, a Fountain cheat sheet, saving and your browser, drafts and cuts, the story map, Drafter for Claude, self-hosting, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
+    'Help for Drafter: what it is, why Drafter, a Fountain cheat sheet, Classic Mode, saving and your browser, drafts and cuts, the story map, Drafter for Claude, self-hosting, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
   path: '/docs',
 });
 
@@ -18,6 +18,8 @@ const about: Record<string, string> = {
     'Free with no catch, no login ever, the big features, and how Drafter compares with other screenwriting apps.',
   'help-fountain':
     'Every Fountain element with its mark, its rule, and an example: what the element bar writes for you.',
+  'help-classic-mode':
+    'Typing a script with Enter and Tab, the way many screenwriters expect, with names and places filled in, over a file that stays Fountain.',
   'help-saving':
     'What Save does in each browser, keeping scripts in a synced folder, the recovery copy, and installing Drafter as an app.',
   'help-drafts-and-cuts':
@@ -44,7 +46,7 @@ const about: Record<string, string> = {
   <article>
     <h1>Help</h1>
     <p class="docs-lead">
-      Fourteen short pages: what Drafter is, writing in Fountain, how Drafter works, running it yourself, and what’s new.
+      Fifteen short pages: what Drafter is, writing in Fountain or in Classic Mode, how Drafter works, running it yourself, and what’s new.
     </p>
     <ul>
       <li v-for="page in HELP_PAGES" :key="page.id">
@@ -99,7 +101,8 @@ const about: Record<string, string> = {
       The <strong>Drafter</strong> mark at the top left is the app’s menu: New, Open, Save,
       Export, the template, History, Settings, and the rest. <strong>Help</strong> is its own menu at
       the top right. Between them are the script’s title (with a red dot and
-      <strong>Unsaved</strong> while there are changes to save), Open, Save, and Export, the search
+      <strong>Unsaved</strong> while there are changes to save), the
+      <strong>Fountain | Classic</strong> switch for how you type, Open, Save, and Export, the search
       (<kbd>Ctrl+K</kbd>, <kbd>⌘K</kbd> on a Mac), and buttons for the Structure strip, focus mode,
       and the theme.
     </p>

@@ -173,17 +173,53 @@ for (const [name, color] of [
     });
   const bar = (x, y, width) =>
     `<rect x="${x}" y="${y}" width="${width}" height="6" rx="3" fill="#ECECEC"/>`;
-  const script =
-    courier('1.', 1146, 176, { size: 12, fill: '#888888', anchor: 'end' }) +
-    courier('INT. KITCHEN - NIGHT', 878, 214, { bold: true }) +
-    courier("The phone doesn't ring.", 878, 248) +
-    courier('MARGARET', 962, 290) +
-    courier('(quietly)', 936, 309) +
-    courier("You said you'd call.", 912, 328) +
-    bar(878, 366, 230) +
-    bar(878, 382, 200) +
-    bar(962, 416, 70) +
-    bar(912, 432, 170);
+  // The two front cards: the same scene typed both ways (Classic Mode design §16, its words
+  // verbatim). Fountain flush left with its marks showing, in the cherry of the revision pages so
+  // the difference is seen; Classic with no marks, each element where a page puts it. The scene
+  // has a mark in it on purpose: a plain scene looks alike both ways.
+  const W = 7.8; // Courier Prime's advance at 13 px
+  const card = (x, y, angle, label, lines) => {
+    const width = 280;
+    const height = 410;
+    const left = x + 26;
+    const body = lines
+      .map(([row, column, words, options = {}]) => {
+        const at = left + column * W;
+        const top = y + 76 + row * 19;
+        if (!options.mark) return courier(words, at, top, { size: 13, bold: options.bold });
+        return (
+          courier(options.mark, at, top, { size: 13, fill: REVISION.cherry }) +
+          courier(words, at + options.mark.length * W, top, { size: 13 })
+        );
+      })
+      .join('');
+    const filler =
+      bar(left, y + 262, 210) + bar(left, y + 278, 180) + bar(left + 10 * W, y + 312, 50);
+    return (
+      `<g transform="rotate(${angle} ${x + width / 2} ${y + height / 2})">` +
+      `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="10" fill="${REVISION.white}"/>` +
+      text(FONTS.semiBold, label, { x: left, y: y + 40, size: 14, fill: '#6B7080' }) +
+      body +
+      filler +
+      '</g>'
+    );
+  };
+  const fountainCard = card(578, 118, -4, 'Fountain', [
+    [0, 0, 'INT. RADIO ROOM - NIGHT'],
+    [2, 0, 'June works the dial.'],
+    [4, 0, 'McGRAW', { mark: '@' }],
+    [5, 0, '(on the radio)'],
+    [6, 0, 'Say again?'],
+    [8, 0, 'FADE OUT.', { mark: '>' }],
+  ]);
+  const classicCard = card(872, 142, 2, 'Classic', [
+    [0, 0, 'INT. RADIO ROOM - NIGHT', { bold: true }],
+    [2, 0, 'June works the dial.'],
+    [4, 10, 'McGRAW'],
+    [5, 6, '(on the radio)'],
+    [6, 4, 'Say again?'],
+    [8, 13, 'FADE OUT.'],
+  ]);
   const sheets = [
     [-22, REVISION.cherry],
     [-19, REVISION.salmon],
@@ -233,7 +269,7 @@ for (const [name, color] of [
         `${gradient('g')}</defs>` +
         '<rect width="1200" height="630" fill="url(#bg)"/>' +
         style +
-        `<g filter="url(#shadow)">${fanMarkup}${page(2, REVISION.white, script)}</g>` +
+        `<g filter="url(#shadow)">${fanMarkup}${fountainCard}${classicCard}</g>` +
         mark({ x: 76, y: 76, size: 48, id: 'g' }) +
         text(FONTS.extraBold, 'drafter', {
           x: 72,
@@ -242,9 +278,14 @@ for (const [name, color] of [
           fill: '#FFFFFF',
           tracking: -5,
         }) +
-        // Fountain first, in the mark's colors, said plainly for anyone who hasn't met Fountain; then
-        // who it's for, and Classic mode to come (v0.25.0; the maintainer asked for "coming soon").
-        text(FONTS.extraBold, 'Fountain first.', { x: 76, y: 356, size: 36, fill: 'url(#g)' }) +
+        // Fountain or Classic, in the mark's colors: two ways of typing over one file (v0.25.0). Then
+        // Fountain said plainly for anyone who hasn't met it, who it's for, and what the choice means.
+        text(FONTS.extraBold, 'Fountain or Classic.', {
+          x: 76,
+          y: 356,
+          size: 36,
+          fill: 'url(#g)',
+        }) +
         text(FONTS.semiBold, 'Fountain: a plain-text script format', {
           x: 76,
           y: 396,
@@ -263,7 +304,7 @@ for (const [name, color] of [
           size: 25,
           fill: '#AEB4C0',
         }) +
-        text(FONTS.semiBold, 'Classic mode: coming soon.', {
+        text(FONTS.semiBold, 'Same file. Your choice of keys.', {
           x: 76,
           y: 513,
           size: 23,
@@ -271,7 +312,7 @@ for (const [name, color] of [
         }) +
         dots +
         text(FONTS.semiBold, 'drafter.dev', { x: 198, y: 571, size: 24, fill: '#E8EAEE' }),
-      'Drafter: Fountain first, a plain-text script format for screenplays and stage plays; novels and notes in Markdown; Classic mode coming soon',
+      'Drafter: Fountain or Classic. The same scene typed both ways, on two script pages: Fountain, a plain-text script format, with its marks showing, and Classic Mode, with no marks and each element where a page puts it. For screenplays and stage plays; novels and notes in Markdown. Same file, your choice of keys.',
     );
   files['og-image.svg'] = share(fan);
   files['og-image-animated.svg'] = share(fanAnimated, fanStyle);

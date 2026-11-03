@@ -6,6 +6,7 @@ import {
   PAGE_COLORS,
   PAPERS,
   TEXT_SIZES,
+  WRITING_MODES,
 } from '../app/settings/settings';
 import { db } from '../app/storage/db';
 
@@ -40,6 +41,8 @@ describe('settings', () => {
       diffLayout: 'unified',
       gridAsList: false,
       pageColor: 'paper',
+      writingMode: 'fountain',
+      classicHintSeen: false,
     });
   });
 
@@ -48,6 +51,7 @@ describe('settings', () => {
     ['compareView', 'changes', 'pages', ['lines', 'Pages', 1, null]],
     ['diffLayout', 'unified', 'split', ['side-by-side', 'Split', false, null]],
     ['pageColor', 'paper', 'dark', ['light', 'Dark', true, null]],
+    ['writingMode', 'fountain', 'classic', ['final-draft', 'Classic', true, null]],
   ] as const)(
     '%s is %s by default, and a stored %s is kept, and anything else isn’t',
     async (key, byDefault, other, wrong) => {
@@ -70,6 +74,16 @@ describe('settings', () => {
       }
     },
   );
+
+  test('writingMode starts as fountain, and a bad row is refused', async () => {
+    expect(WRITING_MODES).toEqual(['fountain', 'classic']);
+    await db.settings.clear();
+    await db.settings.put({ key: 'writingMode', value: 'screenplay' });
+    const store = createSettings();
+    await store.ready;
+    expect(store.settings.value.writingMode).toBe('fountain');
+    expect(store.settings.value.classicHintSeen).toBe(false);
+  });
 
   test('paper for Markdown PDFs is US Letter by default, and a stored a4 is kept, and anything else isn’t', async () => {
     expect(PAPERS).toEqual(['letter', 'a4']);

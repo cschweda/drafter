@@ -116,7 +116,10 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
         Drafter does that formatting for you. You type plain text in a simple style called
         <strong>Fountain</strong>: a line such as <code>INT. KITCHEN - NIGHT</code> becomes a scene
         heading, and a name in capitals becomes a character about to speak. Drafter turns it into
-        proper pages as you go, and into a PDF to send.
+        proper pages as you go, and into a PDF to send. Drafter is Fountain-first, and if you’d
+        rather not type marks, <a href="/docs/classic-mode/">Classic Mode</a> is beside it:
+        <kbd>Enter</kbd> and <kbd>Tab</kbd> move through the script, the way many screenwriters
+        expect, and the file stays Fountain.
       </p>
       <p>Who it’s for:</p>
       <ul>

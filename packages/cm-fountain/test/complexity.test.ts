@@ -1,5 +1,6 @@
 import { fountainDecorations } from '@drafter/cm-fountain';
 import { describe, expect, it } from 'vitest';
+import { hiddenSpans } from '../src/classic';
 import { stateOf } from './helpers';
 
 // Inputs shaped to make careless editor code super-linear: each is a hostile script that must
@@ -24,6 +25,12 @@ const scripts: Array<[string, () => string]> = [
   ['fifty thousand notes, a block each', () => line('[[n]]\n', 50_000)],
   ['fifty thousand forced markers', () => line('!A\n', 50_000)],
   ['a hundred thousand lines of two spaces', () => `MARGARET\n${line('  ', 100_000)}`],
+  // Shaped for Classic Mode's patterns (the hidden marks' pieces, a mark after a lead, a page break).
+  ['a line of fifty thousand mixed inline marks', () => '*_^<\\'.repeat(50_000)],
+  ['a line of a hundred thousand spaces before a mark', () => `${' '.repeat(100_000)}!x`],
+  ['a line of a hundred thousand equals signs', () => '='.repeat(100_000)],
+  ['a hundred thousand lone marks, a line each', () => line('@\n!\n~', 33_000)],
+  ['a section of a hundred thousand hashes', () => `${'#'.repeat(100_000)} x`],
 ];
 
 describe('hostile scripts', () => {
@@ -34,6 +41,15 @@ describe('hostile scripts', () => {
       const set = fountainDecorations(state, [{ from: 0, to: state.doc.length }]);
       expect(performance.now() - start).toBeLessThan(1000);
       expect(set.size).toBeGreaterThan(0);
+    }, 60_000);
+  }
+
+  for (const [label, make] of scripts) {
+    it(`finds Classic Mode's hidden marks in ${label} in under a second`, () => {
+      const state = stateOf(make());
+      const start = performance.now();
+      for (let n = 1; n <= state.doc.lines; n++) hiddenSpans(state, state.doc.line(n));
+      expect(performance.now() - start).toBeLessThan(1000);
     }, 60_000);
   }
 

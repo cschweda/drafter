@@ -76,14 +76,13 @@ test.describe('the toolbar at 320px', () => {
     });
     expect(layout.page).toBeLessThanOrEqual(320);
     expect(layout.bar[0]).toBeLessThanOrEqual(layout.bar[1] as number);
-    // The mark (the app menu), Open, Save, Export, the palette, Help, and More actions (the top
-    // bar's order; Structure has no strip to show here). The title keeps a few letters, so the
-    // theme and Focus fold into More actions first (Task 9 review).
+    // The mark (the app menu), Open, the writing mode, the palette, Help, and More actions (the top
+    // bar's order; Structure has no strip to show here). The title keeps a few letters and the
+    // switch never folds, so the theme, Focus, Export, and Save fold into More actions first.
     expect(layout.buttons.map((b) => b.name)).toEqual([
       'Drafter menu',
+      'Writing mode: Fountain. Switch to Classic.',
       'Open',
-      'Save',
-      'Export',
       'Go to scene or command',
       'Help',
       'More actions',
@@ -121,10 +120,12 @@ test.describe('the toolbar at 320px', () => {
     await expect(page.getByRole('group', { name: 'Scripts', exact: true })).toBeHidden();
 
     // Export: the export menu.
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('group', { name: 'Export' })).toBeVisible();
+    await pressToolbarButton(page, 'Export', { focus: true });
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('menuitem', { name: /PDF/ }).first()).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('group', { name: 'Export' })).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu', { name: 'More actions' })).toBeHidden();
 
     // The sample's ways to start one's own: the chip's menu on a wide screen, the sample row here.
     const sample = page.getByRole('region', { name: 'Sample' });
@@ -140,7 +141,7 @@ test.describe('the toolbar at 320px', () => {
 
     // Save: a download, where the browser has no file picker.
     const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await pressToolbarButton(page, 'Save');
     expect((await download).suggestedFilename()).toBe('The Call.fountain');
 
     // Focus mode on, and off with its own button.

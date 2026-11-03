@@ -172,6 +172,7 @@ const LAYOUT: Record<Group, Section[]> = {
         'toggle-structure-strip',
       ],
     },
+    { pick: ['switch-writing-mode', 'switch-to-classic', 'switch-to-fountain'] },
     { pick: ['fold-all', 'unfold-all'] },
   ],
   Go: [
@@ -185,6 +186,7 @@ const LAYOUT: Record<Group, Section[]> = {
       pick: [
         'help-what-is',
         'help-fountain',
+        'help-classic-mode',
         'help-shortcuts',
         'help-saving',
         'help-drafts-and-cuts',
@@ -218,6 +220,7 @@ const LAYOUT: Record<Group, Section[]> = {
 const LABELS: Record<string, string> = {
   'help-what-is': 'What Is Drafter?',
   'help-fountain': 'Fountain Cheat Sheet',
+  'help-classic-mode': 'Classic Mode',
   'help-shortcuts': 'Keyboard Shortcuts',
   'help-saving': 'Saving',
   'help-drafts-and-cuts': 'Drafts and Cuts',

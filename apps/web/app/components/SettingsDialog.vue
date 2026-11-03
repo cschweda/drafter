@@ -16,6 +16,8 @@ import {
   type Settings,
   TEXT_SIZES,
   useSettings,
+  WRITING_MODES,
+  type WritingMode,
 } from '~/settings/settings';
 
 // The Settings dialog (Phase 1 design §8): a labeled switch for each on/off setting, a select
@@ -247,6 +249,15 @@ function onPageColor(event: Event) {
   void set('pageColor', (event.target as HTMLSelectElement).value as PageColor);
 }
 
+const WRITING_MODE_NAMES: Readonly<Record<WritingMode, string>> = {
+  fountain: 'Fountain',
+  classic: 'Classic',
+};
+
+function onWritingMode(event: Event) {
+  void set('writingMode', (event.target as HTMLSelectElement).value as WritingMode);
+}
+
 // ---- Colors for changes (version-history design §7) -----------------------------------------
 
 function onDiffColors(event: Event) {
@@ -377,6 +388,25 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
       </section>
       <section :id="sectionId('writing')" class="section" aria-labelledby="settings-writing-title">
         <h3 id="settings-writing-title" class="section-title" tabindex="-1">Writing</h3>
+        <div class="row">
+          <div class="text">
+            <label for="settings-writing-mode" class="name">Writing mode</label>
+            <p id="settings-writing-mode-why" class="why">
+              Classic Mode is typed the way many screenwriting apps work. Your file stays Fountain.
+            </p>
+          </div>
+          <select
+            id="settings-writing-mode"
+            class="size"
+            aria-describedby="settings-writing-mode-why"
+            :value="settings.writingMode"
+            @change="onWritingMode"
+          >
+            <option v-for="mode in WRITING_MODES" :key="mode" :value="mode">
+              {{ WRITING_MODE_NAMES[mode] }}
+            </option>
+          </select>
+        </div>
         <div v-for="item in switchesIn('writing')" :key="item.key" class="row">
           <div class="text">
             <label :for="`settings-${item.key}`" class="name">{{ item.label }}</label>

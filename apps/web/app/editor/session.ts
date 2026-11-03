@@ -1,6 +1,13 @@
 import { type ChangeSet, EditorState, type Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { type CursorElement, cursorElement, parsedDoc } from '@drafter/cm-fountain';
+import {
+  type ClassicElement,
+  type CursorElement,
+  classicMoveBy,
+  cursorElement,
+  elementAt,
+  parsedDoc,
+} from '@drafter/cm-fountain';
 import { type Doc, parse, type Span } from '@drafter/fountain';
 import { builtins, type Template } from '@drafter/templates';
 import { nextTick, type ShallowRef, shallowRef } from 'vue';
@@ -8,9 +15,11 @@ import { usePanes } from '~/composables/usePanes';
 import { useSettings } from '~/settings/settings';
 import { WIDE_QUERY } from '~/utils/panes';
 import type { DocumentKind } from '../markdown/kind';
-import { applyEditorSettings } from './apply-settings';
+import { applyEditorSettings, writingModeSwitch } from './apply-settings';
+import type { ElementMove } from './element-announcer';
 import { sayElement } from './element-notice';
 import {
+  classicIsOn,
   type EditorHooks,
   editorExtensions,
   language,
@@ -20,6 +29,8 @@ import {
   readOnly,
   readOnlyExtension,
   relint,
+  writingMode,
+  writingModeExtension,
 } from './extensions';
 import { REVEAL_MS, revealLine } from './reveal-line';
 import { SAMPLE_SCREENPLAY } from './samples';
@@ -31,6 +42,10 @@ export interface EditorSession {
   /** `parsedDoc` after every change. */
   readonly doc: Readonly<ShallowRef<Doc>>;
   readonly cursor: Readonly<ShallowRef<CursorElement | null>>;
+  /** The element the cursor is in, a pending one on an empty line (`elementAt`), in Classic Mode; null in Fountain Mode, where `cursor` says. */
+  readonly element: Readonly<ShallowRef<ClassicElement | null>>;
+  /** The last move by Classic's keys or an accepted offer, a new object each time, for the announcer. */
+  readonly moved: Readonly<ShallowRef<ElementMove | null>>;
   /** The built-in that `templateIdOf(doc)` names (technical design §8.6); the toolbar's chip writes it (`useTemplate`). */
   readonly template: Readonly<ShallowRef<Template>>;
   /** What the document is: Fountain, or plain Markdown (no pages, elements, or checks). */
@@ -113,6 +128,8 @@ function tell<T>(listeners: Iterable<(value: T) => void>, value: T): void {
 function create(): EditorSession {
   const doc = shallowRef<Doc>(parse(SAMPLE_SCREENPLAY));
   const cursor = shallowRef<CursorElement | null>(null);
+  const element = shallowRef<ClassicElement | null>(null);
+  const moved = shallowRef<ElementMove | null>(null);
   const template = shallowRef<Template>(builtins[templateIdOf(doc.value)] as Template);
   const panes = usePanes();
   const locked = shallowRef(false);
@@ -138,8 +155,37 @@ function create(): EditorSession {
       // composition ends, the editor reads what it typed in a microtask of its own, and a dispatch
       // before that throws the typed text away (Firefox, a stage play replaced by a stage play:
       // the text went, Task 9). A task runs after it.
-      setTimeout(relint);
+      setTimeout(templateChanged);
     }
+  }
+
+  /**
+   * Lints with the new template, and in Classic Mode gives the view an update of its own: its look
+   * reads the template on an update, and the one that wrote the block was over before the template
+   * here changed. A composition's next letter is update enough.
+   */
+  function templateChanged() {
+    relint();
+    if (classicIsOn(view.state) && !view.composing) view.dispatch({});
+  }
+
+  /** Keeps `element`, and the same object for the same element, so a letter typed changes nothing. */
+  function followElement(state: EditorState) {
+    const next = classicIsOn(state) ? elementAt(state) : null;
+    const now = element.value;
+    const same =
+      next?.kind === now?.kind &&
+      next?.pending === now?.pending &&
+      next?.soft === now?.soft &&
+      next?.enter === now?.enter &&
+      next?.tab === now?.tab;
+    if (!same) element.value = next;
+  }
+
+  /** A move by Classic's keys, or an accepted offer, which has said where it went (Classic Mode design §12). */
+  function followMove(transactions: readonly Transaction[]) {
+    const by = transactions.map(classicMoveBy);
+    if (by.some(Boolean)) moved.value = { said: by.includes('offer') };
   }
 
   const { settings } = useSettings();
@@ -158,6 +204,8 @@ function create(): EditorSession {
   const extensionsFor = (of: DocumentKind) => [
     editorExtensions(hooks, of),
     EditorView.updateListener.of((update) => {
+      if (update.transactions.length > 0) followElement(update.state);
+      if (classicIsOn(update.state)) followMove(update.transactions);
       if (update.docChanged) follow(update.state);
       if (update.docChanged) tell(changeListeners, update.changes);
       if (update.docChanged) tell(editListeners, update.transactions);
@@ -204,8 +252,9 @@ function create(): EditorSession {
     // are the settings that live in them (spellcheck, line numbers) and Strict Fountain's lint.
     if (locked.value || frozen)
       view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(true)) });
-    applyEditorSettings(view, settings.value);
+    applyEditorSettings(view, settings.value, next);
     follow(view.state);
+    followElement(view.state);
     // There are no elements in a Markdown document.
     cursor.value = next === 'fountain' ? cursorElement(view.state) : null;
     // The new text starts at the top, whatever the old one's scroller was showing.
@@ -219,7 +268,13 @@ function create(): EditorSession {
     if (next === kind.value) return;
     languageEpoch++;
     kind.value = next;
-    view.dispatch({ effects: language.reconfigure(languageExtension(hooks, next)) });
+    // `setKind` keeps the state, so the compartment needs telling: Classic's keys can't stay in Markdown.
+    const mode = writingModeExtension(settings.value.writingMode, next);
+    const switched = writingMode.get(view.state) === mode ? null : writingModeSwitch(view, mode);
+    view.dispatch({
+      ...switched,
+      effects: [language.reconfigure(languageExtension(hooks, next)), ...(switched?.effects ?? [])],
+    });
     cursor.value = next === 'fountain' ? cursorElement(view.state) : null;
     // Fountain's lint starts again for the text it now lints (the reconfigure starts it, too, but
     // after its delay). Not in this update: a listener may not dispatch.
@@ -292,6 +347,8 @@ function create(): EditorSession {
     view,
     doc,
     cursor,
+    element,
+    moved,
     template,
     locked,
     kind,

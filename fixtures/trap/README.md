@@ -5,7 +5,7 @@ one outcome every way in must give it. A trap either **opens** with specific tex
 warning** (a note count, a notice), or is **refused** with a specific plain message. It never
 crashes or hangs, never runs anything, never fetches anything, and never uses unbounded memory.
 
-[MANIFEST.md](MANIFEST.md) lists every trap, generated from [`traps.ts`](traps.ts): 262 of them,
+[MANIFEST.md](MANIFEST.md) lists every trap, generated from [`traps.ts`](traps.ts): 277 of them,
 across Fountain, Markdown, plain text, Final Draft (`.fdx`), Highland, Fade In, HTML and EPUB
 reopening, special files (pipes, links, folders), the desktop app's modules folder, and the
 drafts and cuts files read back from beside a work.
@@ -16,6 +16,7 @@ drafts and cuts files read back from beside a work.
 pnpm -r build                                     # the built `drafter` runs the special files
 pnpm vitest run --project trap                    # packages, the command line, the modules folder
 pnpm vitest run --project web test/trap-open.test.ts   # the app's Open, web and desktop (from apps/web)
+pnpm vitest run --project web test/trap-classic.test.ts   # every Fountain trap in Classic Mode (from apps/web)
 pnpm vitest run --project trap -u                 # after changing a trap: rewrites MANIFEST.md
 TRAP_OUT=/tmp/traps pnpm vitest run --project trap -t TRAP_OUT   # every trap as a file, to open by hand
 
@@ -26,7 +27,7 @@ cd apps/desktop && npx tsdown && npx playwright test e2e/trap.spec.ts
 
 `pnpm test` runs both Vitest parts with everything else, once the packages are built
 (`pnpm -r build`: the special files go to the built `drafter`, and the harness refuses to start
-without it). In CI, the desktop workflow's Linux job runs both Vitest parts after its build, and
+without it). In CI, the desktop workflow's Linux job runs both Vitest parts (the app's Open and Classic Mode with them) after its build, and
 the Electron part with the desktop e2e, on every push to `main` and every release.
 
 Each trap at each entry point is checked for its outcome (the text, the key lines, or the
@@ -62,6 +63,7 @@ Every way a file comes into Drafter, and the harness that runs each one
 | `desktop-modules` | The desktop app's modules folder: each `module.json`, read once at start. | `apps/desktop/src/module-folder.ts` | `harness.test.ts` |
 | `beside-read` | Drafts and cuts read back from beside the work when it opens: the cuts file (`Boca.fountain.cuts.md`), each entry checked by its ID and merged, and draft files (`Boca drafts/Boca – Draft 03.fountain`), each ID checked against its text. Untrusted: they may have been edited anywhere. | `apps/web/app/beside/read.ts` → `@drafter/history` | `harness.test.ts` |
 | `mcp` | Drafter for Claude: each tool’s read of a file in a configured folder, and every path a tool is given. | `packages/mcp/src` (`paths.ts`, `load.ts`, `inside.ts`, `tools/`) → `@drafter/archive` (`notAScript`, `reopenFormatOf`, `embeddedSource`), `@drafter/archive/node` (`readCapped`, `strictText`), and each format’s reader | `harness.test.ts`, in the trap worker, through the SDK’s in-memory transport |
+| `classic` | A hostile script open in Classic Mode: the left pane drawn, the cursor walked through every line, and a mode switched. Every trap that opens as Fountain text (not Markdown) goes through it, after the web app's Open has made it text. | `apps/web/app/storage/open.ts` (`openFile`) → `packages/cm-fountain/src/classic` (`classic()`) | `apps/web/test/trap-classic.test.ts` (jsdom, a real `EditorView`) |
 
 ### Drafter for Claude (`mcp`)
 
@@ -80,7 +82,9 @@ in-memory transport, as an AI app calls it.
   refused in Open's words whatever its name, then an import by its name, then strict text. So a
   PDF named `.fountain` is refused, and an export named `.fountain` is read for its script, as
   Open does. Only the caps' words are the server's (“it is larger than 5 MB”); no trap has an
-  `mcp` outcome of its own.
+  `mcp` outcome of its own. One is kept out (`keptOut`, with its reason in the manifest):
+  `classic-5mb`, whose overview takes longer than the server's 10-second call limit
+  (docs/DEFERRED.md).
 - **Path traps** ([`mcp-traps.ts`](mcp-traps.ts), `MCP_PATH_TRAPS`): `..` first, in the middle,
   and last; a full path; a link to a file and to a folder outside (refused as outside); a loop of
   links; a folder named `x.fountain`; a pipe; a socket; `/dev/zero` behind a link; a file swapped
@@ -103,6 +107,24 @@ in-memory transport, as an AI app calls it.
   trap's folder is listed, and its every file hashed, before and after each job: the same. Writes
   anywhere else are covered by the package's read-only scan of its source
   (`packages/mcp/test/read-only.test.ts`).
+
+### Classic Mode (`classic`)
+
+Every trap whose Open outcome opens as Fountain gets a `classic` outcome, by a mapping in
+`traps.ts` (`withDefaults`): a Markdown file by its name, or an export whose block is Markdown
+(`opensAs`), doesn't. Its text comes through the app's own `openFile`, as in `trap-open.test.ts`
+(the app's harness is shared, `trap-app.ts`), and goes into a real `EditorView` with `classic()`
+and the script's template. The left pane must be drawn with nothing live in it; the cursor is sent
+to the start of every line by transactions alone, and to at most 2,000 evenly spaced lines
+through the view, both ends of each; the mode is switched off and on. The text must come out byte
+for byte as it went in, with the one change Classic Mode's design allows (§3.4: two breaks above
+the metadata block of a blank script), nothing may throw, nothing is fetched, and the walk must
+end in the trap's time. Fifteen traps are Classic Mode's own (`classic-*`): a script of nothing
+but marks; an unclosed `/*` on line 1, an unclosed `[[`, a boneyard in a note, a note across
+lines; a metadata block damaged, not last, and twice; a 100,000-character line, a 5 MB script, a
+heading of 50,000 spaces, and 100,000 forced marks; bidirectional and combining characters on a
+hidden mark's edge; and a name and a place made to break the autofill list, which must show in
+the list as text.
 
 Not entry points, so no trap goes through them, but part of the survey:
 

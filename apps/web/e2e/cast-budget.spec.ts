@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { CastProbe } from '../app/cast/probe';
 import { longScript } from './long-script';
-import { editor, runCommand, setText, start } from './modules';
+import { editor, runCommand, setText, start, wholeText } from './modules';
 
 // The cast's budgets (seeing-the-script design §11): `castOf` within 15 ms for a 120-page script,
 // the Stats tab opened with Characters and the grid drawn within 300 ms, Scaffold's scene page
@@ -92,12 +92,23 @@ test('opening the Stats tab with Characters and the grid is within budget', asyn
   expect(ms).toBeLessThan(3000);
 });
 
+/** Into the first scene's action: every later offset moves, and the cast is worked out again. */
+async function intoFirstScene(page: Page) {
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+Home');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+}
+
 /**
  * Types into the first scene of the long script, which a view of the cast shows, three times at
  * most, and gives the fewest long tasks a run saw: a busy test machine can give one run a long task
  * that isn't Drafter's.
  */
-async function longTasksWhileTyping(page: Page): Promise<number[]> {
+async function longTasksWhileTyping(
+  page: Page,
+  place: (page: Page) => Promise<void> = intoFirstScene,
+): Promise<number[]> {
   await page.evaluate(() => {
     const long: number[] = [];
     (window as unknown as ProbeWindow).longTasks = long;
@@ -126,11 +137,7 @@ async function longTasksWhileTyping(page: Page): Promise<number[]> {
       (window as unknown as ProbeWindow).longTasks.length = 0;
     });
     const before = await probe(page, 'computed');
-    await editor(page).click();
-    // Into the first scene's action: every later offset moves, and the cast is worked out again.
-    await page.keyboard.press('ControlOrMeta+Home');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
+    await place(page);
     await page.keyboard.type('Typing into a long script, one letter at a time. ', { delay: 60 });
     // The pause, the layout, and the cast after it.
     await expect.poll(() => probe(page, 'computed'), { timeout: 10_000 }).toBeGreaterThan(before);
@@ -205,5 +212,271 @@ test.describe('in Chromium', () => {
       `Scaffold's scene page after the rest, ${test.info().project.name}: ${times.map((t) => t.toFixed(1)).join(', ')} ms (median ${median.toFixed(1)})`,
     );
     expect(median).toBeLessThan(40);
+  });
+});
+
+// Classic Mode's budgets (Classic Mode design §13): with Classic Mode on, a keystroke on line 3,000
+// of the 120-page script makes no long task, and adds under 1 ms at p95 against Fountain Mode; a
+// switch of mode is one frame's work, plus CodeMirror's measure; scrolling doesn't jump; and the
+// metadata block's guard costs a cursor move next to nothing. The editor's work for a key is timed
+// around `view.dispatch`, where every change and every filter of both modes runs.
+
+type TimedWindow = Window & { spent: number[]; spending: number };
+
+/** The editor's view, from its content element (as `wholeText` in modules.ts reads it), kept on the window. */
+type ViewWindow = Window & { drafterView: unknown };
+const exposeView = (page: Page) =>
+  page.evaluate(() => {
+    type Linked = { view?: unknown };
+    const content = document.querySelector('.cm-content') as
+      | (Element & { cmTile?: Linked; cmView?: Linked })
+      | null;
+    (window as unknown as ViewWindow).drafterView = (content?.cmTile ?? content?.cmView)?.view;
+  });
+
+/**
+ * Times the editor's work for each key, from one keydown to the next, summed: every dispatch with
+ * the layout it leaves (read straight after, so the browser lays the page out then and there), and
+ * CodeMirror's measure in the next frame, which reads the layout and draws what it found. A budget
+ * that timed the dispatch alone would leave out the part of a keystroke a writer waits for most.
+ */
+async function timeKeys(page: Page) {
+  await exposeView(page);
+  await page.evaluate(() => {
+    const w = window as unknown as TimedWindow;
+    const view = (window as unknown as ViewWindow).drafterView as {
+      dispatch: (...args: unknown[]) => void;
+      measure: (...args: unknown[]) => void;
+      contentDOM: HTMLElement;
+    };
+    w.spent = [];
+    w.spending = 0;
+    const timed = (run: (...args: unknown[]) => void, after?: () => void) =>
+      function (this: unknown, ...args: unknown[]) {
+        const start = performance.now();
+        try {
+          run.apply(this, args);
+          after?.();
+        } finally {
+          w.spending += performance.now() - start;
+        }
+      };
+    view.dispatch = timed(view.dispatch, () => void view.contentDOM.getBoundingClientRect().height);
+    view.measure = timed(view.measure);
+    window.addEventListener(
+      'keydown',
+      () => {
+        w.spent.push(w.spending);
+        w.spending = 0;
+      },
+      { capture: true },
+    );
+  });
+}
+
+/** The times so far (the first key's is the time before it, dropped), and a fresh start. */
+const spent = (page: Page) =>
+  page.evaluate(() => {
+    const w = window as unknown as TimedWindow;
+    const out = [...w.spent.slice(1), w.spending];
+    w.spent = [];
+    w.spending = 0;
+    return out;
+  });
+
+const p95 = (times: number[]) => {
+  const sorted = [...times].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))] ?? 0;
+};
+
+/** The first line of dialogue at line 3,000 or after, 1-based. */
+function dialogueFrom(text: string, from: number): number {
+  const lines = text.split('\n');
+  for (let n = from; n < lines.length; n++) {
+    const above = lines[n - 2] ?? '';
+    const line = lines[n - 1] ?? '';
+    if (
+      line &&
+      /[a-z]/.test(line) &&
+      above &&
+      above === above.toUpperCase() &&
+      /[A-Z]/.test(above)
+    ) {
+      return n;
+    }
+  }
+  throw new Error('no dialogue past the line');
+}
+
+/** The cursor at the end of line `number`, scrolled to and focused, with no pointer. */
+async function toLineEnd(page: Page, number: number) {
+  await exposeView(page);
+  await page.evaluate((n) => {
+    const view = (window as unknown as ViewWindow).drafterView as {
+      state: { doc: { line(n: number): { to: number } } };
+      dispatch(spec: unknown): void;
+      focus(): void;
+    };
+    const { to } = view.state.doc.line(n);
+    view.dispatch({ selection: { anchor: to }, scrollIntoView: true, userEvent: 'select' });
+    view.focus();
+  }, number);
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+}
+
+/** Classic Mode on from the keys, with its hint put away. */
+async function classicOn(page: Page) {
+  await editor(page).focus();
+  await page.keyboard.press('ControlOrMeta+Alt+Digit0');
+  await expect(editor(page)).toHaveAttribute('aria-label', 'Source, Classic Mode');
+  const hint = page.locator('[data-classic-hint]');
+  if (await hint.isVisible()) await hint.getByRole('button', { name: 'Got it' }).click();
+}
+
+test.describe('Classic Mode in Chromium', () => {
+  test.skip(
+    ({ browserName, isMobile }) => browserName !== 'chromium' || !!isMobile,
+    'long tasks are a Chromium API; a wide screen',
+  );
+
+  const LINE = dialogueFrom(longScript(), 3000);
+
+  test('Classic Mode typing budget at 120 pages', async ({ page }) => {
+    test.setTimeout(120_000);
+    await long(page);
+    // As "typing with the Stats tab shown" does: the cast is worked out again after the typing.
+    await runCommand(page, 'Show stats');
+    const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
+    await expect(stats.getByRole('rowheader')).not.toHaveCount(0);
+    await classicOn(page);
+    await expect(editor(page)).toBeVisible();
+    expect(await longTasksWhileTyping(page, (p) => toLineEnd(p, LINE))).toEqual([]);
+  });
+
+  test('Classic Mode adds under 1 ms a keystroke at p95: budget', async ({ page }) => {
+    test.setTimeout(180_000);
+    await long(page);
+    await timeKeys(page);
+    const words = 'and still the lights hum over the counter ';
+    let counted = Number.POSITIVE_INFINITY;
+    const run = async () => {
+      await toLineEnd(page, LINE);
+      await spent(page);
+      await page.keyboard.type(words.repeat(2), { delay: 25 });
+      await page.waitForTimeout(300);
+      // Each run types on at the same line's end, one mode then the other.
+      const times = await spent(page);
+      counted = Math.min(counted, times.filter((t) => t > 0).length);
+      return times;
+    };
+    // Best of three each, one mode then the other, so a busy moment doesn't count against either.
+    const fountain: number[] = [];
+    for (let i = 0; i < 3; i++) fountain.push(p95(await run()));
+    await classicOn(page);
+    const classic: number[] = [];
+    for (let i = 0; i < 3; i++) classic.push(p95(await run()));
+    expect(counted, 'every key was timed').toBeGreaterThan(80);
+    const f = Math.min(...fountain);
+    const c = Math.min(...classic);
+    console.log(
+      `a keystroke on line ${LINE} at p95, Fountain ${fountain.map((t) => t.toFixed(2)).join(', ')} ms, Classic ${classic.map((t) => t.toFixed(2)).join(', ')} ms: Classic adds ${(c - f).toFixed(2)} ms`,
+    );
+    expect(c - f).toBeLessThan(1);
+  });
+
+  test('a switch at 120 pages: budget', async ({ page }) => {
+    test.setTimeout(120_000);
+    await long(page);
+    await toLineEnd(page, LINE);
+    await timeKeys(page);
+    const times: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      await spent(page);
+      await page.keyboard.press('ControlOrMeta+Alt+Digit0');
+      await page.evaluate(
+        () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+      );
+      // Mod+Alt+0 is three keydowns; the switch is all the editor did after them.
+      times.push((await spent(page)).reduce((a, b) => a + b, 0));
+      const hint = page.locator('[data-classic-hint]');
+      if (await hint.isVisible()) await hint.getByRole('button', { name: 'Got it' }).click();
+      await editor(page).focus();
+    }
+    console.log(`a switch at 120 pages: ${times.map((t) => t.toFixed(1)).join(', ')} ms`);
+    // One frame's worth of main-thread work; CodeMirror's measure comes after, in the frame.
+    expect(Math.max(...times)).toBeLessThan(16);
+  });
+
+  test('scrolling at 120 pages doesn’t jump in Classic Mode: budget', async ({ page }) => {
+    test.setTimeout(120_000);
+    await long(page);
+    await classicOn(page);
+    await page.keyboard.press('ControlOrMeta+Home');
+    const scroller = page.locator('.cm-scroller');
+    const box = await scroller.boundingBox();
+    await page.mouse.move((box?.x ?? 0) + 200, (box?.y ?? 0) + 200);
+    /** The offset of the line at the top of the pane. */
+    await exposeView(page);
+    const top = () =>
+      page.evaluate(() => {
+        const view = (window as unknown as ViewWindow).drafterView as {
+          scrollDOM: HTMLElement;
+          documentTop: number;
+          lineBlockAtHeight(h: number): { from: number };
+        };
+        const rect = view.scrollDOM.getBoundingClientRect();
+        return view.lineBlockAtHeight(rect.top - view.documentTop + 1).from;
+      });
+    const height = box?.height ?? 600;
+    const tops: number[] = [await top()];
+    for (let i = 0; i < 40; i++) {
+      await page.mouse.wheel(0, 600);
+      await page.evaluate(
+        () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+      );
+      tops.push(await top());
+    }
+    // Every step goes on down, by about what a wheel moves: never back, never pages ahead.
+    const steps = tops.slice(1).map((t, i) => t - (tops[i] as number));
+    const chars = await page.evaluate(() => {
+      const view = (window as unknown as ViewWindow).drafterView as {
+        state: { doc: { length: number } };
+        contentHeight: number;
+      };
+      return view.state.doc.length / view.contentHeight;
+    });
+    console.log(
+      `scrolling in Classic Mode at 120 pages, characters per step: ${steps.join(', ')} (about ${Math.round(chars * 600)} each)`,
+    );
+    for (const [i, step] of steps.entries()) {
+      expect(step, `step ${i + 1}`).toBeGreaterThan(0);
+      expect(step, `step ${i + 1}`).toBeLessThan(chars * Math.max(600, height) * 4);
+    }
+  });
+
+  test('a cursor move beside the metadata block at 120 pages: budget', async ({ page }) => {
+    test.setTimeout(120_000);
+    await start(page);
+    await page.waitForFunction(() => 'drafterCastProbe' in window);
+    const play = `${longScript()}/* drafter\n{"v":1,"template":"stage-play-standard"}\n*/\n`;
+    await setText(page, play);
+    await expect.poll(() => wholeText(page), { timeout: 60_000 }).toBe(play);
+    await timeKeys(page);
+    const moves = async () => {
+      await toLineEnd(page, LINE);
+      await spent(page);
+      for (let i = 0; i < 60; i++) await page.keyboard.press('ArrowDown');
+      await page.waitForTimeout(200);
+      return p95(await spent(page));
+    };
+    const fountain = Math.min(await moves(), await moves());
+    await classicOn(page);
+    const classic = Math.min(await moves(), await moves());
+    console.log(
+      `a cursor move at 120 pages with the block, p95: Fountain ${fountain.toFixed(2)} ms, Classic ${classic.toFixed(2)} ms`,
+    );
+    expect(classic - fountain).toBeLessThan(1);
   });
 });

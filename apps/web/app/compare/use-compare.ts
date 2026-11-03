@@ -1,3 +1,4 @@
+import { savedText } from '@drafter/cm-fountain';
 import {
   type Change,
   type ChangeStop,
@@ -449,7 +450,8 @@ function create(): CompareSession {
       compare(comparison.older, {
         label: nowLabel(Date.now()),
         at: null,
-        text: editor.view.state.doc.toString(),
+        // As a save would write it, as the Now it was opened with.
+        text: savedText(editor.view.state).toString(),
       });
     },
     close,

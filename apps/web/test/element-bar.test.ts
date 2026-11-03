@@ -1,10 +1,13 @@
-import { SCREENPLAY_STRUCTURE, structureOf } from '@drafter/cm-fountain';
+import { type ClassicElement, SCREENPLAY_STRUCTURE, structureOf } from '@drafter/cm-fountain';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
 import { COMMAND_DATA } from '../app/commands/data';
 import {
   barFor,
   CHEAT_SHEET_ANCHORS,
+  classicHere,
+  classicTip,
+  classicTipFor,
   currentOf,
   ELEMENT_REASONS,
   FOUNTAIN_BUTTONS,
@@ -17,7 +20,7 @@ import {
   SPELLING_BUTTON,
   tipFor,
 } from '../app/editor/element-bar';
-import { ELEMENT_NAMES } from '../app/editor/element-names';
+import { classicElementName, ELEMENT_NAMES } from '../app/editor/element-names';
 
 // The element bar's buttons (docs/drafter-element-bar-design.md §3, §5): each runs a command the
 // palette has, and each says in one sentence what its element is, its mark, and its key.
@@ -213,5 +216,68 @@ describe('the bar on a stage play', () => {
     expect(reasonFor('section', false, undefined, 'scene_heading_play')).toBe(
       'a line starting with ## in a stage play',
     );
+  });
+});
+
+describe('the element bar in Classic Mode', () => {
+  const play = structureOf(builtins['stage-play-standard'] as Template);
+  const pending = (kind: ClassicElement['kind']): ClassicElement => ({
+    kind,
+    pending: true,
+    soft: false,
+    enter: 'chooser',
+    tab: 'action',
+  });
+
+  test.each([
+    ['a screenplay', SCREENPLAY_STRUCTURE],
+    ['a stage play', play],
+  ])('tooltips hold no mark, in %s', (_name, structure) => {
+    const { buttons, more } = barFor(structure);
+    for (const button of [...buttons, ...more]) {
+      const words = classicTip(button, structure);
+      expect(words, button.label).not.toMatch(/[@!>~#=^*_]|\[\[|\/\*|Mark:/);
+      expect(words.length, button.label).toBeGreaterThan(button.label.length + 2);
+    }
+  });
+
+  test('a tooltip says what the design says', () => {
+    const character = FOUNTAIN_BUTTONS.find((b) => b.label === 'Character') as (typeof all)[number];
+    expect(classicTip(character, SCREENPLAY_STRUCTURE)).toBe(
+      'Character. The name above a speech. Tab goes here from Action.',
+    );
+    expect(classicTip(character, play)).toBe(
+      'Character. The name above a speech. Tab goes here from Stage direction.',
+    );
+  });
+
+  test('a tooltip keeps its key', () => {
+    const action = FOUNTAIN_BUTTONS.find((b) => b.label === 'Action') as (typeof all)[number];
+    expect(classicTipFor(action, SCREENPLAY_STRUCTURE, false)).toBe(
+      `${classicTip(action, SCREENPLAY_STRUCTURE)} Shortcut: Ctrl+Alt+2.`,
+    );
+  });
+
+  test('the chip names a pending element', () => {
+    expect(classicElementName(pending('character'), SCREENPLAY_STRUCTURE)).toBe('Character');
+    expect(classicHere(pending('character'), SCREENPLAY_STRUCTURE)).toEqual({
+      name: 'Character',
+      command: 'element-character',
+      anchor: null,
+    });
+    expect(classicElementName(pending('scene_heading'), SCREENPLAY_STRUCTURE)).toBe(
+      'Scene heading',
+    );
+    expect(classicElementName(pending('page_break'), SCREENPLAY_STRUCTURE)).toBe('Page break');
+    expect(classicHere(pending('title_page'), SCREENPLAY_STRUCTURE).command).toBeNull();
+  });
+
+  test('a pending Stage direction, Act, and Scene are named', () => {
+    expect(classicElementName(pending('action'), play)).toBe('Stage direction');
+    expect(classicElementName(pending('act'), play)).toBe('Act');
+    expect(classicElementName(pending('scene_heading'), play)).toBe('Scene');
+    expect(classicHere(pending('action'), play).command).toBe('element-action');
+    expect(classicHere(pending('act'), play).command).toBe('element-act');
+    expect(classicHere(pending('scene_heading'), play).command).toBe('element-scene-heading');
   });
 });

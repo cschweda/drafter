@@ -195,17 +195,34 @@ The [summary of findings](clean-room.md#clean-room-verification) names the commi
 
 **Releasing.** In this order, and never by hand before the tag:
 
-1. On `main`, set the version in every versioned `package.json` (including `apps/desktop/package.json`, which names the desktop packages), move the `[Unreleased]` entries into a section for the version and date, add the release's plain-language items to What's new (`apps/web/app/whats-new/entries.ts`, `banner: true` for a big change or a security update), run `pnpm test-counts` (below) after the e2e build, and commit. Don't push `main` yet: pushing it deploys drafter.dev, whose Saving page links to the latest release.
+1. On `main`, set the version in every versioned `package.json` (including `apps/desktop/package.json`, which names the desktop packages), move the `[Unreleased]` entries into a section for the version and date, add the release's plain-language items to What's new (`apps/web/app/whats-new/entries.ts`, `banner: true` for a big change or a security update), run the release gates (below) and `pnpm test-counts` (below) after the e2e build, and commit. Don't push `main` yet: pushing it deploys drafter.dev, whose Saving page links to the latest release.
 2. Push the tag first: `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag must match `apps/desktop/package.json`'s version, or the workflow stops.
 3. Let `.github/workflows/desktop.yml` make the release. After every check passes, its `publish` job creates the GitHub Release as a draft, uploads the AppImage, the `.deb`, `latest-linux.yml`, the two Windows installers, `latest.yml`, and Drafter for Claude's `drafter-mcp-<version>.js` with its `.sha256` (built, and run as an AI app runs it, in the Linux job), checks them, and only then publishes it. It waits for the Linux job and both Windows jobs; if any of them fails, nothing is published. Once it is published, push `main`, so the site's download link never points at a release without packages.
 
-Every pull request, Dependabot's included, runs `.github/workflows/checks.yml`: lint, the build, every package's tests, the trap documents, the web typecheck and unit tests, the desktop shell's unit tests, and the browser tests in Chromium, on macOS and on Linux, each split across four runners (`--shard`), with one `e2e` check over the checks job and the eight shards; all of it is required. Packaging the desktop app stays in `desktop.yml`. Tests with a fixed time limit in their name ("within 3 seconds", "under 50 ms", and in the browser tests "long task", "quickly", "budget") are skipped there, since a shared runner is slower; the release gates run them. A browser test that has to wait for the app waits for what it means, never for time: the Inspector's header and the element bar are `data-fitting` while they fit, a setting is in `stored(page)` before a reload, and a key with Shift is pressed by its code (`ControlOrMeta+Shift+KeyZ`), as a keyboard sends it.
+Every pull request, Dependabot's included, runs `.github/workflows/checks.yml`: lint, the build, every package's typecheck and tests, the trap documents, the web typecheck and unit tests, the desktop shell's unit tests, and the browser tests in Chromium, on macOS and on Linux, each split across four runners (`--shard`), with one `e2e` check over the checks job and the eight shards; all of it is required. Packaging the desktop app stays in `desktop.yml`. Tests with a fixed time limit in their name ("within 3 seconds", "under 50 ms", and in the browser tests "long task", "quickly", "budget") are skipped there, since a shared runner is slower; the release gates run them. A browser test that has to wait for the app waits for what it means, never for time: the Inspector's header and the element bar are `data-fitting` while they fit, a setting is in `stored(page)` before a reload, and a key with Shift is pressed by its code (`ControlOrMeta+Shift+KeyZ`), as a keyboard sends it.
 4. Then edit the release's notes on GitHub (the workflow writes a one-line placeholder).
 5. Then put Drafter for Claude on npm, from `main` on your own machine: `./publish.sh --dry-run`, then `./publish.sh`. It checks the release exists and passed, builds the tag's commit in a separate worktree, stops unless the staged `drafter-mcp.js` is byte for byte the Release's file, installs and runs the packed package, and asks you to type the version and then to approve the publish on npm (a link to open in a browser on any device, or npm's code on some accounts). It never commits, tags, or pushes. Never run it, or `npm publish`, without `--dry-run` except to publish.
 
 Don't create the release on GitHub (or with `gh release create`) before the workflow does: the workflow never uploads to a release that is already published, so a hand-made release would be left with no packages and no update feed, and the desktop apps would find no update.
 
 ## Test counts and diagrams
+
+**The release gates** run every test once, with its time limit, on a real machine, before the release commit. Every one must pass:
+
+```bash
+set -e -o pipefail
+pnpm install
+pnpm -r --filter "./packages/*" build
+pnpm check
+pnpm -r --filter "./packages/*" typecheck
+pnpm -r --workspace-concurrency=1 --filter "./packages/*" test
+pnpm --filter @drafter/web typecheck
+pnpm --filter @drafter/web exec vitest run
+pnpm --filter @drafter/desktop test
+pnpm vitest run --project trap
+pnpm bench
+pnpm --filter @drafter/web e2e
+```
 
 **`pnpm test-counts`** (`scripts/test-counts.mjs`) writes `apps/web/app/about/test-counts.json`, which the [What is Drafter?](https://drafter.dev/docs/what-is-drafter/#numbers) page shows with the version and date. It runs every Vitest project once with the JSON reporter (a run is the only way to count the tests a suite makes as it goes, such as one for each trap at each way in) and stops if any fails; it lists the browser tests (once, and in each of the five projects) and the desktop app's end-to-end tests with Playwright's `--list`, without running them; and it counts the trap documents and their checks from `fixtures/trap/MANIFEST.md`. Playwright reads the built site to list its tests, so build the packages (`pnpm -r build`) and the e2e site (`DRAFTER_TEST_MODULES=1 NETLIFY=true pnpm --filter @drafter/web build`) first. Run it at each release, after the version is set, and commit the file with the release.
 

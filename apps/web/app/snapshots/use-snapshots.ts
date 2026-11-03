@@ -1,3 +1,4 @@
+import { savedText } from '@drafter/cm-fountain';
 import { type ComputedRef, computed, effectScope, type Ref, ref, shallowRef, watch } from 'vue';
 import { useCutRecorder } from '../cuts/use-recorder';
 import { useEditor } from '../editor/session';
@@ -74,7 +75,8 @@ function create(): SnapshotSession {
   const notRead = computed(() => (notKept.value === READ_ONLY ? null : notKept.value));
   /** The open script's id, when this tab keeps its snapshots. */
   const kept = () => (notKept.value === null ? (script.project.value?.id ?? null) : null);
-  const text = () => editor.view.state.doc.toString();
+  // What a save would write: a line Classic Mode just made inside a speech is left out (savedText).
+  const text = () => savedText(editor.view.state).toString();
 
   /** Keeps `text` (already captured) in the background; resolves with what the store did. */
   function keep(

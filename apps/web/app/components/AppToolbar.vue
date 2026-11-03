@@ -100,7 +100,16 @@ onBeforeUnmount(() => {
   observer?.disconnect();
   cancelAnimationFrame(frame);
 });
-watch([wide, () => moduleButtons.value.length], fitSoon);
+watch(
+  // The switch comes and goes with the kind, and its one word below 1024px changes width.
+  [
+    wide,
+    () => moduleButtons.value.length,
+    () => editor.kind.value,
+    () => settings.value.writingMode,
+  ],
+  fitSoon,
+);
 
 // The folded buttons' items, in the bar's order; each runs what its button does. Export is a
 // submenu of the exports, as its button's menu is.
@@ -207,11 +216,12 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
 <template>
   <header ref="bar" class="toolbar">
     <h1 class="sr-only">Drafter</h1>
-    <!-- The mark opens the app menu; its chevron says so, on every screen. Below 400px the wordmark
-         gives way to the mark, so the bar fits a 320px screen (WCAG 1.4.10). -->
+    <!-- The mark opens the app menu; its chevron says so, on every screen. Below 480px (a phone) the
+         wordmark gives way to the mark, so the bar fits a 320px screen (WCAG 1.4.10) and, with the
+         writing mode's switch in it, a 412px phone keeps Save and Export on the bar (Classic Mode). -->
     <AppMenu>
       <picture class="logo">
-        <source media="(max-width: 399.98px)" srcset="/mark.svg">
+        <source media="(max-width: 479.98px)" srcset="/mark.svg">
         <img :src="dark ? '/logo-dark.svg' : '/logo-light.svg'" alt="Drafter">
       </picture>
     </AppMenu>
@@ -221,6 +231,8 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
     <!-- Unsaved changes, right after the title: a red dot and "Unsaved", which saves (Task 6). -->
     <SaveState />
     <SampleChip v-if="wide" />
+    <!-- Never in TOOLBAR_FOLD_ORDER: it's there all the while the script is written (§3.2). -->
+    <ModeSwitch />
     <span class="sep before-actions" aria-hidden="true" />
     <div class="actions">
       <ScriptsMenu v-slot="{ toggle, expanded, controls }">
@@ -465,10 +477,13 @@ kbd {
   min-width: 0;
 }
 
-/* Under 1280px the search gives a little of its width. */
+/* Under 1280px the search gives a little of its width, and more only when the bar needs it: it
+   shrinks well ahead of the title, down to what still reads as a search. */
 @media (max-width: 1279.98px) {
   .search {
-    width: 220px;
+    flex: 0 8 220px;
+    width: auto;
+    min-width: 110px;
   }
 }
 
@@ -503,6 +518,8 @@ kbd {
     padding: 0;
   }
   .search {
+    flex: none;
+    min-width: 0;
     border-radius: var(--r-sm);
     background: none;
   }

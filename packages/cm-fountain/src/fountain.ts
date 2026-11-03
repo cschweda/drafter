@@ -6,7 +6,13 @@ import type { Template } from '@drafter/templates';
 import { fountainKeymap } from './bindings';
 import { fountainCompletion } from './complete';
 import { type CursorElement, onCursorElement } from './cursor';
-import { elementHint, elementStructure, structureOf, withCompletion } from './elements';
+import {
+  elementHint,
+  elementStructure,
+  elementTemplate,
+  structureOf,
+  withCompletion,
+} from './elements';
 import { fountainFolding } from './fold';
 import { fountainHighlighting } from './highlight';
 import { fountainInput, startCue } from './input';
@@ -78,6 +84,7 @@ export function fountain(options: FountainOptions = {}): Extension {
     fountainInput(),
     Prec.high(keymap.of(bindingsFor(options.onHint))),
     template ? elementStructure.of(() => structureOf(template())) : [],
+    template ? elementTemplate.of(template) : [],
     fountainCompletion(),
     fountainFolding(),
     template ? fountainLint({ template, options: lintOptions }) : [],

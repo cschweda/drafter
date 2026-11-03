@@ -1,7 +1,7 @@
 export { inlineRuns } from './inline';
 export { toJSON } from './json';
-export { setMeta } from './meta';
-export { parse } from './parse';
+export { metadataSpan, setMeta } from './meta';
+export { parse, sceneNumber } from './parse';
 export { print } from './print';
 export { blockAt, characters, locations } from './query';
 export { reparse } from './reparse';

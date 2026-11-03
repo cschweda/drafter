@@ -294,6 +294,21 @@ describe('menuTemplate', () => {
     expect(named(t, 'help-licences')?.label).toBe('Third-party Licences');
   });
 
+  test('puts Classic Mode in Help, after the Fountain cheat sheet', () => {
+    const t = menuTemplate(
+      [
+        ...COMMANDS,
+        cmd('help-fountain', 'Help', 'Open the page: Fountain cheat sheet'),
+        cmd('help-classic-mode', 'Help', 'Open the page: Classic Mode'),
+      ],
+      () => {},
+      { platform: 'linux' },
+    );
+    const ids = submenu(menus(t).Help).map((i) => i.id);
+    expect(ids.indexOf('help-classic-mode')).toBe(ids.indexOf('help-fountain') + 1);
+    expect(named(t, 'help-classic-mode')?.label).toBe('Classic Mode');
+  });
+
   test('puts Technical Details in Help, after Third-party Licences', () => {
     const t = menuTemplate(
       [...COMMANDS, cmd('help-technical', 'Help', 'Open the page: Technical details')],

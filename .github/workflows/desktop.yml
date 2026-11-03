@@ -99,12 +99,12 @@ jobs:
           pnpm --filter @drafter/desktop build
           pnpm --filter @drafter/desktop build:web
       # Every trap through the packages, the command line (built: the special files go to the real
-      # `drafter`), the modules folder, and the app's own Open, web and desktop.
+      # `drafter`), the modules folder, the app's own Open, web and desktop, and Classic Mode.
       - name: The trap documents (fixtures/trap/README.md)
         run: |
           pnpm --filter "@drafter/cli..." build
           pnpm exec vitest run --project trap
-          pnpm exec vitest run --project web trap-open.test.ts
+          pnpm exec vitest run --project web trap-open.test.ts trap-classic.test.ts
       # Drafter for Claude: one file with every dependency and its licences inside it, run as an AI
       # app runs it (over standard input and output, each call in its reader thread), then staged as
       # its npm package. The file and its SHA-256 go on the release; npm gets the same file from the

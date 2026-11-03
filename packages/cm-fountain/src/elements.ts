@@ -110,6 +110,17 @@ export const elementStructure = Facet.define<() => ElementStructure, () => Eleme
 
 const structureIn = (state: EditorState) => state.facet(elementStructure)();
 
+/**
+ * The template, for what needs more than the structure. `fountain({ template })` provides it, and
+ * a state without it has null. A function, as the template can change.
+ */
+export const elementTemplate: Facet<() => Template, (() => Template) | null> = Facet.define<
+  () => Template,
+  (() => Template) | null
+>({
+  combine: (values) => values[0] ?? null,
+});
+
 /** Sent by a command that leaves the cursor where completion has something to offer. */
 const askCompletion = StateEffect.define<null>();
 
@@ -159,7 +170,7 @@ export const insertMark = (head: 'Setup' | 'Payoff'): StateCommand =>
   });
 
 /** The parser's start of a scene heading (rule 11): a prefix, then a dot or a space. */
-const HEADING_START = /^(?:INT\.?\/EXT|INT|EXT|EST|I\/E)[. ]/i;
+export const HEADING_START = /^(?:INT\.?\/EXT|INT|EXT|EST|I\/E)[. ]/i;
 
 /**
  * The headings that name no place, which get `.` and not `INT. `: a whole line of one of these
@@ -170,7 +181,7 @@ const NOT_A_PLACE =
   /^(?:(?:END\s+)?(?:FLASHBACK|MONTAGE|SERIES OF SHOTS|DREAM SEQUENCE)|INTERCUT|BACK TO SCENE|(?:MOMENTS\s+)?LATER|CONTINUOUS)$/;
 
 /** A blank line as the parser reads one: only white space, but not the two spaces of a speech. */
-const isBlank = (text: string) => text !== '  ' && /^\s*$/.test(text);
+export const isBlank = (text: string): boolean => text !== '  ' && /^\s*$/.test(text);
 
 /** What a command knows about one line. */
 interface Here {
@@ -185,7 +196,7 @@ interface Here {
 }
 
 /** Where no command acts: the title page, and a note or boneyard. */
-function blocked(state: EditorState, pos: number): 'title page' | 'region' | null {
+export function blocked(state: EditorState, pos: number): 'title page' | 'region' | null {
   const doc = state.field(parsedDoc);
   const line = state.doc.lineAt(pos);
   const { titlePage } = doc;
@@ -242,6 +253,12 @@ function speechAbove(h: Here): boolean {
   if (!above || isBlank(above.text)) return false;
   const up = here(h.state, above.from);
   return !!up && (isCueLine(up) || inSpeech(up) || isLoneCue(up));
+}
+
+/** Whether the line at `pos` sits directly under a cue or a line of a speech. False where no command acts. */
+export function underSpeech(state: EditorState, pos: number): boolean {
+  const h = here(state, pos);
+  return !!h && speechAbove(h);
 }
 
 /**

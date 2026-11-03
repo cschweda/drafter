@@ -65,6 +65,13 @@ vi.mock('../app/editor/session', async () => {
   return { useEditor: () => session };
 });
 
+/** Classic Mode in the editor's state, as the writing-mode compartment puts it there. */
+async function classicOn(view: { dispatch(spec: object): void }) {
+  const { StateEffect } = await import('@codemirror/state');
+  const { classic, fountain } = await import('@drafter/cm-fountain');
+  view.dispatch({ effects: StateEffect.appendConfig.of([fountain(), classic()]) });
+}
+
 /** A session over the database as it is: `keep` leaves the stored scripts and settings alone (a later visit). */
 async function visit(
   options: { keep?: boolean; breakDb?: (db: typeof import('../app/storage/db').db) => void } = {},
@@ -98,6 +105,32 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+describe('Classic Mode’s room above a blank script’s metadata block', () => {
+  test('is no edit of the writer’s: the script stays unchanged, and a letter after it is one', async () => {
+    const t = await visit();
+    const text = '/* drafter\n{ "v": 1, "template": "stage-play-standard" }\n*/\n';
+    const made = await t.session.addScript(text, { kind: 'fountain', baseline: text });
+    await t.session.open(made.id);
+    const { view } = t.editor;
+    await classicOn(view);
+    view.dispatch({ changes: { from: 0, insert: '\n\n' } });
+    expect(t.text()).toBe(`\n\n${text}`);
+    expect(t.session.dirty.value).toBe(false);
+    view.dispatch({ changes: { from: 0, insert: 'x' } });
+    expect(t.session.dirty.value).toBe(true);
+  });
+
+  test('in Fountain Mode the same two breaks are an edit, as any other is', async () => {
+    const t = await visit();
+    const text = '/* drafter\n{ "v": 1, "template": "stage-play-standard" }\n*/\n';
+    const made = await t.session.addScript(text, { kind: 'fountain', baseline: text });
+    await t.session.open(made.id);
+    t.editor.view.dispatch({ changes: { from: 0, insert: '\n\n' } });
+    expect(t.text()).toBe(`\n\n${text}`);
+    expect(t.session.dirty.value).toBe(true);
+  });
 });
 
 describe('the first New of a kind', () => {
