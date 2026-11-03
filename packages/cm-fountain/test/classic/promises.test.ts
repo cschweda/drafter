@@ -267,16 +267,11 @@ function typedBy(state: EditorState, k: Key): string {
   return labels.map((label) => ` - ${label}`).join('');
 }
 
-/**
- * Keys the property leaves out. §6.2: Shift+Tab on a pending Dialogue takes its empty line, as
- * Backspace would, which is a delete, not an addition. And the open case below: where Classic's
- * Tab and Shift+Tab stand back (a blocked place), Fountain's own Tab and Shift+Tab run.
- */
+/** §6.2: Shift+Tab on a pending Dialogue takes its empty line, as Backspace would: a delete, left out. */
 function leftOut(state: EditorState, k: Key): boolean {
-  if (!('key' in k) || (k.key !== 'Tab' && k.key !== 'Shift-Tab')) return false;
+  if (!('key' in k) || k.key !== 'Shift-Tab') return false;
   const element = elementAt(state);
-  if (!element || element.tab === null) return true;
-  return k.key === 'Shift-Tab' && element.kind === 'dialogue' && element.pending;
+  return element?.kind === 'dialogue' && !!element.pending;
 }
 
 const showKeys = (ks: readonly Key[]) => ks.map((k) => JSON.stringify(k)).join(' ');
@@ -359,12 +354,9 @@ describe('Classic only adds what it may', () => {
     );
   });
 
-  // Open (found by the property above, and left out of it): where Classic's Tab stands back, on a
-  // line that starts inside a boneyard, it gives the key back for the browser to move focus (§6),
-  // but Fountain's own Tab is next in line and takes it, and makes the line a cue: capitals and
-  // `@` on text the writer typed. Shift+Tab the same, the other way. Stopping Fountain's key there
-  // while still letting focus move wants a ruling. This test passes once it's fixed: drop `.fails`.
-  test.fails('Tab on a line that starts in a boneyard leaves the line as it is', () => {
+  // Found by the property above: where Classic's Tab stood back, on a line starting in a boneyard,
+  // Fountain's own Tab made the line a cue. The ruling: Classic takes Tab and writes nothing there.
+  test('Tab on a line that starts in a boneyard leaves the line as it is', () => {
     const text = 'A door.\n\n/* cut\n\nknows the. */ more';
     const state = keys(classicEditor(`${text}|`), 'Tab');
     expect(state.doc.toString()).toBe(text);
@@ -536,15 +528,6 @@ describe('a letter and its mark are never split', () => {
   );
 });
 
-/** An empty line under a line of capitals the parser reads as Action: the open case below. */
-function underLoneCapitals(state: EditorState): boolean {
-  const line = state.doc.lineAt(state.selection.main.head);
-  if (line.text.trim() || line.number < 2) return false;
-  const above = state.doc.line(line.number - 1);
-  const block = state.field(parsedDoc).blocks.find((one) => one.span.from === above.from);
-  return block?.kind === 'action';
-}
-
 describe('Action stays Action', () => {
   const NAMES = ['JUNE', 'DALE'];
   const LOUD = ['BANG', 'THUD', 'CRASH', 'SILENCE.'];
@@ -566,9 +549,6 @@ describe('Action stays Action', () => {
         (ks, text) => {
           let state = classicEditor(`${text}|`, { with: [history()] });
           for (const k of ks) {
-            // The open case below, left out: anything that writes a speech on the line under lone capitals.
-            const writes = !('key' in k) || k.key === 'Shift-Enter' || k.key === 'Tab';
-            if (writes && underLoneCapitals(state)) continue;
             if ('key' in k) {
               state = k.key.startsWith('Arrow')
                 ? (() => {
@@ -602,12 +582,9 @@ describe('Action stays Action', () => {
     );
   });
 
-  // Open (found by the property above, and left out of it): a line of capitals on Action, left and
-  // come back to, reads to the parser as Action, but the empty line under it is pending Dialogue, as
-  // under a name, so Shift+Enter there (a speech's two spaces), Tab (its `()`), or a letter makes
-  // the capitals a cue on a line the cursor isn't on. Today's tests pin the same for a name opened in a file
-  // (`JUNE\n|`), so the fix wants a ruling. This test passes once it's fixed: then drop `.fails`.
-  test.fails('capitals left and come back to stay Action under Shift+Enter on the line below', () => {
+  // Found by the property above: under the line the cursor came back to, Shift+Enter, Tab, or a
+  // letter made the capitals a cue. The ruling: the line above gets its `!` in the same transaction.
+  test('capitals left and come back to stay Action under Shift+Enter on the line below', () => {
     let state = keys(classicEditor('|'), 'BANG', 'Enter');
     const view = new EditorView({ state });
     try {
@@ -618,6 +595,7 @@ describe('Action stays Action', () => {
     }
     expect(render(state)).toBe('BANG\n|\n');
     state = keys(state, 'Shift-Enter');
+    expect(render(state)).toBe('!BANG\n  |\n');
     expect(parse(state.doc.toString()).blocks[0]?.kind).toBe('action');
   });
 

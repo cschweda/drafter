@@ -307,6 +307,7 @@ describe('the stored line', () => {
       dismissed: false,
       beganEmpty: true,
       arrivedAs: 'action',
+      arrived: false,
     });
   });
 

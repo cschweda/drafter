@@ -1,6 +1,8 @@
 import { history, undo } from '@codemirror/commands';
 import { EditorSelection, EditorState } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
 import { makeElement, parsedDoc } from '@drafter/cm-fountain';
+import { parse } from '@drafter/fountain';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
 import { visibleStart } from '../../src/classic/hidden';
@@ -477,10 +479,11 @@ describe('§6.4, Shift+Tab and Shift+Enter', () => {
   rows([
     ['Shift+Enter at the end of BANG writes !BANG', 'BANG|', 'Shift-Enter', '!BANG\n|'],
     [
-      'Shift+Enter on an empty speech line writes two spaces',
+      // A lone name opened in a file is a line the cursor came back to: it stays Action (ruling).
+      'Shift+Enter under a lone name the cursor came back to keeps it Action',
       'JUNE\n|',
       'Shift-Enter',
-      'JUNE\n  |',
+      '!JUNE\n  |',
     ],
     ['Shift+Enter in a line of action is one break', 'She waits.|', 'Shift-Enter', 'She waits.\n|'],
     [
@@ -513,6 +516,39 @@ describe('§6.4, Shift+Tab and Shift+Enter', () => {
     ['Shift+Enter elsewhere, mid-dialogue', 'JUNE\nHel|lo.', 'Shift-Enter', 'JUNE\nHel\n|lo.'],
   ]);
 
+  test('Shift+Enter on the empty line under a name just typed writes two spaces', () => {
+    expect(render(keys(classicEditor('|'), 'Tab', 'june', 'Enter', 'Shift-Enter'))).toBe(
+      'JUNE\n  |',
+    );
+  });
+
+  test.each([
+    ['a letter', 'x', '!BANG\nx|'],
+    ['Shift+Enter', 'Shift-Enter', '!BANG\n  |'],
+    ['Tab', 'Tab', '!BANG\n(|)'],
+  ])(
+    'capitals the cursor came back to stay Action under %s on the line below',
+    (_n, key, after) => {
+      const state = keys(classicEditor('BANG\n|'), key);
+      expect(render(state)).toBe(after);
+      expect(parse(state.doc.toString()).blocks[0]?.kind).toBe('action');
+    },
+  );
+
+  test('Shift+Tab back to capitals the cursor came back to leaves them Action', () => {
+    const back = keys(classicEditor('BANG\n|'), 'Shift-Tab');
+    expect(render(back)).toBe('BANG|');
+    expect(elementAt(back)?.kind).toBe('action');
+    expect(render(keys(back, 'Enter', 'BANG'))).toBe('BANG\n\nBANG|');
+  });
+
+  test('a name typed and gone on from is still a name, its speech under it', () => {
+    const state = keys(classicEditor('|'), 'Tab', 'june', 'Enter', 'Hi.');
+    expect(render(state)).toBe('JUNE\nHi.|');
+    const tabbed = keys(classicEditor('|'), 'Tab', 'june', 'Enter', 'Tab', 'softly');
+    expect(render(tabbed)).toBe('JUNE\n(softly|)');
+  });
+
   test('the line after Shift+Enter stays in its element', () => {
     expect(render(keys(classicEditor('BANG|'), 'Shift-Enter', 'INT.'))).toBe('!BANG\nINT.|');
     const state = keys(classicEditor('JUNE\nHello.|'), 'Shift-Enter');
@@ -529,15 +565,62 @@ describe('where the keys give way', () => {
     expect(render(keys(state, 'Tab'))).toBe('She waits.|');
   });
 
-  test('the title page and a note give Tab back', () => {
-    for (const marked of [
-      'Title: Signal| Hill\n\nA.',
-      'A.\n\n[[a no|te]]\n\nB.',
-      'A.\n\n/* gone\nstill| gone */',
-    ]) {
+  const STANDING_BACK = [
+    'Title: Signal| Hill\n\nA.',
+    'A.\n\n[[a no|te]]\n\nB.',
+    'A.\n\n/* gone\nstill| gone */',
+    // A line that starts in a boneyard, the cursor past its end: Fountain's Tab made it a cue.
+    'A.\n\n/* gone\nknows the. */ more|',
+  ];
+
+  test('on the title page, in a note, and in a boneyard, Tab and Shift+Tab write nothing', () => {
+    // The ruling on Task 13: Classic takes them, so Fountain's Tab never runs there; Esc then Tab leaves.
+    for (const marked of STANDING_BACK) {
       const state = classicEditor(marked);
-      for (const command of COMMANDS) expect(run(state, command).handled).toBe(false);
+      for (const command of [classicTab, classicShiftTab]) {
+        const pressed = run(state, command);
+        expect(pressed.handled, marked).toBe(true);
+        expect(pressed.state.doc.eq(state.doc), marked).toBe(true);
+      }
+      for (const command of [classicEnter, classicShiftEnter]) {
+        expect(run(state, command).handled, marked).toBe(false);
+      }
       expect(render(keys(state, 'Tab'))).toBe(render(state));
+      expect(render(keys(state, 'Shift-Tab'))).toBe(render(state));
+    }
+  });
+
+  test('there, Esc then Tab still goes to the browser, to leave the text', () => {
+    for (const marked of STANDING_BACK) {
+      const parent = document.createElement('div');
+      document.body.append(parent);
+      const view = new EditorView({ state: classicEditor(marked), parent });
+      try {
+        const tab = () => {
+          const event = new KeyboardEvent('keydown', {
+            key: 'Tab',
+            keyCode: 9,
+            bubbles: true,
+            cancelable: true,
+          });
+          view.contentDOM.dispatchEvent(event);
+          return event.defaultPrevented;
+        };
+        expect(tab(), `${marked}: Tab is Classic's`).toBe(true);
+        view.contentDOM.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'Escape',
+            keyCode: 27,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+        expect(tab(), `${marked}: Esc then Tab is the browser's`).toBe(false);
+        expect(render(view.state)).toBe(render(classicEditor(marked)));
+      } finally {
+        view.destroy();
+        parent.remove();
+      }
     }
   });
 
@@ -792,8 +875,11 @@ describe('what a key leaves reads right', () => {
       expect(render(state)).toBe('JUNE\nHi.\nx|');
     });
 
+    // A name typed and gone on from: a lone name the cursor came back to stays Action (ruling).
+    const typedName = () => keys(classicEditor('|'), 'Tab', 'june', 'Enter');
+
     test('a letter between the two spaces is kept, and they go', () => {
-      const state = keys(classicEditor('JUNE\n|'), 'Shift-Enter');
+      const state = keys(typedName(), 'Shift-Enter');
       const between = state.update({ selection: { anchor: state.doc.length - 1 } }).state;
       expect(render(type(between, 'x'))).toBe('JUNE\nx|');
     });
@@ -813,7 +899,7 @@ describe('what a key leaves reads right', () => {
     });
 
     test('a deliberate blank speech line stays when it’s left', () => {
-      const state = keys(classicEditor('JUNE\n|'), 'Shift-Enter');
+      const state = keys(typedName(), 'Shift-Enter');
       expect(left(state).sliceDoc()).toBe('JUNE\n  ');
     });
 
@@ -883,10 +969,16 @@ describe('what a key leaves reads right', () => {
     });
   });
 
-  test('Enter inside an inline note is Fountain’s', () => {
+  test('Enter inside an inline note is Fountain’s, and Tab writes nothing there', () => {
     const state = classicEditor('She [[a no|te]] waits.');
-    for (const command of [classicEnter, classicTab, classicShiftTab, classicShiftEnter]) {
+    for (const command of [classicEnter, classicShiftEnter]) {
       expect(run(state, command).handled).toBe(false);
+    }
+    // The ruling on Task 13: taken, so Fountain's Tab doesn't run; Esc then Tab leaves.
+    for (const command of [classicTab, classicShiftTab]) {
+      const pressed = run(state, command);
+      expect(pressed.handled).toBe(true);
+      expect(pressed.state.doc.eq(state.doc)).toBe(true);
     }
     expect(render(keys(state, 'Enter'))).toBe('She [[a no\n|te]] waits.');
     expect(render(keys(state, 'Tab'))).toBe('She [[a no|te]] waits.');

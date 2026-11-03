@@ -45,6 +45,8 @@ export interface StoredLine {
   beganEmpty: boolean;
   /** What the line was before any shape typed on it (§4.2), which it goes back to when the shape ends. */
   arrivedAs: ClassicKind;
+  /** Stored by the cursor arriving on the empty line, not by a key, a pick, or a command. */
+  arrived?: boolean;
 }
 
 export interface ClassicElement {
@@ -55,6 +57,9 @@ export interface ClassicElement {
   enter: ClassicKind | 'chooser' | null;
   tab: ClassicKind | null;
 }
+
+/** On a pick in the chooser or an element command: the writer named the element. */
+export const pickedElement = StateEffect.define<null>();
 
 /** Marks a transaction as Classic Mode's own, so the stored line goes on through it. */
 export const classicEdit: AnnotationType<true> = Annotation.define<true>();
@@ -311,6 +316,7 @@ function arrival(state: EditorState): StoredLine | null {
     dismissed: false,
     beganEmpty: true,
     arrivedAs: kind,
+    arrived: true,
   };
 }
 
@@ -377,6 +383,8 @@ function applyEffects(line: StoredLine | null, tr: Transaction): StoredLine | nu
         ...effect.value,
         // Naming an element replaces what the line arrived as, unless the mark filter says so.
         arrivedAs: effect.value.arrivedAs ?? effect.value.kind,
+        // A key or a command stored this: the line is no longer only arrived at.
+        arrived: effect.value.arrived ?? false,
         ...(effect.value.chosen ? { soft: false } : null),
         from,
       };

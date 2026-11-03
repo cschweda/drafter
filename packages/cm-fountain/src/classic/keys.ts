@@ -23,6 +23,7 @@ import {
   elementAt,
   lineKindAt,
   NEXT,
+  parsedKindAt,
   type StoredLine,
   setStored,
   showChooser,
@@ -348,13 +349,23 @@ export const typeOffPageBreak: Extension = EditorState.transactionFilter.of((tr)
   };
 });
 
+/**
+ * Whether the one cursor is on the title page, or in a note or a boneyard, where no element key
+ * acts (§6). Tab and Shift+Tab are taken there and write nothing, so Fountain's own Tab never turns
+ * the line into a cue in Classic Mode (the ruling on Task 13); Esc then Tab still leaves the text,
+ * as the view hands that Tab to the browser before any key sees it.
+ */
+function standsBack(state: EditorState): boolean {
+  const { main } = state.selection;
+  if (isBlankScript(state, state.doc.lineAt(main.head))) return false;
+  return !!blocked(state, main.head) || insideRegion(state.field(parsedDoc), main.head);
+}
+
 /** Tab (§6): what comes next, from anywhere on the line, and it never splits it. */
 export const classicTab: StateCommand = key((state) => {
   const { main } = state.selection;
   if (state.selection.ranges.length > 1) return null;
-  const onBlank = isBlankScript(state, state.doc.lineAt(main.head));
-  if (blocked(state, main.head) && !onBlank) return null;
-  if (insideRegion(state.field(parsedDoc), main.head)) return null;
+  if (standsBack(state)) return {};
   if (!main.empty) return { selection: { anchor: main.to } };
   const here = hereIn(state);
   if (!here) return null;
@@ -377,7 +388,10 @@ function backOut({ state, line }: Here): TransactionSpec {
   const { doc } = state;
   const above = doc.line(line.number - 1);
   const under = line.number < doc.lines ? doc.line(line.number + 1) : null;
-  const kind = lineKindAt(state, above);
+  // Arrived at by moving, the line above is what the parser says: capitals came back to are Action.
+  const own = state.field(classicLine, false);
+  const arrived = own?.from === line.from && own.arrived;
+  const kind = arrived ? parsedKindAt(state, above) : lineKindAt(state, above);
   return {
     // A line straight under would join the speech, so the blank line stays.
     ...(under && !isBlank(under.text) ? null : { changes: { from: above.to, to: line.to } }),
@@ -398,6 +412,7 @@ function elementAbove(state: EditorState, line: Line): Line | null {
 
 /** Shift+Tab (§6.2, §6.4): back along the row, or to the end of the element above. */
 export const classicShiftTab: StateCommand = key((state) => {
+  if (state.selection.ranges.length === 1 && standsBack(state)) return {};
   const here = hereIn(state);
   if (!here) return null;
   const { element, line } = here;

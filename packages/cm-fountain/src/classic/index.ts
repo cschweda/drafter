@@ -21,7 +21,14 @@ import {
   typeOffPageBreak,
 } from './keys';
 import { classicLine, keepLineInHistory, typedLine } from './line';
-import { classicMarks, settleBreaks, settleDeletes, settlePaste, tidyLeft } from './marks';
+import {
+  classicMarks,
+  keepActionAbove,
+  settleBreaks,
+  settleDeletes,
+  settlePaste,
+  tidyLeft,
+} from './marks';
 import { blockKeptClear, keepMetadata, metadataHidden } from './metadata';
 import { acceptOffer, classicSay, classicSource, dismissOffer, offerWords } from './offer';
 import { classicView } from './view';
@@ -167,6 +174,7 @@ export function classic({ say }: ClassicOptions = {}): Extension {
     settleBreaks,
     settleDeletes,
     keepHiddenMarks,
+    keepActionAbove,
     classicMarks,
     settlePaste,
     typeOffPageBreak,

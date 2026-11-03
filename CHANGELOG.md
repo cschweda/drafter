@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- In **Classic Mode** a line of capitals you come back to stays Action: a letter, Shift+Enter, or Tab on the empty line under it gives that line its `!`, and Shift+Tab back to it doesn't make it a name. A name you typed and went on from is still a name. On the title page and in a note or a cut, Tab and Shift+Tab now write nothing, where Fountain's own Tab could turn the line into a name; Esc then Tab still leaves the text.
 - In **Classic Mode**, leaving the empty line Enter or Tab made above two blank lines of the script takes back only the break it made, not one of the script's own blank lines; Right at the end of a closing mark just above the hidden metadata block stays put instead of failing; and Lyric chosen under a lyric stays in it with one break, as Enter there does. Each was found by the new byte-promise tests.
 
 ### Changed

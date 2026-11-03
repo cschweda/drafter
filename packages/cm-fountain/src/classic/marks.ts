@@ -32,6 +32,7 @@ import {
   mapSpan,
   parsedKindAt,
   pendingAt,
+  pickedElement,
   type StoredLine,
   setStored,
   WRITES,
@@ -522,6 +523,54 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
       ? upperFix(tr.newDoc, typed.from, tr.newDoc.sliceString(typed.from, typed.to))
       : null;
   return applySettled(tr, line, own, added, fix, rawText, state);
+});
+
+/**
+ * A line of capitals the cursor came back to is Action (§4.2, and the maintainer's ruling on
+ * Task 13), though the empty line under it is pending Dialogue, as under a name. What the writer
+ * types there (a letter, Shift+Enter's two spaces, Tab's `()`) would make it a cue, so the line
+ * above gets its `!` in the same transaction, as `settleBreaks` gives one. Only on a line the
+ * cursor arrived at by moving: one a key went to from a name, or an element stored or picked on it,
+ * is the writer's speech, and the name is left a name.
+ */
+export const keepActionAbove: Extension = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || tr.annotation(appChange)) return tr;
+  const typing = tr.isUserEvent('input.type') && !tr.isUserEvent('input.type.compose');
+  const key =
+    tr.annotation(Transaction.userEvent) === 'input' && tr.annotation(classicEdit) === true;
+  if (!typing && !key) return tr;
+  const start = tr.startState;
+  if (start.selection.ranges.length > 1) return tr;
+  const line = start.doc.lineAt(start.selection.main.head);
+  if (!isBlank(line.text) || line.number < 2) return tr;
+  // Only a line arrived at by moving: a key, a pick, or a command on it means the name above.
+  const held = start.field(classicLine, false);
+  if (held?.from === line.from && !held.arrived) return tr;
+  if (tr.effects.some((effect) => effect.is(pickedElement))) return tr;
+  const above = start.doc.line(line.number - 1);
+  if (isBlank(above.text) || parsedKindAt(start, above) !== 'action') return tr;
+  const state = tr.state;
+  const upper = state.doc.lineAt(tr.changes.mapPos(above.from, -1));
+  const change = markFor(state, upper, 'action');
+  if (!change) return tr;
+  const marks = ChangeSet.of(change, tr.newDoc.length);
+  const here = marks.mapPos(tr.newSelection.main.head, 1);
+  const parens = tr.newDoc.lineAt(tr.newSelection.main.head).text.trim() === '()';
+  return [
+    tr,
+    {
+      changes: marks,
+      selection: { anchor: here },
+      effects: parens
+        ? []
+        : setStored.of({
+            from: marks.mapPos(tr.newDoc.lineAt(tr.newSelection.main.head).from, 1),
+            kind: 'action',
+          }),
+      annotations: classicEdit.of(true),
+      sequential: true,
+    },
+  ];
 });
 
 /** The text with the two breaks `keepMetadata` will add above the block. */

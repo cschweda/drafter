@@ -36,6 +36,7 @@ import {
   classicLine,
   elementAt,
   parsedKindAt,
+  pickedElement,
   setStored,
   showChooser,
   WRITES,
@@ -175,7 +176,11 @@ const pick = (kind: ClassicKind): StateCommand =>
     const here = hereIn(state);
     if (!here?.element.pending) return null;
     if (kind === 'page_break') return pageBreak(here);
-    if (kind === 'parenthetical') return writeParens(here);
+    if (kind === 'parenthetical') {
+      // Named in the chooser: the line above is the name of the speech, whatever it was.
+      const parens = writeParens(here);
+      return { ...parens, effects: [parens.effects ?? [], pickedElement.of(null)].flat() };
+    }
     return isBlankScript(state, here.line)
       ? { effects: setStored.of({ kind, chosen: true }) }
       : apart(here, kind);
@@ -354,15 +359,18 @@ const tooltip = showTooltip.compute([chooserState], (state): Tooltip | null => {
 });
 
 /** The open state, on the text box. `aria-expanded` isn't allowed on a text box, so it's `aria-haspopup`, as completion's is. */
-const openAttributes = EditorView.contentAttributes.compute([chooserState], (state) => {
-  const open = state.field(chooserState);
-  if (!open) return {};
-  return {
-    'aria-haspopup': 'listbox',
-    'aria-controls': open.id,
-    'aria-activedescendant': rowId(open, open.active),
-  };
-});
+const openAttributes = EditorView.contentAttributes.compute(
+  [chooserState],
+  (state): Record<string, string> => {
+    const open = state.field(chooserState);
+    if (!open) return {};
+    return {
+      'aria-haspopup': 'listbox',
+      'aria-controls': open.id,
+      'aria-activedescendant': rowId(open, open.active),
+    };
+  },
+);
 
 const close = (view: EditorView) => view.dispatch({ effects: closeChooser.of(null) });
 
