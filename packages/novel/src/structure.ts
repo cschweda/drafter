@@ -6,7 +6,7 @@ import { findMarkdownMeta, wordsIn } from '@drafter/markdown';
 export type NovelKind = 'part' | 'chapter' | 'section';
 
 export interface NovelNode {
-  /** `${kind}:${slug(title)}:${ordinal among siblings with the same kind and slug}`. */
+  /** `${kind}:${slug(title)}:${ordinal among all nodes of that kind and slug, in document order}`, unique in the book. */
   id: string;
   kind: NovelKind;
   /** The heading's text; `''` for a scene break. */
@@ -17,7 +17,7 @@ export interface NovelNode {
   span: { from: number; to: number };
   /** Words in the node's own text and everything under it. */
   words: number;
-  /** Words between the heading and the first child (or the end of the span). */
+  /** Words in the title and between the heading and the first child (or the end of the span). */
   ownWords: number;
   children: NovelNode[];
 }
@@ -27,7 +27,10 @@ export interface NovelTree {
   preamble: { from: number; to: number } | null;
   /** Whether the book has parts. */
   parts: boolean;
-  /** Parts when there are any, else chapters. */
+  /**
+   * Parts and chapters only. Chapters that come before the first part stay at the root beside the
+   * parts, and a `##` heading (or setext `-` heading) before any chapter or part is a chapter.
+   */
   nodes: NovelNode[];
   /** Every word before the metadata comment. */
   words: number;
@@ -36,12 +39,35 @@ export interface NovelTree {
 const RANK: Record<NovelKind, number> = { part: 0, chapter: 1, section: 2 };
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
-const ATX = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?[ \t]*$/;
+// One space or tab, then the rest: no two parts of the pattern can match the same characters, so a
+// long run of spaces cannot make it backtrack. The title is trimmed by hand below.
+const ATX = /^ {0,3}(#{1,6})(?:[ \t]([^\n]*))?$/;
 const BREAK = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/;
 const SETEXT_1 = /^ {0,3}=+[ \t]*$/;
 const SETEXT_2 = /^ {0,3}-+[ \t]*$/;
-const NOT_PARAGRAPH_START = /^(?: {4}|\t|>|[-*+][ \t]|\d{1,9}[.)][ \t]|<!--)/;
+const NOT_PARAGRAPH_START = /^(?: {4}|\t|<!--)/;
+// A blockquote or list item; the lines after it, to the next blank line, belong to it.
+const CONTAINER_START = /^ {0,3}(?:>|[-*+](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$))/;
 const PART = /^part(?:\s|$)/i;
+
+function isBlank(char: string): boolean {
+  return char === ' ' || char === '\t' || char === '\r';
+}
+
+/** An ATX heading's text: trimmed, without a closing run of `#` (which a space or tab must precede). */
+function atxTitle(rest: string): string {
+  let a = 0;
+  let b = rest.length;
+  while (a < b && isBlank(rest[a])) a++;
+  while (b > a && isBlank(rest[b - 1])) b--;
+  let c = b;
+  while (c > a && rest[c - 1] === '#') c--;
+  if (c < b && (c === a || isBlank(rest[c - 1]))) {
+    b = c;
+    while (b > a && isBlank(rest[b - 1])) b--;
+  }
+  return rest.slice(a, b);
+}
 
 function slug(title: string): string {
   return title
@@ -52,28 +78,30 @@ function slug(title: string): string {
 
 interface Open {
   node: NovelNode;
-  seen: Map<string, number>;
 }
 
 /** Reads a novel's structure in one pass. The metadata comment, and what it holds, is not read. */
 export function novelStructure(text: string): NovelTree {
   const end = findMarkdownMeta(text)?.from ?? text.length;
   const roots: NovelNode[] = [];
-  const rootSeen = new Map<string, number>();
+  const seen = new Map<string, number>();
   const stack: Open[] = [];
   let firstHeading = -1;
   let fence: { char: string; size: number } | null = null;
   // The start of the paragraph that the previous line belongs to, else -1.
   let paraStart = -1;
   let paraText = '';
+  // Inside a blockquote or list item, whose lines can't start a setext heading.
+  let container = false;
 
-  const open = (kind: NovelKind, title: string, from: number, to: number) => {
+  const open = (wanted: NovelKind, title: string, from: number, to: number) => {
     if (firstHeading < 0) firstHeading = from;
+    // Nothing is open yet, so a section heading (an opening "## Prologue") is a chapter.
+    const kind = wanted === 'section' && stack.length === 0 ? 'chapter' : wanted;
     while (stack.length > 0 && RANK[stack[stack.length - 1].node.kind] >= RANK[kind]) {
       const done = stack.pop() as Open;
       done.node.span.to = from;
     }
-    const seen = stack.length > 0 ? stack[stack.length - 1].seen : rootSeen;
     const siblings = stack.length > 0 ? stack[stack.length - 1].node.children : roots;
     const key = `${kind}:${slug(title)}`;
     const n = seen.get(key) ?? 0;
@@ -89,7 +117,7 @@ export function novelStructure(text: string): NovelTree {
       children: [],
     };
     siblings.push(node);
-    stack.push({ node, seen: new Map() });
+    stack.push({ node });
   };
 
   let pos = 0;
@@ -120,16 +148,14 @@ export function novelStructure(text: string): NovelTree {
       paraStart = -1;
     } else if (line.trim() === '') {
       paraStart = -1;
+      container = false;
     } else {
       const atx = ATX.exec(line);
       if (atx) {
         paraStart = -1;
         const level = atx[1].length;
         if (level <= 2) {
-          const title = (atx[2] ?? '')
-            .replace(/[ \t]+#+$/, '')
-            .replace(/^#+$/, '')
-            .trim();
+          const title = atxTitle(atx[2] ?? '');
           const kind: NovelKind = level === 2 ? 'section' : PART.test(title) ? 'part' : 'chapter';
           open(kind, title, pos, lineEnd);
         }
@@ -142,6 +168,11 @@ export function novelStructure(text: string): NovelTree {
       } else if (BREAK.test(line)) {
         paraStart = -1;
         if (stack.length > 0) open('section', '', pos, lineEnd);
+      } else if (CONTAINER_START.test(line)) {
+        paraStart = -1;
+        container = true;
+      } else if (container) {
+        // A lazy line of a quote or list item.
       } else if (paraStart >= 0) {
         paraText += ` ${line.trim()}`;
       } else if (!NOT_PARAGRAPH_START.test(line)) {
@@ -155,7 +186,7 @@ export function novelStructure(text: string): NovelTree {
   // Words, once each: a node's own text runs from its heading to its first child's heading.
   const count = (node: NovelNode): void => {
     const own = node.children.length > 0 ? node.children[0].heading.from : node.span.to;
-    node.ownWords = wordsIn(text.slice(node.heading.to, own));
+    node.ownWords = wordsIn(node.title) + wordsIn(text.slice(node.heading.to, own));
     let words = node.ownWords;
     for (const child of node.children) {
       count(child);
@@ -199,11 +230,12 @@ export function nodeAt(tree: NovelTree, offset: number): NovelNode | null {
 
 /** The node with this id, or null. */
 export function findNode(tree: NovelTree, id: string): NovelNode | null {
-  const stack = [...tree.nodes];
+  // Document order: pop from the end, so push children last-first.
+  const stack = [...tree.nodes].reverse();
   while (stack.length > 0) {
     const node = stack.pop() as NovelNode;
     if (node.id === id) return node;
-    for (const child of node.children) stack.push(child);
+    for (let i = node.children.length - 1; i >= 0; i--) stack.push(node.children[i]);
   }
   return null;
 }

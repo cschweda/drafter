@@ -1,4 +1,4 @@
-import { findMarkdownMeta } from '@drafter/markdown';
+import { countWords, findMarkdownMeta, parseMarkdown } from '@drafter/markdown';
 import { describe, expect, it } from 'vitest';
 import { findNode, nodeAt, novelStructure } from '../src';
 
@@ -11,13 +11,13 @@ describe('novelStructure', () => {
       ['chapter', 'Two'],
     ]);
     const one = tree.nodes[0];
-    expect(one.ownWords).toBe(3);
+    expect(one.ownWords).toBe(4); // the title and `A b c.`
     expect(one.children).toHaveLength(1);
     expect(one.children[0].kind).toBe('section');
-    expect(one.children[0].words).toBe(2);
-    expect(one.words).toBe(5);
+    expect(one.children[0].words).toBe(3);
+    expect(one.words).toBe(7);
     expect(one.id).toBe('chapter:one:0');
-    expect(tree.words).toBe(6);
+    expect(tree.words).toBe(9);
   });
 
   it('reads a part', () => {
@@ -65,7 +65,7 @@ describe('novelStructure', () => {
     const text = '# One\n\nA.\n\n<!-- drafter {"template":"novel","note":"\\n# Nope"} -->\n';
     const tree = novelStructure(text);
     expect(tree.nodes).toHaveLength(1);
-    expect(tree.nodes[0].words).toBe(1);
+    expect(tree.nodes[0].words).toBe(2);
   });
 
   it('reads a setext heading as a chapter, and ---- under text as a section heading', () => {
@@ -90,7 +90,7 @@ describe('novelStructure', () => {
   it('keeps text before the first heading as the preamble', () => {
     const tree = novelStructure('Dedication.\n\n# One\n\nA.\n');
     expect(tree.preamble).toEqual({ from: 0, to: 13 });
-    expect(tree.words).toBe(2);
+    expect(tree.words).toBe(3);
     expect(novelStructure('# One\n').preamble).toBeNull();
     expect(novelStructure('Just words.\n***\nmore\n').preamble).toEqual({ from: 0, to: 21 });
   });
@@ -100,11 +100,67 @@ describe('novelStructure', () => {
     const tree = novelStructure('# One #\r\n\r\nA b.\r\n## Two ##\r\n');
     expect(tree.nodes[0].title).toBe('One');
     expect(tree.nodes[0].children[0].title).toBe('Two');
-    expect(tree.nodes[0].ownWords).toBe(2);
+    expect(tree.nodes[0].ownWords).toBe(3);
   });
 
   it('does not take ### or an indented # as structure', () => {
     expect(novelStructure('### Deep\n\n    # code\n').nodes).toEqual([]);
+  });
+});
+
+describe('review fixes', () => {
+  it('totals agree with the status bar on prose', () => {
+    const body =
+      'A dedication, short.\n\n# Part One\n\n# The *Lighthouse* Keeper\n\nShe climbed [the stairs](http://x.test/a b) at dusk.\n\n## Arrival\n\nThe boat came in.\n\n***\n\nLater, it left.\n\nSecond Chapter\n=============\n\nOne more line here.\n\n# Two #\n\nEnd.\n';
+    const text = `${body}\n<!-- drafter {"template":"novel"} -->\n`;
+    expect(novelStructure(text).words).toBe(countWords(parseMarkdown(body)));
+  });
+
+  it('reads an opening ## as a chapter', () => {
+    const tree = novelStructure('## Prologue\n\nOld.\n\n# One\n\n## Arrival\n');
+    expect(tree.nodes.map((n) => [n.kind, n.title])).toEqual([
+      ['chapter', 'Prologue'],
+      ['chapter', 'One'],
+    ]);
+    expect(tree.nodes[1].children[0].kind).toBe('section');
+    const setext = novelStructure('My Novel\n---\n\nText.\n\n# One\n');
+    expect(setext.nodes.map((n) => [n.kind, n.title])).toEqual([
+      ['chapter', 'My Novel'],
+      ['chapter', 'One'],
+    ]);
+  });
+
+  it('numbers ids across the whole book', () => {
+    const tree = novelStructure('# One\n\nA.\n\n***\n\nB.\n\n# Two\n\nC.\n\n***\n\nD.\n');
+    const [a, b] = [tree.nodes[0].children[0], tree.nodes[1].children[0]];
+    expect([a.id, b.id]).toEqual(['section::0', 'section::1']);
+    expect(findNode(tree, 'section::0')).toBe(a);
+    expect(findNode(tree, 'section::1')).toBe(b);
+  });
+
+  it('ends a paragraph at a quote or list item, so --- is a break', () => {
+    for (const text of [
+      '# A\n\nPara\n> quote\n---\n',
+      '# A\n\n- item\nlazy\n---\n',
+      '# A\n\n1. item\n---\n',
+    ]) {
+      const tree = novelStructure(text);
+      expect(tree.nodes).toHaveLength(1);
+      expect(tree.nodes[0].children.map((n) => n.title)).toEqual(['']);
+    }
+  });
+
+  it('reads a long heading line within a short time', () => {
+    for (const text of [
+      `# ${' '.repeat(200_000)}x\ry\n# After\n`,
+      `# x${' #'.repeat(100_000)}${' '.repeat(100_000)}y\r\n`,
+      `# ${'#'.repeat(200_000)} ${' '.repeat(200_000)}\rz\n`,
+    ]) {
+      const start = performance.now();
+      const tree = novelStructure(text);
+      expect(performance.now() - start).toBeLessThan(100);
+      expect(tree.nodes.length).toBeGreaterThan(0);
+    }
   });
 });
 

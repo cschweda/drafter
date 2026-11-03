@@ -25,7 +25,7 @@ function novel(words: number): string {
 }
 
 describe('novelStructure scaling', () => {
-  it('reads 120,000 words in under 50 ms', () => {
+  it('reads 120,000 words within 50 ms', () => {
     const text = novel(120_000);
     novelStructure(text);
     const start = performance.now();
