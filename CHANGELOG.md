@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- For contributors: `@drafter/novel` moves a part, chapter, or section (before, after, or into another) byte for byte, one empty line at each seam, the metadata comment untouched, with up and down steps for the keyboard.
 - For contributors: `@drafter/novel` reads a novel's parts, chapters, and sections (headings, setext headings, scene breaks) with their words and spans, in one linear pass, ignoring fenced code and the metadata comment; ids are unique across the book, and an opening `##` reads as a chapter.
 - For contributors: the plan for Novel (`docs/plans/2026-11-03-novel.md`), ten tasks.
 - For contributors: the design for **Novel** (`docs/drafter-novel-design.md`), approved by the maintainer for v0.26.0: a first-class Novel choice in plain Markdown, chapters and sections in the Outline and on Cards, focus on one passage, counts and targets, a synopsis and a status for each; the manuscript exports follow in v0.26.1.

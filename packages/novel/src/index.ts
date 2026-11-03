@@ -1,3 +1,4 @@
+export { downTarget, moveNode, type NovelMove, type NovelTarget, upTarget } from './move';
 export {
   findNode,
   type NovelKind,
