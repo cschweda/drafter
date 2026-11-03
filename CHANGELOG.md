@@ -25,6 +25,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - On a phone narrower than 480px the top bar shows Drafter's mark in place of the wordmark, so **Save** and **Export** stay on the bar beside the writing-mode switch.
 - Every pull request, and the release gates, now typecheck each package (`pnpm -r --filter "./packages/*" typecheck`), not only the web app.
 - The browser test that walks the Help menu by keyboard to every help page is marked slow, as it now opens sixteen pages.
+- On CI, the trap test that walks every trap in Classic Mode allows twice each trap's time, as its walk is thousands of moves; locally it keeps the trap's own time.
 
 ### Fixed
 

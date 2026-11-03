@@ -140,7 +140,9 @@ describe('classic: every trap that opens as Fountain, in Classic Mode', () => {
       });
       expect(fetched, `${trap.id}: fetched something`).toEqual([]);
       expect((window as { __trapped?: unknown }).__trapped, trap.id).toBeUndefined();
-      const limit = trap.limitMs ?? LIMIT_MS;
+      // The walk is thousands of moves, not one Open: on CI's slower runners it gets twice the
+      // trap's time. A keystroke's own budget is held in a real browser (cast-budget.spec.ts).
+      const limit = (trap.limitMs ?? LIMIT_MS) * (process.env.CI ? 2 : 1);
       expect(cost.ms, `${trap.id} took ${Math.round(cost.ms)} ms`).toBeLessThan(limit);
       // A trap with an allowance of its own is held to it here too (without `gc`, the peak).
       if (trap.memoryMB !== undefined) {
