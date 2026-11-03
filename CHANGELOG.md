@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- **Typewriter scrolling and Typewriter sounds are named apart everywhere** (the maintainer: "make it clear as possible to distinguish between the two"). The Source header's text-cursor button is **Typewriter scrolling** (it was "Typewriter"), and each one's line in Settings says it isn't the other. The palette and the desktop app's View menu have Turn on and Turn off typewriter sounds beside the scrolling ones, and the help explains both.
 - The browser tests of the Source's element colours and the pages' ink read the colours as each pane draws them, mixed by its contrast slider, not the theme's token alone.
 - The browser test of Back to Drafter counts WebKit's "Page closed" error as the help tab going away, as it can come a moment before the tab says it has closed.
 - **drafter.dev's analytics send only page views and time on a page.** Plausible stays on every page, the app included, only to see the basic traffic and which pages people look at, as a reference for improving Drafter. Clicks on outside links, downloads, and form submissions are no longer sent at all, and the help and the README say that Plausible is privacy-first, with no cookies and no ads.

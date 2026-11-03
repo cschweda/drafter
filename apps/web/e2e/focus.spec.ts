@@ -403,7 +403,7 @@ test.describe('focus mode, keys and layouts', () => {
   test('centers the cursor when it enters with typewriter scrolling on', async ({ page }) => {
     await start(page);
     await showSource(page);
-    await page.getByRole('button', { name: 'Typewriter', exact: true }).click();
+    await page.getByRole('button', { name: 'Typewriter scrolling', exact: true }).click();
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+A');
     await page.keyboard.press('Delete');

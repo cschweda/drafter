@@ -11,7 +11,8 @@ import {
 } from './modules';
 
 const scroller = (page: Page) => page.locator('.cm-scroller');
-const barButton = (page: Page) => page.getByRole('button', { name: 'Typewriter', exact: true });
+const barButton = (page: Page) =>
+  page.getByRole('button', { name: 'Typewriter scrolling', exact: true });
 const switchOf = (page: Page) =>
   settingsDialog(page).getByRole('switch', { name: 'Typewriter scrolling' });
 

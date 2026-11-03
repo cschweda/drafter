@@ -103,7 +103,7 @@ const SWITCHES: Switch[] = [
     section: 'writing',
     key: 'typewriter',
     label: 'Typewriter scrolling',
-    why: 'Keep the line you are writing at the middle of the Source pane.',
+    why: 'Keep the line you are writing at the middle of the Source pane. It makes no sound: that’s Typewriter sounds, below.',
   },
   {
     section: 'writing',
@@ -133,7 +133,7 @@ const SWITCHES: Switch[] = [
     section: 'writing',
     key: 'keySounds',
     label: 'Typewriter sounds',
-    why: 'Hear a typewriter’s key as you type in the Source, and its bell when you start a new line. Just for fun; off unless you turn it on.',
+    why: 'Hear a typewriter’s key as you type in the Source, and its bell when you start a new line. Just for fun, and off unless you turn it on. It doesn’t move the page: that’s Typewriter scrolling, above.',
   },
   {
     section: 'about',

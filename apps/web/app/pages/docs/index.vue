@@ -142,10 +142,13 @@ const about: Record<string, string> = {
       on screen as you slide.
     </p>
     <p>
-      <strong>Typewriter sounds.</strong> For anyone who misses the clatter: turn on
-      <strong>Typewriter sounds</strong> in Settings (Writing) to hear a typewriter’s key as you type
-      in the Source, and its bell when you start a new line. It’s off unless you turn it on, the
-      sounds are made in your browser with no audio files, and a shortcut makes none.
+      <strong>Typewriter sounds and typewriter scrolling are two different things.</strong>
+      <strong>Typewriter scrolling</strong>, the text-cursor button in the Source’s header (and in
+      Settings), keeps the line you’re writing in the middle of the pane, silently.
+      <strong>Typewriter sounds</strong>, in Settings → Writing or the palette (“Turn on typewriter
+      sounds”), plays a typewriter’s key as you type in the Source and its bell when you start a new
+      line. Sounds are off unless you turn them on, are made in your browser with no audio files,
+      and a shortcut makes none.
     </p>
 
     <h2 id="stats-and-scaffold">Stats and Scaffold</h2>

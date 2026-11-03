@@ -262,7 +262,7 @@ test.describe('scroll sync, on wide screens', () => {
     page,
   }) => {
     await fill(page, 'screenplay', SCRIPT);
-    await page.getByRole('button', { name: 'Typewriter', exact: true }).click();
+    await page.getByRole('button', { name: 'Typewriter scrolling', exact: true }).click();
     await scrollSourceTo(page, 'INT. ROOM 30 - NIGHT');
     await page.locator('.cm-line', { hasText: 'INT. ROOM 30 - NIGHT' }).click();
     await page.keyboard.press('End');

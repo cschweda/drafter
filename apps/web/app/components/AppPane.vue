@@ -544,7 +544,7 @@ const { settings, set } = useSettings();
 const scriptTitle = useScriptTitle();
 const TOGGLES = [
   { key: 'lineNumbers', label: 'Line numbers', icon: 'i-lucide-list-ordered' },
-  { key: 'typewriter', label: 'Typewriter', icon: 'i-lucide-text-cursor' },
+  { key: 'typewriter', label: 'Typewriter scrolling', icon: 'i-lucide-text-cursor' },
   { key: 'scrollSync', label: 'Sync scrolling', icon: 'i-lucide-arrow-down-up' },
 ] as const;
 
