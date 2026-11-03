@@ -206,8 +206,36 @@ test('the hint shows once, and takes no focus', async ({ page }) => {
   await expect(page.locator('[data-classic-hint-said]')).toHaveText('');
   await expect.poll(() => stored(page, 'classicHintSeen')).toBe(true);
   await page.reload();
+  // The settings are read in one go, so Classic on the text box means `classicHintSeen` is read
+  // too; two frames later the page has drawn what that makes of the hint.
   await expect(editor(page)).toHaveAttribute('aria-label', 'Source, Classic Mode');
+  await expect(page.locator('[data-classic-hint-said]')).toBeAttached();
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
   await expect(hint(page)).toHaveCount(0);
+  await expect(page.locator('[data-classic-hint-said]')).toHaveText('');
+});
+
+test('in focus mode the first switch says the notice, and the hint waits for the top bar', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name.startsWith('phone'), 'A physical Mod+Alt+0 and Esc.');
+  await start(page);
+  await setText(page, SCRIPT);
+  await page.getByRole('button', { name: 'Focus', exact: true }).click();
+  await expect(page.getByRole('group', { name: 'Focus mode' })).toBeVisible();
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+Alt+Digit0');
+  await expect(editor(page)).toHaveAttribute('aria-label', 'Source, Classic Mode');
+  await expect(page.locator('[data-classic-notice]')).toHaveText(
+    'Classic Mode. Enter and Tab move between elements.',
+  );
+  await expect(hint(page)).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('group', { name: 'Focus mode' })).toBeHidden();
+  await expect(hint(page)).toContainText(HINT);
+  await expect(page.locator('[data-classic-hint-said]')).toHaveText(HINT);
 });
 
 test('Learn more opens the help and the hint goes', async ({ page, context }) => {

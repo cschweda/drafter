@@ -12,7 +12,8 @@ const HINT =
 
 const { settings, set } = useSettings();
 const { kind, view } = useEditor();
-const shown = computed(() => hintDue(settings.value, kind.value));
+const focus = useFocusMode();
+const shown = computed(() => hintDue(settings.value, kind.value, focus.on.value));
 
 // Set after the region is drawn: a live region that first appears with its words says nothing.
 const said = ref('');

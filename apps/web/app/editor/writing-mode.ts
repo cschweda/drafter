@@ -1,3 +1,4 @@
+import { useFocusMode } from '~/composables/useFocusMode';
 import type { DocumentKind } from '~/markdown/kind';
 import { type Settings, useSettings, type WritingMode } from '~/settings/settings';
 import { applyEditorSettings } from './apply-settings';
@@ -18,9 +19,15 @@ export const CLASSIC_TIP =
 export const FOUNTAIN_TIP =
   'Fountain Mode: you type the script as plain text, with Fountain’s marks.';
 
-/** The first-run hint is showing (§9.3): Classic Mode on a script, and the hint not yet seen. */
-export const hintDue = (settings: Settings, kind: DocumentKind): boolean =>
-  settings.writingMode === 'classic' && !settings.classicHintSeen && kind === 'fountain';
+/**
+ * The first-run hint is showing (§9.3): Classic Mode on a script, the hint not yet seen, and focus
+ * mode off, as the hint is under the top bar, which focus mode takes away (it shows on leaving).
+ */
+export const hintDue = (settings: Settings, kind: DocumentKind, focusing: boolean): boolean =>
+  settings.writingMode === 'classic' &&
+  !settings.classicHintSeen &&
+  kind === 'fountain' &&
+  !focusing;
 
 /**
  * Sets the setting, says the notice (or, the first time, leaves the words to the hint, which says
@@ -34,7 +41,7 @@ export function setWritingMode(mode: WritingMode): void {
   const { view, kind } = useEditor();
   void set('writingMode', mode);
   applyEditorSettings(view, settings.value, kind.value);
-  if (!hintDue(settings.value, kind.value)) {
+  if (!hintDue(settings.value, kind.value, useFocusMode().on.value)) {
     void sayClassic(mode === 'classic' ? CLASSIC_NOTICE : FOUNTAIN_NOTICE);
   }
   view.focus();

@@ -16,6 +16,13 @@ vi.mock('~/composables/usePanes', async () => {
   return { usePanes: () => ({ tabs, phoneTab }) };
 });
 
+// Focus mode is Nuxt state too.
+const focusing = vi.hoisted(() => ({ on: false }));
+vi.mock('~/composables/useFocusMode', async () => {
+  const { computed } = await import('vue');
+  return { useFocusMode: () => ({ on: computed(() => focusing.on) }) };
+});
+
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
 Range.prototype.getBoundingClientRect = () => new DOMRect();
 
@@ -52,6 +59,20 @@ describe('setWritingMode', () => {
     await nextTick();
     await nextTick();
     expect(classicNotice.value).toBe(CLASSIC_NOTICE);
+  });
+
+  test('in focus mode, where no hint is drawn, the first switch says the notice', async () => {
+    await useSettings().set('classicHintSeen', false);
+    classicNotice.value = '';
+    focusing.on = true;
+    try {
+      setWritingMode('classic');
+      await nextTick();
+      await nextTick();
+      expect(classicNotice.value).toBe(CLASSIC_NOTICE);
+    } finally {
+      focusing.on = false;
+    }
   });
 
   test('a switch says its notice', async () => {
