@@ -3,6 +3,7 @@ import { EditorView } from '@codemirror/view';
 import {
   type ClassicElement,
   type CursorElement,
+  classicMoveBy,
   cursorElement,
   elementAt,
   parsedDoc,
@@ -15,6 +16,7 @@ import { useSettings } from '~/settings/settings';
 import { WIDE_QUERY } from '~/utils/panes';
 import type { DocumentKind } from '../markdown/kind';
 import { applyEditorSettings, writingModeSwitch } from './apply-settings';
+import type { ElementMove } from './element-announcer';
 import { sayElement } from './element-notice';
 import {
   classicIsOn,
@@ -42,6 +44,8 @@ export interface EditorSession {
   readonly cursor: Readonly<ShallowRef<CursorElement | null>>;
   /** The element the cursor is in, a pending one on an empty line (`elementAt`), in Classic Mode; null in Fountain Mode, where `cursor` says. */
   readonly element: Readonly<ShallowRef<ClassicElement | null>>;
+  /** The last move by Classic's keys or an accepted offer, a new object each time, for the announcer. */
+  readonly moved: Readonly<ShallowRef<ElementMove | null>>;
   /** The built-in that `templateIdOf(doc)` names (technical design §8.6); the toolbar's chip writes it (`useTemplate`). */
   readonly template: Readonly<ShallowRef<Template>>;
   /** What the document is: Fountain, or plain Markdown (no pages, elements, or checks). */
@@ -125,6 +129,7 @@ function create(): EditorSession {
   const doc = shallowRef<Doc>(parse(SAMPLE_SCREENPLAY));
   const cursor = shallowRef<CursorElement | null>(null);
   const element = shallowRef<ClassicElement | null>(null);
+  const moved = shallowRef<ElementMove | null>(null);
   const template = shallowRef<Template>(builtins[templateIdOf(doc.value)] as Template);
   const panes = usePanes();
   const locked = shallowRef(false);
@@ -177,6 +182,12 @@ function create(): EditorSession {
     if (!same) element.value = next;
   }
 
+  /** A move by Classic's keys, or an accepted offer, which has said where it went (Classic Mode design §12). */
+  function followMove(transactions: readonly Transaction[]) {
+    const by = transactions.map(classicMoveBy);
+    if (by.some(Boolean)) moved.value = { said: by.includes('offer') };
+  }
+
   const { settings } = useSettings();
 
   const hooks: EditorHooks = {
@@ -194,6 +205,7 @@ function create(): EditorSession {
     editorExtensions(hooks, of),
     EditorView.updateListener.of((update) => {
       if (update.transactions.length > 0) followElement(update.state);
+      if (classicIsOn(update.state)) followMove(update.transactions);
       if (update.docChanged) follow(update.state);
       if (update.docChanged) tell(changeListeners, update.changes);
       if (update.docChanged) tell(editListeners, update.transactions);
@@ -336,6 +348,7 @@ function create(): EditorSession {
     doc,
     cursor,
     element,
+    moved,
     template,
     locked,
     kind,

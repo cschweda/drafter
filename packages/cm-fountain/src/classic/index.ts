@@ -88,6 +88,7 @@ export {
 export { keepMetadata, metadataHidden, onlyClearedBlock, protectedRange } from './metadata';
 export {
   acceptOffer,
+  classicMoveBy,
   classicSay,
   classicSource,
   dismissOffer,

@@ -13,13 +13,14 @@ import {
 } from '../app/tour/tour.config';
 
 describe('the tour’s steps', () => {
-  test('are the design’s ten, in order, on the targets the app marks', () => {
+  test('are the design’s eleven, in order, on the targets the app marks', () => {
     const targets = buildSteps(true).map((s) => s.target);
     expect(targets).toEqual(
       [
         'source',
         'script',
         'source',
+        'mode',
         'problems',
         'menu',
         'save',
@@ -33,10 +34,10 @@ describe('the tour’s steps', () => {
 
   // Fresh-look Task 9: a toolbar button the phone's top bar folded into More actions isn't on
   // screen, so its step points at More actions instead, where it went; no step is dropped.
-  test('point at More actions for a toolbar button that is folded, and keep ten steps', () => {
+  test('point at More actions for a toolbar button that is folded, and keep eleven steps', () => {
     const steps = buildSteps(false, false, new Set(['save', 'export', 'focus']));
-    expect(steps).toHaveLength(10);
-    expect(new Set(steps.map((s) => s.id)).size).toBe(10);
+    expect(steps).toHaveLength(11);
+    expect(new Set(steps.map((s) => s.id)).size).toBe(11);
     const at = (id: string) => steps.find((s) => s.id === id)?.target;
     for (const id of ['save', 'export', 'focus']) expect(at(id)).toBe('[data-tour="toolbar-more"]');
     expect(at('palette')).toBe('[data-tour="palette"]');
@@ -50,7 +51,7 @@ describe('the tour’s steps', () => {
   test('have their own ids, a title, and text that fits the card', () => {
     for (const wide of [true, false]) {
       const steps = buildSteps(wide);
-      expect(new Set(steps.map((s) => s.id)).size).toBe(10);
+      expect(new Set(steps.map((s) => s.id)).size).toBe(11);
       for (const step of steps) {
         expect(step.title.length).toBeGreaterThan(0);
         // The card's body is a fixed height; about six lines of text.
@@ -61,12 +62,19 @@ describe('the tour’s steps', () => {
 
   test('point at the app menu for the template on every screen, and say where to choose', () => {
     for (const wide of [true, false]) {
-      const template = buildSteps(wide)[4];
+      const template = buildSteps(wide)[5];
       expect(template?.target).toBe('[data-tour="menu"]');
       expect(template?.content).toMatch(/Drafter menu’s Template section/);
       expect(template?.content).toMatch(/palette/);
       expect(template?.content).toMatch(/Template:/);
     }
+  });
+
+  test('have a step on the switch, and a version that stays', () => {
+    const mode = buildSteps(true).find((s) => s.id === 'mode');
+    expect(mode?.target).toBe('[data-tour="mode"]');
+    expect(mode?.content).toContain('Classic');
+    expect(TOUR_VERSION).toBe(1);
   });
 
   test('say what Save does where it does it, and where typewriter scrolling is', () => {
@@ -92,7 +100,7 @@ describe('the tour’s steps', () => {
       expect(bar?.content).not.toMatch(/saved/i);
     }
     const narrow = buildSteps(false, false);
-    expect(narrow).toHaveLength(10);
+    expect(narrow).toHaveLength(11);
     const title = narrow.find((s) => s.id === 'status');
     expect(title?.target).toBe('[data-tour="title"]');
     expect(title?.content).toMatch(/red dot/);
@@ -114,6 +122,7 @@ describe('the tour’s steps', () => {
       'source',
       'script',
       'source',
+      null,
       'problems',
       null,
       null,
@@ -143,7 +152,7 @@ describe('the tour’s steps', () => {
 
   test('say Drafter is Fountain-first and open to other formats, and claim no export it lacks', () => {
     expect(WELCOME.description).toBe(
-      'A Fountain-first writing app: screenplays and stage plays in Fountain, and anything else, from a treatment to a novel, in Markdown. Want a two-minute tour?',
+      'A Fountain-first writing app: screenplays and stage plays in Fountain, and anything else, from a treatment to a novel, in Markdown. Classic Mode is there too, if you’d rather not type marks. Want a two-minute tour?',
     );
     expect(INTRO_SLIDES[0]?.content).toEqual([
       'A Drafter script is plain text, written in a simple format called Fountain. Type it like this, and Drafter lays out the page.',

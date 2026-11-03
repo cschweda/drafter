@@ -202,6 +202,7 @@ onBeforeUnmount(() => {
          a toast and the status bar's chip. -->
     <div v-if="!focus.on.value" class="top">
       <AppToolbar />
+      <ClassicHint />
       <ReadOnlyBar />
       <FileBar />
       <StorageWarning />

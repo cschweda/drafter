@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto';
+import { pickedCompletion } from '@codemirror/autocomplete';
 import { undo } from '@codemirror/commands';
 import type { ChangeSet } from '@codemirror/state';
+import { classicEnter } from '@drafter/cm-fountain';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { applyEditorSettings } from '../app/editor/apply-settings';
 import { classicIsOn } from '../app/editor/extensions';
@@ -140,6 +142,42 @@ describe('the writing mode in the session', () => {
     await set('writingMode', 'fountain');
     applyEditorSettings(editor.view, settings.value, 'fountain');
     expect(editor.element.value).toBeNull();
+  });
+
+  test('`moved` hears Classic’s keys, not letters, arrows, or the chooser opening', async () => {
+    const editor = useEditor();
+    await useSettings().set('writingMode', 'classic');
+    editor.load(SCRIPT);
+    const { view } = editor;
+    view.dispatch({ selection: { anchor: SCRIPT.indexOf('She waits.') + 10 } });
+    const before = editor.moved.value;
+    view.dispatch({ selection: { anchor: 0 } });
+    expect(editor.moved.value).toBe(before);
+    view.dispatch({ selection: { anchor: SCRIPT.indexOf('She waits.') + 10 } });
+    view.dispatch({
+      changes: { from: view.state.selection.main.head, insert: 'x' },
+      userEvent: 'input.type',
+    });
+    expect(editor.moved.value).toBe(before);
+    view.dispatch({ selection: { anchor: view.state.doc.line(3).to } });
+    classicEnter(view);
+    expect(editor.moved.value).toEqual({ said: false });
+    const made = editor.moved.value;
+    classicEnter(view); // an empty line: the chooser, which says it itself
+    expect(editor.moved.value).toBe(made);
+  });
+
+  test('`moved` stays still in Fountain Mode, a completion accepted included', async () => {
+    const editor = useEditor();
+    await useSettings().set('writingMode', 'fountain');
+    editor.load(SCRIPT);
+    const before = editor.moved.value;
+    editor.view.dispatch({
+      changes: { from: SCRIPT.length, insert: '\nJUNE' },
+      annotations: pickedCompletion.of({ label: 'JUNE' }),
+      userEvent: 'input.complete',
+    });
+    expect(editor.moved.value).toBe(before);
   });
 
   test('a load in Classic Mode is Classic, and has the element', async () => {

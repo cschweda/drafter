@@ -580,8 +580,8 @@ for (const theme of THEMES) {
       await expect(step).toBeVisible();
       // The intro card fades out over the first step; it is measured once it has gone.
       await expect(intro).toBeHidden();
-      for (let index = 1; index <= 10; index++) {
-        await expect(step).toContainText(`${index} / 10`);
+      for (let index = 1; index <= 11; index++) {
+        await expect(step).toContainText(`${index} / 11`);
         // The step's own fade has settled before it is measured.
         await expect(step).toHaveCSS('opacity', '1');
         await clean(page, `tour step ${index}`);

@@ -19,7 +19,7 @@ import {
 import { STATUS_BAR_QUERY } from '~/utils/panes';
 import { useToolbarFolded } from '~/utils/toolbar-fold';
 
-// The welcome dialog, the "Fountain in 30 seconds" card, and the ten steps (Phase 1 design §4.4),
+// The welcome dialog, the "Fountain in 30 seconds" card, and the eleven steps (Phase 1 design §4.4),
 // built from `nuxt-guided-tour`'s parts. The module keeps the steps, the highlight, the arrow keys,
 // the focus trap, and the screen-reader announcements; this adds what Drafter needs around it:
 // - the welcome only on a first visit that hasn't seen the tour, and the tour again only on request;

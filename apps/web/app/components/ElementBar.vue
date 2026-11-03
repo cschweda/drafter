@@ -16,9 +16,12 @@ import { commandById } from '~/commands/registry';
 import { useElementBarShown } from '~/composables/useElementBarShown';
 import { useOnScreenKeyboard } from '~/composables/useOnScreenKeyboard';
 import { useWideScreen } from '~/composables/useWideScreen';
+import { keyLine } from '~/editor/classic-key-line';
 import {
   type BarButton,
   barFor,
+  classicHere,
+  classicTipFor,
   currentOf,
   hereParts,
   MARKDOWN_BUTTONS,
@@ -30,6 +33,7 @@ import {
 import { ELEMENT_NAMES } from '~/editor/element-names';
 import { elementNotice, sayElement } from '~/editor/element-notice';
 import { useEditor } from '~/editor/session';
+import { CLASSIC_HELP } from '~/editor/writing-mode';
 import { MARKDOWN_ELEMENT_NAMES, markdownElement } from '~/markdown/commands';
 import { useSettings } from '~/settings/settings';
 import { openSpellMenu } from '~/spell/menu';
@@ -67,6 +71,8 @@ const shown = useElementBarShown();
 const markdown = computed(() => editor.kind.value === 'markdown');
 /** The script's structure by its template: a stage play has acts, `##` scenes, and stage directions. */
 const structure = computed(() => structureOf(editor.template.value));
+/** Classic Mode teaches no marks: its bar has none, and its help is its own (design §9.2). */
+const classic = computed(() => !markdown.value && settings.value.writingMode === 'classic');
 const bar = computed(() =>
   markdown.value ? { buttons: MARKDOWN_BUTTONS, more: [] } : barFor(structure.value),
 );
@@ -133,11 +139,17 @@ const role = computed(() => {
 /** The element the bar names: the template's, and a name with no speech yet is a Character. */
 const shownLine = computed(() => {
   if (markdown.value) return currentOf(null, null);
+  if (classic.value && editor.element.value) {
+    return classicHere(editor.element.value, structure.value);
+  }
   if (onName.value) return currentOf('character', null);
   return currentOf(editor.cursor.value?.kind ?? null, role.value);
 });
 const here = computed(() => hereParts(markdown.value ? markdownHere.value : shownLine.value.name));
+/** What Enter and Tab do here, on the chip, as in the status bar. */
+const keys = computed(() => (classic.value ? keyLine(editor.element.value, structure.value) : ''));
 const why = computed(() => {
+  if (classic.value) return `${keys.value ? `${keys.value}. ` : ''}Opens the Classic Mode help.`;
   const context = onName.value ? 'name' : inSpeech.value ? 'speech' : undefined;
   const kind = onName.value ? 'character' : (editor.cursor.value?.kind ?? null);
   const reason = reasonFor(kind, !!block.value?.forced, context, onName.value ? null : role.value);
@@ -150,6 +162,10 @@ const hereTip = computed(() =>
 
 /** Opens the cheat sheet, at the element the cursor is in when there is one. */
 function openCheatSheet(atElement: boolean) {
+  if (classic.value) {
+    window.open(CLASSIC_HELP, '_blank');
+    return;
+  }
   const sheet = HELP_PAGES.find((page) => page.id === 'help-fountain');
   if (!sheet) return;
   const { anchor } = shownLine.value;
@@ -162,7 +178,12 @@ function openCheatSheet(atElement: boolean) {
 const pressed = (button: BarButton) => button.command === shownLine.value.command;
 const off = (button: BarButton) =>
   button.command === 'element-parenthetical' && parenthesisOff.value;
-const tip = (button: BarButton) => (off(button) ? PARENTHETICAL_HINT : tipFor(button, apple));
+const tip = (button: BarButton) => {
+  if (off(button)) return PARENTHETICAL_HINT;
+  return classic.value ? classicTipFor(button, structure.value, apple) : tipFor(button, apple);
+};
+/** A help's name: the Classic Mode help in Classic Mode. */
+const helpName = computed(() => (classic.value ? 'Classic Mode help' : 'Fountain cheat sheet'));
 
 function press(button: BarButton) {
   if (longPressed) {
@@ -181,7 +202,7 @@ function press(button: BarButton) {
 /** A button as an item of More: its mark in the place a menu shows a shortcut. */
 const moreItem = (button: BarButton): DropdownMenuItem => ({
   label: button.label,
-  kbds: button.mark ? [button.mark] : undefined,
+  kbds: button.mark && !classic.value ? [button.mark] : undefined,
   onSelect: () => {
     chosen = true;
     press(button);
@@ -194,7 +215,7 @@ const more = computed<DropdownMenuItem[][]>(() => {
   const extra: DropdownMenuItem[] = [];
   if (props.inHeader && !markdown.value) {
     extra.push({
-      label: 'Fountain cheat sheet',
+      label: helpName.value,
       icon: 'i-lucide-circle-help',
       onSelect: () => openCheatSheet(false),
     });
@@ -546,7 +567,8 @@ watch(
         data-here
         data-bar-item="here"
         :tabindex="stopOf('here')"
-        aria-describedby="element-bar-here-tip"
+        :aria-describedby="classic ? undefined : 'element-bar-here-tip'"
+        :aria-description="keys || undefined"
         @pointerdown="onPointerDown($event, 'here')"
         @pointerup="onPointerEnd"
         @pointercancel="onPointerEnd"
@@ -587,7 +609,7 @@ watch(
       <!-- The mark, on a line of its own over the sentence (design §3.2: marks in tooltips). -->
       <template #content>
         <span class="tip">
-          <span v-if="markLine(button) && !off(button)" class="tip-mark">{{ markLine(button) }}</span>
+          <span v-if="markLine(button) && !off(button) && !classic" class="tip-mark">{{ markLine(button) }}</span>
           <span>{{ tip(button) }}</span>
         </span>
       </template>
@@ -639,8 +661,8 @@ watch(
       class="button icon"
       data-bar-item="help"
       :tabindex="stopOf('help')"
-      aria-label="Fountain cheat sheet"
-      title="Fountain cheat sheet"
+      :aria-label="helpName"
+      :title="helpName"
       @mousedown.prevent
       @click="openCheatSheet(false)"
     >

@@ -9,6 +9,9 @@ import { useEditor } from './session';
 export const CLASSIC_NOTICE = 'Classic Mode. Enter and Tab move between elements.';
 export const FOUNTAIN_NOTICE = 'Fountain Mode. You type the marks.';
 
+/** The Classic Mode help page. */
+export const CLASSIC_HELP = '/docs/classic-mode/';
+
 export const CLASSIC_TIP =
   'Classic Mode: Enter and Tab move you through the script, the way many screenwriting apps work. Your file stays Fountain.';
 export const FOUNTAIN_TIP =

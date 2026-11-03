@@ -16,6 +16,7 @@ import {
   type Extension,
   Facet,
   type Line,
+  Transaction,
   type TransactionSpec,
 } from '@codemirror/state';
 import { type Command, type EditorView, ViewPlugin } from '@codemirror/view';
@@ -49,6 +50,7 @@ import {
   offersMore,
   setDismissed,
   setStored,
+  showChooser,
   typedLine,
 } from './line';
 import { difference, ownLine, settleLine } from './marks';
@@ -323,6 +325,16 @@ function accept(
   else view.dispatch(first);
   say?.(sentence);
   if (after === 'offer more') startCompletion(view);
+}
+
+/**
+ * How a transaction moved the writer on, for an announcer: by one of Classic Mode's keys, or by an
+ * accepted offer, which says where it went itself. The chooser opening says itself too, and stays.
+ */
+export function classicMoveBy(tr: Transaction): 'key' | 'offer' | null {
+  if (tr.annotation(pickedCompletion)) return 'offer';
+  if (!tr.annotation(classicEdit) || tr.annotation(Transaction.userEvent) !== 'input') return null;
+  return tr.effects.some((effect) => effect.is(showChooser)) ? null : 'key';
 }
 
 function optionFor(label: string, spot: Spot): Completion {

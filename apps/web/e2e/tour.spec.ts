@@ -32,6 +32,7 @@ function plan(bar: boolean) {
     ['You write here', 'source'],
     ['The real pages', 'script'],
     ['Names and places come up', 'source'],
+    ['Fountain or Classic', 'mode'],
     ['Problems', 'problems'],
     // The template is chosen in the Drafter menu on every screen (fresh look, design §10).
     ['Screenplay or stage play', 'menu'],
@@ -107,7 +108,7 @@ test.describe('the welcome and the tour', () => {
 
     const steps = plan(statusBar(page));
     for (const [index, [title, target]] of steps.entries()) {
-      await expect(step(page)).toContainText(`${index + 1} / 10`);
+      await expect(step(page)).toContainText(`${index + 1} / 11`);
       await expect(step(page).getByRole('heading', { name: title })).toBeVisible();
       // The step's target, and only it, is lit, and it is on the screen.
       await expect(lit(page)).toHaveCount(1);
@@ -127,9 +128,9 @@ test.describe('the welcome and the tour', () => {
     await startTour(page);
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
-    await expect(step(page)).toContainText('3 / 10');
+    await expect(step(page)).toContainText('3 / 11');
     await page.keyboard.press('ArrowLeft');
-    await expect(step(page)).toContainText('2 / 10');
+    await expect(step(page)).toContainText('2 / 11');
     await page.keyboard.press('Escape');
     await expect(step(page)).toBeHidden();
     await expect(lit(page)).toHaveCount(0);
@@ -183,10 +184,10 @@ test.describe('the welcome and the tour', () => {
     await skipWelcome(page);
     await takeTourFromHelp(page);
     await intro(page).getByRole('button', { name: 'Start Guided Tour' }).click();
-    for (let index = 1; index <= 10; index++) {
-      await expect(step(page)).toContainText(`${index} / 10`);
+    for (let index = 1; index <= 11; index++) {
+      await expect(step(page)).toContainText(`${index} / 11`);
       await step(page)
-        .getByRole('button', { name: index === 10 ? 'Finish' : 'Next' })
+        .getByRole('button', { name: index === 11 ? 'Finish' : 'Next' })
         .click();
     }
     await expect(step(page)).toBeHidden();
@@ -237,7 +238,7 @@ test.describe('the welcome and the tour', () => {
     await intro(page).getByRole('button', { name: 'Start Guided Tour' }).click();
     const steps = plan(statusBar(page));
     for (const [index, [title, target]] of steps.entries()) {
-      await expect(step(page)).toContainText(`${index + 1} / 10`);
+      await expect(step(page)).toContainText(`${index + 1} / 11`);
       await expect(step(page).getByRole('heading', { name: title })).toBeVisible();
       await expect(lit(page)).toHaveAttribute('data-tour', await litTarget(page, target));
       await expect(lit(page)).toBeVisible();
@@ -300,7 +301,7 @@ test.describe('the welcome and the tour', () => {
     await expect(announcer(page)).toHaveAttribute('aria-live', 'polite');
     const steps = plan(statusBar(page));
     for (const [index, [title]] of steps.entries()) {
-      await expect(announcer(page)).toContainText(`Tour step ${index + 1} of 10: ${title}.`);
+      await expect(announcer(page)).toContainText(`Tour step ${index + 1} of 11: ${title}.`);
       if (index < steps.length - 1) await page.keyboard.press('ArrowRight');
     }
     await page.keyboard.press('Escape');
@@ -343,8 +344,8 @@ test.describe('the welcome and the tour', () => {
     await visit(page);
     await startTour(page);
     // A pane (its overflow is hidden: a second pulse, on the element) and a toolbar button.
-    for (const index of [0, 5]) {
-      while ((await step(page).textContent())?.includes(`${index + 1} / 10`) === false) {
+    for (const index of [0, 6]) {
+      while ((await step(page).textContent())?.includes(`${index + 1} / 11`) === false) {
         await page.keyboard.press('ArrowRight');
       }
       await expect(lit(page)).toHaveCount(1);
@@ -444,13 +445,13 @@ test.describe('on a phone', () => {
       if (target === 'source') await expect(selected('Write')).toBeVisible();
       if (target === 'script') await expect(selected('Script')).toBeVisible();
       if (target === 'problems') await expect(selected('Problems')).toBeVisible();
-      if (index === 4) {
+      if (index === 5) {
         // The template chip is hidden here: the step says where the template is chosen instead.
         await expect(step(page)).toContainText('Drafter menu');
         await expect(step(page)).toContainText('Template: Stage play');
       }
       await step(page)
-        .getByRole('button', { name: index === 9 ? 'Finish' : 'Next' })
+        .getByRole('button', { name: index === 10 ? 'Finish' : 'Next' })
         .click();
     }
     await expect(step(page)).toBeHidden();
@@ -459,20 +460,20 @@ test.describe('on a phone', () => {
   });
 });
 
-test.describe('on a phone, ten steps', () => {
-  // Fresh-look Task 9: the tour keeps its ten steps on a phone, and each lights something that is
+test.describe('on a phone, eleven steps', () => {
+  // Fresh-look Task 9: the tour keeps its eleven steps on a phone, and each lights something that is
   // on the screen, inside the window, at 320px too (a folded top-bar button's step lights More
   // actions, where it went; tour.config.ts).
   for (const width of [320, 390]) {
-    test(`the tour keeps ten steps on a phone, each pointing at something on screen (${width}px)`, async ({
+    test(`the tour keeps eleven steps on a phone, each pointing at something on screen (${width}px)`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 700 });
       await visit(page);
       await welcome(page).getByRole('button', { name: 'Take the tour' }).click();
       await intro(page).getByRole('button', { name: 'Start Guided Tour' }).click();
-      for (let index = 0; index < 10; index++) {
-        await expect(step(page)).toContainText(`${index + 1} / 10`);
+      for (let index = 0; index < 11; index++) {
+        await expect(step(page)).toContainText(`${index + 1} / 11`);
         await expect(lit(page)).toHaveCount(1);
         await expect(lit(page)).toBeVisible();
         const box = await lit(page).boundingBox();
@@ -482,7 +483,7 @@ test.describe('on a phone, ten steps', () => {
           width + 1,
         );
         await step(page)
-          .getByRole('button', { name: index === 9 ? 'Finish' : 'Next' })
+          .getByRole('button', { name: index === 10 ? 'Finish' : 'Next' })
           .click();
       }
       await expect(step(page)).toBeHidden();
@@ -500,13 +501,14 @@ test.describe('on a wide screen', () => {
     await startTour(page);
     // Problems isn't showing to begin with (the editor and the Script are).
     await expect(page.getByRole('tab', { name: 'Problems', selected: true })).toHaveCount(0);
-    for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
-    await expect(step(page)).toContainText('4 / 10');
+    for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
+    await expect(step(page)).toContainText('5 / 11');
     await expect(lit(page)).toHaveAttribute('data-tour', 'problems');
     await expect(lit(page)).toBeVisible();
     // It shows in the Inspector; the editor stays on the left.
     await expect(page.locator('[data-pane="right"] [data-tour="problems"]')).toBeVisible();
     await expect(page.locator('[data-pane="left"] .cm-content')).toBeVisible();
+    await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('ArrowLeft');
     await expect(lit(page)).toHaveAttribute('data-tour', 'source');
     await expect(lit(page)).toBeVisible();

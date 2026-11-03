@@ -9,6 +9,7 @@ export {
   classicChooser,
   classicEnter,
   classicLine,
+  classicMoveBy,
   classicSay,
   classicTab,
   elementAt,

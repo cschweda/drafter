@@ -313,11 +313,7 @@ for (const scheme of ['dark', 'light'] as const) {
       await expect(page.locator('html.light')).toHaveCount(1);
     }
     await chooseClassic(page);
-    // Task 11 puts the words `aria-describedby` names on the page.
-    const { violations } = await new AxeBuilder({ page })
-      .withTags(WCAG)
-      .disableRules(['aria-valid-attr-value'])
-      .analyze();
+    const { violations } = await new AxeBuilder({ page }).withTags(WCAG).analyze();
     expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`)).toEqual(
       [],
     );
