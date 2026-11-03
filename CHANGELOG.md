@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- For contributors: the design for **Novel** (`docs/drafter-novel-design.md`), approved by the maintainer for v0.26.0: a first-class Novel choice in plain Markdown, chapters and sections in the Outline and on Cards, focus on one passage, counts and targets, a synopsis and a status for each; the manuscript exports follow in v0.26.1.
+
 ## [0.25.1] - 2026-11-03
 
 **Your script stays with you, and an audit shows it.** A privacy audit and a red/blue team audit, each recorded in the README, with every finding fixed or listed: Final Draft exports no longer carry notes you left out, the desktop app asks before a page opens an outside address, a crafted Markdown file can no longer freeze the app, and drafter.dev's visit counter gets page views only. Also new: a **Contrast** button with a slider for each pane and its WCAG 2.1 ratio, **Typewriter sounds** (off by default), and **Copy technical details** for bug reports and ideas.
