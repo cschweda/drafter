@@ -42,8 +42,8 @@ const release = (version: string): WhatsNewLink => ({
 
 /** Every item, newest first: by release, and in each release the most important first. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
-  // Unreleased: its version is the next release's, and the release sets its date (a test lets an
-  // entry newer than the CHANGELOG's newest release wait for its section).
+  // An entry made before its release takes the next release's version, and the release sets its
+  // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
     id: 'v0.25.0-classic-mode',
     date: '2026-11-03',

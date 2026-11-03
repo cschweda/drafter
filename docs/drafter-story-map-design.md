@@ -1,6 +1,6 @@
 # Story map — Design
 
-**Status:** designed 2026-11-01; built in **v0.24.1** (ready, not yet released). [DECISIONS](DECISIONS.md) (Story map) records each Call as it landed. For screenplays and stage plays; Markdown documents later (§9). A static mockup of the in-progress and finished states was reviewed alongside this document (local, not committed; described in words here so the document stands alone).
+**Status:** designed 2026-11-01; built and released in **v0.24.1**. [DECISIONS](DECISIONS.md) (Story map) records each Call as it landed. For screenplays and stage plays; Markdown documents later (§9). A static mockup of the in-progress and finished states was reviewed alongside this document (local, not committed; described in words here so the document stands alone).
 
 **Asked for (maintainer, 2026-11-01), in their words:**
 - "a 'visual view' of the entire script, characters, acts -- sort of like an infograph view that can only be downloaded as an html page but that can be shown to someone with all the relevant info in a really visual, really pleasing way. Dark mode only, modern, sleek."

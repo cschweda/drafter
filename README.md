@@ -17,7 +17,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.24.3.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Classic Mode is built, for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks, and comes with v0.25.0; next up is Novel (v0.26.0). See the [roadmap](#roadmap).
+> **Status: v0.25.0.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Classic Mode is out, for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks; next up is Novel (v0.26.0). See the [roadmap](#roadmap).
 
 ## Free, no login, private
 
@@ -36,6 +36,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 - [Features](#features)
 - [Security](#security)
+- [Testing](#testing)
 - [How Drafter compares](#how-drafter-compares)
 - [Get Drafter](#get-drafter)
 - [Formats](#formats)
@@ -118,6 +119,26 @@ Drafter is built to open files from anyone without putting you at risk.
 The [Technical details](docs/technical-details.md#security) give the specifics. [Audits](docs/AUDITS.md) lists every security and clean-room audit, newest first.
 
 The latest security audit: [1 November 2026](docs/security-audit-2026-11-01.md), no exploitable hole found.
+
+## Testing
+
+Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
+
+**What runs.** As of v0.25.0, there are **7,914 unit and property tests** (in 21 packages, the web app, and the desktop app), **1,352 browser tests**, each run in five browser setups (6,760 runs), 137 end-to-end tests of the desktop app, and **277 trap documents** with 1,254 checks:
+
+- **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
+- **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
+- **Browser tests** open the built app and type, click, save, export, and reopen, the way a writer does. They run in Chrome's, Firefox's, and Safari's engines, on a desktop screen and on a phone, with accessibility checked in both themes. The desktop app has its own tests, in Electron.
+- **The [trap documents](fixtures/trap/README.md)** are broken and hostile files, sent through every way a file comes in, each with the one outcome it must have.
+- **Time limits** fail a test when Drafter is too slow: opening a huge file, a keystroke in a long script.
+
+**When it runs.**
+
+- **While a change is made,** its tests are written first where they can be: a test that fails, then the code that makes it pass.
+- **On every proposed change (CI).** Continuous integration means GitHub's computers run the checks on every pull request before it can be merged, so nothing gets in because someone forgot to run the tests, or because it only worked on one computer. That covers the linter, the build, every package's type check and tests, the trap documents, a Docker check, and the browser tests on macOS and Linux. Tests with a time limit are skipped there, as GitHub's shared computers are slower.
+- **Before each release,** every test runs once, with its time limits and in all five browser setups, on a real computer. Then GitHub builds and tests the Linux and Windows apps, and the release is published only if every one passes.
+
+**What tests can't do.** Passing tests show that what they check is right, not that nothing is wrong. A test that sometimes fails for no clear reason gets rerun and looked into, never switched off. Each big change is also tried by hand before it ships, and the screen-reader checks are done by a person. [Technical details](docs/technical-details.md#how-its-tested) has the specifics, and [Developing Drafter](docs/DEVELOPMENT.md#test-counts-and-diagrams) has the commands.
 
 ## How Drafter compares
 
@@ -236,7 +257,7 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 
 ## Roadmap
 
-**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, HTML and EPUB export, Drafts and Cuts (v0.24.0): numbered drafts, and a permanent file of everything you cut, Story map (v0.24.1): a visual page of your script to send to anyone, and Drafter for Claude (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose. You can also host the web app yourself with Docker (v0.24.3). Classic Mode (v0.25.0), typing with Enter and Tab the way many screenwriters expect, over a file that stays Fountain, is built and comes with the next release.
+**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, HTML and EPUB export, Drafts and Cuts (v0.24.0): numbered drafts, and a permanent file of everything you cut, Story map (v0.24.1): a visual page of your script to send to anyone, and Drafter for Claude (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose. You can also host the web app yourself with Docker (v0.24.3), and type a script with Enter and Tab the way many screenwriters expect, over a file that stays Fountain, in Classic Mode (v0.25.0).
 
 **Next:**
 

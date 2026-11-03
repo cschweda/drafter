@@ -391,11 +391,17 @@ for (const theme of THEMES) {
     test(`has no accessibility violations in the Export options dialog (${theme})`, async ({
       page,
     }) => {
-      await page.getByRole('button', { name: 'Export', exact: true }).click();
-      await page
-        .getByRole('group', { name: 'Export' })
-        .getByRole('button', { name: 'Export options…' })
-        .click();
+      // At 320px a script's bar folds Export into More actions, so the palette opens it there.
+      const exportButton = page.getByRole('button', { name: 'Export', exact: true });
+      if (await exportButton.isVisible()) {
+        await exportButton.click();
+        await page
+          .getByRole('group', { name: 'Export' })
+          .getByRole('button', { name: 'Export options…' })
+          .click();
+      } else {
+        await runCommand(page, 'Export options…');
+      }
       const options = page.getByRole('dialog', { name: 'Export options' });
       await expect(options).toBeVisible();
       await expect(options.getByRole('group', { name: 'Title page' })).toBeVisible();
@@ -496,11 +502,26 @@ for (const theme of THEMES) {
       await page.keyboard.press('Escape');
       await expect(page.getByRole('menu', { name: 'Help' })).toBeHidden();
 
-      await page.getByRole('button', { name: 'Export', exact: true }).click();
-      await expect(page.getByRole('group', { name: 'Export' })).toBeVisible();
-      await clean(page, 'the Export menu');
-      await page.keyboard.press('Escape');
-      await expect(page.getByRole('group', { name: 'Export' })).toBeHidden();
+      // At 320px a script's bar folds Export into More actions: that menu, and its Export submenu.
+      const exportButton = page.getByRole('button', { name: 'Export', exact: true });
+      if (await exportButton.isVisible()) {
+        await exportButton.click();
+        await expect(page.getByRole('group', { name: 'Export' })).toBeVisible();
+        await clean(page, 'the Export menu');
+        await page.keyboard.press('Escape');
+        await expect(page.getByRole('group', { name: 'Export' })).toBeHidden();
+      } else {
+        await page.getByRole('button', { name: 'More actions', exact: true }).click();
+        const more = page.getByRole('menu', { name: 'More actions' });
+        await expect(more).toBeVisible();
+        await page.getByRole('menuitem', { name: 'Export', exact: true }).focus();
+        await page.keyboard.press('ArrowRight');
+        await expect(page.getByRole('menuitem', { name: /^Export as PDF/ })).toBeVisible();
+        await clean(page, 'More actions and its Export submenu');
+        await page.keyboard.press('Escape');
+        await page.keyboard.press('Escape');
+        await expect(more).toBeHidden();
+      }
 
       if (wide(page)) {
         // The template chip, in the status bar; a phone has it in the app menu.

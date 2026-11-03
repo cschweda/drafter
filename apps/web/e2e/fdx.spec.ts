@@ -2,6 +2,10 @@ import { readFile } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
 import { bytesOf, nextFileName, picks, putFile, removePickers, stubPickers } from './fs-stub';
 import { expectSaved, runCommand, showView } from './modules';
+import { roomForSaveAndExport } from './viewport';
+
+// Saving and exporting, not the 320px bar, which folds Save and Export (viewport.ts).
+test.beforeEach(({ page }) => roomForSaveAndExport(page));
 
 // Final Draft files (Phase 2 Plan FD): a .fdx opens as a new Fountain script that is not the
 // file's (Save asks for a .fountain, and the .fdx is never written), and a Fountain script exports

@@ -15,6 +15,10 @@ import { fileNameFor } from '../app/storage/text';
 import { openExported } from './exported';
 import { bytesOf, cancelNextPick, failWrites, picks, removePickers, stubPickers } from './fs-stub';
 import { chooseExport, pasteText, setText } from './modules';
+import { roomForSaveAndExport } from './viewport';
+
+// Saving and exporting, not the 320px bar, which folds Save and Export (viewport.ts).
+test.beforeEach(({ page }) => roomForSaveAndExport(page));
 
 const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 // pdf-lib and pdfjs are render-pdf's, so they are found from there.

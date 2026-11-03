@@ -12,6 +12,7 @@ import {
   start,
 } from './modules';
 import { stateWithSettings } from './seed';
+import { roomForSaveAndExport } from './viewport';
 
 // Show changes on the Script pane (version-history design §4): off on every visit; on, the pages
 // are marked against the last save (or a chosen version) with the Changes view's colors, whole
@@ -115,8 +116,10 @@ const markedTexts = (page: Page) => marked(page).allTextContents();
 
 // A wide desktop, where this view's tools fit in the Inspector's header (fresh-look design §3.3):
 // at 1280 they fold behind its "⋯", which shell.spec.ts tries.
+// A phone narrower than 375px is widened to it, for Save beside the writing mode (viewport.ts).
 test.beforeEach(async ({ page, isMobile }) => {
   if (!isMobile) await page.setViewportSize({ width: 1920, height: 1000 });
+  else await roomForSaveAndExport(page);
 });
 
 test.describe('Show changes on the Script pane', () => {

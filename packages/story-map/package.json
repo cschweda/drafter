@@ -1,6 +1,6 @@
 {
   "name": "@drafter/story-map",
-  "version": "0.24.3",
+  "version": "0.25.0",
   "description": "Drafter's Story map: one dark, script-free HTML page that shows a non-writer a screenplay or stage play at a glance.",
   "license": "MIT",
   "type": "module",

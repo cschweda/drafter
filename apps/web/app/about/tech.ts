@@ -367,7 +367,7 @@ const RELEASE: Diagram = {
   ],
 };
 
-/** The page's parts (design §4.1's ten, and Security since the trap documents), plain words first in each. */
+/** The page's parts (design §4.1's ten, Security since the trap documents, and testing), plain words first in each. */
 export const TECH_SECTIONS: readonly TechSection[] = [
   {
     id: 'short-version',
@@ -580,6 +580,41 @@ export const TECH_SECTIONS: readonly TechSection[] = [
         kind: 'link',
         text: 'Clean-room implementation, in the README',
         path: 'README.md#clean-room-implementation',
+      },
+    ],
+  },
+  {
+    id: 'testing',
+    title: 'How it’s tested',
+    plain: [
+      {
+        kind: 'p',
+        text: 'Drafter holds someone’s script, so the tests guard two promises above all: a change to the app never loses or alters a word you wrote, and a file you open can only ever be read, never do anything. Thousands of small programs check this by using Drafter the way you would. Some test one piece alone: does this line read as a name, does this scene fill the page it should. Some open the whole app in a real browser and type, click, save, and reopen. Some feed it broken and hostile files on purpose.',
+      },
+      {
+        kind: 'p',
+        text: '**CI**, continuous integration, means GitHub’s computers run the tests on every proposed change before it can join the main code, so nothing gets in because someone forgot to run them, or because it only worked on one computer. The strictest run, every test with its time limits, in every browser, is on the maintainer’s computer before each release.',
+      },
+    ],
+    details: [
+      {
+        kind: 'list',
+        items: [
+          '**Unit tests** (Vitest) check each package on its own: the Fountain parser, pagination, the PDF, every import and export. The web app’s own pieces (saving, storage, drafts, the editor’s keys) run in jsdom, a stand-in for a browser.',
+          '**Property tests** (fast-check) generate thousands of random scripts and check rules that must hold for every one, not just the examples someone thought of: a script read and written back comes out the same, and Classic Mode never writes anything a writer couldn’t have typed by hand.',
+          '**End-to-end tests** (Playwright) drive the built site in five setups: Chromium, Firefox, and WebKit (Safari’s engine) on a desktop screen, and a phone in Chromium and in WebKit. axe checks accessibility in both themes. The desktop app has end-to-end tests of its own, in Electron.',
+          '**The trap documents** are 277 broken and hostile files, each with the one outcome it must have, sent through every way a file comes in: opening and dropping in the browser and the desktop app, `drafter convert` and `drafter build`, the files kept beside a script, Drafter for Claude, and Classic Mode.',
+          '**Time limits.** A test with a limit in its name (“within a second”) fails if Drafter is too slow, a keystroke has a budget in a real browser, and `pnpm bench` times the parser and the layout on long scripts.',
+          '**While a change is made,** its tests are written first where they can be: a test that fails, then the code that makes it pass.',
+          '**On every pull request,** `.github/workflows/checks.yml` runs the linter (Biome), the build, every package’s type check and tests, the trap documents, the web app’s type check and tests, the desktop shell’s tests, a check of the Docker image, and the browser tests in Chromium on macOS and on Linux, split across eight runners. All of it must pass before a change is merged. Tests with a time limit are skipped there, as GitHub’s shared runners are slower.',
+          '**Before a release,** the release gates run every test once, with its time limits, in all five browser setups, on a real computer. Then the desktop workflow builds the Linux and Windows apps and tests them on GitHub’s computers, and runs Drafter for Claude the way an AI app starts it.',
+          '**What tests can’t do.** Passing tests show that what they check is right, not that nothing is wrong. A test that sometimes fails for no clear reason is rerun and looked into, not switched off. Each big change is also tried by hand before it ships, and the screen-reader checks are done by a person.',
+        ],
+      },
+      {
+        kind: 'link',
+        text: 'Testing, with this version’s test counts, in the README',
+        path: 'README.md#testing',
       },
     ],
   },

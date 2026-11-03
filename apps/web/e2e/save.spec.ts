@@ -21,6 +21,7 @@ import {
   saveState,
   settingsDialog,
 } from './modules';
+import { roomForSaveAndExport } from './viewport';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -467,6 +468,8 @@ test.describe('saving where the browser can’t save in place', () => {
   });
 
   test('has no accessibility violations after saving', async ({ page }) => {
+    // With Save on the bar (viewport.ts).
+    await roomForSaveAndExport(page);
     await start(page);
     await chooseNew(page, 'New screenplay');
     await page.keyboard.insertText('A');

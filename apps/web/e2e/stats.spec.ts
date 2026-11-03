@@ -10,6 +10,7 @@ import {
   start,
 } from './modules';
 import { expectTableStyle } from './table-style';
+import { roomForSaveAndExport } from './viewport';
 
 // Writing stats (docs/drafter-stats-design.md): words and time today in the status bar, and the
 // Stats tab (seeing-the-script design §4), which replaced the Stats window: Overview (the window's
@@ -439,6 +440,8 @@ test.describe('writing stats', () => {
   });
 
   test('a rate set in Stats is kept for that script only, after a reload', async ({ page }) => {
+    // With Open on the bar, for the second script (viewport.ts).
+    await roomForSaveAndExport(page);
     await newScript(page, 'New screenplay');
     await typeAtEnd(page, SCENES);
     // The edit marks the title as unsaved (a moment later on a slow phone); the rates don't.

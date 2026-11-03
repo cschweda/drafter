@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-03
+
+**Classic Mode.** One switch in the top bar, **Fountain | Classic**, lets you type the way many screenwriting apps work: Enter and Tab move from element to element, names and places fill themselves in, capitals and marks are done for you, and the left side looks like a script. Your file stays plain Fountain, and Fountain Mode stays the default.
+
 ### Added
 
 - **Classic Mode**, for writers who'd rather not type Fountain's marks. Click **Classic** in the top bar's **Fountain | Classic** switch (or use Settings, the palette, or **Mod+Alt+0**), and the script types the way many screenwriting apps work:
@@ -21,9 +25,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- A **Testing** section in the README, and **How it's tested** in Technical details (in the app under Help, and in `docs/technical-details.md`): what tests run, when, and what testing and CI mean for an app that holds your script.
 - `appChange`, the annotation that marks a change made by the app rather than the writer, moved from the web app's `editor/typewriter.ts` to `@drafter/cm-fountain`, so the editor package's filters can step back for it; `typewriter.ts` re-exports it, so nothing that imports it changed.
 - On a phone narrower than 480px the top bar shows Drafter's mark in place of the wordmark, so **Save** and **Export** stay on the bar beside the writing-mode switch.
 - Every pull request, and the release gates, now typecheck each package (`pnpm -r --filter "./packages/*" typecheck`), not only the web app.
+- On the 320px phone (iPhone SE), where the writing mode's switch folds Save and Export into More actions, the browser tests of saving, exporting, Show changes, and stats run at 375px; the accessibility tests of the menus and Export options stay at 320px and go through More actions and the palette.
 - The browser test that walks the Help menu by keyboard to every help page is marked slow, as it now opens sixteen pages.
 - On CI, the trap test that walks every trap in Classic Mode allows twice each trap's time, as its walk is thousands of moves; locally it keeps the trap's own time.
 - Drafter for Claude's timing test for a thousand long names is named like the other timing tests, so CI's slower runners skip it, as they skip the rest; it still runs locally.
@@ -1231,7 +1237,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.24.3...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/cschweda/drafter/compare/v0.24.3...v0.25.0
 [0.24.3]: https://github.com/cschweda/drafter/compare/v0.24.2...v0.24.3
 [0.24.2]: https://github.com/cschweda/drafter/compare/v0.24.1...v0.24.2
 [0.24.1]: https://github.com/cschweda/drafter/compare/v0.24.0...v0.24.1
