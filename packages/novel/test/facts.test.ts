@@ -1,3 +1,4 @@
+import { ChangeSet, Text } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 import {
   carryFacts,
@@ -22,20 +23,6 @@ function apply(text: string, changes: Array<{ from: number; to: number; insert: 
     out = out.slice(0, c.from) + c.insert + out.slice(c.to);
   }
   return out;
-}
-
-function mapperFor(changes: Array<{ from: number; to: number; insert: string }>) {
-  return (pos: number) => {
-    let delta = 0;
-    for (const c of [...changes].sort((a, b) => a.from - b.from)) {
-      if (pos < c.to) {
-        if (pos <= c.from) break;
-        return c.from + delta + c.insert.length;
-      }
-      delta += c.insert.length - (c.to - c.from);
-    }
-    return pos + delta;
-  };
 }
 
 const withMeta = (obj: unknown, body = '# One\n\nText.\n') =>
@@ -173,14 +160,7 @@ describe('carryFacts', () => {
     const m = move as NonNullable<typeof move>;
     const out = apply(text, m.changes);
     const after = novelStructure(out);
-    // A move is a cut and a paste, so a plain mapping loses the moved text; the caller maps the
-    // moved unit to where it landed (`at`) and everything else through the changes.
-    const moved = findNode(before, 'chapter:b:0') as NonNullable<ReturnType<typeof findNode>>;
-    const plain = mapperFor(m.changes);
-    const unitEnd = moved.span.to;
-    const mapPos = (p: number) =>
-      p >= moved.span.from && p < unitEnd ? m.at + (p - moved.span.from) : plain(p);
-    const carried = carryFacts(facts, before, after, mapPos);
+    const carried = carryFacts(facts, before, after, m.mapPos);
     expect(Object.keys(carried.nodes).length).toBe(Object.keys(facts.nodes).length);
     // Each fact sits on the node whose heading text is the one it started on.
     for (const [oldId, synopsis] of Object.entries(marks)) {
@@ -222,5 +202,108 @@ describe('orphanedFacts', () => {
     facts.nodes['chapter:two:0'] = { status: 'done' };
     const tree = novelStructure('# One\n\nx\n\n# Deux\n\ny\n');
     expect(orphanedFacts(facts, tree)).toEqual(['chapter:two:0']);
+  });
+});
+
+describe('with real CodeMirror changes', () => {
+  const text = '# A\n\n## x\n\nt\n\n***\n\nu\n\n# B\n\n## x\n\nt\n\n***\n\nu\n\n# C\n\nv\n';
+
+  function allFacts(tree: ReturnType<typeof novelStructure>) {
+    const facts = emptyFacts();
+    const walk = (list: typeof tree.nodes) => {
+      for (const n of list) {
+        facts.nodes[n.id] = { synopsis: `from ${n.id}` };
+        walk(n.children);
+      }
+    };
+    walk(tree.nodes);
+    return facts;
+  }
+
+  it("a move then carryFacts(move.mapPos) keeps every node's facts", () => {
+    const before = novelStructure(text);
+    const facts = allFacts(before);
+    const move = moveNode(text, before, 'chapter:b:0', { before: 'chapter:a:0' });
+    expect(move).not.toBeNull();
+    const m = move as NonNullable<typeof move>;
+    const set = ChangeSet.of(m.changes, text.length);
+    const out = set.apply(Text.of(text.split('\n'))).toString();
+    const after = novelStructure(out);
+    const carried = carryFacts(facts, before, after, m.mapPos);
+    expect(Object.keys(carried.nodes).length).toBe(Object.keys(facts.nodes).length);
+    const bMoved = findNode(after, 'chapter:b:0') as NonNullable<ReturnType<typeof findNode>>;
+    expect(bMoved.heading.from).toBe(m.at);
+    expect(carried.nodes['chapter:b:0']?.synopsis).toBe('from chapter:b:0');
+    for (const id of Object.keys(facts.nodes)) {
+      const old = findNode(before, id) as NonNullable<ReturnType<typeof findNode>>;
+      const hit = Object.entries(carried.nodes).find(([, f]) => f.synopsis === `from ${id}`);
+      const now = findNode(after, (hit as [string, unknown])[0]) as NonNullable<
+        ReturnType<typeof findNode>
+      >;
+      expect(now.title).toBe(old.title);
+      expect(now.kind).toBe(old.kind);
+    }
+  });
+
+  it('move.mapPos and ChangeSet.mapPos agree outside the unit', () => {
+    const before = novelStructure(text);
+    const unit = findNode(before, 'chapter:b:0') as NonNullable<ReturnType<typeof findNode>>;
+    const m = moveNode(text, before, 'chapter:b:0', { before: 'chapter:a:0' }) as NonNullable<
+      ReturnType<typeof moveNode>
+    >;
+    const set = ChangeSet.of(m.changes, text.length);
+    const unitEnd = Math.max(
+      unit.heading.to,
+      text.slice(0, unit.span.to).replace(/\s+$/, '').length,
+    );
+    for (let pos = 0; pos <= text.length; pos++) {
+      if (pos >= unit.span.from && pos <= unitEnd) continue;
+      for (const assoc of [-1, 1]) {
+        expect(m.mapPos(pos, assoc)).toBe(set.mapPos(pos, assoc));
+      }
+    }
+  });
+
+  const doc = '# Alpha\n\nOne.\n\n# Beta\n\nTwo.\n';
+
+  function carry(change: { from: number; to?: number; insert?: string }) {
+    const before = novelStructure(doc);
+    const facts = emptyFacts();
+    facts.nodes['chapter:beta:0'] = { status: 'done' };
+    const set = ChangeSet.of(change, doc.length);
+    const after = novelStructure(set.apply(Text.of(doc.split('\n'))).toString());
+    return { out: carryFacts(facts, before, after, (p, a) => set.mapPos(p, a)), after };
+  }
+
+  it('Enter at a heading start keeps its facts with the heading', () => {
+    const at = (novelStructure(doc).nodes[1] as { heading: { from: number } }).heading.from;
+    const { out } = carry({ from: at, insert: '\n' });
+    expect(out.nodes['chapter:beta:0']).toEqual({ status: 'done' });
+  });
+
+  it('a new chapter inserted at a heading start does not take its facts', () => {
+    const at = (novelStructure(doc).nodes[1] as { heading: { from: number } }).heading.from;
+    const { out, after } = carry({ from: at, insert: '# New\n\n' });
+    expect(out.nodes['chapter:new:0']).toBeUndefined();
+    expect(out.nodes['chapter:beta:0']).toEqual({ status: 'done' });
+    expect(after.nodes.map((n) => n.id)).toContain('chapter:new:0');
+  });
+
+  it('a deletion still drops the facts', () => {
+    const at = (novelStructure(doc).nodes[1] as { heading: { from: number } }).heading.from;
+    const { out } = carry({ from: at, to: doc.length });
+    expect(Object.keys(out.nodes)).toEqual([]);
+  });
+
+  it('a carried fact wins over an orphan with the same id, and results do not share objects', () => {
+    const before = novelStructure('# A\n\n# B\n');
+    const after = novelStructure('# B\n\n# A\n');
+    const facts = emptyFacts();
+    facts.nodes['chapter:a:0'] = { status: 'done' };
+    facts.nodes['chapter:b:0'] = { status: 'todo' };
+    // A is renamed to B in place: old B is deleted; the fact of A lands on the new first chapter (b:0).
+    const out = carryFacts(facts, before, after, (p) => p);
+    expect(out.nodes['chapter:b:0']).toEqual({ status: 'done' });
+    expect(out.nodes['chapter:b:0']).not.toBe(facts.nodes['chapter:a:0']);
   });
 });

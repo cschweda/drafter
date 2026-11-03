@@ -428,6 +428,10 @@ importers:
       '@drafter/markdown':
         specifier: workspace:*
         version: link:../markdown
+    devDependencies:
+      '@codemirror/state':
+        specifier: ^6.7.6
+        version: 6.7.6
 
   packages/outline:
     dependencies:

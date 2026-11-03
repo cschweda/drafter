@@ -86,7 +86,12 @@ export function readFacts(text: string): NovelFacts {
 
 /** The text with these facts as `novel` in its metadata comment; every other key stays. */
 export function writeFacts(text: string, facts: NovelFacts): string {
-  const { meta } = readMarkdownMeta(text);
+  let meta: Record<string, unknown> | null = null;
+  try {
+    meta = readMarkdownMeta(text).meta;
+  } catch {
+    meta = null;
+  }
   const next: Record<string, unknown> = { ...(meta ?? {}) };
   const nodes: Record<string, Facts> = {};
   for (const id of Object.keys(facts.nodes)) {
@@ -129,24 +134,28 @@ export function carryFacts(
   facts: NovelFacts,
   before: NovelTree,
   after: NovelTree,
-  mapPos: (pos: number) => number,
+  mapPos: (pos: number, assoc?: number) => number,
 ): NovelFacts {
   const byPos = new Map<number, string>();
   walk(after.nodes, (n) => byPos.set(n.heading.from, n.id));
   const out: NovelFacts = { nodes: newNodes() };
   if (facts.bookTarget !== undefined) out.bookTarget = facts.bookTarget;
+  const orphans: string[] = [];
   for (const id of Object.keys(facts.nodes)) {
     const node = findNode(before, id);
     if (!node) {
-      out.nodes[id] = facts.nodes[id];
+      orphans.push(id);
       continue;
     }
-    const at = mapPos(node.heading.from);
+    // assoc 1: text typed at the heading's start goes before it, and the heading keeps its facts.
+    const at = mapPos(node.heading.from, 1);
     // A deleted heading collapses to a point, which the next heading may stand on: its end maps no further.
     if (mapPos(node.heading.to) <= at) continue;
     const newId = byPos.get(at);
-    if (newId !== undefined) out.nodes[newId] = facts.nodes[id];
+    if (newId !== undefined) out.nodes[newId] = { ...facts.nodes[id] };
   }
+  // A carried fact wins over an orphan that happens to share its id.
+  for (const id of orphans) if (!(id in out.nodes)) out.nodes[id] = { ...facts.nodes[id] };
   return out;
 }
 

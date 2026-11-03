@@ -13,6 +13,33 @@ export interface NovelMove {
   changes: Array<{ from: number; to: number; insert: string }>;
   /** The moved heading's offset after the move. */
   at: number;
+  /**
+   * Where an offset of the text as it is stands after the move, as CodeMirror's
+   * `ChangeSet.mapPos` would say, except that the moved unit (its heading to its last non-blank
+   * line) travels with its text: `at + (pos - unit start)`. A position at the unit's very end
+   * maps with the unit when `assoc` is negative (the default), so the end of a heading-only unit
+   * stays after its start.
+   */
+  mapPos(pos: number, assoc?: number): number;
+}
+
+/** `ChangeSet.mapPos` for sorted, non-overlapping changes. */
+function mapThrough(
+  changes: Array<{ from: number; to: number; insert: string }>,
+  pos: number,
+  assoc: number,
+): number {
+  let delta = 0;
+  for (const c of changes) {
+    if (c.from > pos) break;
+    if (c.to < pos) {
+      delta += c.insert.length - (c.to - c.from);
+      continue;
+    }
+    const side = c.from === c.to ? assoc : pos === c.from ? -1 : pos === c.to ? 1 : assoc;
+    return c.from + delta + (side < 0 ? 0 : c.insert.length);
+  }
+  return pos + delta;
 }
 
 const isWs = (c: string) => c === ' ' || c === '\t' || c === '\n' || c === '\r';
@@ -150,7 +177,11 @@ export function moveNode(
   if (!found || found.node.kind !== node.kind) return null;
   const wantAt = wantParent ? wantParent.heading.from + shiftOf(wantParent.heading.from) : null;
   if ((found.parent?.heading.from ?? null) !== wantAt) return null;
-  return { changes, at };
+  const mapPos = (pos: number, assoc = -1): number =>
+    pos >= uf && (pos < ue || (pos === ue && assoc < 0))
+      ? at + (pos - uf)
+      : mapThrough(changes, pos, assoc);
+  return { changes, at, mapPos };
 }
 
 function findAt(
