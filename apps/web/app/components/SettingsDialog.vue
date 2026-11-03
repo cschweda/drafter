@@ -103,7 +103,7 @@ const SWITCHES: Switch[] = [
     section: 'writing',
     key: 'typewriter',
     label: 'Typewriter scrolling',
-    why: 'Keep the line you are writing at the middle of the Source pane.',
+    why: 'Keep the line you are writing at the middle of the Source pane. It makes no sound: that’s Typewriter sounds, below.',
   },
   {
     section: 'writing',
@@ -128,6 +128,12 @@ const SWITCHES: Switch[] = [
     key: 'sprintSound',
     label: 'Sprint sound',
     why: 'Play a short tone when a sprint ends. Drafter makes no sound unless you turn this on.',
+  },
+  {
+    section: 'writing',
+    key: 'keySounds',
+    label: 'Typewriter sounds',
+    why: 'Hear a typewriter’s key as you type in the Source, and its bell when you start a new line. Just for fun, and off unless you turn it on. It doesn’t move the page: that’s Typewriter scrolling, above.',
   },
   {
     section: 'about',
@@ -355,6 +361,19 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
               {{ percent(size) }}
             </option>
           </select>
+        </div>
+        <div class="row contrast-row" role="group" aria-labelledby="settings-contrast-name">
+          <div class="text">
+            <span id="settings-contrast-name" class="name">Contrast</span>
+            <p class="why">
+              How strong the colours are in each pane, in light and dark: higher for crisper text,
+              lower for a softer page. The top bar’s Contrast button has them too.
+            </p>
+          </div>
+          <div class="contrasts">
+            <ContrastSlider pane="source" />
+            <ContrastSlider pane="script" />
+          </div>
         </div>
         <div class="row">
           <div class="text">
@@ -806,5 +825,10 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
   .settings-nav-item {
     width: auto;
   }
+}
+.contrasts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 </style>

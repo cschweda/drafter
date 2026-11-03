@@ -2,6 +2,7 @@ import { watch } from 'vue';
 import { applyEditorSettings } from '~/editor/apply-settings';
 import { useEditor } from '~/editor/session';
 import { appearanceStep } from './appearance';
+import { contrastMix } from './contrast';
 import { useSettings } from './settings';
 
 /**
@@ -59,6 +60,23 @@ export function applySettings(): () => void {
         () => settings.value.pageColor,
         (color) => {
           document.documentElement.dataset.pageColor = color;
+        },
+        { immediate: true },
+      ),
+      // The contrast sliders: how far each pane's colours go toward the theme's extreme, or toward
+      // their background (settings/contrast.ts; the mixes are in main.css and tokens.css).
+      watch(
+        () => [settings.value.sourceContrast, settings.value.scriptContrast] as const,
+        ([source, script]) => {
+          const root = document.documentElement.style;
+          for (const [pane, value] of [
+            ['source', source],
+            ['script', script],
+          ] as const) {
+            const { boost, fade } = contrastMix(value);
+            root.setProperty(`--${pane}-boost`, `${boost}%`);
+            root.setProperty(`--${pane}-fade`, `${fade}%`);
+          }
         },
         { immediate: true },
       ),

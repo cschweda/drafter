@@ -146,12 +146,26 @@
   --sheet: var(--paper);
   --sheet-ink: var(--paper-ink);
   --sheet-focus: var(--paper-focus);
+  /* Where the Script contrast slider takes the ink above its middle (settings/contrast.ts). */
+  --sheet-extreme: #000000;
 }
 
 :root[data-page-color="dark"] {
   --sheet: var(--page-dark);
   --sheet-ink: var(--page-dark-ink);
   --sheet-focus: var(--page-dark-focus);
+  --sheet-extreme: #ffffff;
+}
+
+/* Where the Source contrast slider takes each colour above its middle: white on the dark theme,
+   black on the light one (settings/contrast.ts). */
+:root,
+.dark {
+  --contrast-extreme: #ffffff;
+}
+
+.light {
+  --contrast-extreme: #000000;
 }
 
 :root,
@@ -172,7 +186,13 @@
 
 .on-sheet {
   --drafter-page: var(--sheet);
-  --drafter-ink: var(--sheet-ink);
+  /* The Script contrast slider: the ink mixed toward the page's extreme (black on paper, white on
+     the dark page) by --script-boost, then toward the page by --script-fade (settings/contrast.ts). */
+  --drafter-ink: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--sheet-ink), var(--sheet-extreme) var(--script-boost, 0%)),
+    var(--sheet) var(--script-fade, 0%)
+  );
   --focus: var(--sheet-focus);
   --diff-add-bg: #e3f3e7;
   --diff-del-bg: #fbe7e5;

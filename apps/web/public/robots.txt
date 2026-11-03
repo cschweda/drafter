@@ -1,0 +1,4 @@
+# drafter.dev: every page may be read and indexed, by search engines and AI assistants alike.
+# Nothing here holds a writer's script: scripts stay in each writer's own browser and files.
+User-agent: *
+Allow: /

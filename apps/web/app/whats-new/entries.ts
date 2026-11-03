@@ -45,6 +45,24 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.25.1-typewriter-sounds',
+    date: '2026-11-03',
+    version: '0.25.1',
+    kind: 'New',
+    title: 'Typewriter sounds, if you like them',
+    text: 'Turn on Typewriter sounds in Settings to hear a typewriter’s key as you type and its bell at each new line. It’s off unless you turn it on.',
+    link: { href: '/docs/#finding-your-way', label: 'Typewriter sounds' },
+  },
+  {
+    id: 'v0.25.1-contrast',
+    date: '2026-11-03',
+    version: '0.25.1',
+    kind: 'New',
+    title: 'A contrast slider for each pane',
+    text: 'The Contrast button in the top bar has a slider for the Source and one for the Script, in light and dark, each showing its WCAG 2.1 contrast ratio as you slide. Both start near the highest.',
+    link: { href: '/docs/#finding-your-way', label: 'Contrast' },
+  },
+  {
     id: 'v0.25.1-privacy',
     date: '2026-11-03',
     version: '0.25.1',

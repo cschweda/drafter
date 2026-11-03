@@ -61,10 +61,12 @@ test.describe('on a desktop', () => {
       const style = getComputedStyle(el);
       return [style.color, style.fontWeight];
     });
+    // The heading colour as the Source draws it: the theme's, mixed by the Source contrast slider
+    // (settings/contrast.ts), so probed inside the editor, where that mix is set.
     const goldenrod = await page.evaluate(() => {
       const probe = document.createElement('i');
-      probe.style.color = 'var(--accent-text)';
-      document.body.append(probe);
+      probe.style.color = 'var(--src-accent-text)';
+      (document.querySelector('.cm-editor') as Element).append(probe);
       const resolved = getComputedStyle(probe).color;
       probe.remove();
       return resolved;

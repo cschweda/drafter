@@ -8,6 +8,7 @@ import { PLAUSIBLE_INIT, PLAUSIBLE_SRC } from './scripts/plausible.mjs';
 import { TOUR_ICONS } from './scripts/tour-icons.mjs';
 import { buildCommit, drafterVersion } from './scripts/version.mjs';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from './site';
+import { AUTHOR, siteJsonLd } from './site-data';
 
 /** The workspace packages, at the repository root. */
 const PACKAGES = fileURLToPath(new URL('../../packages', import.meta.url));
@@ -239,6 +240,7 @@ export default defineNuxtConfig({
       title: SITE_TITLE,
       meta: [
         { name: 'description', content: SITE_DESCRIPTION },
+        { name: 'author', content: AUTHOR },
         { name: 'theme-color', content: '#0F1013' },
         { property: 'og:type', content: 'website' },
         { property: 'og:site_name', content: 'Drafter' },
@@ -263,7 +265,11 @@ export default defineNuxtConfig({
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
         ...(DESKTOP ? [] : [{ rel: 'manifest' as const, href: '/manifest.webmanifest' }]),
       ],
-      script: PLAUSIBLE ? [{ src: PLAUSIBLE_SRC, async: true }, { innerHTML: PLAUSIBLE_INIT }] : [],
+      script: [
+        // What the site is, for search engines and AI assistants (site-data.ts).
+        { type: 'application/ld+json', innerHTML: siteJsonLd(VERSION, COMMIT?.date) },
+        ...(PLAUSIBLE ? [{ src: PLAUSIBLE_SRC, async: true }, { innerHTML: PLAUSIBLE_INIT }] : []),
+      ],
     },
   },
 });

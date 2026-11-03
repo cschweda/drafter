@@ -167,6 +167,8 @@ const LAYOUT: Record<Group, Section[]> = {
         'hide-line-numbers',
         'turn-on-typewriter',
         'turn-off-typewriter',
+        'turn-on-key-sounds',
+        'turn-off-key-sounds',
         'show-element-bar',
         'hide-element-bar',
         'toggle-structure-strip',

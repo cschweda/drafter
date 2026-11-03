@@ -61,7 +61,7 @@ test.describe('on a desktop', () => {
     expect(Math.round(box?.height ?? 0)).toBeGreaterThanOrEqual(36);
     expect(Math.round(box?.height ?? 99)).toBeLessThanOrEqual(38);
     const group = page.getByRole('group', { name: 'Source view' });
-    for (const name of ['Line numbers', 'Typewriter', 'Sync scrolling']) {
+    for (const name of ['Line numbers', 'Typewriter scrolling', 'Sync scrolling']) {
       const button = group.getByRole('button', { name, exact: true });
       await expect(button).toHaveAttribute('aria-pressed', /^(true|false)$/);
       const b = await button.boundingBox();
@@ -383,7 +383,7 @@ test.describe('on a desktop', () => {
       'Focus',
       /^Switch to (light|dark) theme$/,
       'Line numbers',
-      'Typewriter',
+      'Typewriter scrolling',
     ];
     for (const name of names) {
       const button = page.getByRole('button', { name, exact: true });

@@ -7,6 +7,7 @@ import { useEditor } from '~/editor/session';
 import { runContextFor } from '~/modules/context';
 import { useModuleButtons } from '~/modules/host';
 import { runModuleAction } from '~/modules/registry';
+import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { EXPORTS } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
@@ -199,6 +200,15 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
       },
     });
   }
+  if (has('contrast')) {
+    out.push({
+      label: 'Contrast…',
+      icon: 'i-lucide-contrast',
+      onSelect: () => {
+        settingsOpen.value = true;
+      },
+    });
+  }
   if (has('theme')) {
     out.push({
       label: dark.value ? 'Switch to light theme' : 'Switch to dark theme',
@@ -312,6 +322,21 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
     >
       <UIcon name="i-lucide-scan" class="icon" />
     </button>
+    <!-- Contrast (settings/contrast.ts): one button, and a panel with the Source's and the Script's
+         sliders, each moving its own pane's colours live in either theme. It folds first; folded,
+         More actions opens Settings, which has both. -->
+    <UPopover :content="{ side: 'bottom', align: 'end' }">
+      <button type="button" class="ib fold-contrast-item" aria-label="Contrast" title="Contrast">
+        <UIcon name="i-lucide-contrast" class="icon" />
+      </button>
+      <template #content>
+        <div class="contrast-panel" role="group" aria-label="Contrast">
+          <ContrastSlider pane="source" />
+          <ContrastSlider pane="script" />
+          <p class="contrast-hint">Higher is crisper, lower softer, in light and dark.</p>
+        </div>
+      </template>
+    </UPopover>
     <!-- Help, always in view: a menu of its own, not a section of the Drafter menu (Task 3b). -->
     <HelpMenu />
     <button
@@ -544,6 +569,7 @@ kbd {
 .toolbar.fold-open .fold-open-item,
 .toolbar.fold-save .fold-save-item,
 .toolbar.fold-export .fold-export-item,
+.toolbar.fold-contrast .fold-contrast-item,
 .toolbar.fold-focus .fold-focus-item,
 .toolbar.fold-theme .fold-theme-item,
 .toolbar.fold-modules :deep(.modules > button) {
@@ -565,5 +591,16 @@ kbd {
   .toolbar :deep(.act) {
     width: 26px;
   }
+}
+.contrast-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.contrast-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 </style>

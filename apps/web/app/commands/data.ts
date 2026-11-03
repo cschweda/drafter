@@ -370,6 +370,19 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'hide-line-numbers', title: 'Hide line numbers', group: 'View' },
   { id: 'turn-on-typewriter', title: 'Turn on typewriter scrolling', group: 'View' },
   { id: 'turn-off-typewriter', title: 'Turn off typewriter scrolling', group: 'View' },
+  // The sounds, apart from the scrolling, by name: a key clack and a carriage bell (key-sounds.ts).
+  {
+    id: 'turn-on-key-sounds',
+    title: 'Turn on typewriter sounds',
+    group: 'View',
+    keywords: ['sound', 'click', 'bell', 'audio', 'clack'],
+  },
+  {
+    id: 'turn-off-key-sounds',
+    title: 'Turn off typewriter sounds',
+    group: 'View',
+    keywords: ['sound', 'click', 'bell', 'audio', 'mute', 'silent'],
+  },
   { id: 'turn-on-scroll-sync', title: 'Turn on scroll sync', group: 'View' },
   { id: 'turn-off-scroll-sync', title: 'Turn off scroll sync', group: 'View' },
   {

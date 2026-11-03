@@ -31,7 +31,7 @@ const SCENE_START = { paddingTop: 'calc(10px * var(--text-scale, 1))' };
 export const theme = EditorView.theme({
   '&': {
     height: '100%',
-    color: 'var(--text)',
+    color: 'var(--src-text)',
     backgroundColor: 'var(--bg)',
     fontFamily: 'var(--font-mono)',
     // The text size setting scales the Source pane through --text-scale (settings/apply.ts).
@@ -73,83 +73,83 @@ export const theme = EditorView.theme({
   },
   '.cm-gutters': {
     backgroundColor: 'var(--bg)',
-    color: 'var(--muted)',
+    color: 'var(--src-muted)',
     border: 'none',
   },
   '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 16px' },
 
   // The highlighting classes of @drafter/cm-fountain.
-  '.cm-f-scene_heading': { color: 'var(--accent-text)', fontWeight: '700' },
-  '.cm-f-character': { color: 'var(--cue)', fontWeight: '700' },
-  '.cm-f-transition': { color: 'var(--trans)', fontWeight: '700' },
-  '.cm-f-note': { color: 'var(--note)', fontStyle: 'italic' },
-  '.cm-f-section, .cm-f-title-key': { color: 'var(--title)' },
-  '.cm-f-parenthetical, .cm-f-synopsis': { color: 'var(--muted)', fontStyle: 'italic' },
+  '.cm-f-scene_heading': { color: 'var(--src-accent-text)', fontWeight: '700' },
+  '.cm-f-character': { color: 'var(--src-cue)', fontWeight: '700' },
+  '.cm-f-transition': { color: 'var(--src-trans)', fontWeight: '700' },
+  '.cm-f-note': { color: 'var(--src-note)', fontStyle: 'italic' },
+  '.cm-f-section, .cm-f-title-key': { color: 'var(--src-title)' },
+  '.cm-f-parenthetical, .cm-f-synopsis': { color: 'var(--src-muted)', fontStyle: 'italic' },
   // Boneyard is cut and never prints: struck through, as well as quiet, so it isn't told apart
   // by its color alone.
   '.cm-f-boneyard': {
-    color: 'var(--muted)',
+    color: 'var(--src-muted)',
     textDecoration: 'line-through',
     textDecorationColor: 'color-mix(in srgb, var(--muted) 60%, transparent)',
   },
   '.cm-f-b': { fontWeight: '700' },
   '.cm-f-i': { fontStyle: 'italic' },
   '.cm-f-u': { textDecoration: 'underline' },
-  '.cm-f-marker': { color: 'var(--muted)' },
+  '.cm-f-marker': { color: 'var(--src-muted)' },
 
   // The highlighting classes of the Markdown mode (markdown/editor.ts).
-  '.cm-md-heading': { color: 'var(--accent-text)', fontWeight: '700' },
+  '.cm-md-heading': { color: 'var(--src-accent-text)', fontWeight: '700' },
   '.cm-md-b': { fontWeight: '700' },
   '.cm-md-i': { fontStyle: 'italic' },
-  '.cm-md-code': { color: 'var(--cue)' },
-  '.cm-md-quote': { color: 'var(--muted)', fontStyle: 'italic' },
-  '.cm-md-marker': { color: 'var(--muted)' },
-  '.cm-md-link': { color: 'var(--title)' },
-  '.cm-md-url': { color: 'var(--muted)' },
-  '.cm-md-footnote': { color: 'var(--muted)' },
-  '.cm-md-html': { color: 'var(--note)' },
+  '.cm-md-code': { color: 'var(--src-cue)' },
+  '.cm-md-quote': { color: 'var(--src-muted)', fontStyle: 'italic' },
+  '.cm-md-marker': { color: 'var(--src-muted)' },
+  '.cm-md-link': { color: 'var(--src-title)' },
+  '.cm-md-url': { color: 'var(--src-muted)' },
+  '.cm-md-footnote': { color: 'var(--src-muted)' },
+  '.cm-md-html': { color: 'var(--src-note)' },
 
   // Folding, search, tooltips, and the completion list.
   '.cm-foldPlaceholder': {
     backgroundColor: 'var(--raised)',
-    color: 'var(--muted)',
+    color: 'var(--src-muted)',
     border: '1px solid var(--border)',
   },
   '.cm-panels': {
     backgroundColor: 'var(--surface)',
-    color: 'var(--text)',
+    color: 'var(--src-text)',
     borderColor: 'var(--border)',
     fontFamily: 'var(--font-sans)',
   },
   '.cm-panels input, .cm-panels button, .cm-panels label': { fontFamily: 'inherit' },
   '.cm-panel.cm-search input.cm-textfield': {
     backgroundColor: 'var(--raised)',
-    color: 'var(--text)',
+    color: 'var(--src-text)',
     border: '1px solid var(--border)',
   },
   '.cm-panel.cm-search button': {
     backgroundImage: 'none',
     backgroundColor: 'var(--raised)',
-    color: 'var(--text)',
+    color: 'var(--src-text)',
     border: '1px solid var(--border)',
   },
-  '.cm-panel.cm-search [name=close]': { color: 'var(--text)' },
+  '.cm-panel.cm-search [name=close]': { color: 'var(--src-text)' },
   '.cm-searchMatch': { backgroundColor: 'color-mix(in srgb, var(--accent-text) 30%, transparent)' },
   '.cm-searchMatch.cm-searchMatch-selected': {
     backgroundColor: 'color-mix(in srgb, var(--accent-text) 55%, transparent)',
   },
   '.cm-tooltip': {
     backgroundColor: 'var(--raised)',
-    color: 'var(--text)',
+    color: 'var(--src-text)',
     border: '1px solid var(--border)',
     fontFamily: 'var(--font-sans)',
   },
   '.cm-tooltip-autocomplete ul': { fontFamily: 'var(--font-mono)' },
   '& .cm-tooltip-autocomplete ul li[aria-selected]': {
     backgroundColor: 'var(--overlay)',
-    color: 'var(--text)',
+    color: 'var(--src-text)',
   },
-  '.cm-completionDetail': { color: 'var(--muted)' },
+  '.cm-completionDetail': { color: 'var(--src-muted)' },
   '.cm-diagnostic': { borderLeftColor: 'var(--border)' },
 
   // In Classic Mode the highlighted row is what Enter and Tab write, so it's marked by more than
@@ -193,11 +193,11 @@ export const theme = EditorView.theme({
 
   // Classic Mode: no colour per element, and the weight and slant are the role's.
   [`${CLASSIC} .cm-f-scene_heading, ${CLASSIC} .cm-f-character, ${CLASSIC} .cm-f-transition`]: {
-    color: 'var(--text)',
+    color: 'var(--src-text)',
     fontWeight: 'inherit',
   },
-  [`${CLASSIC} .cm-f-section`]: { color: 'var(--text)' },
-  [`${CLASSIC} .cm-f-parenthetical`]: { color: 'var(--text)', fontStyle: 'inherit' },
+  [`${CLASSIC} .cm-f-section`]: { color: 'var(--src-text)' },
+  [`${CLASSIC} .cm-f-parenthetical`]: { color: 'var(--src-text)', fontStyle: 'inherit' },
 
   // A line with no role of its own (a note, a cut, a synopsis) keeps to the page's 60 characters.
   [`${CLASSIC} .cm-line`]: { paddingRight: 'max(16px, calc(100% - 8px - 60ch))' },
@@ -252,7 +252,7 @@ export const theme = EditorView.theme({
     alignItems: 'center',
     gap: '1ch',
     width: '100%',
-    color: 'var(--muted)',
+    color: 'var(--src-muted)',
     fontStyle: 'normal',
   },
   [`${CLASSIC} .cm-c-page-break::after`]: {
@@ -265,7 +265,7 @@ export const theme = EditorView.theme({
     padding: '0 0.5ch',
     border: '1px solid var(--muted)',
     borderRadius: '3px',
-    color: 'var(--muted)',
+    color: 'var(--src-muted)',
     fontSize: '0.8em',
     fontWeight: '400',
   },

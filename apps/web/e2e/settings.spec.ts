@@ -130,14 +130,14 @@ test.describe('the dialog', () => {
     const inside = () => dialog(page).evaluate((d) => d.contains(document.activeElement));
     expect(await inside()).toBe(true);
     await expect(textSize(page)).toBeFocused();
-    // Tab goes through the settings (the text size, the switches, the spelling language, the
+    // Tab goes through the settings (the text size, the two contrast sliders, the switches, the spelling language, the
     // licences link, a switch for each module, the About section's button, Done) without leaving
     // the dialog. The section list comes before them, so it is Shift+Tab from the first. (WebKit's
     // Tab skips buttons and checkboxes unless the system asks otherwise.)
     if (browserName !== 'webkit') {
       const controls = await dialog(page)
         .locator(
-          '.settings-body :is(select, input[type="checkbox"], button, a[href]), .settings-foot button',
+          '.settings-body :is(select, input[type="checkbox"], input[type="range"], button, a[href]), .settings-foot button',
         )
         .count();
       for (let i = 1; i < controls; i++) {

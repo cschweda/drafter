@@ -63,6 +63,22 @@ const tokenColor = (page: Page, token: string) =>
     return color;
   }, token);
 
+/**
+ * The pages' ink as the page draws it: the theme's, mixed by the Script contrast slider
+ * (settings/contrast.ts), so probed inside the pages, where that mix is set.
+ */
+const sheetInk = (page: Page) =>
+  pages(page)
+    .first()
+    .evaluate((el) => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--drafter-ink)';
+      el.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
+
 /** The first page's paper and type, and the desk around it. */
 const pageColors = (page: Page) =>
   pages(page)
@@ -154,7 +170,7 @@ test.describe('the Script pane on a desktop', () => {
       if (theme === 'light') await useLightTheme(page);
       const colors = await pageColors(page);
       expect(colors.paper, theme).toBe(await tokenColor(page, '--paper'));
-      expect(colors.ink, theme).toBe(await tokenColor(page, '--paper-ink'));
+      expect(colors.ink, theme).toBe(await sheetInk(page));
       expect(colors.desk, theme).toBe(await tokenColor(page, '--desk'));
       expect(colors.paper, theme).not.toBe(colors.desk);
     }
@@ -192,11 +208,25 @@ test.describe('the Script pane on a desktop', () => {
       .poll(async () => (await pageColors(page)).paper)
       .toBe(await tokenColor(page, '--paper'));
     await choosePageColor(page, 'dark');
-    // The page the dark theme drew before the paper, in both themes.
-    const dark = { paper: 'rgb(27, 30, 37)', ink: 'rgb(232, 234, 238)' };
+    // The page the dark theme drew before the paper, in both themes, with its light ink (mixed by
+    // the Script contrast slider, so lighter still at the default).
+    const dark = { paper: 'rgb(27, 30, 37)' };
+    // As sRGB through a canvas: a mixed colour is computed in OKLab, not as rgb().
+    const lightInk = () =>
+      pages(page)
+        .first()
+        .evaluate((el) => {
+          const ctx = document.createElement('canvas').getContext('2d') as CanvasRenderingContext2D;
+          ctx.fillStyle = getComputedStyle(el).color;
+          ctx.fillRect(0, 0, 1, 1);
+          const [r = 0, g = 0, b = 0] = ctx.getImageData(0, 0, 1, 1).data;
+          return Math.min(r, g, b) >= 230;
+        });
     await expect.poll(() => pageColors(page)).toMatchObject(dark);
+    await expect.poll(lightInk).toBe(true);
     await useLightTheme(page);
     await expect.poll(() => pageColors(page)).toMatchObject(dark);
+    await expect.poll(lightInk).toBe(true);
     // Kept with the other settings.
     await page.reload();
     await expect(pages(page).first()).toBeVisible();
