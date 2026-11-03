@@ -18,7 +18,7 @@ import { classic, classicEdit, classicLine, classicTab, elementAt } from '../../
 import { seenSpace } from '../../src/classic/chooser';
 import { setStored } from '../../src/classic/line';
 import { apply, BOM, editor, run } from '../helpers';
-import { classicEditor, render, type } from './harness';
+import { classicEditor, keys, render, type } from './harness';
 
 Range.prototype.getClientRects ??= () => [] as unknown as DOMRectList;
 
@@ -149,7 +149,15 @@ describe('opening', () => {
   test('the row of the pending element is highlighted', () => {
     expect(active(chooser('A.\n\n|'))?.textContent).toBe('Action');
     expect(active(chooser('JUNE\nHi.\n\n|'))?.textContent).toBe('Character');
-    expect(active(chooser('JUNE\n|'))?.textContent).toBe('Dialogue');
+    // A lone name come back to is Action, with Action under it; one just typed has its Dialogue.
+    expect(active(chooser('JUNE\n|'))?.textContent).toBe('Action');
+    const typed = new EditorView({
+      state: keys(classicEditor('|'), 'Tab', 'june', 'Enter'),
+      parent: document.body,
+    });
+    views.push(typed);
+    press(typed, 'Enter');
+    expect(active(typed)?.textContent).toBe('Dialogue');
   });
 
   test('in a speech Dialogue and Parenthetical are there', () => {

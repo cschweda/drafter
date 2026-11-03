@@ -1,6 +1,7 @@
 import {
   Annotation,
   type AnnotationType,
+  ChangeSet,
   type ChangeSpec,
   EditorState,
   type Extension,
@@ -29,7 +30,7 @@ import {
   showChooser,
   WRITES,
 } from './line';
-import { markOf, NO_LINE, settleLine } from './marks';
+import { markFor, markOf, NO_LINE, settleLine } from './marks';
 
 // Enter and Tab in Classic Mode (design §6): where they go is in `NEXT`, and what they write on the
 // way is in `WRITES`. Each key is one transaction with the user event `input`, and carries
@@ -121,9 +122,50 @@ function blanksBelow({ doc }: EditorState, line: Line): { blanks: number; text: 
  * The stored line for an element arrived at. An element Enter can't work out for itself, and Tab's
  * Character, is one the writer chose; the rest are what a click on the same empty line would find.
  */
-function arriving(state: EditorState, kind: ClassicKind, by: Key, made: Span | null) {
+function arriving(
+  state: EditorState,
+  kind: ClassicKind,
+  by: Key,
+  made: Span | null,
+  madeMark: Span | null = null,
+) {
   const soft = kind === 'action' && softAction(state);
-  return setStored.of({ kind, chosen: isFirm(kind, by), soft, made });
+  return setStored.of({ kind, chosen: isFirm(kind, by), soft, made, madeMark });
+}
+
+/**
+ * New breaks in an Action paragraph start a paragraph of what's left below them, which may then
+ * read as a cue: capitals over a line (§4.2). That line gets its `!` in the same transaction, and
+ * it goes with the made line if that's left unused (§4.4). The changes, and the `!` if any.
+ */
+function keptBelow(
+  state: EditorState,
+  changes: ChangeSpec,
+): { changes: ChangeSpec; mark: Span | null } {
+  const first = ChangeSet.of(changes, state.doc.length, state.lineBreak);
+  const after = state.update({ changes: first, filter: false }).state;
+  const { doc } = after;
+  let at = -1;
+  first.iterChanges((_fromA, _toA, _fromB, toB) => {
+    at = Math.max(at, toB);
+  });
+  let n = doc.lineAt(at).number;
+  while (n <= doc.lines && isBlank(doc.line(n).text)) n++;
+  if (n > doc.lines) return { changes, mark: null };
+  const below = doc.line(n);
+  const was = state.doc.lineAt(first.invertedDesc.mapPos(below.from, 1));
+  // Only a line that was inside its paragraph, and now starts one.
+  const above = was.number > 1 ? state.doc.line(was.number - 1) : null;
+  if (!above || isBlank(above.text)) return { changes, mark: null };
+  if (parsedKindAt(state, was) !== 'action') return { changes, mark: null };
+  const change = markFor(after, below, 'action');
+  if (!change) return { changes, mark: null };
+  const mark = ChangeSet.of(change, doc.length, state.lineBreak);
+  const inserted = change.insert.length;
+  return {
+    changes: first.compose(mark),
+    mark: inserted > 0 ? { from: change.from, to: change.from + inserted } : null,
+  };
 }
 
 const isFirm = (kind: ClassicKind, by: Key) =>
@@ -204,10 +246,11 @@ export function onward(here: Here, kind: ClassicKind, by: Key): TransactionSpec 
       effects: arriving(state, kind, by, null),
     };
   }
+  const kept = keptBelow(state, { from: line.to, insert: lineBreak.repeat(breaks) });
   return {
-    changes: { from: line.to, insert: lineBreak.repeat(breaks) },
+    changes: kept.changes,
     selection: { anchor: line.to + 2 },
-    effects: arriving(state, kind, by, { from: line.to, to: line.to + breaks }),
+    effects: arriving(state, kind, by, { from: line.to, to: line.to + breaks }, kept.mark),
   };
 }
 
@@ -271,9 +314,11 @@ function pushDown({ state, element, line }: Here): TransactionSpec {
   const speech = (kind === 'dialogue' || kind === 'lyric') && underSpeech(state, line.from);
   if (speech) return openLine(state, line.from - 1, 'dialogue', 'enter');
   const from = line.from + (line.text.startsWith(BOM) ? 1 : 0);
+  const kept = keptBelow(state, { from, insert: state.lineBreak });
+  const mark = kept.mark ? kept.mark.to - kept.mark.from : 0;
   return {
-    changes: { from, insert: state.lineBreak },
-    selection: { anchor: visibleStart(state, line) + 1 },
+    changes: kept.changes,
+    selection: { anchor: visibleStart(state, line) + 1 + mark },
   };
 }
 

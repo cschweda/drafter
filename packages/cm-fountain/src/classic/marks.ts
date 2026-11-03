@@ -529,10 +529,13 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
  * A line of capitals the cursor came back to is Action (§4.2, and the maintainer's ruling on
  * Task 13), though the empty line under it is pending Dialogue, as under a name. What the writer
  * types there (a letter, Shift+Enter's two spaces, Tab's `()`) would make it a cue, so the line
- * above gets its `!` in the same transaction, as `settleBreaks` gives one. Only on a line the
- * cursor arrived at by moving: one a key went to from a name, or an element stored or picked on it,
- * is the writer's speech, and the name is left a name.
+ * above gets its `!` in the same transaction, as `settleBreaks` gives one. A line stored as a line
+ * of speech (Enter or Tab from a name), or a speech element picked, is the writer's, and the name
+ * is left a name. It runs ahead of `classicMarks`, which then reads the typing with the `!` above.
  */
+/** The elements of a speech's lines, which a name above is for. */
+const SPEECH_LINES: ReadonlySet<ClassicKind> = new Set(['dialogue', 'parenthetical', 'lyric']);
+
 export const keepActionAbove: Extension = EditorState.transactionFilter.of((tr) => {
   if (!tr.docChanged || tr.annotation(appChange)) return tr;
   const typing = tr.isUserEvent('input.type') && !tr.isUserEvent('input.type.compose');
@@ -543,9 +546,9 @@ export const keepActionAbove: Extension = EditorState.transactionFilter.of((tr) 
   if (start.selection.ranges.length > 1) return tr;
   const line = start.doc.lineAt(start.selection.main.head);
   if (!isBlank(line.text) || line.number < 2) return tr;
-  // Only a line arrived at by moving: a key, a pick, or a command on it means the name above.
+  // A speech stored or picked on the line means the name above: Enter from it, the chooser.
   const held = start.field(classicLine, false);
-  if (held?.from === line.from && !held.arrived) return tr;
+  if (held?.from === line.from && SPEECH_LINES.has(held.kind)) return tr;
   if (tr.effects.some((effect) => effect.is(pickedElement))) return tr;
   const above = start.doc.line(line.number - 1);
   if (isBlank(above.text) || parsedKindAt(start, above) !== 'action') return tr;
@@ -619,7 +622,7 @@ function keptOnLine(state: EditorState, line: Line, own: StoredLine, text: strin
 }
 
 /** The change a line needs to read as `kind`, in a state, or null. */
-function markFor(state: EditorState, line: Line, kind: ClassicKind) {
+export function markFor(state: EditorState, line: Line, kind: ClassicKind) {
   if (blocked(state, line.from)) return null;
   const own = { ...NO_LINE, from: line.from, ...kindsOf(kind) };
   const { text } = settleLine(state, line, line.text, own);

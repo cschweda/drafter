@@ -1,7 +1,7 @@
 import { history, undo } from '@codemirror/commands';
 import { EditorSelection, EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { makeElement, parsedDoc } from '@drafter/cm-fountain';
+import { appChange, makeElement, parsedDoc } from '@drafter/cm-fountain';
 import { parse } from '@drafter/fountain';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
@@ -266,7 +266,13 @@ describe('§6.2, an empty line', () => {
     ['Action: Enter writes nothing until the chooser', 'A.\n\n|', 'Enter', 'A.\n\n|'],
     ['Dialogue: Tab writes (), the cursor inside', 'JUNE\n|', 'Tab', 'JUNE\n(|)', 'dialogue'],
     ['Dialogue: Enter writes nothing until the chooser', 'JUNE\n|', 'Enter', 'JUNE\n|', 'dialogue'],
-    ['Dialogue: Shift+Tab goes back to the end of the name', 'JUNE\n|', 'Shift-Tab', 'JUNE|'],
+    [
+      'Dialogue: Shift+Tab goes back to the end of the name',
+      'JUNE\n|',
+      'Shift-Tab',
+      'JUNE|',
+      'dialogue',
+    ],
     [
       'Dialogue under a speech: Shift+Tab goes to the line above',
       'JUNE\nHello.\n|',
@@ -278,6 +284,7 @@ describe('§6.2, an empty line', () => {
       'JUNE\n|\nHe leaves.',
       'Shift-Tab',
       'JUNE|\n\nHe leaves.',
+      'dialogue',
     ],
     ['An empty Parenthetical: Enter removes ()', 'JUNE\n(|)', 'Enter', 'JUNE\n|'],
     ['An empty Parenthetical: Tab removes ()', 'JUNE\n(|)', 'Tab', 'JUNE\n|'],
@@ -479,11 +486,12 @@ describe('§6.4, Shift+Tab and Shift+Enter', () => {
   rows([
     ['Shift+Enter at the end of BANG writes !BANG', 'BANG|', 'Shift-Enter', '!BANG\n|'],
     [
-      // A lone name opened in a file is a line the cursor came back to: it stays Action (ruling).
-      'Shift+Enter under a lone name the cursor came back to keeps it Action',
+      // A lone name opened in a file is a line the cursor came back to: Action, with Action
+      // pending under it (the rulings on Task 13), so Shift+Enter does what Enter does.
+      'Shift+Enter under a lone name the cursor came back to writes nothing',
       'JUNE\n|',
       'Shift-Enter',
-      '!JUNE\n  |',
+      'JUNE\n|',
     ],
     ['Shift+Enter in a line of action is one break', 'She waits.|', 'Shift-Enter', 'She waits.\n|'],
     [
@@ -522,10 +530,17 @@ describe('§6.4, Shift+Tab and Shift+Enter', () => {
     );
   });
 
+  test('under capitals the cursor came back to, Action is pending, and Tab walks the row from it', () => {
+    const state = classicEditor('BANG\n|');
+    expect(elementAt(state)).toMatchObject({ kind: 'action', pending: true });
+    const tabbed = keys(state, 'Tab');
+    expect(render(tabbed)).toBe('BANG\n|');
+    expect(elementAt(tabbed)?.kind).toBe('character');
+  });
+
   test.each([
     ['a letter', 'x', '!BANG\nx|'],
-    ['Shift+Enter', 'Shift-Enter', '!BANG\n  |'],
-    ['Tab', 'Tab', '!BANG\n(|)'],
+    ['Shift+Enter', 'Shift-Enter', 'BANG\n|'],
   ])(
     'capitals the cursor came back to stay Action under %s on the line below',
     (_n, key, after) => {
@@ -535,11 +550,46 @@ describe('§6.4, Shift+Tab and Shift+Enter', () => {
     },
   );
 
-  test('Shift+Tab back to capitals the cursor came back to leaves them Action', () => {
+  test('Shift+Tab under capitals the cursor came back to walks the row, writing nothing', () => {
     const back = keys(classicEditor('BANG\n|'), 'Shift-Tab');
-    expect(render(back)).toBe('BANG|');
-    expect(elementAt(back)?.kind).toBe('action');
-    expect(render(keys(back, 'Enter', 'BANG'))).toBe('BANG\n\nBANG|');
+    expect(render(back)).toBe('BANG\n|');
+    expect(parse(back.doc.toString()).blocks[0]?.kind).toBe('action');
+  });
+
+  test('a name typed, then a change the app makes elsewhere, is still a name', () => {
+    let state = keys(classicEditor('|'), 'Tab', 'june', 'Enter');
+    state = state.update({
+      changes: { from: 0, insert: 'A.\n\n' },
+      annotations: appChange.of(true),
+    }).state;
+    expect(render(type(state, 'Hi.'))).toBe('A.\n\nJUNE\nHi.|');
+  });
+
+  test.each([
+    [
+      'Enter at its end',
+      'A door.|\nBANG\nIt echoes.',
+      'Enter',
+      'A door.\n\n|\n\n!BANG\nIt echoes.',
+    ],
+    ['Tab at its end', 'A door.|\nBANG\nIt echoes.', 'Tab', 'A door.\n\n|\n\n!BANG\nIt echoes.'],
+    ['Tab mid-line', 'A do|or.\nBANG\nIt echoes.', 'Tab', 'A door.\n\n|\n\n!BANG\nIt echoes.'],
+    ['Enter mid-line', 'A door.\nBA|NG\nIt echoes.', 'Enter', 'A door.\nBA\n\n!|NG\nIt echoes.'],
+    ['Enter at its start', 'A door.\n|BANG\nIt echoes.', 'Enter', 'A door.\n\n!|BANG\nIt echoes.'],
+  ])(
+    'a key in an Action paragraph keeps the capitals it leaves below as Action: %s',
+    (_n, before, key, after) => {
+      const state = keys(classicEditor(before), key);
+      expect(render(state)).toBe(after);
+      const kinds = parse(state.doc.toString()).blocks.map((block) => block.kind);
+      expect(kinds.every((kind) => kind === 'action')).toBe(true);
+    },
+  );
+
+  test('left unused, the line Enter made goes, and the ! it wrote below with it', () => {
+    const state = keys(classicEditor('A door.|\nBANG\nIt echoes.'), 'Enter');
+    const away = state.update({ selection: { anchor: 0 }, userEvent: 'select.pointer' }).state;
+    expect(away.doc.toString()).toBe('A door.\nBANG\nIt echoes.');
   });
 
   test('a name typed and gone on from is still a name, its speech under it', () => {
@@ -677,9 +727,10 @@ describe('undo', () => {
     ['Enter', 'She |waits.'],
     ['Tab', 'JUNE\nHello.|'],
     ['Shift-Enter', 'BANG|'],
-    ['Shift-Enter', 'JUNE\n|'],
+    // Dialogue stored, as Enter from a name leaves it: a lone name come back to is Action.
+    ['Shift-Enter', 'JUNE\n|', 'dialogue'],
     ['Enter', 'JUNE\n(|)'],
-    ['Shift-Tab', 'JUNE\n|'],
+    ['Shift-Tab', 'JUNE\n|', 'dialogue'],
     ['Enter', 'JU|NE', 'character'],
   ])(
     'each key is one undo step and undo gives the exact text back: %s on %s',

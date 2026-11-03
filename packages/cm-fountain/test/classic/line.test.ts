@@ -13,7 +13,7 @@ import {
   setDismissed,
   setStored,
 } from '../../src/classic/line';
-import { classicEditor, type } from './harness';
+import { classicEditor, keys, render, type } from './harness';
 
 const PLAY = builtins['stage-play-standard'] as Template;
 
@@ -107,12 +107,18 @@ describe('a line with text', () => {
   });
 
   test('a lone name is a Character while its Dialogue line is pending', () => {
-    const state = classicEditor('\nJUNE\n|');
+    // Pending as Enter from the name leaves it; a lone name come back to has Action under it.
+    const state = keys(classicEditor('\n|'), 'Tab', 'june', 'Enter');
+    expect(render(state)).toBe('\nJUNE\n|');
     const name = state.doc.line(2);
     expect(element(state)).toMatchObject({ kind: 'dialogue', pending: true });
     expect(lineKindAt(state, name)).toBe('character');
     // Elsewhere it draws what the parser reads.
     expect(lineKindAt(cursorTo(state, 0), name)).toBe('action');
+  });
+
+  test('a lone name the cursor comes back under has Action pending', () => {
+    expect(element(classicEditor('\nJUNE\n|'))).toMatchObject({ kind: 'action', pending: true });
   });
 
   test('a lone name the cursor returns to reads as Action', () => {

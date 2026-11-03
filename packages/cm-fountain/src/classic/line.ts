@@ -299,12 +299,27 @@ export function elementAt(state: EditorState): ClassicElement | null {
   return { kind, pending: empty, soft: own?.soft ?? false, enter, tab };
 }
 
-/** A stored line for the cursor's line, if it's an empty line the cursor has arrived on. */
-function arrival(state: EditorState): StoredLine | null {
+/**
+ * Whether the empty line sits straight under a line the parser reads as Action: capitals there
+ * that the cursor came back to are Action, not a name (the rulings on Task 13).
+ */
+function underAction(state: EditorState, line: Line): boolean {
+  if (line.number < 2) return false;
+  const above = state.doc.line(line.number - 1);
+  return !isBlank(above.text) && parsedKindAt(state, above) === 'action';
+}
+
+/**
+ * A stored line for the cursor's line, if it's an empty line the cursor has arrived on.
+ * `arrived`: the cursor moved onto it (or the script opened there), rather than a key putting it
+ * there; under capitals it came back to, Action is pending, not Dialogue.
+ */
+function arrival(state: EditorState, arrived = true): StoredLine | null {
   if (!oneCursor(state)) return null;
   const line = cursorLine(state);
   if (!isEmpty(state, line)) return null;
-  const kind = pendingAt(state, line.from);
+  const worked = pendingAt(state, line.from);
+  const kind = arrived && worked === 'dialogue' && underAction(state, line) ? 'action' : worked;
   const { headings } = state.facet(elementStructure)();
   return {
     from: line.from,
@@ -316,7 +331,7 @@ function arrival(state: EditorState): StoredLine | null {
     dismissed: false,
     beganEmpty: true,
     arrivedAs: kind,
-    arrived: true,
+    arrived,
   };
 }
 
@@ -419,9 +434,14 @@ const isEmptied = (line: StoredLine, tr: Transaction) => isBlank(tr.newDoc.lineA
 
 /** What Classic Mode remembers of the line being typed (§5). It's never saved. */
 export const classicLine: StateField<StoredLine | null> = StateField.define<StoredLine | null>({
-  create: arrival,
+  create: (state) => arrival(state),
   update(value, tr) {
-    if (remade(tr)) return applyEffects(null, tr) ?? arrival(tr.state);
+    // Moved onto the line from another one; a change under the cursor keeps what it was.
+    const was = tr.startState.doc.lineAt(tr.startState.selection.main.head).from;
+    const now = tr.newDoc.lineAt(tr.newSelection.main.head).from;
+    const moved = tr.changes.mapPos(was, -1) !== now;
+    const arrived = moved || (value?.arrived ?? false);
+    if (remade(tr)) return applyEffects(null, tr) ?? arrival(tr.state, arrived);
     if (!tr.docChanged && !tr.selection && tr.effects.length === 0) return value;
     let line = value;
     if (line && tr.docChanged) {
@@ -452,7 +472,7 @@ export const classicLine: StateField<StoredLine | null> = StateField.define<Stor
     ) {
       line = null;
     }
-    return line ?? arrival(tr.state);
+    return line ?? arrival(tr.state, arrived);
   },
 });
 
