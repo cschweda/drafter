@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- The browser test of Back to Drafter counts WebKit's "Page closed" error as the help tab going away, as it can come a moment before the tab says it has closed.
+- **drafter.dev's analytics send only page views and time on a page.** Plausible stays on every page, the app included, only to see the basic traffic and which pages people look at, as a reference for improving Drafter. Clicks on outside links, downloads, and form submissions are no longer sent at all, and the help and the README say that Plausible is privacy-first, with no cookies and no ads.
 - **A Privacy section in the README, and Your script stays with you at the top of Help → Privacy** (on drafter.dev and in the desktop app): nothing about a script is stored in the cloud, Drafter uses no AI, the script leaves only when the writer sends it, every request Drafter makes in one table, and the audit that checks it.
 - The browser's own spellcheck is off in every field (Chrome's Enhanced spell check and Edge's Microsoft Editor send typed text to Google or Microsoft, and notes and scene details hold the script's words). Drafter's own spellcheck, on the device, is unchanged, and Report a problem keeps the browser's for its fields.
 - The help and the README now say exactly what goes over the network: Plausible on drafter.dev only, and what it records; the desktop app's update check, and what GitHub sees; and that a module added to the desktop app's modules folder can reach the addresses you agree to.

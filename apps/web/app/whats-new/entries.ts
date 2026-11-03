@@ -45,6 +45,19 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.25.1-privacy',
+    date: '2026-11-03',
+    version: '0.25.1',
+    kind: 'Security',
+    title: 'Your script stays with you, and an audit shows it',
+    text: 'A privacy audit checked that nothing about your script is stored in the cloud and that Drafter uses no AI. It found that a bug report’s text could reach drafter.dev’s visit counter, which now gets page views only.',
+    link: {
+      href: '/docs/privacy/#your-script-stays-with-you',
+      label: 'Your script stays with you',
+    },
+    banner: true,
+  },
+  {
     id: 'v0.25.1-technical-details',
     date: '2026-11-03',
     version: '0.25.1',

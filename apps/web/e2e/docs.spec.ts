@@ -744,8 +744,10 @@ test.describe('with JavaScript', () => {
 });
 
 /** An action's error, unless the tab it was done in closed under it, which is what was wanted. */
+// WebKit can report the press's "Page closed" a moment before `isClosed()` says so (a phone-webkit
+// run did, on 2026-11-03), so that error counts as the tab going away too.
 const gone = (tab: Page) => (error: unknown) => {
-  if (!tab.isClosed()) throw error;
+  if (!tab.isClosed() && !/page closed|target closed/i.test(String(error))) throw error;
 };
 
 test.describe('from the app', () => {

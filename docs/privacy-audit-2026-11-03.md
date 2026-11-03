@@ -185,6 +185,12 @@ Every request each browser made was recorded: its address, its headers, and its 
 
 Every request was a GET for Drafter's own files, its fonts, its dictionaries, and Plausible's script. The phrase and the title were searched for in each request's address, headers, and body, as typed and as URL-encoded. They were in none of them. The script was in one place afterward: this browser's own storage.
 
+## After the audit: only page views and time on a page
+
+- **The maintainer's decision** (2026-11-03): keep Plausible on every page of drafter.dev, the app included. In the maintainer's words, "it's only because I'd like to know the basic traffic and what people are looking at". The help and the README now say this plainly: Plausible is privacy-first, with no cookies and no ads, and it is there only to see the traffic, as a reference for improving Drafter.
+- **The snippet now matches that.** Its `transformRequest` lets only `pageview` and `engagement` (time on a page) through, and drops every other event before it is sent: outside-link clicks, downloads, and form submissions. So finding 1's door is closed twice, whatever Plausible's dashboard settings are.
+- **Shown** with Plausible's real script, as before: the old snippet sent a page view and the outside-link click with the report in it, and the new one sends only the page view. `apps/web/test/plausible.test.ts` holds it.
+
 ## Changed with this audit
 
 - `d68b7ce7` (on `main`, live on drafter.dev): finding 1.

@@ -92,31 +92,34 @@ useDocsHead({
       version and system you run, as any download does (<a href="#updates">below</a>).
     </p>
     <p>
-      drafter.dev uses <a href="https://plausible.io/privacy-focused-web-analytics">Plausible</a>
-      to measure visitor traffic, so the maintainer can see roughly how many people use Drafter and
-      which help pages they read. Plausible is analytics built for privacy, and it was chosen over
-      Google Analytics for that reason:
+      drafter.dev uses <a href="https://plausible.io/privacy-focused-web-analytics">Plausible</a>,
+      privacy-first analytics with no cookies and no ads, for one thing only: to see the basic
+      traffic, how many people use Drafter and which pages they look at, as a reference for making
+      it better. It is on every page of drafter.dev, the app included. Plausible was chosen over
+      Google Analytics for its privacy:
     </p>
     <ul>
       <li><strong>No cookies.</strong> Nothing is stored in your browser, so there is no cookie banner to click through.</li>
+      <li><strong>No ads.</strong> Nothing is collected for advertising, by Drafter or by Plausible, and drafter.dev shows no ads.</li>
       <li><strong>Nothing that identifies you.</strong> Plausible keeps no IP address and builds no profile of you. To count a visitor once a day, it uses a scrambled code that changes every 24 hours, so a visit can’t be tied to you, or to your visit the next day.</li>
       <li><strong>No following you around the web.</strong> Google Analytics links what you do across the many sites that use it, and Google uses that data for advertising. Plausible tracks nothing across sites, and sells and shares nothing.</li>
       <li><strong>Open and small.</strong> Plausible is open-source software, hosted in the European Union, and its script is a few kilobytes, so drafter.dev stays fast.</li>
     </ul>
     <p>
-      What it records: each page you open, by its address without anything after a <code>?</code>
-      or <code>#</code> (<code>drafter.dev/</code> or a help page), the site that sent you there if
-      your browser says, the kind of device and browser, the country, how far you scrolled and how
-      long the page was open, and the address of an outside link or download you click, also cut
-      before any <code>?</code> or <code>#</code>. It never sees your script, its title, anything
-      you type, or which files you open or save.
+      What it records, and all it records: each page you open, by its address without anything
+      after a <code>?</code> or <code>#</code> (<code>drafter.dev/</code> or a help page), the site
+      that sent you there if your browser says, the kind of device and browser, the country, and
+      how far you scrolled and how long the page was open. Drafter sends Plausible nothing else: no
+      clicks, no downloads, no forms. It never sees your script, its title, anything you type, or
+      which files you open or save.
     </p>
     <p>
       Plausible’s small script comes from plausible.io and runs in the same page as the editor on
-      drafter.dev, so it is the one piece of outside code there. Drafter hands it nothing but the
-      event, cut down first (<code>apps/web/scripts/plausible.mjs</code>). Before 3 November 2026,
-      the address of Open on GitHub in Report a problem went whole, with what the report said; the
-      privacy audit found that, and it was fixed the same day.
+      drafter.dev, so it is the one piece of outside code there. Drafter lets only a page view and
+      the time on the page through, cut down first (<code>apps/web/scripts/plausible.mjs</code>).
+      Before 3 November 2026, Plausible also counted clicks on outside links, and the address of
+      Open on GitHub in Report a problem went whole, with what the report said; the privacy audit
+      found that, and it was fixed the same day.
     </p>
     <ul>
       <li><strong>Only on the website.</strong> Analytics runs only when you use Drafter at drafter.dev in a browser. The downloaded desktop app for Windows, Linux, or Mac, and a copy you host yourself, have no analytics at all. Drafter running offline sends nothing either.</li>

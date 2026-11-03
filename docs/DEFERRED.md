@@ -357,6 +357,6 @@ Known limits the [security audit](security-audit-2026-11-01.md) recorded and tha
 
 From the [privacy audit](privacy-audit-2026-11-03.md); finding 1 and the rest were fixed the same day.
 
-- **Plausible's script runs in the editor's page on drafter.dev.** It is the one outside code there, and the security policy lets it send to plausible.io. Its events are now cut down before they go (`apps/web/scripts/plausible.mjs`), but the script itself could change on Plausible's side. Two ways to close this: load it only on the help pages (then the app's own visits go uncounted), or host a reviewed copy on drafter.dev with `connect-src` narrowed to `https://plausible.io/api/event`. The maintainer to choose.
-- **Plausible's dashboard settings** (outbound links, file downloads, form submissions) live outside the repository. The cut-down makes them harmless; turning off outbound links on the dashboard would make the events smaller still.
+- **Plausible's script runs in the editor's page on drafter.dev**, by the maintainer's choice (every page, for the basic traffic). It is the one outside code there, and the security policy lets it send to plausible.io. Only page views and time on a page leave, cut down (`apps/web/scripts/plausible.mjs`), but the script itself could change on Plausible's side. If that ever matters more: host a reviewed copy on drafter.dev, with `connect-src` narrowed to `https://plausible.io/api/event`.
+- **Plausible's dashboard settings** (outbound links, file downloads, form submissions) live outside the repository. The snippet drops those events whatever they say; turning them off on the dashboard would only tidy it.
 
