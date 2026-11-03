@@ -444,3 +444,31 @@ export const classicLine: StateField<StoredLine | null> = StateField.define<Stor
     return line ?? arrival(tr.state);
   },
 });
+
+/** Accepting offered more on this line: a key may take that before the list has drawn. */
+export const offersMore = StateEffect.define<null>();
+
+/** The line the writer is typing on. `more`: it was left with something more on offer. */
+export interface TypedLine {
+  from: number;
+  more: boolean;
+}
+
+/**
+ * Where the writer has typed in this stay, the one place a key may finish a word for them (§7.3):
+ * text the cursor merely reached is left as it stands. It's apart from `classicLine`, which stores
+ * nothing on a line with text the cursor came back to, so that the parser goes on naming it. Any
+ * move loses it, even along the line.
+ */
+export const typedLine: StateField<TypedLine | null> = StateField.define<TypedLine | null>({
+  create: () => null,
+  update(value, tr) {
+    if (tr.annotation(appChange)) return null;
+    const here = tr.newDoc.lineAt(tr.newSelection.main.head).from;
+    if (tr.docChanged && tr.isUserEvent('input.type')) return { from: here, more: false };
+    if (tr.effects.some((effect) => effect.is(offersMore))) return { from: here, more: true };
+    if (!value || !(tr.docChanged || tr.selection)) return value;
+    if (!tr.docChanged) return null;
+    return tr.changes.mapPos(value.from, -1) === here ? { from: here, more: false } : null;
+  },
+});

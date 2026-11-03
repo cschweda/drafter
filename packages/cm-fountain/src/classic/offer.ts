@@ -7,6 +7,7 @@ import {
   insertCompletionText,
   pickedCompletion,
   selectedCompletion,
+  setSelectedCompletion,
   startCompletion,
 } from '@codemirror/autocomplete';
 import {
@@ -45,8 +46,10 @@ import {
   classicLine,
   elementAt,
   mapSpan,
+  offersMore,
   setDismissed,
   setStored,
+  typedLine,
 } from './line';
 import { difference, ownLine, settleLine } from './marks';
 
@@ -69,6 +72,18 @@ const PREFIXES = ['INT.', 'EXT.', 'INT./EXT.', 'EST.', 'I/E'];
 
 /** The layout adds this for a speaker who continues, so it's never a suggestion (§7.1). */
 const CONTINUED = /^\(CONT['’]D\)$/i;
+
+/** The most of a label a reader hears: a name can be any length, and a live region reads it all. */
+const MOST_SAID = 60;
+
+/** A label for the live region, cut at a whole character. */
+function spoken(label: string): string {
+  const points = [...label];
+  return points.length > MOST_SAID ? `${points.slice(0, MOST_SAID).join('')}…` : label;
+}
+
+/** An extension offered on nothing typed: it waits for Down, and Enter and Tab pass it by. */
+const WAITING = new WeakSet<Completion>();
 
 /** What an option does after writing: stays, goes on to the next element, or offers what comes next on the line. */
 type After = 'stay' | 'go on' | 'offer more';
@@ -198,7 +213,8 @@ function spotsAt(
   if (element.tab === null || insideRegion(state.field(parsedDoc), pos)) return [];
   const own =
     pos >= visibleEnd(state, line) ? elementSpots(state, element, line, text, start, pos) : [];
-  if (!explicit) return own;
+  // A heading and a transition have their own lists, and nothing else belongs on them.
+  if (!explicit || (own.length && element.kind !== 'character')) return own;
   return [...own, { ...anywhereTarget(line, text, start), after: 'stay', least: 0 }];
 }
 
@@ -220,7 +236,9 @@ export function offerAt(state: EditorState, pos: number, explicit: boolean): Off
     const options = optionsAfter(query, spot.labels(doc)).map(({ label }) =>
       optionFor(label, spot),
     );
-    if (options.length) return { from: spot.from, options };
+    if (!options.length) continue;
+    if (spot.role === 'extension' && !query) for (const option of options) WAITING.add(option);
+    return { from: spot.from, options };
   }
   return null;
 }
@@ -292,7 +310,8 @@ function accept(
     completion,
   );
   const say = state.facet(classicSay);
-  const sentence = `${label.replace(/\.$/, '')}.`;
+  const words = spoken(label);
+  const sentence = /[.:?!…]$/.test(words) ? words : `${words}.`;
   const here = after === 'go on' ? hereIn(state.update({ ...first, filter: false }).state) : null;
   if (here) {
     const kind = here.element.enter as ClassicKind;
@@ -300,7 +319,8 @@ function accept(
     say?.(`${sentence} ${WORDS[kind]}.`);
     return;
   }
-  view.dispatch(first);
+  if (after === 'offer more') view.dispatch(first, { effects: offersMore.of(null) });
+  else view.dispatch(first);
   say?.(sentence);
   if (after === 'offer more') startCompletion(view);
 }
@@ -311,29 +331,42 @@ function optionFor(label: string, spot: Spot): Completion {
 
 type Apply = (view: EditorView, completion: Completion, from: number, to: number) => void;
 
+/** The top of what's offered, if a key may take it: only what the writer is typing (§7.3). */
+function topOffer(state: EditorState, head: number) {
+  const typed = state.field(typedLine, false);
+  if (!typed) return null;
+  // Offered more and not sent away: the list is on its way, and the key is its.
+  const more = typed.more && !state.field(classicLine, false)?.dismissed;
+  const offer = offerAt(state, head, more);
+  const top = offer?.options[0];
+  return offer && top && !WAITING.has(top) ? { from: offer.from, option: top } : null;
+}
+
+/** The highlighted option, wherever the list came from. */
+function highlightedOffer(state: EditorState, head: number, label: string) {
+  for (const explicit of [false, true]) {
+    const offer = offerAt(state, head, explicit);
+    const option = offer?.options.find((listed) => listed.label === label);
+    if (offer && option) return { from: offer.from, option };
+  }
+  return null;
+}
+
 /**
- * The highlighted option of an open list, or the top of `offerAt`; applies it in one transaction.
- * False with nothing to accept. It never hands over to `acceptCompletion`, which refuses for 75 ms
- * after a list opens, and a setting all modes share can't change.
+ * The highlighted option of an open list, or the top of `offerAt` on a line being typed; applies it
+ * in one transaction. False with nothing to accept. It never hands over to `acceptCompletion`,
+ * which refuses for 75 ms after a list opens, and a setting all modes share can't change.
  */
 export const acceptOffer: Command = (view) => {
   const { state } = view;
   if (state.readOnly) return false;
   const { head } = state.selection.main;
   const highlighted = selectedCompletion(state)?.label;
-  // The list may be one that was asked for, and the same place then says so.
-  const asked = highlighted === undefined ? [false] : [false, true];
-  for (const explicit of asked) {
-    const offer = offerAt(state, head, explicit);
-    const option = offer?.options.find(
-      ({ label }, index) => label === highlighted || (highlighted === undefined && index === 0),
-    );
-    if (offer && option) {
-      (option.apply as Apply)(view, option, offer.from, head);
-      return true;
-    }
-  }
-  return false;
+  const found =
+    highlighted === undefined ? topOffer(state, head) : highlightedOffer(state, head, highlighted);
+  if (!found) return false;
+  (found.option.apply as Apply)(view, found.option, found.from, head);
+  return true;
 };
 
 /**
@@ -352,22 +385,44 @@ export const dismissOffer: Command = (view) => {
   return false;
 };
 
-/** Says the list to a reader that doesn't follow an active descendant (§7.4). */
-export const offerWords: Extension = ViewPlugin.define((_view) => {
+/**
+ * Says the list to a reader that doesn't follow an active descendant (§7.4), and takes the highlight
+ * off a list that waits, as the highlighted row is the one Enter and Tab write. A list opens in
+ * CodeMirror's own update, so that goes in a microtask.
+ */
+export const offerWords: Extension = ViewPlugin.define((view) => {
   let last: string | null = null;
+  let seen: readonly Completion[] | null = null;
+  let live = true;
+  const say = (text: string) => view.state.facet(classicSay)?.(text);
+  const counted = (count: number) => `${count} suggestion${count === 1 ? '' : 's'}`;
   return {
     update({ state }) {
       if (!completionStatus(state)) {
         last = null;
+        seen = null;
+        return;
+      }
+      const options = currentCompletions(state);
+      const [top] = options;
+      if (top && options !== seen && WAITING.has(top)) {
+        seen = options;
+        queueMicrotask(() => {
+          if (live) view.dispatch({ effects: setSelectedCompletion(-1) });
+        });
+        if (last === null) say(counted(options.length));
+        last = '';
         return;
       }
       const label = selectedCompletion(state)?.label ?? null;
       // While a list narrows it's away for a moment, and coming back isn't opening.
       if (label === null || label === last) return;
-      const count = currentCompletions(state).length;
-      const words = `${count} suggestion${count === 1 ? '' : 's'}: ${label}`;
-      state.facet(classicSay)?.(last === null ? words : label);
+      const row = spoken(label);
+      say(last === null ? `${counted(options.length)}: ${row}` : row);
       last = label;
+    },
+    destroy() {
+      live = false;
     },
   };
 });

@@ -390,6 +390,148 @@ describe.each(['Tab', 'Enter'])('%s accepts', (key) => {
   });
 });
 
+describe('text the writer hasn’t typed in this stay is left alone', () => {
+  const FILE = [
+    'JOHN',
+    'Hi.',
+    '',
+    'INT. HOUSE UPSTAIRS - DAY',
+    '',
+    'INT. DINER - NIGHT',
+    '',
+    'CUT TO:',
+    '',
+    '',
+  ].join('\n');
+
+  /** A line, its cursor at the end, reached by a click and not by typing. */
+  const reached = (line: string, under = '') => {
+    const doc = `${FILE}${line}${under}`;
+    const held = live(classicEditor(doc, { with: IN_EDITOR }));
+    held.view.dispatch({ selection: { anchor: FILE.length + line.length }, userEvent: 'select' });
+    return held;
+  };
+
+  test.each([
+    ['JO', '\nHello.', 'JO\nHello.'],
+    ['INT. HOUSE', '', 'INT. HOUSE\n\n'],
+    ['INT. DINER - D', '', 'INT. DINER - D\n\n'],
+    ['>FADE', '', '>FADE\n\n'],
+  ])('%s, reached with the cursor, goes on with Enter', (line, under, after) => {
+    const held = reached(line, under);
+    press(held, 'Enter');
+    expect(textOf(held).slice(FILE.length)).toBe(after);
+  });
+
+  test('Tab leaves it too', () => {
+    const held = reached('INT. HOUSE');
+    press(held, 'Tab');
+    expect(textOf(held).slice(FILE.length)).toBe('INT. HOUSE\n\n');
+  });
+
+  test('a letter typed there counts, as one typed anywhere', () => {
+    const held = reached('INT. HOU');
+    typeIn(held, 'S');
+    press(held, 'Enter');
+    expect(textOf(held).slice(FILE.length)).toBe('INT. HOUSE UPSTAIRS');
+  });
+
+  test('a move lost it: type, step off and back, and the key goes on', () => {
+    const held = reached('INT. HOU');
+    typeIn(held, 'S');
+    held.view.dispatch({ selection: { anchor: cursor(held) - 1 }, userEvent: 'select' });
+    held.view.dispatch({ selection: { anchor: cursor(held) + 1 }, userEvent: 'select' });
+    press(held, 'Enter');
+    expect(textOf(held).slice(FILE.length)).toBe('INT. HOUS\n\n');
+  });
+
+  test('a list asked for is still taken from', async () => {
+    const held = reached('INT. HOU');
+    startCompletion(held.view);
+    await listOpens(held);
+    press(held, 'Enter');
+    expect(textOf(held).slice(FILE.length)).toBe('INT. HOUSE UPSTAIRS');
+  });
+});
+
+describe('a space after a name', () => {
+  test.each(['Enter', 'Tab'])('writes no extension with %s and no list', (key) => {
+    const held = liveAt(['Tab']);
+    typeIn(held, 'JUNE ');
+    press(held, key);
+    expect(tail(held)).not.toContain('(');
+    expect(elementAt(held.view.state)?.kind).toBe('dialogue');
+  });
+
+  test.each(['Enter', 'Tab'])('writes no extension with %s and the list drawn', async (key) => {
+    const held = liveAt(['Tab']);
+    typeIn(held, 'JUNE ');
+    await listOpens(held);
+    await wait(10);
+    expect(selectedCompletion(held.view.state)).toBeNull();
+    press(held, key);
+    expect(tail(held)).not.toContain('(');
+    expect(elementAt(held.view.state)?.kind).toBe('dialogue');
+  });
+
+  test('Down reaches the first one', async () => {
+    const held = liveAt(['Tab']);
+    typeIn(held, 'JUNE ');
+    await listOpens(held);
+    await wait(90);
+    press(held, 'ArrowDown');
+    expect(selectedCompletion(held.view.state)?.label).toBe('(V.O.)');
+    press(held, 'Enter');
+    expect(tail(held)).toBe('JUNE (V.O.)');
+  });
+
+  test('a typed ( or letter takes the top one', () => {
+    const held = liveAt(['Tab']);
+    typeIn(held, 'JUNE (');
+    press(held, 'Tab');
+    expect(tail(held)).toBe('JUNE (V.O.)');
+  });
+
+  test('a reader hears how many, and no row until Down', async () => {
+    const said: string[] = [];
+    const held = liveAt(['Tab'], `${SCRIPT}|`, said);
+    typeIn(held, 'JUNE ');
+    await listOpens(held);
+    await wait(90);
+    expect(said).toEqual(['2 suggestions']);
+    press(held, 'ArrowDown');
+    expect(said).toEqual(['2 suggestions', '(V.O.)']);
+  });
+});
+
+describe('a key straight after a place', () => {
+  test('takes the top time, before the list is drawn', () => {
+    const held = liveAt(['INT. KI']);
+    press(held, 'Tab');
+    expect(currentCompletions(held.view.state)).toEqual([]);
+    press(held, 'Enter');
+    expect(tail(held)).toBe('INT. KITCHEN - DAY\n\n');
+  });
+
+  test('after Escape it goes on', () => {
+    const held = liveAt(['INT. KI']);
+    press(held, 'Tab');
+    press(held, 'Escape');
+    press(held, 'Enter');
+    expect(tail(held)).toBe('INT. KITCHEN\n\n');
+  });
+
+  test('a heading’s places are all a prefix offers, with no place in the script', async () => {
+    const held = liveAt(['Tab', 'Tab', 'Tab'], 'JUNE\nHi.\n\nGo.\n\n|');
+    typeIn(held, 'in');
+    press(held, 'Tab');
+    await wait(120);
+    expect(currentCompletions(held.view.state)).toEqual([]);
+    press(held, 'Enter');
+    expect(textOf(held)).not.toContain('INT. JUNE');
+  });
+});
+
 test('the next letter offers again', () => {
   const held = liveAt(['Tab']);
   typeIn(held, 'J');
@@ -581,6 +723,27 @@ describe('a screen reader', () => {
     typeIn(held, 'JU');
     press(held, 'Tab');
     expect(said).toEqual(['JUNE. Dialogue.']);
+  });
+
+  test('hears a transition with no stray stop', () => {
+    const said: string[] = [];
+    const held = liveAt(['Tab', 'Tab'], `${SCRIPT}|`, said);
+    typeIn(held, 'CU');
+    press(held, 'Tab');
+    expect(said).toEqual(['CUT TO: Action.']);
+  });
+
+  test('hears a long name cut short, whole characters, and still where it went', () => {
+    const said: string[] = [];
+    const name = `${'😀'.repeat(200)}`;
+    const held = liveAt(['Tab'], `@${name}\nHi.\n\nGo.\n\n|`, said);
+    typeIn(held, '😀');
+    press(held, 'Tab');
+    const [words = ''] = said;
+    expect(words.length).toBeLessThanOrEqual(160);
+    expect([...words].length).toBeLessThanOrEqual(80);
+    expect(words.endsWith('… Dialogue.')).toBe(true);
+    expect(words).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
   });
 
   test('hears a time go to Action, and a place stay', () => {

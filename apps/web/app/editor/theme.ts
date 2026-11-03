@@ -150,6 +150,14 @@ export const theme = EditorView.theme({
   '.cm-completionDetail': { color: 'var(--muted)' },
   '.cm-diagnostic': { borderLeftColor: 'var(--border)' },
 
+  // In Classic Mode the highlighted row is what Enter and Tab write, so it's marked by more than
+  // a tint. The padding takes back the bar's width, so the row's text doesn't shift. Where colours
+  // are forced, main.css has it: style-mod's `&` doesn't work inside an at-rule.
+  [`${CLASSIC} .cm-tooltip-autocomplete ul li[aria-selected]`]: {
+    borderLeft: '3px solid var(--accent-text)',
+    paddingLeft: '0',
+  },
+
   // Classic Mode: no colour per element, and the weight and slant are the role's.
   [`${CLASSIC} .cm-f-scene_heading, ${CLASSIC} .cm-f-character, ${CLASSIC} .cm-f-transition`]: {
     color: 'var(--text)',

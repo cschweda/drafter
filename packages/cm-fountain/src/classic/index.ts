@@ -11,7 +11,7 @@ import {
   keepHiddenMarks,
 } from './caret';
 import { classicEnter, classicShiftEnter, classicShiftTab, classicTab } from './keys';
-import { classicLine, keepLineInHistory } from './line';
+import { classicLine, keepLineInHistory, typedLine } from './line';
 import { classicMarks, settleBreaks, settleDeletes, tidyLeft } from './marks';
 import { blockKeptClear, keepMetadata, metadataHidden } from './metadata';
 import { acceptOffer, classicSay, classicSource, dismissOffer, offerWords } from './offer';
@@ -116,6 +116,7 @@ export function classic({ say }: ClassicOptions = {}): Extension {
     classicMarks,
     tidyLeft,
     classicLine,
+    typedLine,
     keepLineInHistory,
     classicView,
     metadataHidden,

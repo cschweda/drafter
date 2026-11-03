@@ -57,6 +57,10 @@ html:has(dialog:modal) {
   [aria-disabled="true"] .iconify {
     background-color: GrayText;
   }
+  /* Classic Mode's highlighted row, its attribute twice to outweigh the editor's theme. */
+  .cm-editor.cm-classic .cm-tooltip-autocomplete ul li[aria-selected][aria-selected] {
+    border-left-color: CanvasText;
+  }
 }
 
 /* One focus ring for every control, in the brand's goldenrod (design §8, Call 11). */
