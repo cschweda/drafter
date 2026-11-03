@@ -80,7 +80,12 @@ export function whenComposed(view: EditorView, then: () => void): void {
 export const afterComposition =
   (command: Command): Command =>
   (view) => {
-    if (!composing(view)) return command(view);
+    if (!composing(view)) {
+      // A key that comes in the same burst as the composition's end, before the task that settles
+      // it: what was composed is settled first, or the key goes on from a lowercase `dale`.
+      plugins.get(view)?.settleWaiting();
+      return command(view);
+    }
     whenComposed(view, () => {
       // Not if the script went read-only, or Classic Mode went, while it waited.
       if (!view.state.readOnly && view.state.field(classicLine, false) !== undefined) {
@@ -128,7 +133,12 @@ export function settledComposition(state: EditorState, range: Span): Transaction
   });
   const stored = typed.state.field(classicLine, false);
   const effects = stored ? setStored.of(stored) : [];
-  if (typed.newDoc.eq(state.doc)) return { effects, annotations: classicEdit.of(true) };
+  if (typed.newDoc.eq(state.doc)) {
+    // Text already right (Android often composes every word), and nothing new to store: nothing.
+    const held = state.field(classicLine, false);
+    if (JSON.stringify(held ?? null) === JSON.stringify(stored ?? null)) return null;
+    return { effects, annotations: classicEdit.of(true) };
+  }
 
   // The one change from the text as it stands to the text as typing would have left it.
   const both = taken.changes.compose(typed.changes);
@@ -215,6 +225,11 @@ class Composition {
     // Never in an update: a view can't be changed in the middle of one.
     if (composing(update.view)) whenComposed(this.view, () => {});
     else setTimeout(() => this.settle());
+  }
+
+  /** Settles now what's waiting, if anything is: a key is about to go on from it. */
+  settleWaiting() {
+    if (this.range) this.settle();
   }
 
   /** Settles what was composed, now that the composition is over. */

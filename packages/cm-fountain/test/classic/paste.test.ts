@@ -1,5 +1,6 @@
 import { history, undo } from '@codemirror/commands';
 import type { EditorState } from '@codemirror/state';
+import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
 import { type ClassicKind, classicLine, setStored } from '../../src/classic/line';
 import { apply, render } from '../helpers';
@@ -33,6 +34,8 @@ Always.
 
 [[a note]]
 `;
+
+const PLAY = builtins['stage-play-standard'] as Template;
 
 const paste = (state: EditorState, text: string, userEvent = 'input.paste') =>
   type(state, text, { userEvent, by: 'whole' });
@@ -68,6 +71,34 @@ describe('§11, paste', () => {
     expect(render(paste(classicEditor('She waits|.'), ' for CUT TO:'))).toBe(
       'She waits for CUT TO:|.',
     );
+  });
+
+  test('a pasted line with a mark of its own keeps it, and is what it says', () => {
+    // On a fresh line after Action, after a speech (a pending Character), and in a play.
+    const cases: [string, string, string | null][] = [
+      ['@McGRAW', 'character', null],
+      ['.FLASHBACK', 'scene_heading', null],
+      ['>CUT TO BLACK.', 'transition', null],
+      ['> CUT TO: <', 'centered', null],
+      ['~One more song', 'lyric', null],
+      ['= A synopsis', 'synopsis', null],
+      ['!INT. BY THE DOOR', 'action', null],
+    ];
+    for (const [text, kind] of cases) {
+      for (const before of ['She waits.\n\n|', 'JUNE\nStill open?\n\n|']) {
+        const state = paste(classicEditor(before), text);
+        expect(render(state), `${text} after ${before}`).toBe(`${before.slice(0, -1)}${text}|`);
+        expect(state.field(classicLine)?.kind, text).toBe(kind);
+        expect(state.field(classicLine)?.added, text).toEqual([]);
+      }
+    }
+    // Even on a line where another element was chosen.
+    expect(render(paste(choose(classicEditor('She waits.\n\n|'), 'action'), '@McGRAW'))).toBe(
+      'She waits.\n\n@McGRAW|',
+    );
+    const play = paste(classicEditor('She waits.\n\n|', { template: PLAY }), '# Act');
+    expect(render(play)).toBe('She waits.\n\n# Act|');
+    expect(play.field(classicLine)?.kind).toBe('act');
   });
 
   test('pasted june on a Character is @june', () => {

@@ -69,6 +69,7 @@ test('the Next button names where Tab goes, does it, and keeps the keyboard up',
   await expect(first).toHaveAttribute('data-next', '');
   const box = await next(page).boundingBox();
   expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
   // It lies wholly above the keyboard.
   const height = page.viewportSize()?.height ?? 0;
   expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(height - KEYBOARD + 1);

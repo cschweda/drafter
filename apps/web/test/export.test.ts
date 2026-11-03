@@ -34,7 +34,8 @@ vi.mock('../app/editor/session', async () => {
       get kind() {
         return { value: shown.kind };
       },
-      view: { state: { doc: { toString: () => shown.text } } },
+      // No Classic Mode here: `savedText` reads no stored line, and gives the text itself.
+      view: { state: { doc: { toString: () => shown.text }, field: () => undefined } },
     }),
   };
 });

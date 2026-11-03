@@ -761,6 +761,27 @@ export const settlePaste: Extension = EditorState.transactionFilter.of((tr) => {
     return mapped && room ? mapSpan(mapped, room) : mapped;
   };
   const added = spaces ? [] : own.added.flatMap((span) => through(span) ?? []);
+  // A line that brings a mark of its own onto an empty line is what its mark says (§11): `@McGRAW`
+  // stays as it is, and the line is a Character, whatever was pending there.
+  if (isBlank(old.text) && MARK_START.test(line.text)) {
+    const read = line.text.trimStart().startsWith('@') ? 'character' : parsedKindAt(state, line);
+    const kind = read ?? own.kind;
+    specs.push({
+      effects: setStored.of({
+        ...own,
+        from: line.from,
+        kind,
+        arrivedAs: kind,
+        added: [],
+        soft: false,
+        made: own.made && through(own.made),
+        madeMark: own.madeMark && through(own.madeMark),
+      }),
+      annotations: classicEdit.of(true),
+      sequential: true,
+    });
+    return specs;
+  }
   const settled = settleLine(state, line, line.text, { ...own, added }, { verbatim: true });
   const changed = settled.text !== line.text;
   const noted = settled.kind !== own.kind || !sameSpans(settled.added, added);

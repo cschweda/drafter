@@ -114,7 +114,7 @@ const classicKeys = Prec.highest(
   keymap.of([
     // An input method's composition ends first, and is settled, so Enter goes on from what it wrote (§10).
     { key: 'Enter', run: afterComposition((view) => acceptOffer(view) || classicEnter(view)) },
-    { key: 'Tab', run: (view) => acceptOffer(view) || classicTab(view) },
+    { key: 'Tab', run: afterComposition((view) => acceptOffer(view) || classicTab(view)) },
     { key: 'Escape', run: dismissOffer },
     { key: 'Shift-Tab', run: classicShiftTab },
     { key: 'Shift-Enter', run: classicShiftEnter },

@@ -1,3 +1,4 @@
+import { savedText } from '@drafter/cm-fountain';
 import { parse } from '@drafter/fountain';
 import { ref, watch } from 'vue';
 import { useEditor } from '../editor/session';
@@ -150,7 +151,8 @@ async function doCheck(ask: boolean, forSave: boolean): Promise<Outcome> {
     fileTrouble.value = trouble;
     script.fileLocked.value = trouble?.kind === 'permission';
   };
-  const text = () => editor.view.state.doc.toString();
+  // What a save would write: a line Classic Mode just made inside a speech is left out (savedText).
+  const text = () => savedText(editor.view.state).toString();
 
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     // Another tab edits it, and checks it: this one only shows it.

@@ -134,6 +134,42 @@ describe('§10, a composition', () => {
     expect(render(view.state)).toBe('She waits.\n\nJU\n|');
   });
 
+  test('Enter or Tab in the same burst as the end settles the name first', async () => {
+    vi.useFakeTimers();
+    const binding = (view: EditorView, key: string) =>
+      view.state
+        .facet(keymap)
+        .flat()
+        .find((found) => found.key === key && found.run);
+    for (const key of ['Enter', 'Tab']) {
+      const { view, compose, end } = composer('She waits.\n\n|', { kind: 'character' });
+      compose('dale');
+      end();
+      // No task between: the key comes before the settling's own.
+      expect(binding(view, key)?.run?.(view)).toBe(true);
+      expect(render(view.state), key).toBe('She waits.\n\nDALE\n|');
+      await tasks();
+      expect(render(view.state), key).toBe('She waits.\n\nDALE\n|');
+    }
+    // And a name the parser would read as Action has its `@` before the key goes on.
+    const marked = composer('She waits.\n\n|', { kind: 'character' });
+    marked.compose('李明');
+    marked.end();
+    binding(marked.view, 'Enter')?.run?.(marked.view);
+    expect(render(marked.view.state)).toBe('She waits.\n\n@李明\n|');
+  });
+
+  test('a composition already right writes and stores nothing', async () => {
+    vi.useFakeTimers();
+    const { view, seen, compose, end } = composer('She waits.\n\nThe lights hum.|');
+    compose(' Again.');
+    seen.length = 0;
+    end();
+    await tasks();
+    expect(render(view.state)).toBe('She waits.\n\nThe lights hum. Again.|');
+    expect(seen).toHaveLength(0);
+  });
+
   test('the Next button waits for it, and does what Tab does', async () => {
     vi.useFakeTimers();
     const { view, compose, end } = composer('She waits.|');

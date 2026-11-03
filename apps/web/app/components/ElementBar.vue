@@ -878,11 +878,12 @@ button.here.chip:hover {
 .button.more {
   padding-right: 4px;
 }
-/* The Next button (§10): Tab for a finger, at least 44px wide, set off from the elements. */
+/* The Next button (§10): Tab for a finger, at least 44px each way as the chooser's rows are, set
+   off from the elements. */
 .button.next {
   justify-content: center;
   min-width: 44px;
-  min-height: 28px;
+  min-height: 44px;
   padding: 0 10px;
   border: 1px solid var(--border);
   color: var(--text);
