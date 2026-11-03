@@ -1,7 +1,7 @@
 import { isolateHistory } from '@codemirror/commands';
 import { Text, Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { onlyClearedBlock } from '@drafter/cm-fountain';
+import { onlyClearedBlock, savedText } from '@drafter/cm-fountain';
 import {
   type ComputedRef,
   computed,
@@ -312,9 +312,11 @@ function create(): ScriptSession {
 
   const guard = useGuard();
 
+  // In Classic Mode the text a save writes leaves out a line just made inside a speech, which the
+  // writer's next letter heals (savedText): a script whose only difference is that line is saved.
   const dirty = computed(() => {
     editor.doc.value; // the text changed
-    return baseline.value === null || !view.state.doc.eq(baseline.value);
+    return baseline.value === null || !savedText(view.state).eq(baseline.value);
   });
 
   const lastSaved = computed(() => {
@@ -394,7 +396,7 @@ function create(): ScriptSession {
     // Not a success: the text was not written, and the writer must keep it.
     if (gone) throw new Error(`There is no script ${id} to write to.`);
     // What a closing page left behind is written, unless newer text has been typed since.
-    if (view.state.doc.toString() === source) clearStash(id);
+    if (savedText(view.state).toString() === source) clearStash(id);
     if (failing) {
       failing = false;
       clearTimeout(retry);
@@ -409,7 +411,7 @@ function create(): ScriptSession {
     // handing the script over is read-only but still has its writer, and the text it hasn't
     // written yet is still its to leave.
     if (!writer) return;
-    if (writer.pending && project.value) stash(project.value.id, view.state.doc.toString());
+    if (writer.pending && project.value) stash(project.value.id, savedText(view.state).toString());
     void writer.flush().catch(() => {});
   };
 
@@ -436,9 +438,8 @@ function create(): ScriptSession {
     const id = next.id;
     writer = writable ? createWriter((source) => persist(id, source)) : undefined;
     // Text typed while the script was being read.
-    if (writer && fromEditor && view.state.doc.toString() !== next.source) {
-      writer.schedule(view.state.doc.toString());
-    }
+    const source = savedText(view.state).toString();
+    if (writer && fromEditor && source !== next.source) writer.schedule(source);
   }
 
   /**
@@ -1159,7 +1160,8 @@ function create(): ScriptSession {
       baseline.value = state.doc;
       return;
     }
-    writer?.schedule(state.doc.toString());
+    // The recovery copy is what a save would write.
+    writer?.schedule(savedText(state).toString());
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flushQuietly();

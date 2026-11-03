@@ -7,6 +7,7 @@ import {
   classicEnter,
   classicTab,
   isBlankScript,
+  savedText,
   selectionClear,
   tidiedSpeech,
 } from '../../src/classic';
@@ -106,4 +107,23 @@ describe('selectionClear', () => {
 test('isBlankScript names a script that is only its block', () => {
   const state = EditorState.create({ doc: '/* drafter\n{"v":1}\n*/\n', extensions: fountain() });
   expect(isBlankScript(state, state.doc.line(1))).toBe(true);
+});
+
+describe('savedText', () => {
+  test('a save leaves out a line Enter made in a speech, and the cursor where it is', () => {
+    const state = entered('JUNE\nOne.|\nTwo.\n');
+    expect(state.doc.toString()).toBe('JUNE\nOne.\n\nTwo.\n');
+    expect(savedText(state).toString()).toBe('JUNE\nOne.\nTwo.\n');
+    // Nothing was dispatched: the line is still there for the writer's next letter.
+    expect(state.doc.toString()).toBe('JUNE\nOne.\n\nTwo.\n');
+  });
+
+  test('is the text itself when nothing is made, and in Fountain Mode', () => {
+    const state = classicEditor('JUNE\nOne.|\nTwo.\n');
+    expect(savedText(state)).toBe(state.doc);
+    const plain = EditorState.create({ doc: 'JUNE\nOne.\n\nTwo.\n', extensions: fountain() });
+    expect(savedText(plain)).toBe(plain.doc);
+    const blank = entered('A plain line.|\n\nAnother.\n');
+    expect(savedText(blank)).toBe(blank.doc);
+  });
 });

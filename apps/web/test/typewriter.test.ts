@@ -2,6 +2,7 @@
 import { selectAll } from '@codemirror/commands';
 import { EditorSelection, EditorState, StateEffect } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
+import { classicMove } from '@drafter/cm-fountain';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import {
   appChange,
@@ -65,6 +66,25 @@ describe('centersOn', () => {
       annotations: appChange.of(true),
     });
     expect(centersOn(marked)).toBe(false);
+  });
+
+  test('a Tab that writes nothing centres', () => {
+    // Classic Mode's key that only moves the cursor (Tab from a name to its speech) is an `input`
+    // with no change, which only `classicMove` tells from Select All. No key that moves the cursor
+    // was pressed, as far as the plugin knows.
+    const tr = base.update({
+      selection: { anchor: 8 },
+      userEvent: 'input',
+      annotations: classicMove.of(true),
+    });
+    expect(centersOn(tr)).toBe(true);
+    expect(centersOn(base.update({ selection: { anchor: 8 }, userEvent: 'input' }))).toBe(false);
+    // The app's own move still doesn't.
+    const app = base.update({
+      selection: { anchor: 8 },
+      annotations: [classicMove.of(true), appChange.of(true)],
+    });
+    expect(centersOn(app)).toBe(false);
   });
 
   test('ignores a user event that changed neither the text nor the selection', () => {

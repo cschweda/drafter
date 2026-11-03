@@ -1,6 +1,6 @@
 import type { Extension, Transaction } from '@codemirror/state';
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
-import { appChange } from '@drafter/cm-fountain';
+import { appChange, classicMove } from '@drafter/cm-fountain';
 import { isApple } from '../commands/keys';
 
 export { appChange };
@@ -15,7 +15,7 @@ export { appChange };
  * never count.
  *
  * A change to the selection alone counts only when `navigated` says a key that moves the cursor
- * (an arrow, Home, End, Page Up or Down) made it. Everything else that selects carries the same
+ * (an arrow, Home, End, Page Up or Down) made it, or Classic Mode's `classicMove` marks it. Everything else that selects carries the same
  * `select` user event: Select All, which would jump to the end of the script, and the handles a
  * finger drags on a touch screen, which scrolling would fight.
  */
@@ -28,6 +28,9 @@ export function centersOn(tr: Transaction, navigated = false): boolean {
   ) {
     return false;
   }
+  // Classic Mode's key that only moves the cursor (Tab from a name to its speech) says so: its
+  // user event is `input`, and no key that moves the cursor made it.
+  if (tr.annotation(classicMove)) return true;
   if (!tr.docChanged && !navigated) return false;
   return ['input', 'delete', 'undo', 'redo', 'select', 'move'].some((event) =>
     tr.isUserEvent(event),

@@ -393,7 +393,8 @@ describe('the transaction', () => {
     expect(apply(typed, undo).sliceDoc()).toBe(before.sliceDoc());
   });
 
-  test.each(['input.paste', 'input.type.compose', 'undo', 'redo', 'input.replace', 'input'])(
+  // A paste of one line is settled too, by its own filter (paste.test.ts, §11).
+  test.each(['input.type.compose', 'undo', 'redo', 'input.replace', 'input'])(
     'steps back for %s',
     (userEvent) => {
       const state = choose(classicEditor(SOFT), 'lyric');

@@ -12,6 +12,7 @@ import {
   keepHiddenMarks,
 } from './caret';
 import { classicChooser, pendingElementKey } from './chooser';
+import { afterComposition, classicComposition } from './compose';
 import {
   classicEnter,
   classicShiftEnter,
@@ -20,7 +21,7 @@ import {
   typeOffPageBreak,
 } from './keys';
 import { classicLine, keepLineInHistory, typedLine } from './line';
-import { classicMarks, settleBreaks, settleDeletes, tidyLeft } from './marks';
+import { classicMarks, settleBreaks, settleDeletes, settlePaste, tidyLeft } from './marks';
 import { blockKeptClear, keepMetadata, metadataHidden } from './metadata';
 import { acceptOffer, classicSay, classicSource, dismissOffer, offerWords } from './offer';
 import { classicView } from './view';
@@ -43,6 +44,14 @@ export {
   elementCommand,
   openChooser,
 } from './chooser';
+export {
+  afterComposition,
+  COMPOSITION_CHECK_MS,
+  classicComposition,
+  classicNext,
+  settledComposition,
+  whenComposed,
+} from './compose';
 export {
   type HiddenSpan,
   hiddenSpans,
@@ -78,9 +87,11 @@ export {
   classicMarks,
   MAX_RUN,
   readsAs,
+  savedText,
   settleBreaks,
   settleDeletes,
   settleLine,
+  settlePaste,
   shapeOf,
   tidiedSpeech,
   tidyLeft,
@@ -101,7 +112,8 @@ export { classicView, lineClassOf, roleVariables } from './view';
 /** At `Prec.highest`, ahead of `language`, as CodeMirror's completion keys are at that level too (§6). */
 const classicKeys = Prec.highest(
   keymap.of([
-    { key: 'Enter', run: (view) => acceptOffer(view) || classicEnter(view) },
+    // An input method's composition ends first, and is settled, so Enter goes on from what it wrote (§10).
+    { key: 'Enter', run: afterComposition((view) => acceptOffer(view) || classicEnter(view)) },
     { key: 'Tab', run: (view) => acceptOffer(view) || classicTab(view) },
     { key: 'Escape', run: dismissOffer },
     { key: 'Shift-Tab', run: classicShiftTab },
@@ -146,6 +158,7 @@ export function classic({ say }: ClassicOptions = {}): Extension {
     classicAttributes,
     classicChooser,
     classicKeys,
+    classicComposition,
     completionOverride.of(classicSource),
     say ? classicSay.of(say) : [],
     offerWords,
@@ -155,6 +168,7 @@ export function classic({ say }: ClassicOptions = {}): Extension {
     settleDeletes,
     keepHiddenMarks,
     classicMarks,
+    settlePaste,
     typeOffPageBreak,
     tidyLeft,
     classicLine,

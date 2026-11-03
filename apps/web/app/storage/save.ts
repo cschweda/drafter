@@ -1,3 +1,4 @@
+import { savedText } from '@drafter/cm-fountain';
 import { ref, watch } from 'vue';
 import { useCutRecorder } from '../cuts/use-recorder';
 import { replaceText } from '../editor/replace-text';
@@ -96,8 +97,9 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
     : fileNameFor(title, markdown ? '.md' : '.fountain');
   const lineBreak = held?.lineBreak ?? '\n';
   const bom = held?.bom ?? false;
-  // The text is read as late as it can be, so what is written is what the editor shows.
-  const shown = () => editor.view.state.doc.toString();
+  // The text is read as late as it can be, so what is written is what the editor shows. In Classic
+  // Mode a line just made inside a speech is left out, and left in the editor (savedText).
+  const shown = () => savedText(editor.view.state).toString();
   const started = shown();
   /**
    * What to write: the editor's text while the script the save started on is the one open. If

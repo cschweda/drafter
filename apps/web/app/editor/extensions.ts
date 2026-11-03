@@ -13,6 +13,7 @@ import {
   ViewPlugin,
 } from '@codemirror/view';
 import {
+  COMPOSITION_CHECK_MS,
   type CursorElement,
   classic,
   fountain,
@@ -170,8 +171,9 @@ export function relint(): void {
 const composing = (view: EditorView) => view.composing || view.compositionStarted;
 /** A relint waits for a composition to end. */
 let waiting = false;
-/** How often a waiting relint checks that the composition is still going. */
-export const COMPOSITION_CHECK_MS = 500;
+
+/** How often a waiting relint checks that the composition is still going: Classic Mode's wait's too. */
+export { COMPOSITION_CHECK_MS };
 
 const LINE_NUMBERS = lineNumbers();
 

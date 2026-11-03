@@ -4,12 +4,16 @@ export {
   type ClassicElement,
   type ClassicKind,
   type ClassicOptions,
+  COMPOSITION_CHECK_MS,
   chooserItems,
   classic,
   classicChooser,
+  classicComposition,
   classicEnter,
   classicLine,
+  classicMove,
   classicMoveBy,
+  classicNext,
   classicSay,
   classicTab,
   elementAt,
@@ -17,8 +21,10 @@ export {
   isBlankScript,
   onlyClearedBlock,
   openChooser,
+  savedText,
   selectionClear,
   tidiedSpeech,
+  whenComposed,
 } from './classic';
 export { completionOverride, fountainCompletion, fountainCompletionSource } from './complete';
 export { type CursorElement, cursorElement, onCursorElement } from './cursor';

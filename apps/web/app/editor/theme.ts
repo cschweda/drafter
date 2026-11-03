@@ -161,7 +161,12 @@ export const theme = EditorView.theme({
   // The chooser (§9.1). The highlighted row has a bar as well as a tint, and its padding takes back
   // the bar's width. main.css has the rest: a phone's rows and forced colours are at-rules, and
   // style-mod's `&` doesn't work inside one.
+  // Over a phone's keyboard CodeMirror may give the list less height than it wants (§10): then
+  // the list scrolls inside it.
+  [`${CLASSIC} .cm-chooser`]: { display: 'flex', flexDirection: 'column' },
   [`${CLASSIC} .cm-chooser ul`]: {
+    flex: '1 1 auto',
+    minHeight: '0',
     margin: '0',
     padding: '4px 0',
     listStyle: 'none',

@@ -9,7 +9,16 @@ import {
   StateField,
   type TransactionSpec,
 } from '@codemirror/state';
-import { EditorView, showTooltip, type Tooltip, type ViewUpdate } from '@codemirror/view';
+import {
+  EditorView,
+  type Rect,
+  repositionTooltips,
+  showTooltip,
+  type Tooltip,
+  tooltips,
+  ViewPlugin,
+  type ViewUpdate,
+} from '@codemirror/view';
 import {
   blocked,
   type ElementStructure,
@@ -263,7 +272,10 @@ function labelInto(row: HTMLElement, { label, letter }: ChooserItem): void {
   const at = label.toLowerCase().indexOf(letter);
   const mark = document.createElement('u');
   mark.textContent = label.slice(at, at + 1);
-  row.append(label.slice(0, at), mark, label.slice(at + 1));
+  // One piece inside the row, which is a flex box: WebKit would name each piece apart, "C haracter".
+  const words = document.createElement('span');
+  words.append(label.slice(0, at), mark, label.slice(at + 1));
+  row.append(words);
 }
 
 const say = (view: EditorView, text: string) => view.state.facet(classicSay)?.(text);
@@ -390,8 +402,56 @@ function chooserKey(event: KeyboardEvent, view: EditorView): boolean {
   return false;
 }
 
+/**
+ * Where a tooltip may go: what the writer can see of the window, and of that only the editor's
+ * height. On a phone the keyboard covers the bottom of the window and only the visual viewport is
+ * seen, and CodeMirror places tooltips by the window, so the chooser and the autofill list would
+ * open under the keyboard (§10); turned above the line instead, they'd go under the top bar, which
+ * is drawn over the page. In the editor's height they go where there's room and stay in sight.
+ */
+export function seenSpace(view: EditorView): Rect {
+  const win = view.dom.ownerDocument.defaultView;
+  const viewport = win?.visualViewport;
+  const root = view.dom.ownerDocument.documentElement;
+  const seen = viewport
+    ? {
+        top: viewport.offsetTop,
+        left: viewport.offsetLeft,
+        right: viewport.offsetLeft + viewport.width,
+        bottom: viewport.offsetTop + viewport.height,
+      }
+    : {
+        top: 0,
+        left: 0,
+        right: root.clientWidth || (win?.innerWidth ?? 0),
+        bottom: root.clientHeight || (win?.innerHeight ?? 0),
+      };
+  const box = view.dom.getBoundingClientRect();
+  // A view not laid out (hidden, or no layout at all) has no height to keep to.
+  if (box.height <= 0) return seen;
+  const top = Math.max(seen.top, box.top);
+  const bottom = Math.min(seen.bottom, box.bottom);
+  return top < bottom ? { ...seen, top, bottom } : seen;
+}
+
+/** A keyboard that opens or closes changes what's seen, and not the window: the lists move with it. */
+const followViewport = ViewPlugin.define((view) => {
+  const viewport = view.dom.ownerDocument.defaultView?.visualViewport;
+  const move = () => repositionTooltips(view);
+  viewport?.addEventListener('resize', move);
+  viewport?.addEventListener('scroll', move);
+  return {
+    destroy() {
+      viewport?.removeEventListener('resize', move);
+      viewport?.removeEventListener('scroll', move);
+    },
+  };
+});
+
 /** The list, ahead of every other key, so that nothing typed at it reaches the text. */
 export const classicChooser: Extension = [
+  tooltips({ tooltipSpace: seenSpace }),
+  followViewport,
   chooserState,
   tooltip,
   openAttributes,

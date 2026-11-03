@@ -188,6 +188,31 @@ describe('the writing mode in the session', () => {
     expect(editor.element.value?.kind).toBe('scene_heading');
   });
 
+  test('a jump with no key of the writer’s (the Outline’s goto, a note’s reveal) takes a made line with it', async () => {
+    const editor = useEditor();
+    await useSettings().set('writingMode', 'classic');
+    const speech = 'INT. DINER - DAY\n\nJUNE\nOne.\nTwo.\n';
+    // `goto` asks whether the screen is wide; jsdom has no media queries.
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    forget.push(() => vi.unstubAllGlobals());
+    for (const jump of [() => editor.goto(0), () => editor.reveal(0)]) {
+      editor.load(speech);
+      const { view } = editor;
+      view.dispatch({ selection: { anchor: speech.indexOf('One.') + 4 } });
+      classicEnter(view);
+      expect(view.state.doc.toString()).toBe('INT. DINER - DAY\n\nJUNE\nOne.\n\nTwo.\n');
+      jump();
+      expect(view.state.doc.toString()).toBe(speech);
+      expect(view.state.selection.main.head).toBe(0);
+    }
+    // Back to the cursor's own place, as a pane gives focus back: nothing is taken.
+    editor.load(speech);
+    editor.view.dispatch({ selection: { anchor: speech.indexOf('One.') + 4 } });
+    classicEnter(editor.view);
+    editor.goto(editor.view.state.selection.main.head);
+    expect(editor.view.state.doc.toString()).toBe('INT. DINER - DAY\n\nJUNE\nOne.\n\nTwo.\n');
+  });
+
   test('setKind reconfigures it with the language', async () => {
     const editor = useEditor();
     await useSettings().set('writingMode', 'classic');

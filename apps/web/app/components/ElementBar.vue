@@ -2,6 +2,7 @@
 import type { EditorState } from '@codemirror/state';
 import {
   canMakeParenthetical,
+  classicNext,
   elementHint,
   PARENTHETICAL_HINT,
   readsAsName,
@@ -16,7 +17,7 @@ import { commandById } from '~/commands/registry';
 import { useElementBarShown } from '~/composables/useElementBarShown';
 import { useOnScreenKeyboard } from '~/composables/useOnScreenKeyboard';
 import { useWideScreen } from '~/composables/useWideScreen';
-import { keyLine } from '~/editor/classic-key-line';
+import { keyLine, nextLabel } from '~/editor/classic-key-line';
 import {
   type BarButton,
   barFor,
@@ -234,6 +235,16 @@ function onCloseAutoFocus(event: Event) {
   requestAnimationFrame(() => editor.view.focus());
 }
 
+// ---- The phone's Next button (Classic Mode design §10) --------------------------------------
+
+/** First in the row over a phone's keyboard in Classic Mode, as a phone's keyboard has no Tab. */
+const nextShown = computed(() => classic.value && keyboard.open.value);
+const nextName = computed(() => nextLabel(editor.element.value, structure.value));
+/** What Tab does; a composition ends first. The press takes no focus, so the keyboard stays up. */
+function pressNext() {
+  classicNext(editor.view);
+}
+
 // ---- The phone's Spelling button (Plan D, Call 15) -----------------------------------------
 
 const wide = useWideScreen();
@@ -298,6 +309,7 @@ const items = () => [
 ];
 const order = computed(() =>
   [
+    ...(nextShown.value ? ['next'] : []),
     ...(markdown.value ? [] : ['here']),
     ...buttons.value.map((button) => button.command),
     ...(spellingShown.value ? [SPELLING_BUTTON.command] : []),
@@ -448,6 +460,7 @@ function measure() {
   const total = (k: number, chipWidth: number) => {
     const gone = new Set(order.slice(0, k));
     const parts = [chipWidth, widthOf('.rule')];
+    if (nextShown.value) parts.push(item('next'));
     for (const button of buttons.value) {
       if (!gone.has(button.command)) parts.push(item(button.command));
     }
@@ -515,6 +528,8 @@ watch(
     settings.value.textSize,
     hereMin.value === 0 ? here.value.name : '',
     folds.value,
+    nextShown.value,
+    nextName.value,
   ],
   () => void nextTick(measureSoon),
 );
@@ -540,6 +555,19 @@ watch(
     @focusin="onFocusin"
     @scroll.passive="followEdges"
   >
+    <button
+      v-if="nextShown"
+      type="button"
+      class="button next"
+      data-bar-item="next"
+      data-next
+      :tabindex="stopOf('next')"
+      aria-keyshortcuts="Tab"
+      @mousedown.prevent
+      @click="pressNext"
+    >
+      {{ nextName }}
+    </button>
     <span
       v-if="markdown"
       class="here"
@@ -849,6 +877,16 @@ button.here.chip:hover {
 }
 .button.more {
   padding-right: 4px;
+}
+/* The Next button (§10): Tab for a finger, at least 44px wide, set off from the elements. */
+.button.next {
+  justify-content: center;
+  min-width: 44px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 600;
 }
 .chevron {
   width: 12px;

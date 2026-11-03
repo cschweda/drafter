@@ -15,6 +15,7 @@ import {
 import { builtins, type Template } from '@drafter/templates';
 import { afterEach, describe, expect, test } from 'vitest';
 import { classic, classicEdit, classicLine, classicTab, elementAt } from '../../src/classic';
+import { seenSpace } from '../../src/classic/chooser';
 import { setStored } from '../../src/classic/line';
 import { apply, BOM, editor, run } from '../helpers';
 import { classicEditor, render, type } from './harness';
@@ -158,6 +159,13 @@ describe('opening', () => {
 });
 
 describe('the list', () => {
+  test('a row’s words are one piece, so its name isn’t split at the underline', () => {
+    // A row lays out as a flex box, and WebKit names each of its items apart: "C haracter".
+    const view = chooser('A.\n\n|');
+    for (const row of rows(view)) expect(row.children).toHaveLength(1);
+    expect(rows(view)[2]?.firstElementChild?.textContent).toBe('Character');
+  });
+
   test('each row’s letter is underlined, in text', () => {
     const view = chooser('A.\n\n|');
     expect(rows(view).map((row) => row.querySelector('u')?.textContent)).toEqual([
@@ -695,4 +703,34 @@ test('Tab’s walk and a pick agree on what’s stored', () => {
   const tabbed = apply(classicEditor('A.\n\n|'), classicTab);
   const picked = apply(classicEditor('A.\n\n|'), elementCommand('character'));
   expect(picked.field(classicLine)).toEqual(tabbed.field(classicLine));
+});
+
+describe('above a phone’s keyboard (§10)', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(window, 'visualViewport');
+  });
+
+  test('the list goes where the writer can see: the visual viewport, not the window', () => {
+    const view = new EditorView({ state: classicEditor('She waits.\n\n|'), parent: document.body });
+    views.push(view);
+    // CodeMirror places tooltips by the window, whose bottom a phone's keyboard covers.
+    const viewport = { offsetTop: 40, offsetLeft: 0, width: 400, height: 500 };
+    Object.defineProperty(window, 'visualViewport', { value: viewport, configurable: true });
+    expect(seenSpace(view)).toEqual({ top: 40, left: 0, right: 400, bottom: 540 });
+    // And only the editor's height of it, as the top bar is drawn over the page above the editor.
+    view.dom.getBoundingClientRect = () => ({ top: 60, bottom: 900, height: 840 }) as DOMRect;
+    expect(seenSpace(view)).toEqual({ top: 60, left: 0, right: 400, bottom: 540 });
+  });
+
+  test('with no visual viewport it’s the window', () => {
+    const view = new EditorView({ state: classicEditor('She waits.\n\n|'), parent: document.body });
+    views.push(view);
+    Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true });
+    expect(seenSpace(view)).toEqual({
+      top: 0,
+      left: 0,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+    });
+  });
 });

@@ -6,6 +6,7 @@ import {
   EditorState,
   type Extension,
   type Line,
+  type Text,
   Transaction,
   type TransactionSpec,
 } from '@codemirror/state';
@@ -33,6 +34,7 @@ import {
   pendingAt,
   type StoredLine,
   setStored,
+  WRITES,
 } from './line';
 
 // Classic Mode's marks (design §4.2). After every keystroke, in the transaction that types it, the
@@ -47,7 +49,7 @@ import {
 export const MAX_RUN = { lines: 64, chars: 8192 } as const;
 
 /** The elements typed in capitals. */
-const CAPITALS: ReadonlySet<ClassicKind> = new Set<ClassicKind>([
+export const CAPITALS: ReadonlySet<ClassicKind> = new Set<ClassicKind>([
   'scene_heading',
   'character',
   'transition',
@@ -290,18 +292,21 @@ function upperPrefix(body: string): string {
  * The line's text with the mark it needs for its element, and the marks it had that this stay
  * added taken off. `stored.added` is in the positions of `text`, on a line starting at `line.from`,
  * and so is what comes back. `line` is the line in `state`, which gives what's around it.
+ * `verbatim`: the text was pasted, so a heading's prefix keeps its case (§11).
  */
 export function settleLine(
   state: EditorState,
   line: Line,
   text: string,
   stored: StoredLine,
+  { verbatim = false }: { verbatim?: boolean } = {},
 ): { text: string; kind: ClassicKind; added: readonly Span[] } {
   const bare = without(text, line.from, stored.added);
   const bom = bare.startsWith(BOM) ? BOM : '';
   const shape = shapeWith(state, line, bare, stored);
   const kind = shape === 'title_page' ? 'action' : (shape ?? stored.arrivedAs);
-  const body = shape === 'scene_heading' ? bom + upperPrefix(bare.slice(bom.length)) : bare;
+  const capitals = shape === 'scene_heading' && !verbatim;
+  const body = capitals ? bom + upperPrefix(bare.slice(bom.length)) : bare;
   const words = body.slice(bom.length);
   const asTyped = { text: body, kind, added: [] };
   if (shape || /^\s*$/.test(words)) return asTyped;
@@ -440,6 +445,18 @@ export function tidiedSpeech(state: EditorState): TransactionSpec | null {
     // A step of its own, or history joins it to the key that made the line, and Undo shows nothing.
     annotations: [appChange.of(true), isolateHistory.of('full')],
   };
+}
+
+/**
+ * The text a save writes (§4.2's one exception): with what `tidiedSpeech` would take out left out,
+ * and the editor as it is. A save never moves the writer: the made line under the cursor is where
+ * their next letter goes, and that letter heals it, or leaving takes it away. Only the file gets the
+ * text as it will be either way, so a save, or the recovery copy, never holds a speech cut in two.
+ */
+export function savedText(state: EditorState): Text {
+  const tidy = tidiedSpeech(state);
+  if (!tidy?.changes) return state.doc;
+  return ChangeSet.of(tidy.changes, state.doc.length, state.lineBreak).apply(state.doc);
 }
 
 const kindsOf = (kind: ClassicKind) => ({ kind, arrivedAs: kind });
@@ -657,3 +674,115 @@ function applySettled(
   }
   return specs.length ? [tr, ...specs] : tr;
 }
+
+/** The one change of a paste or a drop, if it's one: a drop that moves text is two, and is left as it is. */
+function onlyChange(tr: Transaction) {
+  const found: { fromA: number; toA: number; fromB: number; toB: number; text: Text }[] = [];
+  tr.changes.iterChanges((fromA, toA, fromB, toB, text) => {
+    found.push({ fromA, toA, fromB, toB, text });
+  });
+  return found.length === 1 ? (found[0] ?? null) : null;
+}
+
+/**
+ * Whether a paste on the empty line `line` needs a blank line above it and below it, so it can't
+ * run into a neighbour (§11), by the rule the chooser follows for a pick (§6.1): a line of a speech
+ * goes on with the speech, and a line of Action goes on with the Action above it. Several lines
+ * stand apart from everything but a speech. Pasted text that starts or ends with a blank line
+ * brings its own.
+ */
+function breaksAround(state: EditorState, line: Line, kind: ClassicKind, text: Text) {
+  const { doc } = state;
+  const several = text.lines > 1;
+  const above = line.number > 1 ? doc.line(line.number - 1) : null;
+  const under = line.number < doc.lines ? doc.line(line.number + 1) : null;
+  const inSpeech = underSpeech(state, line.from);
+  const staysIn = inSpeech
+    ? several || WRITES.by[kind] !== 'blank'
+    : !several && kind === 'action' && !!above && parsedKindAt(state, above) === 'action';
+  return {
+    above: !!above && !isBlank(above.text) && !isBlank(text.line(1).text) && !staysIn,
+    under:
+      !!under &&
+      !isBlank(under.text) &&
+      !blocked(state, under.from) &&
+      !isBlank(text.line(text.lines).text) &&
+      !(staysIn && inSpeech),
+  };
+}
+
+/**
+ * Paste and drop (§11). What was copied goes in as it was, never in capitals. One line takes the
+ * element of the line it lands on, as typing would, and gets a mark only if that line needs one:
+ * `june` pasted on a Character is `@june`. Several lines are the parser's, with no marks, so a
+ * script pasted in comes out as it was. On an empty line a paste gets the blank lines it needs,
+ * and on a blank speech line it takes the two spaces' place. A replace-all (`input.replace`) and a
+ * drop that moves text are left alone.
+ */
+export const settlePaste: Extension = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || tr.annotation(appChange)) return tr;
+  if (!tr.isUserEvent('input.paste') && !tr.isUserEvent('input.drop')) return tr;
+  const start = tr.startState;
+  if (start.selection.ranges.length > 1 || tr.newSelection.ranges.length > 1) return tr;
+  const pasted = onlyChange(tr);
+  if (!pasted?.text.length) return tr;
+  const old = start.doc.lineAt(pasted.fromA);
+  if (pasted.toA > old.to || isBlankScript(start, old) || blocked(start, old.from)) return tr;
+  const own = ownLine(start, old);
+  const held = start.field(classicLine, false)?.from === old.from;
+
+  // First the blank lines and the spaces, in the new text's positions.
+  const from = tr.changes.mapPos(old.from, -1);
+  const spaces = old.text === BLANK_SPEECH && pasted.text.toString().trim() !== '';
+  const breaks = isBlank(old.text)
+    ? breaksAround(start, old, own.kind, pasted.text)
+    : { above: false, under: false };
+  const { lineBreak } = start;
+  const around = [
+    ...(breaks.above ? [{ from, insert: lineBreak }] : []),
+    // Each space on its own: the paste may have gone in between them.
+    ...(spaces
+      ? [old.from, old.from + 1].flatMap(
+          (at) => mapSpan({ from: at, to: at + 1 }, tr.changes) ?? [],
+        )
+      : []),
+    ...(breaks.under ? [{ from: tr.newDoc.lineAt(pasted.toB).to, insert: lineBreak }] : []),
+  ];
+  const room = around.length ? ChangeSet.of(around, tr.newDoc.length, lineBreak) : null;
+  const specs: (Transaction | TransactionSpec)[] = [tr];
+  if (room) specs.push({ changes: room, sequential: true });
+  if (pasted.text.lines > 1) return specs.length > 1 ? specs : tr;
+
+  // Then the one line's element, read in the text with its room around it.
+  const state = room ? tr.state.update({ changes: room, filter: false }).state : tr.state;
+  const line = state.doc.lineAt(room ? room.mapPos(from, 1) : from);
+  const through = (span: Span): Span | null => {
+    const mapped = mapSpan(span, tr.changes);
+    return mapped && room ? mapSpan(mapped, room) : mapped;
+  };
+  const added = spaces ? [] : own.added.flatMap((span) => through(span) ?? []);
+  const settled = settleLine(state, line, line.text, { ...own, added }, { verbatim: true });
+  const changed = settled.text !== line.text;
+  const noted = settled.kind !== own.kind || !sameSpans(settled.added, added);
+  if (changed || noted || held) {
+    specs.push({
+      ...(changed ? { changes: difference(line.text, settled.text, line.from) } : null),
+      effects:
+        noted || held
+          ? setStored.of({
+              // Whole, as a blank line put in above moves the line's start past what's mapped.
+              ...own,
+              from: line.from,
+              kind: settled.kind,
+              added: settled.added,
+              made: own.made && through(own.made),
+              madeMark: own.madeMark && through(own.madeMark),
+            })
+          : [],
+      // The stored line goes on through the paste, as through typing.
+      annotations: classicEdit.of(true),
+      sequential: true,
+    });
+  }
+  return specs.length > 1 ? specs : tr;
+});
