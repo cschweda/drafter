@@ -234,25 +234,35 @@ const exposeView = (page: Page) =>
     (window as unknown as ViewWindow).drafterView = (content?.cmTile ?? content?.cmView)?.view;
   });
 
-/** Times the editor's work for each key: every dispatch from one keydown to the next, summed. */
+/**
+ * Times the editor's work for each key, from one keydown to the next, summed: every dispatch with
+ * the layout it leaves (read straight after, so the browser lays the page out then and there), and
+ * CodeMirror's measure in the next frame, which reads the layout and draws what it found. A budget
+ * that timed the dispatch alone would leave out the part of a keystroke a writer waits for most.
+ */
 async function timeKeys(page: Page) {
   await exposeView(page);
   await page.evaluate(() => {
     const w = window as unknown as TimedWindow;
     const view = (window as unknown as ViewWindow).drafterView as {
       dispatch: (...args: unknown[]) => void;
+      measure: (...args: unknown[]) => void;
+      contentDOM: HTMLElement;
     };
     w.spent = [];
     w.spending = 0;
-    const own = view.dispatch;
-    view.dispatch = function (this: unknown, ...args: unknown[]) {
-      const start = performance.now();
-      try {
-        own.apply(this, args);
-      } finally {
-        w.spending += performance.now() - start;
-      }
-    };
+    const timed = (run: (...args: unknown[]) => void, after?: () => void) =>
+      function (this: unknown, ...args: unknown[]) {
+        const start = performance.now();
+        try {
+          run.apply(this, args);
+          after?.();
+        } finally {
+          w.spending += performance.now() - start;
+        }
+      };
+    view.dispatch = timed(view.dispatch, () => void view.contentDOM.getBoundingClientRect().height);
+    view.measure = timed(view.measure);
     window.addEventListener(
       'keydown',
       () => {

@@ -11,7 +11,14 @@ import {
   selectSelectionMatches,
   setSearchQuery,
 } from '@codemirror/search';
-import { EditorSelection, EditorState, type StateCommand, Text } from '@codemirror/state';
+import {
+  Compartment,
+  EditorSelection,
+  EditorState,
+  Prec,
+  type StateCommand,
+  Text,
+} from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { appChange, fountain, parsedDoc } from '@drafter/cm-fountain';
 import { metadataSpan, setMeta } from '@drafter/fountain';
@@ -586,11 +593,16 @@ describe('a blank script is made ready', () => {
       'Title: Untitled Play\nCredit: Written by\nAuthor: Your Name\nDraft date: May 1, 2026\n\n';
     const doc = `${title}\n${BLOCK}\n`;
     const changed: boolean[] = [];
+    // The writing mode in a compartment, as the app has it: Fountain Mode first, then a switch.
+    const mode = new Compartment();
     const view = new EditorView({
-      state: classicEditor(`${title}|\n${BLOCK}\n`, {
-        template: STAGE,
-        with: [
+      state: EditorState.create({
+        doc,
+        selection: EditorSelection.cursor(title.length),
+        extensions: [
           history(),
+          fountain({ template: () => STAGE }),
+          mode.of([]),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) changed.push(true);
           }),
@@ -600,10 +612,13 @@ describe('a blank script is made ready', () => {
     });
     view.focus();
     await settled();
+    view.dispatch({ effects: mode.reconfigure(Prec.high(classic())) });
+    expect(view.state.field(classicLine, false)).not.toBeUndefined();
+    await settled();
     view.contentDOM.blur();
     view.focus();
     await settled();
-    expect(changed, 'focus writes nothing').toEqual([]);
+    expect(changed, 'focus and the switch write nothing').toEqual([]);
     expect(view.state.sliceDoc()).toBe(doc);
     // The first letter brings its own blank line, in its own step.
     const at = view.state.selection.main.head;

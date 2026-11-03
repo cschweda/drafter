@@ -525,6 +525,9 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
   return applySettled(tr, line, own, added, fix, rawText, state);
 });
 
+/** The elements of a speech's lines, which a name above is for. */
+const SPEECH_LINES: ReadonlySet<ClassicKind> = new Set(['dialogue', 'parenthetical', 'lyric']);
+
 /**
  * A line of capitals the cursor came back to is Action (§4.2, and the maintainer's ruling on
  * Task 13), though the empty line under it is pending Dialogue, as under a name. What the writer
@@ -533,9 +536,6 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
  * of speech (Enter or Tab from a name), or a speech element picked, is the writer's, and the name
  * is left a name. It runs ahead of `classicMarks`, which then reads the typing with the `!` above.
  */
-/** The elements of a speech's lines, which a name above is for. */
-const SPEECH_LINES: ReadonlySet<ClassicKind> = new Set(['dialogue', 'parenthetical', 'lyric']);
-
 export const keepActionAbove: Extension = EditorState.transactionFilter.of((tr) => {
   if (!tr.docChanged || tr.annotation(appChange)) return tr;
   const typing = tr.isUserEvent('input.type') && !tr.isUserEvent('input.type.compose');

@@ -386,7 +386,7 @@ describe('the transaction', () => {
     expect(typed.field(classicLine)).not.toBeNull();
   });
 
-  test('a capital, a mark, and a letter undo together, and the kept text comes back', () => {
+  test('a mark and a no-case letter undo together, and the text before comes back', () => {
     const before = choose(classicEditor(SOFT, { with: [history()] }), 'character');
     const typed = type(before, '李');
     expect(typed.doc.line(3).text).toBe('@李');
@@ -452,7 +452,7 @@ describe('makeElement on the cursor’s line', () => {
   });
 });
 
-describe('fix round 1', () => {
+describe('what a line becomes after a speech, on line 1, and with a mark’s own character', () => {
   test('Action under an action paragraph after a speech stays Action', () => {
     expect(typedOn(classicEditor('JUNE\nHello.\n\nShe leaves.\n|'), 'She waits for him')).toBe(
       'She waits for him',
