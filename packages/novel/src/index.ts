@@ -1,6 +1,7 @@
 export {
   carryFacts,
   type Facts,
+  MAX_SYNOPSIS,
   type NovelFacts,
   orphanedFacts,
   readFacts,

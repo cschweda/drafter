@@ -27,7 +27,8 @@ export interface NovelFacts {
   nodes: Record<string, Facts>;
 }
 
-const MAX_SYNOPSIS = 2000;
+/** The longest synopsis kept, in UTF-16 code units: a longer one is cut there when read or written. */
+export const MAX_SYNOPSIS = 2000;
 const MAX_TARGET = 10_000_000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {

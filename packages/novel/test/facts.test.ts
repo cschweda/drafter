@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   carryFacts,
   findNode,
+  MAX_SYNOPSIS,
   moveNode,
   type NovelFacts,
   novelStructure,
@@ -75,7 +76,8 @@ describe('readFacts / writeFacts', () => {
     });
     const f = readFacts(text);
     expect(f.bookTarget).toBeUndefined();
-    expect(f.nodes.a.synopsis?.length).toBe(2000);
+    expect(MAX_SYNOPSIS).toBe(2000);
+    expect(f.nodes.a.synopsis?.length).toBe(MAX_SYNOPSIS);
     expect(f.nodes.a.target).toBeUndefined();
     expect(f.nodes.a.status).toBeUndefined();
     expect(f.nodes.b?.target).toBeUndefined();

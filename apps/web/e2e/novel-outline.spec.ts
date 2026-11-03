@@ -167,9 +167,25 @@ test.describe('the Outline for a novel', () => {
     const target = row(page, /^The Page, section/);
     const box = await target.boundingBox();
     if (!box) throw new Error('no row');
-    await row(page, /^What the Sand Kept, section/).dragTo(target, {
-      targetPosition: { x: 20, y: box.height - 3 },
-    });
+    const lines = page.locator('.row.drop-above, .row.drop-below');
+    // By hand, so the drop line can be seen on the way: over the row, out of the tree, and back.
+    const source = await row(page, /^What the Sand Kept, section/).boundingBox();
+    if (!source) throw new Error('no row');
+    await page.mouse.move(source.x + 20, source.y + source.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 20, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.move(box.x + 20, box.y + box.height - 3, { steps: 3 });
+    await expect(target).toHaveClass(/\bdrop-below\b/);
+    await expect(lines).toHaveCount(1);
+    // Out of the tree, over the editor: the line goes.
+    const outside = await page.locator('.cm-content').boundingBox();
+    if (!outside) throw new Error('no editor');
+    await page.mouse.move(outside.x + 40, outside.y + 40, { steps: 5 });
+    await expect(lines).toHaveCount(0);
+    await page.mouse.move(box.x + 20, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.move(box.x + 20, box.y + box.height - 3, { steps: 3 });
+    await expect(target).toHaveClass(/\bdrop-below\b/);
+    await page.mouse.up();
     await expect
       .poll(() => headings(page))
       .toEqual([
@@ -185,6 +201,7 @@ test.describe('the Outline for a novel', () => {
         '## The Turning Light',
       ]);
     await expect(row(page, /^What the Sand Kept, section/)).toBeFocused();
+    await expect(lines).toHaveCount(0);
   });
 
   test('a row’s menu moves it, as a phone does', async ({ page }) => {
@@ -213,7 +230,7 @@ test.describe('the Outline for a novel', () => {
 
     await menuFor(page, visitor);
     await rowMenu(page).getByRole('menuitem', { name: 'Status' }).click();
-    await page.getByRole('menuitemcheckbox', { name: 'Draft' }).click();
+    await page.getByRole('menuitemradio', { name: 'Draft' }).click();
     await expect(row(page, 'The Visitor, section, 78 words, Draft')).toBeVisible();
     await expect(announcer(page)).toHaveText('The Visitor is Draft.');
 
@@ -239,7 +256,7 @@ test.describe('the Outline for a novel', () => {
     await openSample(page);
     // The button is a pointer's: the row's name says the status, and its menu sets it.
     await letter(page).locator('.status').click();
-    await page.getByRole('menuitemcheckbox', { name: 'Done' }).click();
+    await page.getByRole('menuitemradio', { name: 'Done' }).click();
     await expect(letter(page)).toHaveAccessibleName(/, Done$/);
     await expect(letter(page)).toBeFocused();
   });
@@ -310,7 +327,7 @@ for (const theme of ['dark', 'light'] as const) {
       await menuFor(page, saltRoad(page));
       await clean(page, "a row's menu");
       await rowMenu(page).getByRole('menuitem', { name: 'Status' }).click();
-      await expect(page.getByRole('menuitemcheckbox', { name: 'Draft' })).toBeVisible();
+      await expect(page.getByRole('menuitemradio', { name: 'Draft' })).toBeVisible();
       await clean(page, 'the statuses');
       await page.keyboard.press('Escape');
       await page.keyboard.press('Escape');

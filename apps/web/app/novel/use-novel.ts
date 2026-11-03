@@ -4,6 +4,7 @@ import {
   carryFacts,
   type Facts,
   findNode,
+  MAX_SYNOPSIS,
   moveNode,
   type NovelFacts,
   type NovelNode,
@@ -91,9 +92,9 @@ function create(): NovelSession {
     refresh();
 
     const readOnly = () => {
-      if (editor.locked.value) return 'This script is open for editing in another tab.';
-      if (script.fileLocked.value) return 'Drafter is checking this script’s file first.';
-      if (editor.view.state.readOnly) return 'This script can’t be changed here.';
+      if (editor.locked.value) return 'This novel is open for editing in another tab.';
+      if (script.fileLocked.value) return 'Drafter is checking this novel’s file first.';
+      if (editor.view.state.readOnly) return 'This novel can’t be changed here.';
       return null;
     };
 
@@ -118,7 +119,8 @@ function create(): NovelSession {
       const all = readFacts(text);
       const kept: Facts = {};
       if (next.status) kept.status = next.status;
-      if (next.synopsis?.trim()) kept.synopsis = next.synopsis.trim();
+      const synopsis = capSynopsis(next.synopsis?.trim() ?? '');
+      if (synopsis) kept.synopsis = synopsis;
       if (next.target) kept.target = next.target;
       if (Object.keys(kept).length > 0) all.nodes[id] = kept;
       else delete all.nodes[id];
@@ -159,6 +161,14 @@ function create(): NovelSession {
 
     return { tree, facts, moved, readOnly, setFacts, move, goto } satisfies NovelSession;
   }) as NovelSession;
+}
+
+/** A synopsis no longer than the package keeps (`MAX_SYNOPSIS`), never cut inside a surrogate pair. */
+export function capSynopsis(text: string): string {
+  if (text.length <= MAX_SYNOPSIS) return text;
+  const cut = text.slice(0, MAX_SYNOPSIS);
+  const last = cut.charCodeAt(cut.length - 1);
+  return last >= 0xd800 && last <= 0xdbff ? cut.slice(0, -1) : cut;
 }
 
 function findAt(list: NovelNode[], at: number): NovelNode | null {

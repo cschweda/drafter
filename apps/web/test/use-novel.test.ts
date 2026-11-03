@@ -1,7 +1,7 @@
 import { history, redo, undo } from '@codemirror/commands';
 import { EditorState, type TransactionSpec } from '@codemirror/state';
 import { setMarkdownMeta } from '@drafter/markdown';
-import { novelStructure, readFacts } from '@drafter/novel';
+import { MAX_SYNOPSIS, novelStructure, readFacts } from '@drafter/novel';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { ShallowRef } from 'vue';
 import * as carryModule from '../app/novel/carry';
@@ -127,6 +127,25 @@ describe('useNovel', () => {
     expect(text()).toBe(BOOK);
     cmd(redo);
     expect(readFacts(text()).nodes['chapter:the-night-watch:0']).toEqual({ status: 'revised' });
+  });
+
+  test('a synopsis is written no longer than the package keeps, never half a surrogate pair', async () => {
+    const novel = await session();
+    novel.setFacts('chapter:the-night-watch:0', { synopsis: 'x'.repeat(5000) });
+    expect(readFacts(text()).nodes['chapter:the-night-watch:0']?.synopsis).toBe(
+      'x'.repeat(MAX_SYNOPSIS),
+    );
+    const { capSynopsis } = await import('../app/novel/use-novel');
+    expect(capSynopsis('short')).toBe('short');
+    // An emoji that would be cut in half at the limit is left out whole.
+    const long = `${'x'.repeat(MAX_SYNOPSIS - 1)}😀`;
+    expect(capSynopsis(long)).toBe('x'.repeat(MAX_SYNOPSIS - 1));
+  });
+
+  test('a locked novel says so, in a novel’s words', async () => {
+    const novel = await session();
+    env.refs.locked.value = true;
+    expect(novel.readOnly()).toBe('This novel is open for editing in another tab.');
   });
 
   test('empty facts take a node’s facts away', async () => {

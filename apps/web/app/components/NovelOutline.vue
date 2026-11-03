@@ -234,6 +234,14 @@ function onDragend() {
   dropLine.value = null;
 }
 
+/** The pointer left the tree while dragging: no line, until it comes back over a row. */
+function onDragleave(event: DragEvent) {
+  const to = event.relatedTarget;
+  // Moving from one row to another (or into a row's own parts) is not leaving.
+  if (to instanceof Node && (event.currentTarget as HTMLElement).contains(to)) return;
+  dropLine.value = null;
+}
+
 // ---- Facts -------------------------------------------------------------------------------
 
 function setStatus(id: string, status: Status | null) {
@@ -322,6 +330,29 @@ const afterClosing = (act: () => void) => {
   afterMenu = act;
 };
 
+/**
+ * The statuses are one choice of several, so their items are radios: Nuxt UI's menu has
+ * checkbox items only, so while a menu of this tree is open, its status items are given the
+ * `menuitemradio` role (their `aria-checked` already says which is chosen). A menu opens its
+ * Status submenu later, so the open menu is watched until it closes.
+ */
+const STATUS_ITEM = 'novel-status-item';
+function radios() {
+  for (const item of document.querySelectorAll(`.${STATUS_ITEM}[role="menuitemcheckbox"]`)) {
+    item.setAttribute('role', 'menuitemradio');
+  }
+}
+let radioWatch: MutationObserver | null = null;
+watch(menuFor, (open) => {
+  radioWatch?.disconnect();
+  radioWatch = null;
+  if (!open || typeof MutationObserver === 'undefined') return;
+  radioWatch = new MutationObserver(radios);
+  radioWatch.observe(document.body, { childList: true, subtree: true });
+  void nextTick(radios);
+});
+onBeforeUnmount(() => radioWatch?.disconnect());
+
 function statusItems(id: string): DropdownMenuItem[][] {
   const now = facts.value.nodes[id]?.status ?? null;
   const off = novel.readOnly() !== null;
@@ -330,9 +361,12 @@ function statusItems(id: string): DropdownMenuItem[][] {
     label: status ? STATUS_LABELS[status] : 'No status',
     checked: now === status,
     disabled: off,
+    // Drawn as a radio (`menuitemradio`, below): one status at a time.
+    class: STATUS_ITEM,
     onSelect: () => setStatus(id, status),
   });
-  return [STATUSES.map(pick), [pick(null)]];
+  // One group, so the radios are one set.
+  return [[...STATUSES.map(pick), pick(null)]];
 }
 
 function menuItems(row: Row): DropdownMenuItem[][] {
@@ -459,7 +493,7 @@ watch(rows, async () => {
       No chapters yet. A chapter starts with <code>#</code> and its title, and a section within it
       with <code>##</code>.
     </DEmpty>
-    <ul v-else role="tree" aria-label="Outline" class="tree">
+    <ul v-else role="tree" aria-label="Outline" class="tree" @dragleave="onDragleave">
       <li
         v-for="row in rows"
         :id="domId(row.id)"
