@@ -17,7 +17,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.24.3.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Classic Mode is built, for writers who know Final Draft rather than Fountain, and comes with v0.25.0; next up is Novel (v0.26.0). See the [roadmap](#roadmap).
+> **Status: v0.24.3.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Classic Mode is built, for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks, and comes with v0.25.0; next up is Novel (v0.26.0). See the [roadmap](#roadmap).
 
 ## Free, no login, private
 

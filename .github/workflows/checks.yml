@@ -1,6 +1,6 @@
 # The checks on every pull request: Dependabot's updates and anyone else's. The same gates a release
 # runs, on Linux, minus packaging the desktop app (desktop.yml does that on main and on tags):
-# formatting and lint, the build, every package's tests, the trap documents, the web app's
+# formatting and lint, the build, every package's typecheck and tests, the trap documents, the web app's
 # typecheck and unit tests, the desktop shell's unit tests, and the browser tests in Chromium on
 # macOS and Linux. Every job is required.
 #
@@ -41,6 +41,10 @@ jobs:
         env:
           NETLIFY: "true"
         run: pnpm build
+      - name: Every package's typecheck
+        # Each package's tests run its source through Vitest, which strips types without checking
+        # them; tsc --noEmit is what catches a type error in a package.
+        run: pnpm -r --filter "./packages/*" typecheck
       - name: Every package's tests
         # A shared runner is slower and noisier than a writer's computer. The tests with a fixed time
         # limit ("within 3 seconds", "under 50 ms", "in under a second") are left to the release gates,
