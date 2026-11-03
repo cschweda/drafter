@@ -275,12 +275,22 @@ async function startEditing(id: string) {
   input?.select();
 }
 
-function finishEditing(save: boolean) {
+function finishEditing(save: boolean, refocus = true) {
   const id = editing.value;
   if (!id) return;
   editing.value = null;
   if (save) novel.setFacts(id, { ...(facts.value.nodes[id] ?? {}), synopsis: draft.value });
-  void focusRow(id);
+  if (refocus) void focusRow(id);
+}
+
+const root = ref<HTMLElement | null>(null);
+
+/** Leaving the field keeps the draft, as Enter does; focus goes back to the row only within the pane. */
+function onFieldBlur(event: FocusEvent) {
+  const to = event.relatedTarget;
+  const inside =
+    !(to instanceof Node) || to === document.body || (root.value?.contains(to) ?? false);
+  finishEditing(true, inside);
 }
 
 function onEditKeydown(event: KeyboardEvent) {
@@ -488,7 +498,7 @@ watch(rows, async () => {
 </script>
 
 <template>
-  <div class="novel-outline">
+  <div ref="root" class="novel-outline">
     <DEmpty v-if="rows.length === 0" icon="i-lucide-list-tree">
       No chapters yet. A chapter starts with <code>#</code> and its title, and a section within it
       with <code>##</code>.
@@ -499,6 +509,7 @@ watch(rows, async () => {
         :id="domId(row.id)"
         :key="row.id"
         role="treeitem"
+        aria-keyshortcuts="Enter Shift+F10 Alt+ArrowUp Alt+ArrowDown"
         class="row"
         :class="[
           row.node.kind,
@@ -592,7 +603,7 @@ watch(rows, async () => {
           class="synopsis-field"
           :aria-label="`Synopsis of ${row.label}`"
           @keydown="onEditKeydown"
-          @blur="finishEditing(false)"
+          @blur="onFieldBlur"
         />
         <div
           v-else-if="row.facts.synopsis"

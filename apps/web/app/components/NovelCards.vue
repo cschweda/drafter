@@ -6,7 +6,6 @@ import {
   findNode,
   type NovelNode,
   type NovelTarget,
-  type NovelTree,
   STATUS_LABELS,
   STATUSES,
   type Status,
@@ -273,12 +272,20 @@ async function startEditing(id: string) {
   input?.select();
 }
 
-function finishEditing(save: boolean) {
+function finishEditing(save: boolean, refocus = true) {
   const id = editing.value;
   if (!id) return;
   editing.value = null;
   if (save) novel.setFacts(id, { ...(facts.value.nodes[id] ?? {}), synopsis: draft.value });
-  void focusCard(id);
+  if (refocus) void focusCard(id);
+}
+
+/** Leaving the field keeps the draft, as Enter does; focus goes back to the card only within the pane. */
+function onFieldBlur(event: FocusEvent) {
+  const to = event.relatedTarget;
+  const inside =
+    !(to instanceof Node) || to === document.body || (root.value?.contains(to) ?? false);
+  finishEditing(true, inside);
 }
 
 function onEditKeydown(event: KeyboardEvent) {
@@ -511,7 +518,6 @@ watch(cards, async () => {
             v-memo="[
               card.sig,
               card.id === current,
-              editing === card.id ? draft : null,
               isOpen(card.id, 'more'),
               isOpen(card.id, 'status'),
               canDrag,
@@ -520,6 +526,7 @@ watch(cards, async () => {
               dropAt(card.id),
             ]"
             role="option"
+            aria-keyshortcuts="Enter Shift+F10 Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown"
             class="card"
             :class="[
               card.node.kind,
@@ -597,7 +604,7 @@ watch(cards, async () => {
       :style="{ top: `${fieldAt.top}px`, left: `${fieldAt.left}px`, width: `${fieldAt.width}px` }"
       :aria-label="`Synopsis of ${editingTitle}`"
       @keydown="onEditKeydown"
-      @blur="finishEditing(false)"
+      @blur="onFieldBlur"
     />
   </div>
 </template>
@@ -697,7 +704,6 @@ watch(cards, async () => {
 }
 .more {
   display: inline-flex;
-  cursor: pointer;
   flex: none;
   align-items: center;
   justify-content: center;

@@ -233,9 +233,13 @@ export async function runCommand(page: Page, title: string) {
   await page.keyboard.insertText(title);
   const row = palette(page).getByRole('option', { name: title, exact: true });
   await expect(row).toBeVisible();
-  await expect(row).toHaveAttribute('data-highlighted', '');
-  await page.keyboard.press('Enter');
-  await expect(palette(page)).toBeHidden();
+  // A list redrawn under the keys loses its highlight for a frame; an Enter then does nothing.
+  // choose() closes the palette before it runs the command, so an open palette means it didn't run.
+  await expect(async () => {
+    await expect(row).toHaveAttribute('data-highlighted', '', { timeout: 1_000 });
+    await page.keyboard.press('Enter');
+    await expect(palette(page)).toBeHidden({ timeout: 1_000 });
+  }).toPass({ timeout: 10_000 });
 }
 
 /**

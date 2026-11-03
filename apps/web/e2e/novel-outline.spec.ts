@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { runCommand, showSource, start } from './modules';
+import { runCommand, settled, showSource, start } from './modules';
 
 // The Outline for a novel (Novel plan, Task 5): the sample novel's parts, chapters, and sections
 // with their words, targets, and statuses; Alt+Up and Alt+Down and dragging move a passage with its
@@ -78,6 +78,8 @@ async function openSample(page: Page) {
     .getByRole('button', { name: 'Novel', exact: true })
     .click();
   await expect(page.locator('.cm-content')).toContainText('Low Tide');
+  await expect(page.getByRole('group', { name: 'Scripts', exact: true })).toBeHidden();
+  await settled(page);
   await showOutline(page);
 }
 
@@ -250,6 +252,46 @@ test.describe('the Outline for a novel', () => {
     await expect(row(page, 'The Visitor, section, 78 words, Draft')).toHaveAccessibleDescription(
       'Alder comes to the gate.',
     );
+  });
+
+  test('leaving the synopsis field keeps what was typed', async ({ page, isMobile }) => {
+    await openSample(page);
+    const visitor = row(page, /^The Visitor, section/);
+    await menuFor(page, visitor);
+    await rowMenu(page).getByRole('menuitem', { name: 'Edit synopsis' }).click();
+    const field = page.getByRole('textbox', { name: 'Synopsis of The Visitor' });
+    await expect(field).toBeFocused();
+    await field.fill('Kept on Tab.');
+    await page.keyboard.press('Tab');
+    await expect(field).toHaveCount(0);
+    await expect(visitor).toHaveAccessibleDescription('Kept on Tab.');
+    // A click into the Source keeps focus there; a phone shows one pane, so only the Tab above.
+    if (isMobile) return;
+    await menuFor(page, visitor);
+    await rowMenu(page).getByRole('menuitem', { name: 'Edit synopsis' }).click();
+    await page.getByRole('textbox', { name: 'Synopsis of The Visitor' }).fill('Kept on click.');
+    await page.locator('.cm-content').click();
+    await expect(visitor).toHaveAccessibleDescription('Kept on click.');
+    await expect(page.locator('.cm-content')).toBeFocused();
+  });
+
+  test('sets a status with the keyboard only', async ({ page }) => {
+    await openSample(page);
+    const target = row(page, /^Climbing, section/);
+    await target.focus();
+    await page.keyboard.press('Shift+F10');
+    await expect(rowMenu(page)).toBeVisible();
+    const status = rowMenu(page).getByRole('menuitem', { name: 'Status' });
+    for (let i = 0; i < 8 && !(await status.evaluate((el) => el === document.activeElement)); i++) {
+      await page.keyboard.press('ArrowDown');
+    }
+    await expect(status).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('menuitemradio', { name: 'Draft' })).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(target).toHaveAccessibleName(/, (To do|Draft|Revised|Done)$/);
+    await expect(target).toBeFocused();
   });
 
   test('the status button picks a status with a pointer', async ({ page }) => {

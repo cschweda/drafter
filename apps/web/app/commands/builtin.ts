@@ -667,7 +667,7 @@ export function registerBuiltinCommands(): void {
       enabled: () => isFountain() || editor.novel.value,
       run: () => showTab('outline'),
     },
-    // Not core tabs (design §5.8): showing one puts it in its pane's slot. None for Markdown.
+    // Not core tabs (design §5.8): showing one puts it in its pane's slot. Cards and the Outline are a script's or a novel's.
     'show-cards': {
       enabled: () => isFountain() || editor.novel.value,
       run: () => showTab('cards'),

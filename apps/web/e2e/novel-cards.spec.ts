@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { runCommand, showSource, start, viewTool } from './modules';
+import { runCommand, settled, showSource, start, viewTool } from './modules';
 
 // Cards for a novel (Novel plan, Task 6): a card for each chapter and section of the sample, under
 // its part's title, with its words, status, and synopsis; dragging a card (or its menu, or Alt+Arrow)
@@ -71,6 +71,8 @@ async function openSample(page: Page) {
     .getByRole('button', { name: 'Novel', exact: true })
     .click();
   await expect(page.locator('.cm-content')).toContainText('Low Tide');
+  await expect(page.getByRole('group', { name: 'Scripts', exact: true })).toBeHidden();
+  await settled(page);
   await runCommand(page, 'Show Cards');
   await expect(cards(page)).toBeVisible();
 }
@@ -197,6 +199,44 @@ test.describe('Cards for a novel', () => {
     await page.getByRole('menuitemradio', { name: 'Done' }).click();
     await expect(saltRoad(page)).toHaveAccessibleName(/, Done$/);
     await expect(saltRoad(page)).toBeFocused();
+  });
+
+  test('leaving the synopsis field keeps what was typed', async ({ page, isMobile }) => {
+    await openSample(page);
+    await menuFor(page, climbing(page));
+    await cardMenu(page).getByRole('menuitem', { name: 'Edit synopsis' }).click();
+    const field = page.getByRole('textbox', { name: 'Synopsis of Climbing' });
+    await expect(field).toBeFocused();
+    await field.fill('Kept on Tab.');
+    await page.keyboard.press('Tab');
+    await expect(field).toHaveCount(0);
+    await expect(climbing(page)).toHaveAccessibleDescription('Kept on Tab.');
+    // A click into the Source keeps focus there; a phone shows one pane, so only the Tab above.
+    if (isMobile) return;
+    await menuFor(page, climbing(page));
+    await cardMenu(page).getByRole('menuitem', { name: 'Edit synopsis' }).click();
+    await page.getByRole('textbox', { name: 'Synopsis of Climbing' }).fill('Kept on click.');
+    await page.locator('.cm-content').click();
+    await expect(climbing(page)).toHaveAccessibleDescription('Kept on click.');
+    await expect(page.locator('.cm-content')).toBeFocused();
+  });
+
+  test('sets a status with the keyboard only', async ({ page }) => {
+    await openSample(page);
+    await climbing(page).focus();
+    await page.keyboard.press('Shift+F10');
+    await expect(cardMenu(page)).toBeVisible();
+    const status = cardMenu(page).getByRole('menuitem', { name: 'Status' });
+    for (let i = 0; i < 8 && !(await status.evaluate((el) => el === document.activeElement)); i++) {
+      await page.keyboard.press('ArrowDown');
+    }
+    await expect(status).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('menuitemradio', { name: 'Draft' })).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(climbing(page)).toHaveAccessibleName(/, (To do|Draft|Revised|Done)$/);
+    await expect(climbing(page)).toBeFocused();
   });
 
   test('changes the card size from the slim bar', async ({ page }) => {
