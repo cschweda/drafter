@@ -128,6 +128,30 @@ test.describe('a first visit', () => {
     await expect(page.locator('.cm-line', { hasText: 'Title: The Call' })).toBeInViewport();
   });
 
+  test('is in Fountain Mode, with no Classic Mode hint', async ({ page }) => {
+    await start(page);
+    await showSource(page);
+    // No writing mode stored: the default, Fountain, is what the editor has.
+    const stored = await page.evaluate(
+      () =>
+        new Promise((done) => {
+          const open = indexedDB.open('drafter');
+          open.onsuccess = () => {
+            const get = open.result
+              .transaction('settings')
+              .objectStore('settings')
+              .get('writingMode');
+            get.onsuccess = () => done(get.result?.value ?? null);
+          };
+        }),
+    );
+    expect(stored === null || stored === 'fountain').toBe(true);
+    await expect(editor(page)).toHaveAttribute('aria-label', 'Source');
+    await expect(page.locator('.cm-classic')).toHaveCount(0);
+    await expect(page.locator('[data-classic-hint]')).toHaveCount(0);
+    await expect(page.locator('[data-classic-hint-said]')).toHaveText('');
+  });
+
   test('offers new scripts and Open from the sample chip, or a phone’s sample bar', async ({
     page,
   }) => {

@@ -93,6 +93,13 @@ const next = computed<WritingMode>(() => (current.value === 'classic' ? 'fountai
   color: var(--accent-text);
   font-weight: 600;
 }
+/* A phone's bar is short of room: the word stays, in a tighter pill, so Save and Export stay on it. */
+@media (max-width: 479.98px) {
+  .mode-one {
+    padding: 0 6px;
+    font-size: 11px;
+  }
+}
 @media (forced-colors: active) {
   .mode-button[aria-pressed='true'],
   .mode-one {

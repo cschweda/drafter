@@ -216,11 +216,12 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
 <template>
   <header ref="bar" class="toolbar">
     <h1 class="sr-only">Drafter</h1>
-    <!-- The mark opens the app menu; its chevron says so, on every screen. Below 400px the wordmark
-         gives way to the mark, so the bar fits a 320px screen (WCAG 1.4.10). -->
+    <!-- The mark opens the app menu; its chevron says so, on every screen. Below 480px (a phone) the
+         wordmark gives way to the mark, so the bar fits a 320px screen (WCAG 1.4.10) and, with the
+         writing mode's switch in it, a 412px phone keeps Save and Export on the bar (Classic Mode). -->
     <AppMenu>
       <picture class="logo">
-        <source media="(max-width: 399.98px)" srcset="/mark.svg">
+        <source media="(max-width: 479.98px)" srcset="/mark.svg">
         <img :src="dark ? '/logo-dark.svg' : '/logo-light.svg'" alt="Drafter">
       </picture>
     </AppMenu>

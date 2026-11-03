@@ -674,6 +674,52 @@ describe('where the keys give way', () => {
     }
   });
 
+  test('Shift+Alt+M on a Mac turns on Tab focus mode, read by the key’s place, not its letter', () => {
+    // Option+Shift+M types a letter on a Mac ("Â" on a US layout), which CodeMirror's own binding,
+    // `Shift-Alt-m`, never matches there; the escape the help page names must still work (§12).
+    const platform = Object.getOwnPropertyDescriptor(Navigator.prototype, 'platform');
+    Object.defineProperty(navigator, 'platform', { value: 'MacIntel', configurable: true });
+    const parent = document.createElement('div');
+    document.body.append(parent);
+    const view = new EditorView({ state: classicEditor('One.|'), parent });
+    try {
+      const press = (key: string) => {
+        const event = new KeyboardEvent('keydown', {
+          key,
+          code: 'KeyM',
+          keyCode: 77,
+          altKey: true,
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true,
+        });
+        view.contentDOM.dispatchEvent(event);
+        return event.defaultPrevented;
+      };
+      const tab = () => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'Tab',
+          keyCode: 9,
+          bubbles: true,
+          cancelable: true,
+        });
+        view.contentDOM.dispatchEvent(event);
+        return event.defaultPrevented;
+      };
+      expect(press('Â')).toBe(true);
+      expect(tab(), 'Tab is the browser’s').toBe(false);
+      expect(tab(), 'and stays so').toBe(false);
+      expect(press('Â')).toBe(true);
+      expect(tab(), 'Tab is Classic’s again').toBe(true);
+      expect(view.state.doc.toString().startsWith('One.')).toBe(true);
+    } finally {
+      view.destroy();
+      parent.remove();
+      delete (navigator as unknown as Record<string, unknown>).platform;
+      if (platform) Object.defineProperty(Navigator.prototype, 'platform', platform);
+    }
+  });
+
   test('several cursors give every key back', () => {
     const state = classicEditor('One\n\nTwo', {
       with: [EditorState.allowMultipleSelections.of(true)],

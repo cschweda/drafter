@@ -144,6 +144,24 @@ const classicKeys = Prec.highest(
 );
 
 /**
+ * Shift+Alt+M on a Mac turns Tab focus mode on and off (§12), as Ctrl+M does elsewhere through
+ * `defaultKeymap`. CodeMirror's own Mac binding, `Shift-Alt-m`, is matched against the letter the
+ * key types, and on a Mac Option+Shift+M types one ("Â" on a US layout), so it never runs: the key
+ * is read here by where it is on the keyboard instead. The platform test is CodeMirror's.
+ */
+const tabFocusKey = Prec.highest(
+  EditorView.domEventHandlers({
+    keydown(event, view) {
+      const mac = /Mac/.test(navigator.platform) || /iP(hone|ad|od)/.test(navigator.platform);
+      if (!mac || event.code !== 'KeyM' || !event.altKey || !event.shiftKey) return false;
+      if (event.ctrlKey || event.metaKey) return false;
+      view.setTabFocusMode();
+      return true;
+    },
+  }),
+);
+
+/**
  * The text box's name says the mode, and it points at how to leave it (§12), as Tab doesn't. The
  * app's page holds the words, at this id. First in the list wins, so `classic()` goes ahead of the
  * editor's own attributes.
@@ -165,6 +183,7 @@ export function classic({ say }: ClassicOptions = {}): Extension {
     classicAttributes,
     classicChooser,
     classicKeys,
+    tabFocusKey,
     classicComposition,
     completionOverride.of(classicSource),
     say ? classicSay.of(say) : [],

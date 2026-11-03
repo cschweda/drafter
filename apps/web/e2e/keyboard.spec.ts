@@ -368,3 +368,58 @@ test('the shortcuts page lists the spelling keys', async ({ page }) => {
     await expect(row(title)).toContainText(other);
   }
 });
+
+test('no trap in Classic Mode, walked by Tab', async ({ page, browserName }) => {
+  test.skip(browserName === 'webkit', "Safari's Tab skips buttons unless the reader turns that on");
+  await watchPointer(page);
+  await open(page);
+  const inEditor = () => page.evaluate(() => !!document.activeElement?.closest('.cm-editor'));
+  // Into the text by the skip link, and Classic Mode on from the text.
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to the editor' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(editor(page)).toBeFocused();
+  await page.keyboard.press('ControlOrMeta+Alt+Digit0');
+  await expect(editor(page)).toHaveAttribute('aria-label', 'Source, Classic Mode');
+  // Tab is Classic's: it stays in the text.
+  await page.keyboard.press('Tab');
+  expect(await inEditor()).toBe(true);
+  // Esc then Tab leaves; from there, Tab goes all the way round the page and back to the text.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Tab');
+  await expect.poll(inEditor).toBe(false);
+  const focused = () =>
+    page.evaluate(() => {
+      const el = document.activeElement;
+      return `${el?.tagName}${el?.id ? `#${el.id}` : ''}:${el?.getAttribute('aria-label') ?? el?.textContent?.trim().slice(0, 20) ?? ''}`;
+    });
+  /** Presses `key` until focus is in the text again, or stops moving (it has left the page). */
+  async function walk(key: string): Promise<{ back: boolean; seen: Set<string> }> {
+    const seen = new Set<string>();
+    let last = '';
+    let still = 0;
+    for (let i = 0; i < 200; i++) {
+      await page.keyboard.press(key);
+      if (await inEditor()) return { back: true, seen };
+      const now = await focused();
+      still = now === last ? still + 1 : 0;
+      if (still >= 3) break;
+      last = now;
+      seen.add(now);
+    }
+    return { back: false, seen };
+  }
+  // Chromium wraps round to the text; Firefox goes on to its own toolbar, past the page's end, and
+  // Shift+Tab from there comes back through the page to the text.
+  const forward = await walk('Tab');
+  expect(forward.seen.size, 'Tab moved through the page').toBeGreaterThan(5);
+  if (!forward.back) {
+    const backward = await walk('Shift+Tab');
+    expect(backward.back, 'Shift+Tab came back to the text').toBe(true);
+  }
+  // And out of it the other way.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Shift+Tab');
+  await expect.poll(inEditor).toBe(false);
+  await noPointer(page);
+});

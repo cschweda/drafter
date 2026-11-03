@@ -8,6 +8,7 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view';
+import { MAX_NESTING } from './depth';
 
 // The Source pane's mode for a Markdown document: CodeMirror's general-purpose Markdown grammar
 // (a Lezer grammar, which is outside Plan 2's "no Lezer grammar" rule: that rule is about
@@ -69,10 +70,17 @@ function decorations(view: EditorView): DecorationSet {
   const out: Range<Decoration>[] = [];
   const tree = syntaxTree(view.state);
   for (const { from, to } of view.visibleRanges) {
+    // The ends of the marks that hold the node being entered. A quote nested thousands deep would be
+    // a mark inside a mark for every level, and CodeMirror walks its marks by recursion, so past a
+    // few thousand an update runs out of stack and is lost. Marks stop nesting at the depth the
+    // Preview reads (MAX_NESTING); a document deeper than that isn't previewed either.
+    const open: number[] = [];
     tree.iterate({
       from,
       to,
       enter(node) {
+        while (open.length > 0 && (open.at(-1) as number) <= node.from) open.pop();
+        if (open.length >= MAX_NESTING) return;
         if (
           node.name === 'Link' &&
           node.to - node.from <= 1_003 &&
@@ -82,7 +90,10 @@ function decorations(view: EditorView): DecorationSet {
           return;
         }
         const decoration = BY_NODE[node.name];
-        if (decoration && node.to > node.from) out.push(decoration.range(node.from, node.to));
+        if (decoration && node.to > node.from) {
+          out.push(decoration.range(node.from, node.to));
+          open.push(node.to);
+        }
       },
     });
   }
