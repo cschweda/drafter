@@ -897,6 +897,7 @@ function onPanelKeydown(event: KeyboardEvent) {
   flex: none;
   gap: 2px;
 }
+
 .icon-toggle {
   display: grid;
   place-items: center;

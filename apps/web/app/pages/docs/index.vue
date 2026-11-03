@@ -131,6 +131,22 @@ const about: Record<string, string> = {
       Drafter opens dark. Pick light with the theme button, or turn on
       <strong>Match system appearance</strong> to follow your computer; Drafter keeps your choice.
     </p>
+    <p>
+      <strong>Contrast.</strong> The <strong>Contrast</strong> button in the top bar opens a slider
+      for each pane, the Source and the Script, each on its own. Slide right for crisper text, left
+      for a softer page; the colours change as you slide, in the light and the dark theme. Both
+      start near the highest, and both are in Settings too (on a narrow screen, the button is in
+      <strong>More actions</strong>). Printing and every export are unchanged. Under each slider is
+      the WCAG 2.1 contrast ratio of that pane’s text against its background (4.5:1 is AA for
+      normal text, 7:1 is AAA), and for the Source its weakest colour too, measured from the colours
+      on screen as you slide.
+    </p>
+    <p>
+      <strong>Typewriter sounds.</strong> For anyone who misses the clatter: turn on
+      <strong>Typewriter sounds</strong> in Settings (Writing) to hear a typewriter’s key as you type
+      in the Source, and its bell when you start a new line. It’s off unless you turn it on, the
+      sounds are made in your browser with no audio files, and a shortcut makes none.
+    </p>
 
     <h2 id="stats-and-scaffold">Stats and Scaffold</h2>
     <p>

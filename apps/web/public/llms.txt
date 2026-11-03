@@ -1,0 +1,33 @@
+# Drafter
+
+> Drafter is a free, open-source writing app for screenplays and stage plays in plain-text Fountain, and for novels and treatments in Markdown. You write on the left and the formatted pages build on the right as you type. It runs in the browser at drafter.dev, or as a desktop app for Windows and Linux. There's no account, and your script never leaves your device unless you send it.
+
+Drafter is made by Christopher Schweda and is MIT-licensed. It is free with no catch, no login, no ads, and no paid version. Nothing about a script is stored in the cloud, and Drafter uses no AI. drafter.dev counts page visits with Plausible, which uses no cookies, and the desktop app has no analytics at all. Scripts open and save as Fountain, Final Draft (.fdx), Highland, Fade In, Markdown, HTML, EPUB, PDF, and plain text. Classic Mode types a script with Enter and Tab, the way many screenwriting apps work, over a file that stays Fountain.
+
+## Help
+
+- [What is Drafter?](https://drafter.dev/docs/what-is-drafter/): what it does, for whom, and the numbers behind it
+- [Why Drafter](https://drafter.dev/docs/why/): the idea and the principles
+- [Fountain cheat sheet](https://drafter.dev/docs/fountain/): the plain-text screenplay format, mark by mark
+- [Classic Mode](https://drafter.dev/docs/classic-mode/): typing with Enter and Tab, without Fountain's marks
+- [Saving and your browser](https://drafter.dev/docs/saving/): where a script is kept, saving to files, and exports
+- [Drafts and cuts](https://drafter.dev/docs/drafts-and-cuts/): numbered drafts, and every cut kept beside the script
+- [Story map](https://drafter.dev/docs/story-map/): a visual page of a script to send to anyone
+- [Drafter for Claude](https://drafter.dev/docs/drafter-for-claude/): an optional, read-only MCP server that lets your own AI app read folders you name
+- [Self-hosting](https://drafter.dev/docs/self-hosting/): running the web app from your own computer or server with Docker
+- [Keyboard shortcuts](https://drafter.dev/docs/shortcuts/): every key
+- [Privacy](https://drafter.dev/docs/privacy/): what stays on your device, and everything that uses the network
+- [Open formats](https://drafter.dev/docs/open-formats/): the file formats Drafter reads and writes
+- [Technical details](https://drafter.dev/docs/technical/): how Drafter is put together
+- [What's new](https://drafter.dev/docs/whats-new/): every release, newest first
+- [Download Drafter](https://drafter.dev/docs/download/): the desktop app for Windows and Linux
+
+## Source
+
+- [Drafter on GitHub](https://github.com/cschweda/drafter): the code, the README, and the releases
+- [Changelog](https://github.com/cschweda/drafter/blob/main/CHANGELOG.md): every change, by release
+- [Audits](https://github.com/cschweda/drafter/blob/main/docs/AUDITS.md): every security, privacy, and red/blue team audit
+
+## Optional
+
+- [Third-party licences](https://drafter.dev/docs/licences/): the open-source software inside Drafter

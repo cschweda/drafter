@@ -28,8 +28,10 @@ import type { Template } from '@drafter/templates';
 import { commandById } from '../commands/registry';
 import type { DocumentKind } from '../markdown/kind';
 import type { WritingMode } from '../settings/settings';
+import { useSettings } from '../settings/settings';
 import { onSpellContextMenu } from '../spell/menu';
 import { sayClassic } from './element-notice';
+import { keySounds } from './key-sounds';
 import { revealedLine } from './reveal-line';
 import { theme } from './theme';
 import { typewriterScrolling } from './typewriter';
@@ -271,6 +273,9 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
       drop: (event) => Array.from(event.dataTransfer?.types ?? []).includes('Files'),
       contextmenu: (event, view) => onSpellContextMenu(event, view),
     }),
+    // Settings → Typewriter sounds, off by default: read at each key, so the setting needs no
+    // reconfigure, and the settings aren't read until a key is pressed.
+    keySounds(() => useSettings().settings.value.keySounds),
     // Save, Save As, Open, and New are the page's: the command registry binds their keys on the
     // window, before the editor sees them. These commands' keys are the editor's own.
     keymap.of([

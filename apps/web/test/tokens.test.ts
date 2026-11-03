@@ -523,7 +523,12 @@ describe('the pages', () => {
     // The pages' region draws with them.
     const own = block('.on-sheet');
     expect(own['--drafter-page']).toBe('var(--sheet)');
-    expect(own['--drafter-ink']).toBe('var(--sheet-ink)');
+    // The ink is the sheet's, as the Script contrast slider mixes it (settings/contrast.ts): toward
+    // the page's extreme by --script-boost, then toward the page by --script-fade.
+    const ink = (own['--drafter-ink'] as string).replace(/\s+/g, ' ');
+    expect(ink).toContain('var(--sheet-ink)');
+    expect(ink).toContain('var(--sheet-extreme) var(--script-boost, 0%)');
+    expect(ink).toContain('var(--sheet) var(--script-fade, 0%)');
     expect(own['--focus']).toBe('var(--sheet-focus)');
   });
 

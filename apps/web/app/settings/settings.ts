@@ -3,6 +3,7 @@ import type { Paper } from '@drafter/templates';
 import { type Ref, readonly, shallowRef } from 'vue';
 import { DIFF_COLORS, type DiffColors } from '../compare/colors';
 import { db } from '../storage/db';
+import { CONTRAST_DEFAULT, isContrast } from './contrast';
 import { WRITING_MODES, type WritingMode } from './writing-modes';
 
 export { WRITING_MODES, type WritingMode };
@@ -34,6 +35,12 @@ export interface Settings {
    * by default.
    */
   hideTitle: boolean;
+  /** The Source pane's contrast, 40 to 100 (settings/contrast.ts): 90, nearly the highest, by default. */
+  sourceContrast: number;
+  /** The Script pane's pages' contrast, the same way, on its own. */
+  scriptContrast: number;
+  /** A typewriter's key clack and carriage bell as you type in the Source (editor/key-sounds.ts); off by default. */
+  keySounds: boolean;
   /** How big the Cards tab draws its cards, chosen on its slim bar; medium by default (Phase 2 design §7). */
   cardSize: CardSize;
   /** The spellcheck's dictionary: US English by default (Plan D, Call 8). */
@@ -93,6 +100,9 @@ export const DEFAULT_SETTINGS: Settings = {
   scrollSync: true,
   elementBar: true,
   hideTitle: false,
+  sourceContrast: CONTRAST_DEFAULT,
+  scriptContrast: CONTRAST_DEFAULT,
+  keySounds: false,
   cardSize: 'medium',
   spellLanguage: 'en-US',
   spellNotes: false,
@@ -118,6 +128,7 @@ function isKey(key: string): key is keyof Settings {
 /** Whether `value` is one `key` can hold: a stored row from an older or damaged table may not be. */
 function isValid(key: keyof Settings, value: unknown): boolean {
   if (key === 'textSize') return typeof value === 'number' && TEXT_SIZES.includes(value);
+  if (key === 'sourceContrast' || key === 'scriptContrast') return isContrast(value);
   if (key === 'cardSize') return (CARD_SIZES as readonly unknown[]).includes(value);
   if (key === 'markdownPaper') return (PAPERS as readonly unknown[]).includes(value);
   if (key === 'diffColors') return (DIFF_COLORS as readonly unknown[]).includes(value);
