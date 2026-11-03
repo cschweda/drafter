@@ -125,7 +125,7 @@ test.describe('About Drafter', () => {
     await expect(dialog).toBeHidden();
   });
 
-  test('copies the version info for a bug report, and says so', async ({
+  test('copies the technical details for a bug report, and says so', async ({
     page,
     context,
     browserName,
@@ -136,13 +136,41 @@ test.describe('About Drafter', () => {
     await start(page);
     await runCommand(page, 'About Drafter');
     const dialog = about(page);
-    await dialog.getByRole('button', { name: 'Copy version info' }).click();
-    await expect(dialog.locator('[data-about-copied]')).toHaveText('Copied.');
+    await dialog.getByRole('button', { name: 'Copy technical details' }).click();
+    await expect(dialog.locator('[data-about-copied]')).toHaveText('Copied the technical details.');
     if (browserName === 'chromium') {
       const copied = await page.evaluate(() => navigator.clipboard.readText());
       expect(copied).toContain(`Drafter v${VERSION}`);
       expect(copied).toContain('App: web app (drafter.dev)');
       expect(copied).toMatch(/Browser: \w+/);
+      expect(copied).toContain('Address: this computer (localhost)');
+      expect(copied).toMatch(/Screen: \d+×\d+ \(window \d+×\d+/);
+      expect(copied).toContain('Document: US Screenplay (Feature)');
+      expect(copied).toContain('Writing mode: Fountain');
+      // The address in words: never the host or its port.
+      expect(copied).not.toContain(new URL(page.url()).host);
+    }
+  });
+
+  test('Help → Copy technical details copies them, and the toast says so', async ({
+    page,
+    context,
+    browserName,
+  }) => {
+    if (browserName === 'chromium') {
+      await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    }
+    await start(page);
+    await runCommand(page, 'Copy technical details');
+    await expect(page.locator('.toast [role="status"]')).toContainText(
+      browserName === 'chromium' ? 'Copied the technical details.' : /technical details/,
+    );
+    if (browserName === 'chromium') {
+      const copied = await page.evaluate(() => navigator.clipboard.readText());
+      expect(copied).toContain(`Drafter v${VERSION}`);
+      expect(copied).toContain('Spellcheck: ');
+      // Nothing of the script.
+      expect(copied).not.toContain('KITCHEN');
     }
   });
 });

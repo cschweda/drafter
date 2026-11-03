@@ -29,6 +29,7 @@ import {
 import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
 import { aboutOpen } from '~/about/dialog';
+import { useTechnicalDetails } from '~/about/use-technical-details';
 import { MARKDOWN_WHY, useShowChanges } from '~/compare/baseline';
 import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
@@ -71,7 +72,7 @@ import { useSpell } from '~/spell/use-spell';
 import { openCounts } from '~/stats/counts-panel';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { showStats } from '~/stats/tab';
-import { type ExportKind, exportApplies, exportScript } from '~/storage/export';
+import { type ExportKind, exportApplies, exportScript, sayInToast } from '~/storage/export';
 import { exportOptionsOpen } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
 import { screenplayFromOutline } from '~/storage/new-script';
@@ -83,6 +84,7 @@ import { markSpeech, speechAt } from '~/story-map/quote-marks';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
 import { requestTour } from '~/tour/state';
 import { updateCheckOpen } from '~/update/use-check';
+import { writeClipboard } from '~/utils/clipboard';
 import { showInInspector, type TabId, WIDE_QUERY } from '~/utils/panes';
 import {
   COMMAND_DATA,
@@ -132,6 +134,7 @@ export function registerBuiltinCommands(): void {
   const cuts = useCuts();
   const drafts = useDrafts();
   const steps = useDraftSteps();
+  const technicalDetails = useTechnicalDetails();
   /**
    * Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus; with
    * no comparison open, Show changes' marks on the Script pane, which shows.
@@ -534,6 +537,17 @@ export function registerBuiltinCommands(): void {
     'suggest-idea': {
       run: () => {
         reportOpen.value = 'idea';
+      },
+    },
+    // Help → Copy technical details: for a GitHub issue, read as the command runs (in its click).
+    'copy-technical-details': {
+      run: async () => {
+        const ok = await writeClipboard(technicalDetails());
+        await sayInToast(
+          ok
+            ? 'Copied the technical details. Paste them into your GitHub issue.'
+            : 'Couldn’t copy. Help → Report a problem… shows the technical details, to select and copy.',
+        );
       },
     },
     // Export: the toolbar's Export menu, the app menu, and the palette run these. What the open kind

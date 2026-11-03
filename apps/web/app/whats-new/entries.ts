@@ -45,6 +45,15 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.25.1-technical-details',
+    date: '2026-11-03',
+    version: '0.25.1',
+    kind: 'Improved',
+    title: 'Bug reports and ideas carry your setup',
+    text: 'Report a problem… and Suggest an idea… now add your Drafter version, system, browser, screen, and a few settings, never your script. Help → Copy technical details copies them for a GitHub issue.',
+    link: { href: '/docs/privacy/#reporting', label: 'What a report includes' },
+  },
+  {
     id: 'v0.25.0-classic-mode',
     date: '2026-11-03',
     version: '0.25.0',

@@ -37,7 +37,7 @@ export interface IssueDraft {
   expected: string;
   /** An idea's: what the writer would like. */
   idea: string;
-  /** Adds About's version info. */
+  /** Adds the technical details (`about/setup.ts`): About's version info and the setup. */
   includeVersion: boolean;
 }
 
@@ -78,7 +78,7 @@ export const KINDS: Record<
 };
 
 /** The version field's id and label, in both forms. */
-export const VERSION_FIELD = { id: 'version', label: 'Version info' } as const;
+export const VERSION_FIELD = { id: 'version', label: 'Technical details' } as const;
 
 export interface IssueField {
   id: string;

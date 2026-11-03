@@ -10,9 +10,9 @@ import {
   currentAbout,
   runtimeLine,
   versionLine,
-  versionText,
 } from '~/about/info';
 import { createAboutCheck } from '~/about/update-check';
+import { useTechnicalDetails } from '~/about/use-technical-details';
 import { HELP_PAGES, helpHref } from '~/commands/data';
 import { commandById } from '~/commands/registry';
 import DDialog from '~/components/ui/DDialog.vue';
@@ -23,11 +23,12 @@ import { actionLabel } from '~/update/flow';
 import { runUpdateCheck, takeUpdate, useUpdateCheck } from '~/update/use-check';
 import { writeClipboard } from '~/utils/clipboard';
 
-// Help → About Drafter: the version (for a bug report, with Copy version info, and Check for
+// Help → About Drafter: the version (for a bug report, with Copy technical details, and Check for
 // updates… beside it), which app this is, and the links. Every link leaves the app: a new tab on
 // the web, the system browser in the desktop app (its window-open handler hands an https address to the browser and never
 // navigates the app's window). The help pages open as the Help commands open them.
 const dialog = ref<InstanceType<typeof DDialog>>();
+const readDetails = useTechnicalDetails();
 const info = ref<AboutInfo | null>(null);
 const copied = ref('');
 /** As Report a problem's email link: a new window in the desktop app, which hands it to the email app. */
@@ -70,8 +71,10 @@ function onClose() {
 
 async function copy() {
   if (!info.value) return;
-  const ok = await writeClipboard(versionText(info.value), dialog.value?.el);
-  copied.value = ok ? 'Copied.' : 'Couldn’t copy. Select the text above and copy it.';
+  const ok = await writeClipboard(readDetails(), dialog.value?.el);
+  copied.value = ok
+    ? 'Copied the technical details.'
+    : 'Couldn’t copy. Report a problem… shows the technical details, to select and copy.';
 }
 
 /** Report a problem or Suggest an idea: About closes, and that dialog opens in its place. */
@@ -138,7 +141,7 @@ function openHelp(id: string) {
       </p>
       <p class="trademark" data-about-trademark>{{ ABOUT_TRADEMARK }}</p>
       <div class="copy">
-        <DButton @click="copy">Copy version info</DButton>
+        <DButton @click="copy">Copy technical details</DButton>
         <span role="status" aria-live="polite" class="copied" data-about-copied>{{ copied }}</span>
       </div>
       <div class="report">

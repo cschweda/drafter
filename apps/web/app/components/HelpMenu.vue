@@ -58,7 +58,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
     item('take-the-tour'),
     pages.flatMap(item),
     [sampleScripts.value, ...item('reset-sample')],
-    [...item('report-problem'), ...item('suggest-idea')],
+    [...item('report-problem'), ...item('suggest-idea'), ...item('copy-technical-details')],
     [...item('check-for-updates'), ...item('about-drafter')],
   ];
 });

@@ -8,7 +8,7 @@ import { DOWNLOAD_PAGE, HELP_PAGES } from './data';
 /**
  * The Help menu's commands, top to bottom: the tour, the help pages, Download the desktop app (web
  * only: the desktop app has no such command, so no item), Reset sample,
- * Report a problem…, Suggest an idea…, Check for updates…, About.
+ * Report a problem…, Suggest an idea…, Copy technical details, Check for updates…, About.
  */
 export const HELP_MENU_COMMANDS: readonly string[] = [
   'take-the-tour',
@@ -17,6 +17,7 @@ export const HELP_MENU_COMMANDS: readonly string[] = [
   'reset-sample',
   'report-problem',
   'suggest-idea',
+  'copy-technical-details',
   'check-for-updates',
   'about-drafter',
 ];
@@ -43,6 +44,7 @@ export const HELP_MENU_ICONS: Record<string, string> = {
   'reset-sample': 'i-lucide-rotate-ccw',
   'report-problem': 'i-lucide-bug',
   'suggest-idea': 'i-lucide-lightbulb',
+  'copy-technical-details': 'i-lucide-clipboard-copy',
   'check-for-updates': 'i-lucide-refresh-cw',
   'about-drafter': 'i-lucide-info',
 };

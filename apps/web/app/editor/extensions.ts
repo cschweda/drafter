@@ -38,7 +38,7 @@ import { typewriterScrolling } from './typewriter';
  * Drafter's spellcheck in the Source pane (Plan D): the spelling marks (`spellMarks()`, which
  * `useSpell` fills from its worker) when the setting is on, nothing when it is off. The browser's
  * own spellcheck is off there either way (Call 18): its underlines would be a second, different
- * opinion on the same words. Other text fields keep the browser's.
+ * opinion on the same words. The page turns the browser's off everywhere else too (nuxt.config.ts).
  */
 export const spellcheck = new Compartment();
 

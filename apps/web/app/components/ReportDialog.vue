@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { currentAbout, versionText } from '~/about/info';
+import { useTechnicalDetails } from '~/about/use-technical-details';
 import { formatKeys, isApple } from '~/commands/keys';
 import DDialog from '~/components/ui/DDialog.vue';
 import DSegmented from '~/components/ui/DSegmented.vue';
@@ -35,7 +35,9 @@ const shown = ref(false);
 const draft = reactive<IssueDraft>({ ...EMPTY_DRAFT });
 const copied = ref('');
 const online = ref(true);
-const versionInfo = versionText(currentAbout());
+/** The technical details (`about/setup.ts`), read as the dialog opens. */
+const versionInfo = ref('');
+const readDetails = useTechnicalDetails();
 /**
  * The desktop app opens a `mailto:` as a new window, which it refuses and hands to the email app
  * (`navigationFor`), so the editor's own window never starts a navigation. A browser follows it in
@@ -48,10 +50,10 @@ const KIND_OPTIONS: { value: IssueKind; label: string }[] = [
   { value: 'idea', label: 'Idea' },
 ];
 
-const link = computed(() => issueLink(draft, versionInfo));
-const mail = computed(() => mailLink(draft, versionInfo));
+const link = computed(() => issueLink(draft, versionInfo.value));
+const mail = computed(() => mailLink(draft, versionInfo.value));
 /** The whole report, never trimmed: what every copy copies. */
-const preview = computed(() => fullText(draft, versionInfo));
+const preview = computed(() => fullText(draft, versionInfo.value));
 const typed = computed(() => hasText(draft));
 const previewText = ref<HTMLElement>();
 const titleField = ref<HTMLInputElement>();
@@ -76,6 +78,7 @@ watch(reportOpen, async (kind) => {
     Object.assign(draft, loadDraft(), { kind });
     copied.value = '';
     onLine();
+    versionInfo.value = readDetails();
     shown.value = true;
     await nextTick();
     if (dialog.value && !dialog.value.open) dialog.value.showModal();
@@ -192,6 +195,7 @@ function clearReport() {
           type="text"
           maxlength="256"
           autocomplete="off"
+          spellcheck="true"
           :placeholder="draft.kind === 'problem' ? 'Export skips the title page' : 'Index cards in colour'"
           autofocus
         />
@@ -199,21 +203,29 @@ function clearReport() {
       <template v-if="draft.kind === 'problem'">
         <label class="field">
           <span class="label">What happened</span>
-          <textarea v-model="draft.happened" rows="4" />
+          <textarea v-model="draft.happened" rows="4" spellcheck="true" />
         </label>
         <label class="field">
           <span class="label">What you expected</span>
-          <textarea v-model="draft.expected" rows="3" />
+          <textarea v-model="draft.expected" rows="3" spellcheck="true" />
         </label>
       </template>
       <label v-else class="field">
         <span class="label">What you’d like</span>
-        <textarea v-model="draft.idea" rows="5" />
+        <textarea v-model="draft.idea" rows="5" spellcheck="true" />
       </label>
-      <label class="check">
-        <input v-model="draft.includeVersion" type="checkbox" />
-        Include version info
-      </label>
+      <div class="details">
+        <label class="check">
+          <input v-model="draft.includeVersion" type="checkbox" />
+          Include technical details
+        </label>
+        <DButton variant="borderless" data-report-copy-details @click="copy(versionInfo, 'the technical details')"
+          >Copy technical details</DButton
+        >
+      </div>
+      <p class="hint">
+        Your Drafter version, system, browser, screen, and settings, to help find the problem.
+      </p>
 
       <h3 id="report-preview-title">The report</h3>
       <!-- Focusable, so a keyboard can scroll it; named by its heading. Selectable, to copy by hand. -->
@@ -336,6 +348,17 @@ p {
 .clear {
   min-height: 24px;
   padding: 0 8px;
+}
+.details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.hint {
+  margin: 2px 0 0;
+  color: var(--muted);
 }
 .check {
   display: flex;

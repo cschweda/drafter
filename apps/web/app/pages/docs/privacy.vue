@@ -118,9 +118,13 @@ useDocsHead({
       you: GitHub’s new-issue page opens with it filled in, in your browser, and you review it and
       submit it there yourself, with your own GitHub account. Drafter has no server and no token, so
       it can’t post anything for you. Your script is never included: not its text, its title, its
-      file name, or your notes. <strong>Include version info</strong> adds only what About’s
-      <strong>Copy version info</strong> copies (the version, the app, the system, and the browser),
-      and you can turn it off.
+      file name, or your notes. <strong>Include technical details</strong> adds only what
+      <strong>Help → Copy technical details</strong> copies, and you can turn it off: Drafter’s
+      version, which app this is, the system and browser, the language, the screen and window
+      size, touch or mouse, whether Drafter is installed, works offline, saves in place, and keeps
+      its storage, whether you’re online, and a few of your settings (the kind of script, Fountain
+      or Classic Mode, the theme and text size, and spellcheck). The web address is put in words
+      (drafter.dev, this computer, or self-hosted), never the name of a server of your own.
     </p>
     <p>
       With no GitHub account, you can email cschweda@gmail.com instead. That email goes from your

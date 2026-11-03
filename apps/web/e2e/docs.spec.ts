@@ -754,7 +754,7 @@ test.describe('from the app', () => {
     await openMenu(page);
     const opened = page.context().waitForEvent('page');
     if (how === 'click') {
-      await menu(page).getByRole('menuitem', { name: title }).click();
+      await menu(page).getByRole('menuitem', { name: title, exact: true }).click();
     } else {
       // Arrow down to the item.
       let found = false;

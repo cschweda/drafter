@@ -20,8 +20,8 @@ body:
   - type: textarea
     id: version
     attributes:
-      label: Version info
-      description: Help → About Drafter → Copy version info, or Suggest an idea… adds it for you.
+      label: Technical details
+      description: Help → Copy technical details, or Suggest an idea… adds them for you.
       render: text
     validations:
       required: false
