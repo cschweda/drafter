@@ -1,5 +1,5 @@
 import { type Extension, Prec } from '@codemirror/state';
-import { keymap } from '@codemirror/view';
+import { EditorView, keymap } from '@codemirror/view';
 import { completionOverride } from '../complete';
 import { FORCED_KINDS } from '../keymap';
 import {
@@ -34,6 +34,7 @@ export {
   classicHome,
   keepHiddenMarks,
   passedOver,
+  selectionClear,
 } from './caret';
 export {
   type ChooserItem,
@@ -42,7 +43,13 @@ export {
   elementCommand,
   openChooser,
 } from './chooser';
-export { type HiddenSpan, hiddenSpans, visibleEnd, visibleStart } from './hidden';
+export {
+  type HiddenSpan,
+  hiddenSpans,
+  isBlankScript,
+  visibleEnd,
+  visibleStart,
+} from './hidden';
 export {
   choosePending,
   classicEnter,
@@ -75,6 +82,7 @@ export {
   settleDeletes,
   settleLine,
   shapeOf,
+  tidiedSpeech,
   tidyLeft,
 } from './marks';
 export { keepMetadata, metadataHidden, onlyClearedBlock, protectedRange } from './metadata';
@@ -115,6 +123,16 @@ const classicKeys = Prec.highest(
   ]),
 );
 
+/**
+ * The text box's name says the mode, and it points at how to leave it (§12), as Tab doesn't. The
+ * app's page holds the words, at this id. First in the list wins, so `classic()` goes ahead of the
+ * editor's own attributes.
+ */
+const classicAttributes = EditorView.contentAttributes.of({
+  'aria-label': 'Source, Classic Mode',
+  'aria-describedby': 'classic-leave',
+});
+
 export interface ClassicOptions {
   /** Told what to announce to a screen reader, in a sentence. */
   say?: (text: string) => void;
@@ -124,6 +142,7 @@ export interface ClassicOptions {
 export function classic({ say }: ClassicOptions = {}): Extension {
   // Filters run last to first: the caret reads what tidying left, and the block's backstop has the last word.
   return [
+    classicAttributes,
     classicChooser,
     classicKeys,
     completionOverride.of(classicSource),

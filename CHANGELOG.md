@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **Classic Mode is in the app.** A **Fountain | Classic** switch stays in the top bar while you write (one word on a phone and in focus mode), Fountain to start, and a click, the palette, Settings, or **Mod+Alt+0** changes it either way. Your file stays Fountain: a switch writes nothing, keeps your undo history and your place, and puts you back in the text. A Markdown document has no switch and no Classic keys, and the next script picks the mode up again.
 - **Classic Mode**, in the editor package and not yet switched on in the app: Enter and Tab move through the script element by element, Tab walks the elements on an empty line, Shift+Enter keeps a break inside an element, and an empty line or `()` left unused is taken away.
 - In **Classic Mode** the caret stays where a writer can see it: it steps over hidden marks and the blank line between elements, Backspace and Delete join elements in one press, a hidden mark outlives the delete beside it and goes with the last letter, a delete settles the line as typing does, and a typed `)` moves past the one that's there.
 - In **Classic Mode** the left pane looks like a script, still not switched on in the app: marks are hidden, each element takes its place from the template's own numbers, notes and cuts have a thin rule at each end, a page break is a rule with its words, and a dual cue has a small tag. The text doesn't change.

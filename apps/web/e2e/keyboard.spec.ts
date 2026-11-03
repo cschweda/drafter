@@ -340,7 +340,7 @@ test.describe('a menu and Tab', () => {
   test("Tab and Shift+Tab close the Modules menu a narrow screen folds the modules' buttons into", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 390, height: 800 });
+    await page.setViewportSize({ width: 520, height: 800 });
     await open(page);
     for (const module of ['Scene list', 'Cast', 'Notes']) {
       await page.keyboard.press('ControlOrMeta+,');

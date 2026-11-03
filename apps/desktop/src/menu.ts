@@ -172,6 +172,7 @@ const LAYOUT: Record<Group, Section[]> = {
         'toggle-structure-strip',
       ],
     },
+    { pick: ['switch-writing-mode', 'switch-to-classic', 'switch-to-fountain'] },
     { pick: ['fold-all', 'unfold-all'] },
   ],
   Go: [

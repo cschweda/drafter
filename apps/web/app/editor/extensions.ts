@@ -14,6 +14,7 @@ import {
 } from '@codemirror/view';
 import {
   type CursorElement,
+  classic,
   fountain,
   invertSceneMoves,
   invertSpellMarks,
@@ -25,7 +26,9 @@ import {
 import type { Template } from '@drafter/templates';
 import { commandById } from '../commands/registry';
 import type { DocumentKind } from '../markdown/kind';
+import type { WritingMode } from '../settings/settings';
 import { onSpellContextMenu } from '../spell/menu';
+import { sayClassic } from './element-notice';
 import { revealedLine } from './reveal-line';
 import { theme } from './theme';
 import { typewriterScrolling } from './typewriter';
@@ -90,6 +93,30 @@ export function readOnlyExtension(on: boolean): Extension {
  * highlighting, and lint are all off, because they are all in `fountain()`.
  */
 export const language = new Compartment();
+
+/**
+ * Classic Mode (`classic()`, Classic Mode design §3.4) or nothing. It sits ahead of `language`, so
+ * that Classic's keys run first, and with it empty none of Classic's code is in the editor.
+ */
+export const writingMode = new Compartment();
+
+/**
+ * Made once, as `TYPEWRITER` is, so changing another setting doesn't rebuild it. What it says comes
+ * in the middle of a view update, so it's queued: a say that reached a listener which dispatched
+ * would throw there.
+ */
+const CLASSIC = classic({ say: (text) => queueMicrotask(() => void sayClassic(text)) });
+
+/** What `writingMode` holds in Fountain Mode, and always in a Markdown document. */
+export const CLASSIC_OFF = NOTHING;
+
+/** The same object each time. Markdown gets nothing, whatever the setting. */
+export function writingModeExtension(mode: WritingMode, kind: DocumentKind): Extension {
+  return mode === 'classic' && kind === 'fountain' ? CLASSIC : NOTHING;
+}
+
+/** Whether Classic Mode is in this editor state. */
+export const classicIsOn = (state: EditorState): boolean => writingMode.get(state) === CLASSIC;
 
 let active: EditorView | undefined;
 
@@ -223,6 +250,7 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
     sceneIds,
     sceneMoveHistory,
     spellMarkHistory,
+    writingMode.of(NOTHING),
     language.of(languageExtension(hooks, kind)),
     history(),
     drawSelection(),

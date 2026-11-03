@@ -43,6 +43,8 @@ const label = computed(() =>
     <!-- The time left of a sprint, as in the status bar. -->
     <SprintTimer />
     <span class="state" data-focus-state>{{ label }}</span>
+    <!-- The top bar has gone, and the mode must not (Classic Mode design §3.2). -->
+    <ModeSwitch compact />
     <button type="button" class="leave" @click="emit('leave')">Leave focus mode</button>
   </div>
 </template>

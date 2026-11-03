@@ -7,12 +7,13 @@ import type { EditorView } from '@codemirror/view';
 import {
   canMakeParenthetical,
   type ElementKind,
+  elementCommand,
   elementHint,
   forceKind,
   insertMark,
   insertPageBreak,
+  isBlankScript,
   MARK_REFUSED,
-  makeElement,
   type SpellMark,
   spellMarkAt,
   spellMarksOf,
@@ -38,6 +39,7 @@ import { useDrafts } from '~/drafts/use-drafts';
 import { useDraftSteps } from '~/drafts/use-steps';
 import { applyTextChanges } from '~/editor/apply-changes';
 import { sayElement } from '~/editor/element-notice';
+import { classicIsOn } from '~/editor/extensions';
 import { firstSceneStart } from '~/editor/first-scene';
 import { SAMPLE_SCRIPTS } from '~/editor/sample-scripts';
 import { SAMPLES } from '~/editor/samples';
@@ -45,6 +47,7 @@ import { useEditor } from '~/editor/session';
 import { STARTERS } from '~/editor/starters';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
+import { setWritingMode } from '~/editor/writing-mode';
 import { openSceneHistory } from '~/history/scene-history';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { openNewNote } from '~/notes/use-notes';
@@ -88,6 +91,7 @@ import {
   HELP_PAGES,
   helpHref,
   MARKDOWN_ACTIONS,
+  modeSwitchApplies,
 } from './data';
 import { openPalette, togglePalette } from './palette';
 import { type Command, registerCommands } from './registry';
@@ -209,13 +213,18 @@ export function registerBuiltinCommands(): void {
   ): Behavior => ({
     enabled: () => canEdit() && applies(),
     run: () => {
-      const hint = kind && elementHint(kind, view.state);
+      // A blank script in Classic Mode with the editor yet to take focus: the cursor still shares a
+      // line with the hidden block, which is no note the writer has ever seen, and focus clears it.
+      const blank =
+        classicIsOn(view.state) &&
+        isBlankScript(view.state, view.state.doc.lineAt(view.state.selection.main.head));
+      const hint = kind && !blank && elementHint(kind, view.state);
       if (hint) void sayElement(hint);
       showTab('source');
       void nextTick().then(() => withCompletion(act)(view));
     },
   });
-  const element = (kind: ElementKind) => inEditor(isFountain, makeElement(kind), kind);
+  const element = (kind: ElementKind) => inEditor(isFountain, elementCommand(kind), kind);
   /** What the script's template makes of its structure: a stage play's acts and scenes. */
   const structure = () => structureOf(editor.template.value);
   const isStage = () => !structure().headings;
@@ -743,6 +752,21 @@ export function registerBuiltinCommands(): void {
       enabled: () => settings.value.lineNumbers,
       run: () => void set('lineNumbers', false),
     },
+    'switch-to-classic': {
+      enabled: () => modeSwitchApplies('classic', settings.value.writingMode, editor.kind.value),
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      run: () => setWritingMode('classic'),
+    },
+    'switch-to-fountain': {
+      enabled: () => modeSwitchApplies('fountain', settings.value.writingMode, editor.kind.value),
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      run: () => setWritingMode('fountain'),
+    },
+    'switch-writing-mode': {
+      enabled: isFountain,
+      why: () => (isMarkdown() ? NOT_FOR_MARKDOWN : undefined),
+      run: () => setWritingMode(settings.value.writingMode === 'classic' ? 'fountain' : 'classic'),
+    },
     'turn-on-typewriter': {
       enabled: () => !settings.value.typewriter,
       run: () => void set('typewriter', true),
@@ -887,7 +911,7 @@ export function registerBuiltinCommands(): void {
     },
     'element-act': inEditor(
       () => isFountain() && structure().actDepth !== null,
-      makeElement('act'),
+      elementCommand('act'),
       'act',
     ),
     'element-action': {
@@ -899,12 +923,12 @@ export function registerBuiltinCommands(): void {
     // Off where it doesn't apply, so the palette doesn't offer it (the bar's button says why).
     'element-parenthetical': inEditor(
       () => isFountain() && canMakeParenthetical(view.state),
-      makeElement('parenthetical'),
+      elementCommand('parenthetical'),
       'parenthetical',
     ),
     'element-transition': inEditor(
       () => isFountain() && structure().transitions,
-      makeElement('transition'),
+      elementCommand('transition'),
       'transition',
     ),
     'element-centered': element('centered'),

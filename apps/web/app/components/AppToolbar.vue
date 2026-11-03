@@ -100,7 +100,16 @@ onBeforeUnmount(() => {
   observer?.disconnect();
   cancelAnimationFrame(frame);
 });
-watch([wide, () => moduleButtons.value.length], fitSoon);
+watch(
+  // The switch comes and goes with the kind, and its one word below 1024px changes width.
+  [
+    wide,
+    () => moduleButtons.value.length,
+    () => editor.kind.value,
+    () => settings.value.writingMode,
+  ],
+  fitSoon,
+);
 
 // The folded buttons' items, in the bar's order; each runs what its button does. Export is a
 // submenu of the exports, as its button's menu is.
@@ -221,6 +230,8 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
     <!-- Unsaved changes, right after the title: a red dot and "Unsaved", which saves (Task 6). -->
     <SaveState />
     <SampleChip v-if="wide" />
+    <!-- Never in TOOLBAR_FOLD_ORDER: it's there all the while the script is written (§3.2). -->
+    <ModeSwitch />
     <span class="sep before-actions" aria-hidden="true" />
     <div class="actions">
       <ScriptsMenu v-slot="{ toggle, expanded, controls }">
@@ -465,10 +476,10 @@ kbd {
   min-width: 0;
 }
 
-/* Under 1280px the search gives a little of its width. */
+/* Under 1280px the search gives some of its width, so the writing mode's switch leaves the title room. */
 @media (max-width: 1279.98px) {
   .search {
-    width: 220px;
+    width: 110px;
   }
 }
 

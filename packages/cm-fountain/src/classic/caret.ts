@@ -168,6 +168,15 @@ function stoppedAbove(state: EditorState, selection: EditorSelection, limit: num
   return EditorSelection.create(stopped, Math.max(left.indexOf(main), 0));
 }
 
+/**
+ * The selection stopped above the metadata block, or null with nothing to stop. A selection made
+ * before Classic Mode was on can stand in a block it's about to hide (§8.4).
+ */
+export function selectionClear(state: EditorState): EditorSelection | null {
+  const limit = protectedRange(state)?.from ?? null;
+  return limit === null ? null : stoppedAbove(state, state.selection, limit);
+}
+
 /** Whether a transaction is Find's going to a match, or Replace's with nothing replaced. */
 const finding = (tr: Transaction) =>
   tr.isUserEvent('select.search') || (!tr.docChanged && tr.isUserEvent('input.replace'));

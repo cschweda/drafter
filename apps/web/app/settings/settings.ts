@@ -51,7 +51,15 @@ export interface Settings {
    * print, the PDF, or an export.
    */
   pageColor: PageColor;
+  /** How the script is typed: Fountain's marks, by default, or Classic Mode's Enter and Tab (Classic Mode design §3.1). One for the app, never in the file. */
+  writingMode: WritingMode;
+  /** Classic Mode's first-run hint has been dismissed (Classic Mode design §9.3). */
+  classicHintSeen: boolean;
 }
+
+export type WritingMode = 'fountain' | 'classic';
+/** The writing modes, as Settings lists them. */
+export const WRITING_MODES: readonly WritingMode[] = ['fountain', 'classic'];
 
 export type CompareView = 'changes' | 'pages';
 export type DiffLayout = 'unified' | 'split';
@@ -90,6 +98,8 @@ export const DEFAULT_SETTINGS: Settings = {
   diffLayout: 'unified',
   gridAsList: false,
   pageColor: 'paper',
+  writingMode: 'fountain',
+  classicHintSeen: false,
 };
 
 /** The text sizes the dialog offers, as multiples of the normal size. */
@@ -107,6 +117,7 @@ function isValid(key: keyof Settings, value: unknown): boolean {
   if (key === 'diffColors') return (DIFF_COLORS as readonly unknown[]).includes(value);
   if (key === 'compareView') return (COMPARE_VIEWS as readonly unknown[]).includes(value);
   if (key === 'pageColor') return (PAGE_COLORS as readonly unknown[]).includes(value);
+  if (key === 'writingMode') return (WRITING_MODES as readonly unknown[]).includes(value);
   if (key === 'diffLayout') return (DIFF_LAYOUTS as readonly unknown[]).includes(value);
   if (key === 'spellLanguage') return (SPELL_LANGUAGES as readonly unknown[]).includes(value);
   if (key === 'personalDictionary') {

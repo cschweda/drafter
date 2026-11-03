@@ -7,11 +7,16 @@ export {
   chooserItems,
   classic,
   classicChooser,
+  classicEnter,
   classicLine,
+  classicSay,
   elementAt,
   elementCommand,
+  isBlankScript,
   onlyClearedBlock,
   openChooser,
+  selectionClear,
+  tidiedSpeech,
 } from './classic';
 export { completionOverride, fountainCompletion, fountainCompletionSource } from './complete';
 export { type CursorElement, cursorElement, onCursorElement } from './cursor';

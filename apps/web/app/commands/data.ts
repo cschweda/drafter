@@ -26,6 +26,13 @@ export interface CommandData {
   webOnly?: boolean;
 }
 
+/** What a writer who wants Classic Mode might search the palette for. */
+const MODE_WORDS = ['final draft', 'mode', 'typing'];
+
+/** Whether Switch to Classic Mode or Switch to Fountain Mode would do something: a Fountain script, in the other mode. */
+export const modeSwitchApplies = (target: string, current: string, kind: string): boolean =>
+  kind === 'fountain' && target !== current;
+
 export interface HelpPage {
   id: string;
   /** The route, prerendered, and the service worker's entry. */
@@ -342,6 +349,26 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'turn-off-typewriter', title: 'Turn off typewriter scrolling', group: 'View' },
   { id: 'turn-on-scroll-sync', title: 'Turn on scroll sync', group: 'View' },
   { id: 'turn-off-scroll-sync', title: 'Turn off scroll sync', group: 'View' },
+  {
+    id: 'switch-to-classic',
+    title: 'Switch to Classic Mode',
+    group: 'View',
+    keywords: MODE_WORDS,
+  },
+  {
+    id: 'switch-to-fountain',
+    title: 'Switch to Fountain Mode',
+    group: 'View',
+    keywords: MODE_WORDS,
+  },
+  {
+    id: 'switch-writing-mode',
+    title: 'Switch writing mode',
+    group: 'View',
+    keys: 'Mod-Alt-0',
+    global: true,
+    keywords: MODE_WORDS,
+  },
   { id: 'show-element-bar', title: 'Show the element bar', group: 'View' },
   { id: 'hide-element-bar', title: 'Hide the element bar', group: 'View' },
   // The Structure strip (structure strip design §5, Call 31): Mod+Alt+O, read from the physical
