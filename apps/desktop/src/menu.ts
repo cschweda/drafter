@@ -208,7 +208,7 @@ const LAYOUT: Record<Group, Section[]> = {
         'new-guided-stage-play': 'Guided first stage play',
       },
     },
-    { pick: ['report-problem', 'suggest-idea'] },
+    { pick: ['report-problem', 'suggest-idea', 'copy-technical-details'] },
     { pick: ['check-for-updates'] },
   ],
 };
@@ -232,6 +232,7 @@ const LABELS: Record<string, string> = {
   'help-whats-new': 'What’s New',
   'report-problem': 'Report a Problem…',
   'suggest-idea': 'Suggest an Idea…',
+  'copy-technical-details': 'Copy Technical Details',
   'check-for-updates': 'Check for Updates…',
   'open-as-screenplay': 'Open as Screenplay…',
   'start-draft': 'Start New Draft…',
@@ -239,7 +240,7 @@ const LABELS: Record<string, string> = {
 
 /**
  * The page's About Drafter command: its dialog (the version, Electron's and Chromium's, the links,
- * Copy version info). The menu's About Drafter runs it while the page can; with no page to show it
+ * Copy technical details). The menu's About Drafter runs it while the page can; with no page to show it
  * (none yet, or a Mac with no window), About is the app's own box (`MenuActions.about`).
  */
 export const ABOUT_COMMAND = 'about-drafter';

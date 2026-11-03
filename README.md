@@ -25,15 +25,37 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 - **Free, with no catch.** No price, no trial, no subscription, no locked "free tier", and no ads. Drafter isn't a business: one writer makes it, for writers, and gives it away. There is no paid version, and there won't be one.
 - **No login, ever.** No sign-up, no sign-in, no licence key, no activation. Close it, open it tomorrow, and you're back in your script.
-- **Private.** No cookies, no tracking of you, no telemetry. Drafter has no server that could receive your script, so it never leaves your device. The website, drafter.dev, measures visitor traffic with [Plausible](https://plausible.io/privacy-focused-web-analytics), privacy-focused analytics with no cookies, nothing that identifies you, and no tracking across sites (chosen over Google Analytics for that). **The downloaded desktop app has no analytics at all.** See [Privacy](https://drafter.dev/docs/privacy/#analytics).
+- **Private.** No cookies, no tracking of you, no telemetry. Drafter has no server that could receive your script, so it never leaves your device. The website, drafter.dev, measures visitor traffic with [Plausible](https://plausible.io/privacy-focused-web-analytics): privacy-first analytics with no cookies, no ads, nothing that identifies you, and no tracking across sites (chosen over Google Analytics for that). It's there only to see the basic traffic and which pages people look at, as a reference for improving Drafter. **The downloaded desktop app has no analytics at all.** See [Privacy](https://drafter.dev/docs/privacy/#analytics).
 - **Open.** The code is MIT-licensed. Your script is a plain `.fountain` text file you own, which any app can open and which will still open in fifty years. A lapsed licence can never lock you out of your own work.
 - **Instant, and offline.** No installer or setup is needed to begin. Once it has loaded, Drafter runs with no connection, on a plane or a train.
 - **No forced updates.** The web app updates when you reload, or the next time you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
 - **Plays well with Final Draft.** It opens and saves Final Draft (`.fdx`) files, so you can trade scripts with anyone who uses it.
 - **Built for working writers.** The production features a greenlit script needs come to the free app in v0.27.0: colored revision sets with marks in the margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors.
 
+## Privacy: your script stays with you
+
+Writers worry, rightly, about a script getting out before it's ready. Drafter is built so it can't, and an [audit](docs/privacy-audit-2026-11-03.md) checks it.
+
+- **Nothing in the cloud.** No server stores anything about your script, at drafter.dev or anywhere else: not its text, its title, its length, or its name. drafter.dev is a set of static files that sends the app to your browser. It has no database, no accounts, and nowhere to upload to. The desktop app has no server at all.
+- **Kept on your device only.** Your script lives in the files you save, plus a recovery copy, its history, drafts, and cuts. In the web app those are in your browser's own storage (IndexedDB) on this device, and in the desktop app in its folder on your computer. Drafts and cuts are also plain files beside your script.
+- **No AI.** Drafter has no AI in it: no AI service, no model, and nothing that reads your script to suggest, summarize, or learn from it. Your words never train anything. If you want your own AI app to read your scripts, [Drafter for Claude](https://drafter.dev/docs/drafter-for-claude/) is a separate program you set up yourself. It reads only the folders you name, and Drafter never starts it.
+- **It leaves only when you send it.** A file you share, a report you open on GitHub, an email you write: those go because you chose them, and only what you see goes.
+
+**What does use the network, all of it:**
+
+| What | Where to | When | Carries your script? |
+|---|---|---|---|
+| The app, its fonts, and its dictionaries | drafter.dev itself (or your own server, if you [host it](#self-hosted)) | When the page loads, and when it checks for a new version | No |
+| A count of page visits ([Plausible](https://drafter.dev/docs/privacy/#analytics): privacy-first, no cookies, no ads; only to see the basic traffic, for future improvements) | plausible.io | drafter.dev only: each page view and the time on it, each address cut before any `?` or `#`; no clicks, downloads, or forms | No. The desktop app and self-hosted copies don't have it |
+| A check for a new version | GitHub | The desktop app, when it starts; you can turn it off in Settings | No. GitHub sees your IP address, version, and system |
+| A report or an idea | GitHub, or your email app | Only when you click **Open on GitHub** or **Write an email** | Only what you typed and saw |
+| A module you add yourself | The addresses it names | Desktop app only, and only once you agree to them | It can, so add only modules you trust ([more](https://drafter.dev/docs/privacy/#modules)) |
+
+**Checked, not just promised.** The [privacy audit of 3 November 2026](docs/privacy-audit-2026-11-03.md) went through every line of code that could reach the network, every place Drafter stores anything, and every dependency. It also ran a writing session on drafter.dev in Chrome, Firefox, and Safari's engine with every request recorded. A made-up phrase typed into the script appeared in none of them. It found one leak and it was fixed the same day: on drafter.dev, what a report said could reach the analytics when it was opened on GitHub. The [Privacy](https://drafter.dev/docs/privacy/) help page, in the app and on drafter.dev, says the same in more detail.
+
 ## Contents
 
+- [Privacy](#privacy-your-script-stays-with-you)
 - [Features](#features)
 - [Security](#security)
 - [Testing](#testing)
@@ -107,7 +129,7 @@ Each shot shows "Signal Hill", a short screenplay written for these pictures, in
 Drafter is built to open files from anyone without putting you at risk.
 
 - **Drafter never runs anything in a file it opens.** A script is read as text, and your words are shown as words, never as web code.
-- **A strict content security policy.** The web app tells your browser to run only Drafter's own scripts, so nothing slipped into a page or a file can run there.
+- **A strict content security policy.** The web app tells your browser to run only Drafter's own scripts (and, on drafter.dev, Plausible's visit counter), so nothing slipped into a page or a file can run there.
 - **No accounts, no server keeping your scripts, no cookies, no tracking of you.** Your files stay on your device; drafter.dev's only analytics is Plausible, which uses no cookies.
 - **Size limits are checked before anything is unpacked.** A Highland, Fade In, or EPUB file's entries can't point outside their archive. A Final Draft file never makes Drafter fetch or read anything else: the outside references XML allows are refused.
 - **The desktop app** never loads an opened file into a window. It reads the bytes of only the files you chose, and hands them to the editor.
@@ -119,6 +141,8 @@ Drafter is built to open files from anyone without putting you at risk.
 The [Technical details](docs/technical-details.md#security) give the specifics. [Audits](docs/AUDITS.md) lists every security and clean-room audit, newest first.
 
 The latest security audit: [1 November 2026](docs/security-audit-2026-11-01.md), no exploitable hole found.
+
+The latest privacy audit: [3 November 2026](docs/privacy-audit-2026-11-03.md). Nothing about a script is stored in the cloud, no AI is used, and no request in a full writing session in three browsers carried the script. One leak was found and fixed the same day: on drafter.dev, what a report said could reach the analytics when it was opened on GitHub. See [Privacy](#privacy-your-script-stays-with-you).
 
 ## Testing
 

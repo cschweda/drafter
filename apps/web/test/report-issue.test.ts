@@ -161,7 +161,7 @@ describe('the preview and Copy', () => {
     const fields = issueFields(draft({ happened: 'It hung.', expected: 'A PDF.' }), VERSION);
     expect(fields.map((f) => f.id)).toEqual(['what-happened', 'expected', 'version']);
     expect(issueBody(fields)).toBe(
-      `### What happened\n\nIt hung.\n\n### What you expected\n\nA PDF.\n\n### Version info\n\n${VERSION}`,
+      `### What happened\n\nIt hung.\n\n### What you expected\n\nA PDF.\n\n### Technical details\n\n${VERSION}`,
     );
   });
 
@@ -189,7 +189,7 @@ describe('the email', () => {
     expect(url.pathname).toBe(CONTACT_EMAIL);
     expect(url.searchParams.get('subject')).toBe('Drafter: Export & hang');
     expect(url.searchParams.get('body')).toBe(
-      `What happened:\nIt hung.\n\nVersion info:\n${VERSION}`,
+      `What happened:\nIt hung.\n\nTechnical details:\n${VERSION}`,
     );
     // Spaces as %20, not +, which some email apps show as it is.
     expect(mail.url).not.toContain('+');

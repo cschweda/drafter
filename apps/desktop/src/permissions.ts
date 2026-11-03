@@ -3,7 +3,7 @@
 // allow only what Drafter uses, and only to the app's own pages:
 //   - `persistent-storage`: `navigator.storage.persist()` (storage/health.ts), for the recovery copy.
 // (Copy and paste in the editor are the browser's own, which need no permission. About Drafter's
-// Copy version info tries `navigator.clipboard.writeText` and, if that is refused, falls back to
+// Copy technical details tries `navigator.clipboard.writeText` and, if that is refused, falls back to
 // the browser's own Copy of a hidden field, so no clipboard permission is given.)
 // Everything else (the camera and microphone, location, notifications, MIDI, devices, the screen,
 // full screen, the File System Access pickers) is refused, and a device picker is cancelled before

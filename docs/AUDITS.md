@@ -13,6 +13,14 @@ Every audit and review of Drafter, newest first in each section. Each newer audi
 | 2026-11-01 | v0.23.1: reopenable HTML and EPUB exports | A review of reading a script back out of an export: only the embedded source is read, as text, with size caps before anything is unpacked; its fixes landed before the release | [`DECISIONS.md`](DECISIONS.md), "Reopenable HTML and EPUB exports" |
 | 2026-10-27 | v0.4.0: the desktop app's modules folder and updates | A review of the desktop app before its first release: WebRTC closed for every renderer, folder modules kept apart from built-in ones, and unsigned updates checked by SHA-512 | [`DECISIONS.md`](DECISIONS.md), "After the security review (2026-10-27)" |
 
+## Privacy audits
+
+Checks that a script stays on the writer's device: nothing about it stored in the cloud, no AI, and nothing sent unless the writer sends it.
+
+| Date | Covers | Result | Record |
+|---|---|---|---|
+| 2026-11-03 | v0.25.0 (`main` at `ee4de47a`) and live drafter.dev: the web app, the desktop app, the packages, Drafter for Claude, the build, the analytics, and the privacy claims in the README and the help | **Pass with findings, fixed the same day.** No server stores anything about a script; no AI anywhere; a writing session in Chromium, Firefox, and WebKit on live drafter.dev sent the script in no request. Fixed: Plausible's outbound-link events sent the whole Open on GitHub address, with what a report said (High; fixed in `d68b7ce7`, shown before and after with Plausible's own script); the browser's own spellcheck service in note and card fields (off page-wide); overstated lines in the README and the help. The first privacy audit; compares itself with the security audit's storage-and-privacy check | [The audit](privacy-audit-2026-11-03.md) |
+
 ## Clean-room audits
 
 Checks that Drafter holds no code from other screenwriting software, no Fountain library, and nothing copied from anywhere; the rules are in [Clean-room implementation](clean-room.md).

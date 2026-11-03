@@ -6,17 +6,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-### Security
+### Added
 
-- **drafter.dev's analytics no longer receive what a report says.** Plausible's script for the site counts clicks on outside links and sent each link's whole address, and Report a problem's **Open on GitHub** is a link whose address holds everything the writer typed in the report. Every Plausible event is now cut down before it is sent: whatever follows `?` or `#` is dropped from the page's address, the referrer, and every property. It happened only on drafter.dev, only when a report was opened on GitHub, and only with what that report said (which could include lines pasted into it); the script itself was never sent, and the desktop app and self-hosted copies never load Plausible. Found by the privacy audit of 2026-11-03.
+- **Copy technical details** (Help, the palette, About, and the report dialog): your Drafter version and build, the app, the system and browser, the language, the screen and window, touch or mouse, whether it's installed, works offline, saves in place, and keeps its storage, whether you're online, and the kind of script, Fountain or Classic Mode, the theme and text size, and spellcheck. It's plain text for a GitHub issue. Report a problem… and Suggest an idea… (for feature requests) carry the same details under **Technical details**, with **Include technical details** to leave them out. The web address is put in words (drafter.dev, this computer, a preview, or self-hosted), never a server's own name, and nothing from the script goes in. The palette finds Report a problem… for "bug report" and Suggest an idea… for "feature request".
 
 ### Changed
 
+- The browser test of Back to Drafter counts WebKit's "Page closed" error as the help tab going away, as it can come a moment before the tab says it has closed.
+- **drafter.dev's analytics send only page views and time on a page.** Plausible stays on every page, the app included, only to see the basic traffic and which pages people look at, as a reference for improving Drafter. Clicks on outside links, downloads, and form submissions are no longer sent at all, and the help and the README say that Plausible is privacy-first, with no cookies and no ads.
+- **A Privacy section in the README, and Your script stays with you at the top of Help → Privacy** (on drafter.dev and in the desktop app): nothing about a script is stored in the cloud, Drafter uses no AI, the script leaves only when the writer sends it, every request Drafter makes in one table, and the audit that checks it.
+- The browser's own spellcheck is off in every field (Chrome's Enhanced spell check and Edge's Microsoft Editor send typed text to Google or Microsoft, and notes and scene details hold the script's words). Drafter's own spellcheck, on the device, is unchanged, and Report a problem keeps the browser's for its fields.
+- The help and the README now say exactly what goes over the network: Plausible on drafter.dev only, and what it records; the desktop app's update check, and what GitHub sees; and that a module added to the desktop app's modules folder can reach the addresses you agree to.
+- The issue forms' Version info field is now **Technical details** (its id, `version`, is the same, so older links still fill it).
 - The desktop app's test of View → Show Scaffold waits for the Inspector's header to fit before it opens More tools, as the web app's tests do; a slow Mac runner clicked it as it refit.
 
 ### Fixed
 
 - Report a problem closed with Escape, then Suggest an idea… chosen at once (as the desktop app's Help menu can on Windows), now opens: the first dialog's late close no longer closes the second.
+
+### Security
+
+- **drafter.dev's analytics no longer receive what a report says.** Plausible's script for the site counts clicks on outside links and sent each link's whole address, and Report a problem's **Open on GitHub** is a link whose address holds everything the writer typed in the report. Every Plausible event is now cut down before it is sent: whatever follows `?` or `#` is dropped from the page's address, the referrer, and every property. It happened only on drafter.dev, only when a report was opened on GitHub, and only with what that report said (which could include lines pasted into it); the script itself was never sent, and the desktop app and self-hosted copies never load Plausible. Found by the privacy audit of 2026-11-03.
 
 ## [0.25.0] - 2026-11-03
 

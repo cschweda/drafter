@@ -318,7 +318,7 @@ test.describe('the Help menu', () => {
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(24);
   });
 
-  test('holds the tour, the help pages, Download, the samples, Report a problem, Suggest an idea, Check for updates, and About, in order', async ({
+  test('holds the tour, the help pages, Download, the samples, Report a problem, Suggest an idea, Copy technical details, Check for updates, and About, in order', async ({
     page,
   }) => {
     await start(page);
@@ -350,6 +350,7 @@ test.describe('the Help menu', () => {
       /^Reset sample/,
       /^Report a problem…/,
       /^Suggest an idea…/,
+      /^Copy technical details/,
       /^Check for updates…/,
       /^About Drafter/,
     ];

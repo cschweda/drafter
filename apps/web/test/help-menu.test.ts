@@ -11,7 +11,7 @@ const source = (name: string) =>
   readFileSync(new URL(`../app/components/${name}`, import.meta.url), 'utf8');
 
 describe('the Help menu', () => {
-  test('lists the tour, every help page, Download, the samples, Report a problem, Suggest an idea, Check for updates, and About, in that order', () => {
+  test('lists the tour, every help page, Download, the samples, Report a problem, Suggest an idea, Copy technical details, Check for updates, and About, in that order', () => {
     expect(HELP_MENU_COMMANDS).toEqual([
       'take-the-tour',
       ...HELP_PAGES.map((page) => page.id),
@@ -19,6 +19,7 @@ describe('the Help menu', () => {
       'reset-sample',
       'report-problem',
       'suggest-idea',
+      'copy-technical-details',
       'check-for-updates',
       'about-drafter',
     ]);
