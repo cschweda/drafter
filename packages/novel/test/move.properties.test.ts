@@ -60,8 +60,25 @@ describe('moveNode properties', () => {
             expect(out.indexOf(META)).toBe(out.lastIndexOf(META));
           }
           // The moved heading is where `at` says.
-          const unit = text.slice(node.heading.from, node.heading.to);
-          expect(out.slice(move.at, move.at + unit.length)).toBe(unit);
+          const trimmed = text.slice(node.span.from, node.span.to).replace(/\s+$/, '');
+          expect(out.slice(move.at, move.at + trimmed.length)).toBe(trimmed);
+          // It keeps its kind and sits under the requested parent.
+          const find = (
+            list: NovelNode[],
+            parent: NovelNode | null,
+          ): [NovelNode, NovelNode | null] | null => {
+            for (const n of list) {
+              if (n.heading.from === move.at) return [n, parent];
+              const r = find(n.children, n);
+              if (r) return r;
+            }
+            return null;
+          };
+          const hit = find(novelStructure(out).nodes, null);
+          expect(hit?.[0].kind).toBe(node.kind);
+          const parentOld = how === 'into' ? other : nodes.find((n) => n.children.includes(other));
+          expect(hit?.[1]?.title ?? null).toBe(parentOld?.title ?? null);
+          expect(hit?.[1]?.kind ?? null).toBe(parentOld?.kind ?? null);
           // The result still parses, with the same number of nodes.
           expect(flat(novelStructure(out).nodes).length).toBe(nodes.length);
         },

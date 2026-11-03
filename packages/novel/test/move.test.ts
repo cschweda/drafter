@@ -11,7 +11,7 @@ function apply(text: string, changes: Array<{ from: number; to: number; insert: 
   return out;
 }
 
-/** Moves the node whose title is `title` (first match) and returns the new text and the moved text. */
+/** Moves the node with this id and returns the new text and the moved text. */
 function run(text: string, id: string, target: NovelTarget) {
   const tree = novelStructure(text);
   const node = findNode(tree, id);
@@ -231,6 +231,43 @@ ${META}`);
   });
 });
 
+describe('a move that would change the kind of a heading', () => {
+  it('returns null for an opening ## chapter moved after a # chapter', () => {
+    const text = '## Prologue\n\npro\n\n# One\n\none\n';
+    expect(run(text, 'chapter:prologue:0', { after: 'chapter:one:0' })).toBeNull();
+  });
+});
+
+describe('down then up', () => {
+  it('takes a chapter back out of the first part', () => {
+    const text = '# Loose\n\nlo\n\n# Part One\n\n# Chapter A\n\na\n';
+    const tree = novelStructure(text);
+    const down = downTarget(tree, 'chapter:loose:0');
+    expect(down).toEqual({ into: 'part:part-one:0' });
+    const r = run(text, 'chapter:loose:0', down as NovelTarget);
+    const out = r?.out as string;
+    const tree2 = novelStructure(out);
+    const id = tree2.nodes[0].children[0].id;
+    const up = upTarget(tree2, id);
+    expect(up).toEqual({ before: 'part:part-one:0' });
+    const back = run(out, id, up as NovelTarget);
+    expect(back?.out).toBe(text);
+  });
+});
+
+describe('down then up, with a second loose chapter', () => {
+  it('goes back after the last loose chapter', () => {
+    const text = '# Loose\n\nlo\n\n# Last\n\nla\n\n# Part One\n\n# Chapter A\n\na\n';
+    const tree = novelStructure(text);
+    const out = run(text, 'chapter:last:0', downTarget(tree, 'chapter:last:0') as NovelTarget)
+      ?.out as string;
+    const tree2 = novelStructure(out);
+    const id = tree2.nodes[1].children[0].id;
+    expect(upTarget(tree2, id)).toEqual({ after: 'chapter:loose:0' });
+    expect(run(out, id, upTarget(tree2, id) as NovelTarget)?.out).toBe(text);
+  });
+});
+
 describe('upTarget and downTarget', () => {
   const tree = novelStructure(book);
   it('step among siblings and across parents', () => {
@@ -248,8 +285,6 @@ describe('upTarget and downTarget', () => {
   });
 
   it('every offered step is a legal move', () => {
-    const all = [...book.matchAll(/^#+ (.*)$/gm)];
-    expect(all.length).toBeGreaterThan(0);
     const ids: string[] = [];
     const walk = (list: typeof tree.nodes) => {
       for (const n of list) {

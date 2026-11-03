@@ -1,5 +1,5 @@
 import { findMarkdownMeta } from '@drafter/markdown';
-import { findNode, type NovelNode, type NovelTree } from './structure';
+import { findNode, type NovelNode, type NovelTree, novelStructure } from './structure';
 
 // Moving a part, a chapter, or a section. A node is cut together with the blank lines around it
 // and written again at its new place, so that exactly one empty line (in the file's own line
@@ -51,6 +51,9 @@ function fits(node: NovelNode, target: NovelNode, how: 'before' | 'after' | 'int
       (node.kind === 'chapter' && target.kind === 'part')
     );
   }
+  // A chapter may go before the first part (the reparse check refuses any other part: it would
+  // land in the part before).
+  if (node.kind === 'chapter' && target.kind === 'part') return how === 'before';
   return node.kind === target.kind;
 }
 
@@ -130,7 +133,37 @@ export function moveNode(
 
   const changes = [cut, place].sort((a, b) => a.from - b.from);
   const shift = cut.from < place.from ? cut.insert.length - (cut.to - cut.from) : 0;
-  return { changes, at: place.from + offset + shift };
+  const at = place.from + offset + shift;
+
+  // Read the result back: the node must keep its kind, and sit where it was asked to (an opening
+  // `##` or a scene break moved after a `#` chapter would read as that chapter's section).
+  let out = text;
+  for (const c of [...changes].reverse()) out = out.slice(0, c.from) + c.insert + out.slice(c.to);
+  const wantParent = how === 'into' ? dest : parentOf(tree, targetId);
+  const shiftOf = (pos: number) => {
+    let d = 0;
+    for (const c of changes) if (c.to <= pos) d += c.insert.length - (c.to - c.from);
+    return d;
+  };
+  const after = novelStructure(out);
+  const found = findAt(after.nodes, at);
+  if (!found || found.node.kind !== node.kind) return null;
+  const wantAt = wantParent ? wantParent.heading.from + shiftOf(wantParent.heading.from) : null;
+  if ((found.parent?.heading.from ?? null) !== wantAt) return null;
+  return { changes, at };
+}
+
+function findAt(
+  list: NovelNode[],
+  at: number,
+  parent: NovelNode | null = null,
+): { node: NovelNode; parent: NovelNode | null } | null {
+  for (const n of list) {
+    if (n.heading.from === at) return { node: n, parent };
+    const r = findAt(n.children, at, n);
+    if (r) return r;
+  }
+  return null;
 }
 
 const chaptersOf = (tree: NovelTree): NovelNode[] =>
@@ -156,7 +189,12 @@ export function upTarget(tree: NovelTree, id: string): NovelTarget | null {
   if (parent) {
     const parts = tree.nodes.filter((n) => n.kind === 'part');
     const before = parts[parts.indexOf(parent) - 1];
-    if (!before) return null;
+    if (!before) {
+      // The first part: out to the end of the chapters that come before the parts.
+      const loose = tree.nodes.filter((n) => n.kind === 'chapter');
+      const last = loose[loose.length - 1];
+      return last ? { after: last.id } : { before: parent.id };
+    }
     const last = before.children[before.children.length - 1];
     return last ? { after: last.id } : { into: before.id };
   }
