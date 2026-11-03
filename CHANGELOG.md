@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- For contributors: `@drafter/novel` keeps a status, a synopsis, and a word target for each passage (and the book) in the metadata comment beside the other keys, reads hostile JSON without throwing, and carries each passage's facts through a rename, a move, or a deletion by following its heading.
 - For contributors: `@drafter/novel` moves a part, chapter, or section (before, after, or into another) byte for byte, one empty line at each seam, the metadata comment untouched, with up and down steps for the keyboard.
 - For contributors: `@drafter/novel` reads a novel's parts, chapters, and sections (headings, setext headings, scene breaks) with their words and spans, in one linear pass, ignoring fenced code and the metadata comment; ids are unique across the book, and an opening `##` reads as a chapter.
 - For contributors: the plan for Novel (`docs/plans/2026-11-03-novel.md`), ten tasks.
