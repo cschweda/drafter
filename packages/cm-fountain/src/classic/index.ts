@@ -12,7 +12,7 @@ import {
 import { classicEnter, classicShiftEnter, classicShiftTab, classicTab } from './keys';
 import { classicLine, keepLineInHistory } from './line';
 import { classicMarks, settleBreaks, settleDeletes, tidyLeft } from './marks';
-import { keepMetadata, metadataHidden } from './metadata';
+import { blockKeptClear, keepMetadata, metadataHidden } from './metadata';
 import { classicView } from './view';
 
 export {
@@ -60,7 +60,7 @@ export {
   shapeOf,
   tidyLeft,
 } from './marks';
-export { keepMetadata, metadataHidden, protectedRange } from './metadata';
+export { keepMetadata, metadataHidden, onlyClearedBlock, protectedRange } from './metadata';
 export { classicView, lineClassOf, roleVariables } from './view';
 
 /** At `Prec.highest`, ahead of `language`, as CodeMirror's completion keys are at that level too (§6). */
@@ -104,5 +104,6 @@ export function classic(_options: ClassicOptions = {}): Extension {
     keepLineInHistory,
     classicView,
     metadataHidden,
+    blockKeptClear,
   ];
 }

@@ -6,6 +6,7 @@ export {
   classic,
   classicLine,
   elementAt,
+  onlyClearedBlock,
 } from './classic';
 export { completionOverride, fountainCompletion, fountainCompletionSource } from './complete';
 export { type CursorElement, cursorElement, onCursorElement } from './cursor';

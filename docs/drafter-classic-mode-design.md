@@ -388,7 +388,7 @@ CodeMirror already gives the list `role="listbox"`, and the editor `aria-autocom
 
 | Writer does | Result |
 |---|---|
-| Select All, Delete | The script's text goes; the block stays, with an empty line above it for the cursor. The template holds |
+| Select All, Delete | The script's text goes; the block stays, under an empty line for the cursor and the blank line that keeps the block apart, so two empty lines are drawn. The template holds |
 | Undo after that | One step brings the text back, byte for byte. The block was never touched |
 | Select All, Cut | The clipboard has the text without the block, and the text goes; the block stays |
 | Select All, Copy | The text without the block. To carry a whole file, Save As does that (§11, Copy) |
@@ -396,6 +396,8 @@ CodeMirror already gives the list `role="listbox"`, and the editor `aria-autocom
 | Paste over all of text that ends in its own metadata block | Paste is what was copied, so it goes in; the kept block stays last and wins, and the pasted one shows as a boneyard the writer can delete. **Call:** rare, and nothing is lost |
 | Select All, type | The first letter replaces the text, above the block |
 | Switch to Fountain Mode | The block shows as it always has, and there it can be selected and deleted |
+
+**Decided (maintainer, 2026-11-02): a blank script is made ready before a first letter can come.** A script that's nothing but the block has no line above it, and an input method's text can't be rewritten (§10), so `x/* drafter` would lose the template. When Classic Mode starts, when the editor takes focus, and when the text changes under a focused editor, two line breaks go in above the block, as an `appChange` outside the undo history. It's the one exception to "switching and moving write nothing" (§3.4). The app counts it as no edit: the unchanged baseline moves with it, and no recovery copy is written. Fountain Mode never does it.
 
 ## 9. The chooser, the element bar, and teaching
 

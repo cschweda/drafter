@@ -100,6 +100,21 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe('Classic Mode’s room above a blank script’s metadata block', () => {
+  test('is no edit of the writer’s: the script stays unchanged, and a letter after it is one', async () => {
+    const t = await visit();
+    const text = '/* drafter\n{ "v": 1, "template": "stage-play-standard" }\n*/\n';
+    const made = await t.session.addScript(text, { kind: 'fountain', baseline: text });
+    await t.session.open(made.id);
+    const { view } = t.editor;
+    view.dispatch({ changes: { from: 0, insert: '\n\n' } });
+    expect(t.text()).toBe(`\n\n${text}`);
+    expect(t.session.dirty.value).toBe(false);
+    view.dispatch({ changes: { from: 0, insert: 'x' } });
+    expect(t.session.dirty.value).toBe(true);
+  });
+});
+
 describe('the first New of a kind', () => {
   test('a first stage play opens with the stage-play sample, as the writer’s own; the second is blank', async () => {
     const t = await visit();

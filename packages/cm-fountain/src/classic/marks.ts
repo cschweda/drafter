@@ -474,8 +474,11 @@ export const classicMarks: Extension = EditorState.transactionFilter.of((tr) => 
 });
 
 /** The text with the two breaks `keepMetadata` will add above the block. */
-const withRoomAbove = (state: EditorState) =>
-  state.update({ changes: { from: 0, insert: state.lineBreak.repeat(2) }, filter: false }).state;
+const withRoomAbove = (state: EditorState) => {
+  const from = state.doc.line(1).text.startsWith(BOM) ? 1 : 0;
+  const insert = state.lineBreak.repeat(2);
+  return state.update({ changes: { from, insert }, filter: false }).state;
+};
 
 /**
  * A delete is a keystroke too (§4.2): what's left of the line may read as something else, or may no

@@ -32,7 +32,7 @@ import {
 import { hereIn, isEmptyParens, key, removeParens } from './keys';
 import { BLANK_SPEECH, classicEdit, classicLine } from './line';
 import { classicTidied } from './marks';
-import { protectedRange } from './metadata';
+import { matchAbove, protectedRange } from './metadata';
 
 // Where the cursor may stand in Classic Mode, and what a delete takes (design §6.4). The writer
 // sees the page and not the marks, so a hidden mark is never a place to stand or a thing to delete,
@@ -137,22 +137,40 @@ function place(state: EditorState, sent: number, travel: Travel): number {
   return pos;
 }
 
-/** A range with both ends at or above `limit`. */
-function stopAt(range: SelectionRange, limit: number): SelectionRange {
-  if (range.anchor <= limit && range.head <= limit) return range;
-  const anchor = Math.min(range.anchor, limit);
-  const head = Math.min(range.head, limit);
-  return EditorSelection.range(anchor, head, range.goalColumn, range.bidiLevel ?? undefined);
-}
-
-/** The selection a transaction makes, stopped above the protected block (§8.4). */
-function stoppedAbove({ ranges, mainIndex }: EditorSelection, limit: number | null) {
-  if (limit === null || ranges.every(({ to }) => to <= limit)) return null;
-  return EditorSelection.create(
-    ranges.map((range) => stopAt(range, limit)),
-    mainIndex,
+/** A range with both ends between `low` and `high`. */
+function stopAt(range: SelectionRange, low: number, high: number): SelectionRange {
+  if (range.from >= low && range.to <= high) return range;
+  const stop = (pos: number) => Math.max(low, Math.min(pos, high));
+  return EditorSelection.range(
+    stop(range.anchor),
+    stop(range.head),
+    range.goalColumn,
+    range.bidiLevel ?? undefined,
   );
 }
+
+/**
+ * A selection stopped above the protected block and past a byte-order mark (§8.4), or null with
+ * nothing to stop. Of several ranges, one wholly past the block goes: Select Matches and Mod+D find
+ * matches there, and a cursor left over at the block is nobody's.
+ */
+function stoppedAbove(state: EditorState, selection: EditorSelection, limit: number | null) {
+  const { ranges, main } = selection;
+  const low = state.sliceDoc(0, 1) === BOM ? 1 : 0;
+  const high = limit ?? state.doc.length;
+  // A lone cursor's way past the mark is `place`'s.
+  const floor = (range: SelectionRange) => (range.empty ? 0 : low);
+  const inPlace = (range: SelectionRange) => range.from >= floor(range) && range.to <= high;
+  if (ranges.every(inPlace)) return null;
+  const left = ranges.length > 1 ? ranges.filter(({ from }) => from < high) : ranges;
+  if (!left.length) return state.selection;
+  const stopped = left.map((range) => stopAt(range, floor(range), high));
+  return EditorSelection.create(stopped, Math.max(left.indexOf(main), 0));
+}
+
+/** Whether a transaction is Find's going to a match, or Replace's with nothing replaced. */
+const finding = (tr: Transaction) =>
+  tr.isUserEvent('select.search') || (!tr.docChanged && tr.isUserEvent('input.replace'));
 
 /**
  * Where the cursor may stand, moved off a hidden mark or a passed-over line (§6.4), and no selection
@@ -166,8 +184,12 @@ export const classicCaret: Extension = EditorState.transactionFilter.of((tr) => 
   // A tidied line is gone in the new text, and what's a place to stand is read from that.
   const state = tidied ? tr.state : tr.startState;
   const limit = protectedRange(state)?.from ?? null;
-  const stopped = stoppedAbove(tr.newSelection, limit);
-  const { ranges, main } = stopped ?? tr.newSelection;
+  const sent = tr.newSelection;
+  if (limit !== null && sent.ranges.length === 1 && sent.main.to > limit && finding(tr)) {
+    return matchAbove(tr, limit);
+  }
+  const stopped = stoppedAbove(state, sent, limit);
+  const { ranges, main } = stopped ?? sent;
   const moved = () => (stopped ? [tr, { selection: stopped, sequential: true }] : tr);
   if (tr.annotation(classicEdit) || ranges.length > 1 || !main.empty) return moved();
   const from = tr.changes.mapPos(tr.startState.selection.main.head, -1);

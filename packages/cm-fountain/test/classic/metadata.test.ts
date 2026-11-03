@@ -1,13 +1,28 @@
 import { cursorDocEnd, history, redo, selectAll, undo } from '@codemirror/commands';
+import {
+  findNext,
+  findPrevious,
+  replaceAll,
+  replaceNext,
+  SearchQuery,
+  search,
+  selectMatches,
+  selectNextOccurrence,
+  selectSelectionMatches,
+  setSearchQuery,
+} from '@codemirror/search';
 import { EditorSelection, EditorState, type StateCommand, Text } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { appChange, fountain, parsedDoc } from '@drafter/cm-fountain';
 import { metadataSpan, setMeta } from '@drafter/fountain';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
-import { classic, classicLine, elementAt } from '../../src/classic';
+import { classic, classicLine, elementAt, onlyClearedBlock } from '../../src/classic';
 import { metadataHidden, protectedRange } from '../../src/classic/metadata';
+import { BOM } from '../helpers';
 import { classicEditor, keys, render, type } from './harness';
+
+Range.prototype.getClientRects ??= () => [] as unknown as DOMRectList;
 
 const BLOCK = '/* drafter\n{"v":1,"template":"stage-play"}\n*/';
 const STAGE = builtins['stage-play-standard'] as Template;
@@ -57,7 +72,7 @@ describe('protectedRange', () => {
 });
 
 describe('what the writer does (§8.4)', () => {
-  test('Select All, Delete leaves the block and an empty line', () => {
+  test('Select All, Delete leaves the block, an empty line for the cursor, and the blank line under it', () => {
     const next = keys(all(play(`|${SCRIPT}`)), 'Backspace');
     expect(render(next)).toBe(`|\n\n${BLOCK}\n`);
   });
@@ -291,6 +306,38 @@ describe('the backstop', () => {
     expect(tr.state.sliceDoc()).toBe(SCRIPT);
   });
 
+  test('a replacement inside the block goes whole', () => {
+    const at = SCRIPT.indexOf('template');
+    const tr = play(`|${SCRIPT}`).update({
+      changes: { from: at, to: at + 8, insert: 'X' },
+      userEvent: 'input.replace.all',
+    });
+    expect(tr.state.sliceDoc()).toBe(SCRIPT);
+  });
+
+  test('a change above the block that sends the cursor into it stops it', () => {
+    const tr = play(`|${SCRIPT}`).update({
+      changes: { from: 0, insert: 'a' },
+      selection: { anchor: 20 },
+      userEvent: 'input',
+    });
+    expect(render(tr.state)).toBe(`aOne.\n\nTwo.|\n\n${BLOCK}\n`);
+  });
+
+  test('a drag past the block keeps the dragged text selected', () => {
+    const tr = play(`|${SCRIPT}`).update({
+      changes: [
+        { from: 0, to: 4 },
+        { from: SCRIPT.length, insert: 'One.' },
+      ],
+      selection: { anchor: SCRIPT.length - 4, head: SCRIPT.length },
+      userEvent: 'move.drop',
+    });
+    expect(tr.state.sliceDoc()).toBe(`\n\nTwo.One.\n\n${BLOCK}\n`);
+    const { from, to } = tr.state.selection.main;
+    expect(tr.state.sliceDoc(from, to)).toBe('One.');
+  });
+
   test('text dropped past the block lands above it', () => {
     const state = play(`|${SCRIPT}`);
     const tr = state.update({
@@ -299,6 +346,7 @@ describe('the backstop', () => {
       userEvent: 'input.drop',
     });
     expect(tr.state.sliceDoc()).toBe(`One.\n\nTwo.New.\n\n${BLOCK}\n`);
+    expect(tr.state.selection.main.from).toBe(10);
     expect(tr.state.selection.main.to).toBe(14);
   });
 
@@ -332,14 +380,234 @@ describe('the backstop', () => {
   });
 
   test('a composition is not rewritten', () => {
-    const state = play(`|${BLOCK}\n`);
-    const next = write(state, 'あ', 'input.type.compose');
-    expect(next.sliceDoc()).toBe(`あ${BLOCK}\n`);
     const over = play(`|${SCRIPT}`).update({
       changes: { from: 0, to: SCRIPT.length, insert: 'あ' },
       userEvent: 'input.type.compose',
     });
     expect(over.state.sliceDoc()).toBe('あ');
+  });
+});
+
+/** A state that finds `word`, in a view, for Find's own commands. */
+function finding(marked: string, query: ConstructorParameters<typeof SearchQuery>[0]) {
+  const state = classicEditor(marked, {
+    template: STAGE,
+    with: [search(), history(), EditorState.allowMultipleSelections.of(true)],
+  });
+  const view = new EditorView({ state, parent: document.body });
+  view.dispatch({ effects: setSearchQuery.of(new SearchQuery(query)) });
+  return view;
+}
+
+const chosen = (view: EditorView) =>
+  view.state.selection.ranges.map(({ from, to }) => view.state.sliceDoc(from, to));
+
+/** A script with `play` above the block and in it. */
+const FOUND = `A play.\n\nOne play.\n\n${BLOCK}\n`;
+
+describe('Find and Replace', () => {
+  const inBlock = FOUND.indexOf('play', FOUND.indexOf('/*'));
+
+  test('replace all leaves the script alone where the match is in the block', () => {
+    const view = finding(`|${FOUND}`, { search: 'template', replace: 'X' });
+    replaceAll(view);
+    expect(view.state.sliceDoc()).toBe(FOUND);
+    view.destroy();
+  });
+
+  test('replace all takes the matches above and only those', () => {
+    const view = finding(`|${FOUND}`, { search: 'play', replace: 'drama' });
+    replaceAll(view);
+    expect(view.state.sliceDoc()).toBe(
+      FOUND.replace('A play', 'A drama').replace('One play', 'One drama'),
+    );
+    expect(view.state.field(parsedDoc).meta).toEqual(META);
+    view.destroy();
+  });
+
+  test('Find Next wraps past the block', () => {
+    const view = finding(`|${FOUND}`, { search: 'play' });
+    const heads = [0, 1, 2, 3].map(() => {
+      findNext(view);
+      return view.state.selection.main.from;
+    });
+    expect(heads).toEqual([2, 13, 2, 13]);
+    expect(inBlock).toBeGreaterThan(13);
+    view.destroy();
+  });
+
+  test('Find Previous wraps to the last match above the block', () => {
+    const view = finding(`|${FOUND}`, { search: 'play' });
+    findPrevious(view);
+    expect(view.state.selection.main.from).toBe(13);
+    findPrevious(view);
+    expect(view.state.selection.main.from).toBe(2);
+    view.destroy();
+  });
+
+  test('Find with a match only in the block stays', () => {
+    const view = finding(`A|b\n\n${BLOCK}\n`, { search: 'template' });
+    findNext(view);
+    expect(view.state.selection.main.head).toBe(1);
+    expect(view.state.selection.ranges).toHaveLength(1);
+    view.destroy();
+  });
+
+  test('Replace past the last match above wraps too', () => {
+    const view = finding(`|${FOUND}`, { search: 'play', replace: 'act' });
+    findNext(view);
+    findNext(view);
+    replaceNext(view);
+    expect(view.state.sliceDoc()).toBe(FOUND.replace('One play', 'One act'));
+    replaceNext(view);
+    expect(view.state.selection.main.from).toBe(2);
+    expect(chosen(view)).toEqual(['play']);
+    view.destroy();
+  });
+
+  test('select matches leaves out those in the block', () => {
+    const view = finding(`|${FOUND}`, { search: 'play' });
+    selectMatches(view);
+    expect(view.state.selection.ranges.map(({ from }) => from)).toEqual([2, 13]);
+    view.destroy();
+  });
+
+  test('select the selection’s matches, and Mod+D, leave no cursor at the block', () => {
+    const view = finding(`A [play].\n\nOne play.\n\n${BLOCK}\n`, { search: 'play' });
+    selectSelectionMatches(view);
+    expect(chosen(view)).toEqual(['play', 'play']);
+    view.destroy();
+    const next = finding(`One [play].\n\n${BLOCK}\n`, { search: 'play' });
+    selectNextOccurrence(next);
+    expect(next.state.selection.ranges).toHaveLength(1);
+    expect(chosen(next)).toEqual(['play']);
+    next.destroy();
+  });
+});
+
+describe('a blank script is made ready', () => {
+  const settled = async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  };
+
+  /** A view on `doc` in Classic Mode, attached, with an unfocused start. */
+  const opened = (doc: string, extra: Parameters<typeof classicEditor>[1] = {}) =>
+    new EditorView({
+      state: classicEditor(`|${doc}`, { template: STAGE, with: [history()], ...extra }),
+      parent: document.body,
+    });
+
+  test('when Classic Mode starts: two breaks above the block, in no undo step', async () => {
+    const view = opened(`${BLOCK}\n`);
+    await settled();
+    expect(render(view.state)).toBe(`|\n\n${BLOCK}\n`);
+    undo(view);
+    expect(view.state.sliceDoc()).toBe(`\n\n${BLOCK}\n`);
+    view.destroy();
+  });
+
+  test('a composed first letter lands above a block clear of it', async () => {
+    const view = opened(`${BLOCK}\n`);
+    await settled();
+    view.dispatch({ changes: { from: 0, insert: 'あ' }, userEvent: 'input.type.compose' });
+    expect(view.state.sliceDoc()).toBe(`あ\n\n${BLOCK}\n`);
+    expect(view.state.field(parsedDoc).meta).toEqual(META);
+    view.destroy();
+  });
+
+  test('on focus, and when the text changes under a focused editor', async () => {
+    const view = opened('One.\n');
+    await settled();
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: `${BLOCK}\n` } });
+    await settled();
+    expect(view.state.sliceDoc()).toBe(`${BLOCK}\n`);
+    view.focus();
+    await settled();
+    expect(view.state.sliceDoc()).toBe(`\n\n${BLOCK}\n`);
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: `${BLOCK}\n` } });
+    await settled();
+    expect(view.state.sliceDoc()).toBe(`\n\n${BLOCK}\n`);
+    view.destroy();
+  });
+
+  test('a script with text, a read-only one, and a composition are left alone', async () => {
+    const view = opened(SCRIPT);
+    await settled();
+    expect(view.state.sliceDoc()).toBe(SCRIPT);
+    view.destroy();
+    const locked = opened(`${BLOCK}\n`, { with: [EditorState.readOnly.of(true)] });
+    await settled();
+    expect(locked.state.sliceDoc()).toBe(`${BLOCK}\n`);
+    locked.destroy();
+  });
+
+  test('a destroyed view is left alone', async () => {
+    const view = opened(`${BLOCK}\n`);
+    view.destroy();
+    await settled();
+    expect(view.state.sliceDoc()).toBe(`${BLOCK}\n`);
+  });
+
+  test('marks the change as the app’s and keeps a byte-order mark first', async () => {
+    const seen: boolean[] = [];
+    const view = opened(`${BOM}${BLOCK}\n`, {
+      with: [
+        EditorView.updateListener.of((update) => {
+          for (const tr of update.transactions) seen.push(tr.annotation(appChange) === true);
+        }),
+      ],
+    });
+    await settled();
+    expect(view.state.sliceDoc()).toBe(`${BOM}\n\n${BLOCK}\n`);
+    expect(view.state.selection.main.head).toBe(1);
+    expect(seen).toEqual([true]);
+    view.destroy();
+  });
+
+  test('Fountain Mode never does it', async () => {
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: `${BLOCK}\n`,
+        extensions: [fountain({ template: () => STAGE })],
+      }),
+      parent: document.body,
+    });
+    view.focus();
+    await settled();
+    expect(view.state.sliceDoc()).toBe(`${BLOCK}\n`);
+    view.destroy();
+  });
+
+  test('onlyClearedBlock knows those two breaks from anything else', () => {
+    const of = (text: string) => Text.of(text.split('\n'));
+    expect(onlyClearedBlock(of(`${BLOCK}\n`), of(`\n\n${BLOCK}\n`))).toBe(true);
+    expect(onlyClearedBlock(of(`${BOM}${BLOCK}`), of(`${BOM}\n\n${BLOCK}`))).toBe(true);
+    expect(onlyClearedBlock(of(`${BLOCK}\n`), of(`x\n${BLOCK}\n`))).toBe(false);
+    expect(onlyClearedBlock(of('One.'), of('One.ab'))).toBe(false);
+  });
+});
+
+describe('a byte-order mark stays first', () => {
+  test('typing on a blank script with one', () => {
+    const next = type(play(`${BOM}|${BLOCK}\n`), 'x');
+    expect(next.sliceDoc()).toBe(`${BOM}x\n\n${BLOCK}\n`);
+    expect(metaOf(next)).toEqual(META);
+  });
+
+  test('a letter takes the element Tab chose, past it', () => {
+    const next = keys(play(`${BOM}|${BLOCK}\n`), 'Tab', 'june');
+    expect(next.sliceDoc()).toBe(`${BOM}JUNE\n\n${BLOCK}\n`);
+  });
+
+  test('Delete on a blank script with one writes nothing', () => {
+    expect(keys(play(`${BOM}|${BLOCK}\n`), 'Delete').sliceDoc()).toBe(`${BOM}${BLOCK}\n`);
+  });
+
+  test('Select All, Delete keeps it, with a block and with none', () => {
+    const script = `${BOM}One.\n\n${BLOCK}\n`;
+    expect(keys(all(play(`|${script}`)), 'Backspace').sliceDoc()).toBe(`${BOM}\n\n${BLOCK}\n`);
+    expect(keys(all(play(`|${BOM}One.`)), 'Backspace').sliceDoc()).toBe(BOM);
   });
 });
 
