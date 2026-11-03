@@ -132,12 +132,49 @@ async function imported(run: () => FdxImport | Promise<FdxImport>): Promise<FdxI
 }
 
 /**
+ * The most paragraphs (text between blank lines) a file may have to be read: a long feature
+ * script has a few thousand. Past this, a file's parse can outgrow a reader's heap
+ * (READER_HEAP_MB), and in list_scripts or search_scripts the reader stopping would fail the whole
+ * folder; so the file is refused alone, as too long (red/blue audit, 2026-11-03: a 3 MB file of
+ * 540,000 one-line scenes and actions stopped every listing, where 360,000 still listed).
+ */
+export const MAX_PARAGRAPHS = 300_000;
+
+/** Whether `text` has more than `max` paragraphs (lines ending in LF, CR, or CRLF), in one pass. */
+export function moreParagraphsThan(text: string, max: number): boolean {
+  let paragraphs = 0;
+  let blank = true;
+  let lineBlank = true;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    // LF, CR, and CRLF each end a line, as the parser reads them.
+    if (code === 10 || code === 13) {
+      if (code === 13 && text.charCodeAt(i + 1) === 10) i++;
+      blank = lineBlank;
+      lineBlank = true;
+    } else if (code !== 32 && code !== 9 && lineBlank) {
+      lineBlank = false;
+      if (blank && ++paragraphs > max) return true;
+      blank = false;
+    }
+  }
+  return false;
+}
+
+/**
  * The script inside `file`, named `name` (its shown name, which is all a refusal says), judged in
  * Open's order. Throws NotRead when its bytes couldn't be read, NotOpened in Open's words for a
  * file Open turns away, and Refused (the reader's own phrase) for text Open won't read: over 5 MB,
- * not UTF-8, more than text.
+ * not UTF-8, more than text, or more than MAX_PARAGRAPHS paragraphs.
  */
 export async function readInside(file: Readable, name: string): Promise<Inside> {
+  const inside = await readWhole(file, name);
+  if (moreParagraphsThan(inside.text, MAX_PARAGRAPHS))
+    throw new Refused(`it has more than ${MAX_PARAGRAPHS.toLocaleString('en-US')} paragraphs`);
+  return inside;
+}
+
+async function readWhole(file: Readable, name: string): Promise<Inside> {
   const kind = importKindOf(name);
   const read = { noFollow: true, expect: { dev: file.dev, ino: file.ino } };
   // Text or a Final Draft file over 5 MB is refused by its size, unless its first bytes make it an

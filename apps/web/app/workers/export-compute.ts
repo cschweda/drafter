@@ -395,7 +395,8 @@ export function createExporter(
     const { kind, source, template, options = DEFAULT_EXPORT_OPTIONS } = request;
     const parsed = parse(source);
     const doc = { ...parsed, titlePage: titlePageFor(parsed.titlePage, options.titlePage) };
-    if (kind === 'fdx') return { data: toFdx(doc, template) };
+    // Notes go into a Final Draft file only when Include notes says so: Final Draft prints them.
+    if (kind === 'fdx') return { data: toFdx(doc, template, { notes: options.notes }) };
     if (kind === 'md') {
       const { sceneNumbers, notes } = options;
       const index = sceneIndex(doc, template);
@@ -439,12 +440,17 @@ export function createExporter(
           author: scriptAuthor(doc),
           modified: new Date(request.modified),
           // The work's identity, not its text's: the project, else the title and the title
-          // page's author (as written, whatever the export's title page option).
-          id: epubIdentifier({
-            project: request.projectId,
-            title: request.title,
-            author: scriptAuthor(parsed),
-          }),
+          // page's author (as written), so a reader app knows a new copy for the same book. With no
+          // title page (a blind submission), a new random id, so the copy can't be tied to the
+          // named ones or to a guessed author (red/blue audit, 2026-11-03).
+          id:
+            options.titlePage === 'none'
+              ? `urn:uuid:${crypto.randomUUID()}`
+              : epubIdentifier({
+                  project: request.projectId,
+                  title: request.title,
+                  author: scriptAuthor(parsed),
+                }),
           ...embedded(request.embed),
         }),
       };

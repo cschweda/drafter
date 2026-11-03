@@ -153,7 +153,8 @@ test('refuses to navigate away from the app', async ({ desktop, profile }) => {
     ),
   });
 
-  // In the window itself: nothing loads but the app. An https address goes to the system browser.
+  // In the window itself: nothing loads but the app. An https address goes to the system browser,
+  // once the writer says yes when it isn't one of Drafter's own links.
   // (A refused navigation leaves Playwright's frame waiting for it to finish, so the page is read
   // with `evaluate` from here on rather than with locators, which would wait for it.)
   for (const url of [
@@ -178,7 +179,11 @@ test('refuses to navigate away from the app', async ({ desktop, profile }) => {
   expect(opened).toEqual([true, true, true, true]);
   await page.waitForTimeout(SETTLE);
   expect(await windows()).toBe(1);
-  expect(openedExternally(profile)).toEqual(['https://example.com/', 'https://example.org/']);
+  // Neither is one of Drafter's own links, so the writer is asked first (window.ts, openFromPage).
+  expect(openedExternally(profile)).toEqual([
+    'asked https://example.com/',
+    'asked https://example.org/',
+  ]);
 
   // The app's own pages may open in a window of their own, under the same rules.
   const [help] = await Promise.all([
@@ -196,9 +201,9 @@ test('refuses to navigate away from the app', async ({ desktop, profile }) => {
   await help.waitForTimeout(SETTLE);
   expect(await help.evaluate(() => location.href)).toBe('app://drafter/docs/saving/');
   expect(openedExternally(profile)).toEqual([
-    'https://example.com/',
-    'https://example.org/',
-    'https://example.com/elsewhere',
+    'asked https://example.com/',
+    'asked https://example.org/',
+    'asked https://example.com/elsewhere',
   ]);
 });
 

@@ -9,6 +9,7 @@ import {
   headersFor,
   navigationFor,
   resolveAppUrl,
+  trustedExternal,
 } from '../src/protocol';
 
 const ROOT = join(tmpdir(), 'drafter-web');
@@ -259,5 +260,41 @@ describe('navigationFor', () => {
     ]) {
       expect(navigationFor(url), url).toBe('refuse');
     }
+  });
+});
+
+// A page may send only Drafter's own links to the browser without the writer saying yes: a page a
+// hostile file had made run code could otherwise put the script in an address (red/blue audit).
+describe('trustedExternal', () => {
+  test('lets Drafter’s own links through', () => {
+    for (const url of [
+      'https://github.com/cschweda/drafter/issues/new?template=bug.yml&title=x',
+      'https://github.com/cschweda/drafter/releases',
+      'https://drafter.dev/docs/privacy/',
+      'https://fountain.io/syntax',
+      'https://plausible.io/privacy-focused-web-analytics',
+      'https://nodejs.org/',
+      'https://docs.docker.com/get-started/',
+      'https://metaincognita.com',
+      'mailto:cschweda@gmail.com?subject=Hi&body=There',
+    ])
+      expect(trustedExternal(url), url).toBe(true);
+  });
+
+  test('asks about anything else, however it is dressed up', () => {
+    for (const url of [
+      'https://exfil.invalid/c?d=INT.%20SECRET',
+      'https://github.com/attacker/repo?d=secret',
+      'https://github.com/cschweda/other',
+      'https://gist.github.com/cschweda/drafter',
+      'https://drafter.dev.evil.example/',
+      'https://evil.example/drafter.dev',
+      'https://drafter.dev:8443/',
+      'https://a@drafter.dev/',
+      'http://drafter.dev/',
+      'mailto:someone@example.com',
+      'not a url',
+    ])
+      expect(trustedExternal(url), url).toBe(false);
   });
 });

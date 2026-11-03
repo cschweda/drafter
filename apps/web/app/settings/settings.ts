@@ -28,6 +28,12 @@ export interface Settings {
   scrollSync: boolean;
   /** The element bar over the Source pane, which writes Fountain's marks; on by default (decided 2026-10-27). */
   elementBar: boolean;
+  /**
+   * The tab and the window say "Drafter", not the script's title: a browser keeps a tab's title
+   * in its history and syncs open tabs to its maker's servers (red/blue audit, 2026-11-03). Off
+   * by default.
+   */
+  hideTitle: boolean;
   /** How big the Cards tab draws its cards, chosen on its slim bar; medium by default (Phase 2 design §7). */
   cardSize: CardSize;
   /** The spellcheck's dictionary: US English by default (Plan D, Call 8). */
@@ -86,6 +92,7 @@ export const DEFAULT_SETTINGS: Settings = {
   checkForUpdates: true,
   scrollSync: true,
   elementBar: true,
+  hideTitle: false,
   cardSize: 'medium',
   spellLanguage: 'en-US',
   spellNotes: false,

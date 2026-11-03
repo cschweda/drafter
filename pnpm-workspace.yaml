@@ -1,3 +1,7 @@
 packages:
   - "packages/*"
   - "apps/*"
+
+# A version must be a week old before pnpm will pick it (minutes): a package published with malware
+# is usually pulled within days (red/blue audit, 2026-11-03; Dependabot's cooldown matches).
+minimumReleaseAge: 10080

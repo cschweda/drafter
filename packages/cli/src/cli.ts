@@ -1,7 +1,7 @@
-import { createHash } from 'node:crypto';
-import { readFile, stat, writeFile } from 'node:fs/promises';
+import { createHash, randomBytes } from 'node:crypto';
+import { readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { basename, extname, resolve } from 'node:path';
+import { basename, dirname, extname, join, resolve } from 'node:path';
 import { MAX_SCRIPT_BYTES } from '@drafter/archive';
 import { Refused, readCapped, reason } from '@drafter/archive/node';
 import { type Doc, parse, toJSON } from '@drafter/fountain';
@@ -136,7 +136,7 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
     )
     .option(
       '--story-map <file>',
-      'write a story map: one picture-first HTML page of the script so far, to send to anyone (notes left out)',
+      'write a story map: one picture-first HTML page of the script so far, to send to anyone (your notes left out; synopses and setups and payoffs shown)',
     )
     .option(
       '--status <in-progress|finished>',
@@ -483,9 +483,16 @@ async function emit(target: string, data: string | Uint8Array, io: IO) {
     io.out(data);
     return;
   }
+  // Written beside it, then renamed over it: a rename replaces a symlink at the target rather than
+  // writing through it, so a link planted where the output goes (`script.pdf -> ../elsewhere`)
+  // can't make a build overwrite a file outside the folder (red/blue audit, 2026-11-03).
+  const path = resolve(io.cwd, target);
+  const temp = join(dirname(path), `.drafter-${randomBytes(6).toString('hex')}.tmp`);
   try {
-    await writeFile(resolve(io.cwd, target), data);
+    await writeFile(temp, data, { flag: 'wx' });
+    await rename(temp, path);
   } catch (error) {
+    await unlink(temp).catch(() => {});
     throw new CliError(`can't write ${target}: ${reason(error)}`);
   }
 }

@@ -50,3 +50,11 @@ Thumbs.db
 
 # Drafter for Claude's npm package, staged from its bundle (packages/mcp/scripts/stage.mjs)
 packages/mcp/stage/
+
+# Signing keys and credentials, before code signing arrives (red/blue audit, 2026-11-03)
+*.p12
+*.pfx
+*.pem
+*.key
+.npmrc
+electron-builder.env

@@ -21,7 +21,7 @@ import { FdxError, fromFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
 import { mergeCuts, readCutsBytes, readDraftBytes, skippedLine } from '@drafter/history';
 import { paginate } from '@drafter/layout';
-import { NestedTooDeeply, parseMarkdown } from '@drafter/markdown';
+import { MarkedTooDensely, NestedTooDeeply, parseMarkdown } from '@drafter/markdown';
 import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
 import {
   buildStoryMap,
@@ -145,7 +145,8 @@ const refusedBy = (error: unknown): Happened => {
   if (
     error instanceof FdxError ||
     error instanceof ArchiveError ||
-    error instanceof NestedTooDeeply
+    error instanceof NestedTooDeeply ||
+    error instanceof MarkedTooDensely
   )
     return { kind: 'refused', message: error.message };
   throw error;
@@ -166,7 +167,7 @@ async function readPackage(format: string, bytes: Uint8Array): Promise<Happened>
       try {
         parseMarkdown(text);
       } catch (error) {
-        if (!(error instanceof NestedTooDeeply)) throw error;
+        if (!(error instanceof NestedTooDeeply || error instanceof MarkedTooDensely)) throw error;
         return { kind: 'opened', text, message: error.message };
       }
       return { kind: 'opened', text, message: '' };

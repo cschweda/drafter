@@ -2,7 +2,7 @@
 
 Generated from `traps.ts` by `harness.test.ts` (run `pnpm vitest run --project trap -u` after changing a trap). Each row is one file; each entry point it goes through has the outcome it must give. See README.md for the entry points.
 
-277 traps: fountain 58, markdown 31, text 20, fdx 30, highland 42, fadein 11, html 31, epub 18, files 13, modules 9, cuts 8, draft 6.
+278 traps: fountain 58, markdown 32, text 20, fdx 30, highland 42, fadein 11, html 31, epub 18, files 13, modules 9, cuts 8, draft 6.
 
 ## fountain
 
@@ -99,6 +99,7 @@ Generated from `traps.ts` by `harness.test.ts` (run `pnpm vitest run --project t
 | `md-deep-lists` | `deep-lists.md` | Lists nested 300 deep open; the reader says it is nested too deeply instead of stalling. | **web-open**: opens, with 2 key lines<br>**package**: opens with a warning: “nested too deeply”<br>**desktop-open**: opens, with 2 key lines<br>**mcp**: opens |
 | `md-deep-quotes` | `deep-quotes.md` | Block quotes nested 100,000 deep open; the reader refuses to parse them. | **web-open**: opens, with 1 key line<br>**package**: opens with a warning: “nested too deeply”<br>**desktop-open**: opens, with 1 key line<br>**mcp**: opens |
 | `md-deep-emphasis` | `deep-emphasis.md` | Emphasis nested 1,500 deep parses in time, and its export stays inert. | **web-open**: opens, with 1 key line<br>**desktop-open**: opens, with 1 key line<br>**package**: opens<br>**mcp**: opens |
+| `md-emphasis-quadratic` | `emphasis-quadratic.md` | A paragraph of 160,000 emphasis marks opens at once; the reader refuses it instead of stalling for minutes (red/blue audit, 2026-11-03). | **web-open**: opens, with 1 key line<br>**package**: opens with a warning: “too many marks”<br>**desktop-open**: opens, with 1 key line<br>**mcp**: opens |
 | `md-huge-table` | `huge-table.md` | A pipe table of 1,500 rows by 50 columns of inline HTML opens and exports in time. | **web-open**: opens, with 1 key line<br>**desktop-open**: opens, with 1 key line<br>**package**: opens<br>**mcp**: opens |
 | `md-many-footnotes` | `many-footnotes.md` | 30,000 footnote definitions and references parse in linear time. | **web-open**: opens, with 1 key line<br>**desktop-open**: opens, with 1 key line<br>**package**: opens<br>**mcp**: opens |
 | `md-is-epub` | `book.md` | An EPUB named .md is named an e-book by its content, whatever its name, by Open and by Drafter for Claude alike. | **web-open**: refused: “Drafter can’t open an e-book”<br>**desktop-open**: refused: “Drafter can’t open an e-book”<br>**mcp**: refused: “Drafter can’t open an e-book” |

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { contentSecurityPolicy, headersFile, inlineHashes, writeHeaders } from '../scripts/csp.mjs';
+import { PLAUSIBLE_SRC } from '../scripts/plausible.mjs';
 
 const ALERT = "'sha256-bhHHL3z2vDgxUt0W3dWQOrprscmda2Y5pLsLg4GF+pI='"; // alert(1)
 const LOG = "'sha256-VdIjA7RcGlAMlha0KwNIywkhItnIinF5FbBU63ckpoc='"; // console.log("drafter")
@@ -49,8 +50,10 @@ describe('Plausible, on drafter.dev only', () => {
   test('is allowed for scripts and requests only when asked', () => {
     expect(contentSecurityPolicy(["'sha256-a'"])).not.toContain('plausible.io');
     const csp = contentSecurityPolicy(["'sha256-a'"], { plausible: true });
-    expect(csp).toContain("script-src 'self' https://plausible.io 'sha256-a';");
-    expect(csp).toContain("connect-src 'self' https://plausible.io;");
+    // Only Plausible's one script and its one event address, not the whole of plausible.io.
+    expect(csp).toContain(`script-src 'self' ${PLAUSIBLE_SRC} 'sha256-a';`);
+    expect(csp).toContain("connect-src 'self' https://plausible.io/api/event;");
+    expect(csp).not.toMatch(/https:\/\/plausible\.io[ ;]/);
     expect(csp).toContain("default-src 'self';");
   });
 

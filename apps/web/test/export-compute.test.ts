@@ -298,12 +298,23 @@ describe('the export worker’s options', () => {
     // Still the engine's own output today, with nothing asked of it.
     expect(renderText(layout, template)).toBe(before.txt);
     expect(toFdx(parse(sampleScreenplay), template)).toBe(before.fdx);
+    // The app's Final Draft file leaves the notes out by default, as Export options say (Final
+    // Draft prints them; red/blue audit, 2026-11-03), and with Include notes is the file before.
+    const noNotes = toFdx(parse(sampleScreenplay), template, { notes: 'leave-out' });
+    expect(noNotes).not.toContain('[[');
+    expect(noNotes).not.toContain('DrafterNote');
     for (const options of [undefined, DEFAULT_EXPORT_OPTIONS]) {
       const request = { source: sampleScreenplay, template, ...(options ? { options } : {}) };
       expect(bytesOf(await exporter({ kind: 'pdf', ...request }))).toEqual(pdf);
       expect(textOf(await exporter({ kind: 'txt', ...request }))).toBe(before.txt);
-      expect(textOf(await exporter({ kind: 'fdx', ...request }))).toBe(before.fdx);
+      expect(textOf(await exporter({ kind: 'fdx', ...request }))).toBe(noNotes);
     }
+    const included = { ...DEFAULT_EXPORT_OPTIONS, notes: 'include' as const };
+    expect(
+      textOf(
+        await exporter({ kind: 'fdx', source: sampleScreenplay, template, options: included }),
+      ),
+    ).toBe(before.fdx);
   });
 });
 
@@ -583,8 +594,20 @@ describe('the export worker’s EPUB', () => {
     // No title page: no author either; notes in.
     const options = { sceneNumbers: 'all', titlePage: 'none', notes: 'include' } as const;
     const chosen = bytesOf(await exporter(epub({ options })));
-    expect(chosen).toEqual(await expected(SCRIPT, options));
     const other = await entries(chosen);
+    // With no title page the book gets a random id, so a blind copy can't be tied to the named one
+    // (red/blue audit, 2026-11-03): everything else is as the engine writes it.
+    const blindId = /<dc:identifier id="uid">([^<]*)</.exec(
+      (await other.text('EPUB/package.opf')) as string,
+    )?.[1];
+    expect(blindId).toMatch(/^urn:uuid:[0-9a-f-]{36}$/);
+    expect(blindId).not.toBe(epubIdentifier({ project: 'project-1' }));
+    const again = await entries(bytesOf(await exporter(epub({ options }))));
+    expect(
+      /<dc:identifier id="uid">([^<]*)</.exec(
+        (await again.text('EPUB/package.opf')) as string,
+      )?.[1],
+    ).not.toBe(blindId);
     expect(await other.text('EPUB/package.opf')).not.toContain('dc:creator');
     expect(await other.text('EPUB/part-1.xhtml')).toContain('A note to self.');
   });

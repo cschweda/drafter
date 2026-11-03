@@ -17,8 +17,11 @@ export function wordsLabel(count: number): string {
   return count === 1 ? '1 word' : `${count.toLocaleString('en-US')} words`;
 }
 
-/** Why the Preview can't show a document: nested too deeply for the parser or the drawing, or anything else. */
-export type PreviewProblem = 'deep' | 'other';
+/**
+ * Why the Preview can't show a document: nested too deeply for the parser or the drawing, a
+ * paragraph with too many marks (`MarkedTooDensely`), or anything else.
+ */
+export type PreviewProblem = 'deep' | 'dense' | 'other';
 
 /**
  * What went wrong, from the error a parse or a drawing threw (or the worker's message for it):
@@ -26,13 +29,16 @@ export type PreviewProblem = 'deep' | 'other';
  * much recursion" in Firefox), and so is the parse's own refusal of one (`NestedTooDeeply`).
  */
 export function previewProblem(error: unknown): PreviewProblem {
-  if (error instanceof RangeError) return 'deep';
   const message = error instanceof Error ? error.message : String(error);
+  if (/too many marks/i.test(message)) return 'dense';
+  if (error instanceof RangeError) return 'deep';
   return /call stack|too much recursion|nested too deeply/i.test(message) ? 'deep' : 'other';
 }
 
 /** What the Preview says in place of a document it can't show. */
 export const PREVIEW_PROBLEMS: Readonly<Record<PreviewProblem, string>> = {
   deep: 'This document is nested too deeply to preview. Your text is safe in the Source.',
+  dense:
+    'A paragraph here has thousands of * or _ marks, too many to preview. Your text is safe in the Source.',
   other: 'The Preview couldn’t show this document. Your text is safe in the Source.',
 };

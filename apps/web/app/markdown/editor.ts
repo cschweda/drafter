@@ -8,7 +8,7 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view';
-import { MAX_NESTING } from './depth';
+import { isEmphasisMark, MAX_MARKS, MAX_NESTING } from './depth';
 
 // The Source pane's mode for a Markdown document: CodeMirror's general-purpose Markdown grammar
 // (a Lezer grammar, which is outside Plan 2's "no Lezer grammar" rule: that rule is about
@@ -125,5 +125,44 @@ const highlighting = ViewPlugin.fromClass(
  * No HTML tag completion: Fountain's completion is off, and this is not a replacement for it.
  */
 export function markdownMode(): Extension {
-  return [markdown({ base: commonmarkLanguage, completeHTMLTags: false }), highlighting];
+  return [
+    markdown({
+      base: commonmarkLanguage,
+      completeHTMLTags: false,
+      extensions: [plainWhenDense],
+    }),
+    highlighting,
+  ];
 }
+
+/** Whether a paragraph's text has more than MAX_MARKS emphasis marks, worked out once per paragraph. */
+const dense = new WeakMap<object, boolean>();
+function isDense(cx: { text: string }): boolean {
+  let known = dense.get(cx);
+  if (known === undefined) {
+    let marks = 0;
+    for (let i = 0; i < cx.text.length && marks <= MAX_MARKS; i++)
+      if (isEmphasisMark(cx.text.charCodeAt(i))) marks++;
+    known = marks > MAX_MARKS;
+    dense.set(cx, known);
+  }
+  return known;
+}
+
+/**
+ * In a paragraph with more than MAX_MARKS `*` and `_`, they are plain text: the grammar's emphasis
+ * work grows with their number squared, and 160 KB of `*_` held the page for 14 seconds, again on
+ * every reload (red/blue audit, 2026-11-03). Taking each mark as one plain character, before the
+ * grammar's own emphasis parser sees it, keeps that paragraph linear; every other paragraph is
+ * highlighted as before.
+ */
+const plainWhenDense = {
+  parseInline: [
+    {
+      name: 'PlainWhenDense',
+      before: 'Emphasis',
+      parse: (cx: { text: string; offset: number }, next: number, pos: number) =>
+        isEmphasisMark(next) && isDense(cx) ? pos + 1 : -1,
+    },
+  ],
+};

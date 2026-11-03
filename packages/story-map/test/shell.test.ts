@@ -219,6 +219,11 @@ describe('the page frame', () => {
     for (const bad of [
       'a@b@c',
       'x y@z',
+      // Another address, plain or encoded (red/blue audit, 2026-11-03).
+      'me@x.co,spy@evil.co',
+      'me@x.co;spy@evil.co',
+      'me@x.co%2Cspy%40evil.co',
+      'me@x.co%0D%0ABcc%3Aspy@evil.co',
       's@x?cc=y',
       's@x&a',
       '@x',

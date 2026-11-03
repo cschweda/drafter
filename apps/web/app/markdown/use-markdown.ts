@@ -73,13 +73,15 @@ function create(): MarkdownSession {
             if (client === made) client = undefined;
           }
           if (seq !== wanted) return;
-          // A text nested too deeply for the worker's stack is too deep for the page's too: parsing
-          // it again would only hold the page up. The Preview says why at once.
-          if (!failed && previewProblem(message) === 'deep') {
+          // A text nested too deeply for the worker's stack is too deep for the page's too, and one
+          // too thick with marks is refused there as here: parsing it again would only hold the
+          // page up. The Preview says why at once.
+          const refused = failed ? null : previewProblem(message);
+          if (refused === 'deep' || refused === 'dense') {
             wanted = null;
             tree.value = null;
             counted.value = wordsIn(view.state.doc.toString());
-            problem.value = 'deep';
+            problem.value = refused;
             updating.value = false;
             return;
           }
@@ -110,7 +112,7 @@ function create(): MarkdownSession {
         tree.value = null;
         problem.value = previewProblem(error);
         // A document too deep to parse still has words: its plain text's.
-        counted.value = problem.value === 'deep' ? wordsIn(text) : 0;
+        counted.value = problem.value === 'other' ? 0 : wordsIn(text);
       }
       updating.value = false;
     };

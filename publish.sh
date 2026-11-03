@@ -183,9 +183,12 @@ else
   problem "CHANGELOG.md has no '## [$VERSION]' section."
 fi
 
-# Only the tag's run of the desktop workflow counts, and only when it finished and passed.
-CI=$(gh run list --workflow "$WORKFLOW" --branch "$TAG" --limit 1 \
-  --json status,conclusion --jq '.[0] | "\(.status) \(.conclusion)"' 2>/dev/null || true)
+# Only the tag's run of the desktop workflow counts, and only when it finished and passed: a push
+# of the tag, at the tag's own commit, so a run by hand on a branch named like the tag never
+# passes for it (red/blue audit, 2026-11-03).
+CI=$(gh run list --workflow "$WORKFLOW" --branch "$TAG" --event push --limit 5 \
+  --json status,conclusion,headSha \
+  --jq "[.[] | select(.headSha == \"$TAG_COMMIT\")][0] | \"\\(.status) \\(.conclusion)\"" 2>/dev/null || true)
 case "$CI" in
   "completed success") info "The $WORKFLOW run for $TAG passed." ;;
   "" | "null null") problem "No $WORKFLOW run found for $TAG." ;;

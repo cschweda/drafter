@@ -70,6 +70,12 @@ const SWITCHES: Switch[] = [
     why: 'Use the light or dark appearance your device is set to.',
   },
   {
+    section: 'general',
+    key: 'hideTitle',
+    label: 'Hide the script’s title in the tab',
+    why: 'The browser tab and the window say only “Drafter”. Browsers keep a tab’s title in their history, and can sync open tabs to your account with them.',
+  },
+  {
     section: 'spelling',
     key: 'spellcheck',
     label: 'Spellcheck',

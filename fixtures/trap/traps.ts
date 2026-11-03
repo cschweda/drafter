@@ -967,6 +967,16 @@ const MARKDOWN_TRAPS: Trap[] = [
     limitMs: 5000,
   },
   {
+    id: 'md-emphasis-quadratic',
+    format: 'markdown',
+    name: 'emphasis-quadratic.md',
+    tests:
+      'A paragraph of 160,000 emphasis marks opens at once; the reader refuses it instead of stalling for minutes (red/blue audit, 2026-11-03).',
+    bytes: () => enc(`# Marks\n\n${'*_'.repeat(80_000)}\n`),
+    expect: { 'web-open': opensWith('# Marks'), package: warns('too many marks') },
+    limitMs: 5000,
+  },
+  {
     id: 'md-huge-table',
     format: 'markdown',
     name: 'huge-table.md',

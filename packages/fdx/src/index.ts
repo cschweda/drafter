@@ -1,4 +1,4 @@
-export { toFdx } from './export';
+export { type FdxOptions, toFdx } from './export';
 export { FdxError, type FdxImport, fromFdx, IGNORED, MAX_IGNORED } from './import';
 export { fromOsf, OSF_IGNORED, OsfError, osfToFdxTree } from './osf';
 export {

@@ -2,6 +2,14 @@
 
 Every audit and review of Drafter, newest first in each section. Each newer audit compares itself with the ones before it. A new audit goes at the top of its section, as a dated file in `docs/` (`<kind>-audit-YYYY-MM-DD.md`).
 
+## Red/blue team audits
+
+Adversarial audits: red-team attackers try to break one area each and prove it, and a blue team checks every finding and fixes what is real. The README's [Audit record](../README.md#audit-record) keeps the newest in full and every earlier audit in a line.
+
+| Date | Covers | Result | Record |
+|---|---|---|---|
+| 2026-11-03 | `main` at `d4598bfa` (v0.25.0 and the v0.25.1 work), in four areas: the web app and its formats, the desktop app, the supply chain and release, and privacy | **Pass with findings.** No attack ran code from a script, a file, or an export, got past the security policy, or reached the network from a page. Fixed with tests: Final Draft exports carrying notes (P1, High), a compromised desktop page opening an address with the script (D1, High), a Markdown file that froze the tab on every reload (W1, W2), form history, `drafter build` through a link, and more. Mitigated: the tab title (a setting), Plausible (the policy narrowed). Left for the maintainer: tag and branch rulesets, a release environment, and token scopes (S1). Compares itself with the security and privacy audits, which each attacker read first | [The audit](redblue-audit-2026-11-03.md) |
+
 ## Security audits
 
 | Date | Covers | Result | Record |

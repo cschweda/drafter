@@ -36,7 +36,10 @@ export function caddyfile(headersText) {
     ...lines,
     '\ttry_files {path} {path}.html {path}/index.html',
     '\tfile_server',
+    // A missing file is never cached as one of the build's immutable files: a 404 under /_nuxt/
+    // took that rule's year-long cache-control (red/blue audit, 2026-11-03).
     '\thandle_errors {',
+    '\t\theader Cache-Control "no-cache"',
     '\t\trewrite * /404.html',
     '\t\tfile_server',
     '\t}',

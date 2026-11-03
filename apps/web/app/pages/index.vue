@@ -98,8 +98,14 @@ const pageTitle = useScriptTitle();
 // A tab's title can't be coloured, so its icon says so too, with a red dot (fresh-look Task 6): both
 // icons, whichever the browser chose: the .ico with the .ico (a browser that picks it may not read an
 // SVG), the SVG with the SVG. The "• " stays, for a reader who can't tell the red.
+// With Hide the script’s title in the tab (Settings), the tab and the window say only “Drafter”:
+// a browser keeps a tab’s title in its history and syncs open tabs (red/blue audit, 2026-11-03).
+const { settings: appSettings } = useSettings();
 useHead({
-  title: computed(() => `${dirty.value ? '• ' : ''}${pageTitle.value} — Drafter`),
+  title: computed(
+    () =>
+      `${dirty.value ? '• ' : ''}${appSettings.value.hideTitle ? 'Drafter' : `${pageTitle.value} — Drafter`}`,
+  ),
   link: computed(() =>
     dirty.value
       ? [

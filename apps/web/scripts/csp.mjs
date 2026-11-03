@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PLAUSIBLE_SRC } from './plausible.mjs';
 
 // Script types a browser runs, and so the policy governs. JSON payloads
 // (`application/json`) aren't run and need no hash.
@@ -35,6 +36,12 @@ export function inlineHashes(html) {
 
 /** Plausible, which drafter.dev's own build loads to count visits (nuxt.config.ts). */
 export const PLAUSIBLE = 'https://plausible.io';
+/**
+ * The one address Plausible's script sends to. With PLAUSIBLE_SRC, the only two Plausible
+ * addresses the policy names: not the whole of plausible.io, so a page can load that one script
+ * and send only to its event address (red/blue audit, 2026-11-03).
+ */
+export const PLAUSIBLE_EVENTS = `${PLAUSIBLE}/api/event`;
 
 /**
  * @param {string[]} scriptHashes
@@ -42,14 +49,13 @@ export const PLAUSIBLE = 'https://plausible.io';
  * @returns {string}
  */
 export function contentSecurityPolicy(scriptHashes, { plausible = false } = {}) {
-  const extra = plausible ? [PLAUSIBLE] : [];
   return [
     "default-src 'self'",
-    ["script-src 'self'", ...extra, ...scriptHashes].join(' '),
+    ["script-src 'self'", ...(plausible ? [PLAUSIBLE_SRC] : []), ...scriptHashes].join(' '),
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    ["connect-src 'self'", ...extra].join(' '),
+    ["connect-src 'self'", ...(plausible ? [PLAUSIBLE_EVENTS] : [])].join(' '),
     "worker-src 'self'",
     "manifest-src 'self'",
     "object-src 'none'",

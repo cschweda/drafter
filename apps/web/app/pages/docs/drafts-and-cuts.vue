@@ -188,6 +188,13 @@ useDocsHead({
       <strong>Save As</strong> to a new name or place writes the whole set beside the new file, and
       leaves the old files where they are.
     </p>
+    <p>
+      <strong>In a shared folder, cuts are shared too.</strong> Every cut is kept, including text you
+      pasted by mistake and then deleted, and there is no way yet to delete a cut. If your script is
+      in a Dropbox, Google Drive, or OneDrive folder that someone else can see, they can read the
+      cuts file and the drafts folder beside it. Keep a script you share that way in a folder of
+      its own, or move the cuts file out before you share it.
+    </p>
 
     <h3 id="desktop">In the desktop app</h3>
     <p>
