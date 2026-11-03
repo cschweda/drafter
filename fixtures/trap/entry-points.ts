@@ -9,7 +9,8 @@ export type Entry =
   | 'package'
   | 'desktop-modules'
   | 'beside-read'
-  | 'mcp';
+  | 'mcp'
+  | 'classic';
 
 export interface EntryPoint {
   id: Entry;
@@ -72,6 +73,12 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
     code: 'packages/mcp/src (paths.ts, load.ts, inside.ts, tools/) → @drafter/archive (notAScript, reopenFormatOf, embeddedSource), @drafter/archive/node (readCapped, strictText), and each format’s reader',
     harness:
       'fixtures/trap/harness.test.ts (in the trap worker, through the SDK’s in-memory transport)',
+  },
+  {
+    id: 'classic',
+    what: 'A hostile script open in Classic Mode: the left pane drawn, the cursor walked through every line, and a mode switched. Every trap that opens as Fountain text goes through it, after the web app’s Open has made it text.',
+    code: 'apps/web/app/storage/open.ts (`openFile`) → packages/cm-fountain/src/classic (`classic()`: its hidden marks, `classicCaret`, the metadata block kept, the tidying of a move)',
+    harness: 'apps/web/test/trap-classic.test.ts (jsdom, a real `EditorView`)',
   },
 ];
 

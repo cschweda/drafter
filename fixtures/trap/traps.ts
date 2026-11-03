@@ -65,6 +65,8 @@ export interface Trap {
   limitMs?: number;
   /** Generated at test time because it is large (over 1 MB). */
   large?: boolean;
+  /** What it opens as, where its name doesn't say: a Drafter export whose block is Markdown. */
+  opensAs?: 'fountain' | 'markdown';
   /**
    * The memory it may take at one entry point, in MB, when a parser's own tree makes the default
    * (a few copies of its bytes) too small; see docs/DEFERRED.md for the Markdown parser's.
@@ -731,6 +733,154 @@ const FOUNTAIN_TRAPS: Trap[] = [
     expect: { 'web-open': opens(SCRIPT) },
   },
 ];
+
+// For Classic Mode (design §15.2): scripts shaped against its hidden marks, its caret, and the
+// metadata block it keeps. Each opens exactly, and the `classic` harness walks it.
+const CLASSIC_META = '/* drafter\n{"v":1,"template":"stage-play-standard"}\n*/';
+const ONLY_MARKS = `${['@@@@', '!!!!', '>>><<<', '~~~~', '....', '####', '====', '= =', '><', '**', '__', '^', '\\\\', '[[]]', '/**/', '()', '#1#'].join('\n\n')}\n`;
+const UNCLOSED_FIRST = `/* never closed, from line 1\n\nA lever waits.\n\nJUNE\nIs it on?\n\n>CUT TO:\n`;
+const UNCLOSED_NOTE = `INT. SIGNAL BOX - NIGHT\n\nA lever [[waits, and the note never closes.\n\nDALE\nIt's late.\n\n>CUT TO:\n`;
+const BONEYARD_IN_NOTE = `INT. SIGNAL BOX - NIGHT\n\nA lever waits. [[A note /* with a boneyard */ inside it.]]\n\n@JUNE\nHello. [[/* and here */]]\n`;
+const NOTE_ACROSS = `INT. SIGNAL BOX - NIGHT\n\nA lever [[a note\nthat runs\nacross three lines]] waits.\n\nJUNE\n[[one\nmore]]\nHello.\n`;
+const META_DAMAGED = `INT. SIGNAL BOX - NIGHT\n\nA lever waits.\n\n/* drafter\n{"v":1,"template":\n*/\n`;
+const META_NOT_LAST = `INT. SIGNAL BOX - NIGHT\n\nA lever waits.\n\n${CLASSIC_META}\n\nJUNE\nAfter the block.\n`;
+const META_TWICE = `# ACT ONE\n\n## THE BOX\n\nA lever waits.\n\n${CLASSIC_META}\n\n${CLASSIC_META}\n`;
+const CLASSIC_LONG_LINE = `INT. SIGNAL BOX - NIGHT\n\n!${'Lever. '.repeat(14_285)}\n\n@JUNE\n${'go '.repeat(33_333)}\n`;
+const SPACES_HEADING = `INT.${' '.repeat(50_000)}SIGNAL BOX - NIGHT\n\n.${' '.repeat(50_000)}\n\nA lever waits.\n`;
+const FORCED_MARKS = `${'!A\n\n'.repeat(50_000)}${'@B\nhi.\n\n'.repeat(50_000)}`;
+const BIDI_EDGE = `!${BIDI}A lever waits.\n\n${BIDI}!A lever waits.\n\n@${BIDI}JUNE\nHello.\n\n>\u202dTHE END\u202c<\n\n**${BIDI}bold**\u202c and *\u2066it\u2069*\n\n~\u200fLa la\n`;
+const COMBINING_EDGE = `!\u0301A lever waits.\n\n@\u0308JUNE\nHello.\n\n~\u0301La la\n\n>THE END<\u0301\n\n*\u0301it*\u0308 and **b\u0301**\n\n.\u0301FLASHBACK\n`;
+const LIST_BREAKER_NAME = '<IMG SRC=X ONERROR=THROW>';
+const LIST_BREAKER = `INT. ${LIST_BREAKER_NAME} - NIGHT\n\nA lever waits.\n\n${LIST_BREAKER_NAME}\nHello.\n\n@<img src=x onerror=window.__trapped=1>\nAgain.\n\nEXT. ${LIST_BREAKER_NAME} - DAY\n\nRain.\n`;
+
+/** The size of the 5 MB script: a kilobyte under the cap. */
+const CLASSIC_5MB_SIZE = SCRIPT_CAP - KiB;
+
+/** A script of `CLASSIC_5MB_SIZE` characters (all ASCII), every element and mark in it, made when asked. */
+function classic5mb(): string {
+  // A section, a heading, and a synopsis every hundred parts: a long play's worth of acts and
+  // scenes, not ten thousand of them.
+  const head = (n: number) =>
+    n % 100 === 1 ? `# Part ${n}\n\nINT. SIGNAL BOX ${n} - NIGHT\n\n= She waits.\n\n` : '';
+  const scene = (n: number) =>
+    `${head(n)}!BANG. A lever waits. [[a note]] *it* **is** _late_.\n\n@McGRAW\n(softly)\nIs it on?\n~La la la.\n\nJUNE ^\nIt's on.\n\n>THE END<\n\n/* cut ${n} */\n\n>FADE OUT.\n\n===\n\n`;
+  const parts: string[] = [];
+  let length = 0;
+  for (let n = 1; ; n++) {
+    const one = scene(n);
+    if (length + one.length > CLASSIC_5MB_SIZE - 2) break;
+    parts.push(one);
+    length += one.length;
+  }
+  // The last line of action fills it to the size, and ends the file.
+  parts.push(`${'w'.repeat(CLASSIC_5MB_SIZE - length - 1)}\n`);
+  return parts.join('');
+}
+
+const classicTrap = (id: string, tests: string, body: string, more: Partial<Trap> = {}): Trap => ({
+  id: `classic-${id}`,
+  format: 'fountain',
+  name: `classic-${id}.fountain`,
+  tests,
+  bytes: () => enc(body),
+  expect: { 'web-open': opens(body) },
+  ...more,
+});
+
+const CLASSIC_TRAPS: Trap[] = [
+  classicTrap(
+    'only-marks',
+    'A script of nothing but marks (`@@@@`, `!!!!`, `>>><<<`, and every other) opens, and Classic Mode hides only what pairs.',
+    ONLY_MARKS,
+  ),
+  classicTrap(
+    'unclosed-boneyard-line-1',
+    'A `/*` on line 1 that never closes: Classic Mode shows it, so the rest of the script isn’t cut for no reason.',
+    UNCLOSED_FIRST,
+  ),
+  classicTrap(
+    'unclosed-note',
+    'A `[[` that never closes, mid-script: its brackets stay seen, and the caret walks past it.',
+    UNCLOSED_NOTE,
+  ),
+  classicTrap(
+    'boneyard-in-note',
+    'A boneyard inside a note, in action and in a speech: the delimiters hidden pair as the parser reads them.',
+    BONEYARD_IN_NOTE,
+  ),
+  classicTrap(
+    'note-across-lines',
+    'A note across three lines, and one inside a speech: hidden at each end, its lines walked.',
+    NOTE_ACROSS,
+  ),
+  classicTrap(
+    'meta-damaged',
+    'A damaged metadata block is a boneyard, shown and not protected, and walking it writes nothing.',
+    META_DAMAGED,
+  ),
+  classicTrap(
+    'meta-not-last',
+    'A metadata block with text after it isn’t the script’s block, and Classic Mode leaves both alone.',
+    META_NOT_LAST,
+  ),
+  classicTrap(
+    'meta-twice',
+    'Two metadata blocks at the end: the last is protected, the other shown, and neither is written.',
+    META_TWICE,
+  ),
+  classicTrap(
+    'long-line',
+    'A 100,000-character line of forced action and a 100,000-character speech: drawn and walked in time.',
+    CLASSIC_LONG_LINE,
+    { inert: true },
+  ),
+  {
+    id: 'classic-5mb',
+    format: 'fountain',
+    name: 'classic-5mb.fountain',
+    tests:
+      'A script of nearly 5 MB with every element and mark: the left pane drawn and every line walked in time.',
+    bytes: () => enc(classic5mb()),
+    expect: { 'web-open': opens(undefined, { chars: CLASSIC_5MB_SIZE }) },
+    large: true,
+    limitMs: 20_000,
+    memoryMB: 1024,
+  },
+  classicTrap(
+    'spaces-heading',
+    'A scene heading of 50,000 spaces, and a forced one of nothing else: walked without stalling.',
+    SPACES_HEADING,
+  ),
+  classicTrap(
+    '100k-marks',
+    'A hundred thousand forced marks, a line each: each hidden, each line walked, in time.',
+    FORCED_MARKS,
+    // A quarter of a million lines walked one by one: the time of a script at the cap, and the
+    // memory of a quarter of a million blocks parsed.
+    { limitMs: 10_000, memoryMB: 384 },
+  ),
+  classicTrap(
+    'bidi-edge',
+    'Bidirectional overrides and isolates on a hidden mark’s edge stay as they are, the caret beside them.',
+    BIDI_EDGE,
+    { inert: true },
+  ),
+  classicTrap(
+    'combining-edge',
+    'Combining marks on a hidden mark’s edge stay with their letters, and the caret never splits them.',
+    COMBINING_EDGE,
+    { inert: true },
+  ),
+  classicTrap(
+    'list-breaker',
+    'A name and a place made to break a list, `<img src=x onerror=…>`, are text in the script and in the autofill list.',
+    LIST_BREAKER,
+    { inert: true },
+  ),
+];
+
+/** The name the list-breaker trap puts in a cue and a place, which the autofill list must show as text. */
+export const LIST_BREAKER_LABEL = LIST_BREAKER_NAME;
 
 const deepList = (depth: number) =>
   Array.from({ length: depth }, (_, i) => `${'  '.repeat(i)}- level ${i}`).join('\n');
@@ -1701,6 +1851,7 @@ const HTML_TRAPS: Trap[] = [
     tests: 'A block of kind markdown reopens as a Markdown document.',
     bytes: () => enc(page(block(NOTES, 'markdown'))),
     expect: { 'web-open': opens(NOTES) },
+    opensAs: 'markdown',
   },
   {
     id: 'html-no-source',
@@ -2019,6 +2170,7 @@ const EPUB_TRAPS: Trap[] = [
     tests: 'An EPUB carrying drafter-source.md reopens as Markdown.',
     bytes: epub([source('markdown', NOTES)]),
     expect: { 'web-open': opens(NOTES) },
+    opensAs: 'markdown',
   },
   {
     id: 'epub-no-source',
@@ -2609,6 +2761,7 @@ export const MCP_FORMATS: ReadonlySet<Format> = new Set([
 export const TRAPS: readonly Trap[] = [
   ...TEXT_KINDS.flatMap(textTraps),
   ...FOUNTAIN_TRAPS,
+  ...CLASSIC_TRAPS,
   ...MARKDOWN_TRAPS,
   ...FDX_TRAPS,
   ...HIGHLAND_TRAPS,
@@ -2638,8 +2791,17 @@ function withDefaults(trap: Trap): Trap {
       if (outcome) expect.package = outcome;
     }
     if (MCP_FORMATS.has(trap.format)) expect.mcp ??= mcpOutcome(web);
+    if (web.kind !== 'refused' && opensAs(trap) === 'fountain') expect.classic ??= opens();
   }
   return { ...trap, expect };
+}
+
+/** What a trap that opens opens as: Markdown by its name or its block's kind, else Fountain. */
+function opensAs(trap: Trap): 'fountain' | 'markdown' {
+  if (trap.opensAs) return trap.opensAs;
+  return trap.format === 'markdown' || /\.(?:md|markdown)$/i.test(trap.name)
+    ? 'markdown'
+    : 'fountain';
 }
 
 /**
