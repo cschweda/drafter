@@ -28,6 +28,7 @@ import {
   type ClassicKind,
   classicEdit,
   classicLine,
+  clearOf,
   lineKindAt,
   mapSpan,
   parsedKindAt,
@@ -397,15 +398,21 @@ function withItsLine(made: Span, line: Line): Span {
 
 /**
  * Takes away the empty line or `()` this stay made, in the transaction that leaves it (§4.4). It
- * stands back for what isn't the writer's own move: a change the app makes, a replace-all, undo and
- * redo. An empty line at the end of the file is no trouble to anyone, so it stays.
+ * stands back for what isn't the writer's own move: a replace-all, undo and redo, and a change the
+ * app makes on the line. An app change somewhere else that takes the cursor away (a cut put back,
+ * a spelling fix, an Outline move) leaves the line as surely as a click, so it tidies too. An empty
+ * line at the end of the file is no trouble to anyone, so it stays.
  */
 export const tidyLeft: Extension = EditorState.transactionFilter.of((tr) => {
   const held = tr.startState.field(classicLine, false);
-  if (!held?.made || tr.annotation(appChange)) return tr;
-  const event = tr.annotation(Transaction.userEvent);
-  // A bare selection is a move (`goto`, `reveal`); a bare change is the app's.
-  if (event ? /^(?:input\.replace|undo|redo)/.test(event) : tr.docChanged) return tr;
+  if (!held?.made) return tr;
+  if (tr.annotation(appChange)) {
+    if (!clearOf(held, tr)) return tr;
+  } else {
+    const event = tr.annotation(Transaction.userEvent);
+    // A bare selection is a move (`goto`, `reveal`); a bare change is the app's.
+    if (event ? /^(?:input\.replace|undo|redo)/.test(event) : tr.docChanged) return tr;
+  }
   const from = tr.changes.mapPos(held.from, -1);
   if (tr.newDoc.lineAt(tr.newSelection.main.head).from === tr.newDoc.lineAt(from).from) return tr;
   const made = mapSpan(held.made, tr.changes);

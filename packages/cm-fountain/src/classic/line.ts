@@ -364,9 +364,10 @@ function staysOnLine(tr: Transaction): boolean {
 /**
  * Whether a change leaves the stored line alone: none of it touches the line, or what this stay
  * made or marked around it. A template chip, a fix, or a cut put back somewhere else doesn't change
- * what the writer is typing, and what they made must still be tidied when they leave.
+ * what the writer is typing, and what they made must still be tidied when they leave (`tidyLeft`
+ * uses the same rule).
  */
-function clearOf(line: StoredLine, tr: Transaction): boolean {
+export function clearOf(line: StoredLine, tr: Transaction): boolean {
   const spans = [line.made, line.madeMark, ...line.added].filter((span) => span != null);
   const from = Math.min(line.from, ...spans.map((span) => span.from));
   const to = Math.max(tr.startState.doc.lineAt(line.from).to, ...spans.map((span) => span.to));

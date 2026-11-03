@@ -1,14 +1,22 @@
 // @vitest-environment jsdom
 import { history, undo, undoDepth } from '@codemirror/commands';
-import { EditorState, type Transaction } from '@codemirror/state';
+import { EditorSelection, EditorState, Prec, type Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import {
+  classic,
+  classicEnter,
+  elementStructure,
+  elementTemplate,
+  fountain,
   parsedDoc,
   type SpellMark,
+  savedText,
   setSpellMarks,
   spellMarks,
   spellMarksOf,
+  structureOf,
 } from '@drafter/cm-fountain';
+import { builtins, type Template } from '@drafter/templates';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { shallowRef } from 'vue';
 
@@ -307,5 +315,36 @@ describe('the spelling actions', () => {
     const { view: clean } = viewOf(text, []);
     expect(await stepMisspelling(clean, 1)).toBe(false);
     expect(clean.state.selection.main.head).toBe(0);
+  });
+});
+
+describe('a spelling fix in Classic Mode', () => {
+  test('a fix elsewhere takes the cursor off a line Enter just made, and that line goes', () => {
+    const text = 'INT. HALL - DAY\n\nThe phnoe rings.\n\nJUNE\nOne.\nTwo.\n';
+    const template = builtins['us-screenplay'] as Template;
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: text,
+        selection: EditorSelection.cursor(text.indexOf('One.') + 4),
+        extensions: [
+          fountain(),
+          elementStructure.of(() => structureOf(template)),
+          elementTemplate.of(() => template),
+          Prec.high(classic()),
+          spellMarks(),
+          history(),
+        ],
+      }),
+    });
+    document.body.append(view.dom);
+    views.push(view);
+    const marks = marksOf(text, 'phnoe');
+    view.dispatch({ effects: setSpellMarks.of(marks) });
+    expect(classicEnter(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(text.replace('One.\n', 'One.\n\n'));
+    expect(replaceWord(view, marks[0] as SpellMark, 'phone')).toBe(true);
+    const fixed = text.replace('phnoe', 'phone');
+    expect(view.state.doc.toString()).toBe(fixed);
+    expect(savedText(view.state).toString()).toBe(fixed);
   });
 });

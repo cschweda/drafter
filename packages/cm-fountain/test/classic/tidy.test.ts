@@ -78,16 +78,56 @@ describe('§4.4, an empty line left behind', () => {
     expect(click(state, 0).sliceDoc()).toBe('She waits.\n\n');
   });
 
-  test('an app change near a made line tidies nothing', () => {
+  test('an app change elsewhere that moves the cursor tidies in the same transaction', () => {
+    // Put back a cut, a spelling fix, or an Outline move: the change and the cursor's new place.
     const state = keys(classicEditor('She waits.|\n\nHe leaves.'), 'Enter');
-    const after = state.update({
+    const tr = state.update({
       changes: { from: 0, insert: 'X' },
       selection: { anchor: 0 },
       annotations: appChange.of(true),
       userEvent: 'input',
+    });
+    expect(tr.state.sliceDoc()).toBe('XShe waits.\n\nHe leaves.');
+    expect(tr.state.selection.main.head).toBe(0);
+  });
+
+  test.each([
+    ['Enter', 'JUNE\nOne.|\nTwo.\n\nShe waits.', 'JUNE\nOne.\nTwo.\n\nShe waits.\n\nMore.'],
+    ['Tab', 'JUNE\nOne.|\n\nShe waits.', 'JUNE\nOne.\n\nShe waits.\n\nMore.'],
+  ])('a cursor-moving app change elsewhere tidies what %s made', (key, start, tidy) => {
+    const made = keys(classicEditor(start), key);
+    const end = made.doc.length;
+    const after = made.update({
+      changes: { from: end, insert: '\n\nMore.' },
+      selection: { anchor: end + 7 },
+      annotations: appChange.of(true),
+      userEvent: 'input',
     }).state;
-    expect(after.sliceDoc()).toBe('XShe waits.\n\n\n\nHe leaves.');
-    expect(click(after, 0).sliceDoc()).toBe('XShe waits.\n\n\n\nHe leaves.');
+    expect(after.sliceDoc()).toBe(tidy);
+    expect(savedText(after).toString()).toBe(tidy);
+    expect(after.selection.main.head).toBe(tidy.length);
+  });
+
+  test('a cursor-moving app change that touches the made line tidies nothing', () => {
+    const made = keys(classicEditor('JUNE\nOne.|\n\nShe waits.'), 'Tab');
+    const at = made.sliceDoc().indexOf('()');
+    const after = made.update({
+      changes: { from: at + 1, insert: 'x' },
+      selection: { anchor: 0 },
+      annotations: appChange.of(true),
+      userEvent: 'input',
+    }).state;
+    expect(after.sliceDoc()).toBe('JUNE\nOne.\n(x)\n\nShe waits.');
+    const emptied = keys(classicEditor('JUNE\nOne.|\nTwo.'), 'Enter');
+    const line = emptied.doc.lineAt(emptied.selection.main.head);
+    const next = emptied.update({
+      // The break above the made line, written again as it was: a change that touches it.
+      changes: { from: line.from - 1, to: line.from, insert: '\n' },
+      selection: { anchor: 0 },
+      annotations: appChange.of(true),
+      userEvent: 'input',
+    }).state;
+    expect(next.sliceDoc()).toBe('JUNE\nOne.\n\nTwo.');
   });
 
   // A template chip, Fix from Problems, Put back a cut, a module's edit: an app change somewhere
