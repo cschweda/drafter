@@ -2,6 +2,7 @@ import { isolateHistory } from '@codemirror/commands';
 import { setMeta } from '@drafter/fountain';
 import { type ComputedRef, computed } from 'vue';
 import type { DocumentKind } from '../markdown/kind';
+import { withNovel } from '../novel/kind';
 import { useScript } from '../storage/script';
 import { askToUseMarkdown } from './markdown-question';
 import type { SampleKind } from './sample-kinds';
@@ -53,7 +54,7 @@ export interface TemplateChoice {
 }
 
 export function useTemplate(): TemplateChoice {
-  const { view, doc, locked, kind } = useEditor();
+  const { view, doc, locked, kind, novel } = useEditor();
   const script = useScript();
   const id = computed(() => templateIdOf(doc.value));
   // `setMeta` writes nothing after an unclosed boneyard: its own `*/` would close the writer's `/*`.
@@ -89,7 +90,10 @@ export function useTemplate(): TemplateChoice {
   }
 
   function isCurrent(type: DocumentType): boolean {
-    if (type.kind === 'markdown') return kind.value === 'markdown';
+    if (type.kind === 'markdown') {
+      // A novel is a Markdown document that names its template; plain Markdown is one that doesn't.
+      return kind.value === 'markdown' && novel.value === (type.id === 'novel');
+    }
     return (
       kind.value === 'fountain' &&
       type.id === id.value &&
@@ -102,10 +106,45 @@ export function useTemplate(): TemplateChoice {
    * the screenplay sample, a template on the Markdown sample) opens that type's own sample instead.
    */
   function sampleFor(type: DocumentType): SampleKind | null {
-    if (!script.project.value?.sample) return null;
-    if ((type.kind === 'markdown') === (kind.value === 'markdown')) return null;
-    if (type.kind === 'markdown') return 'markdown';
-    return type.id === 'stage-play-standard' ? 'stage-play' : 'screenplay';
+    const sample = script.project.value?.sample;
+    if (!sample) return null;
+    // Between two templates of a script the sample takes the block, as it always has.
+    if (type.kind === 'fountain' && kind.value === 'fountain') return null;
+    const wanted: SampleKind =
+      type.kind === 'markdown'
+        ? type.id === 'novel'
+          ? 'novel'
+          : 'markdown'
+        : type.id === 'stage-play-standard'
+          ? 'stage-play'
+          : 'screenplay';
+    return wanted === sample ? null : wanted;
+  }
+
+  /**
+   * Makes the Markdown document a novel, or plain Markdown again: one undoable change to the
+   * metadata comment, which keeps every other fact in it (`template` is the one key this writes).
+   * Plain Markdown with nothing else in the comment drops the comment.
+   */
+  function writeMarkdownTemplate(novelOn: boolean) {
+    if (view.state.readOnly || novel.value === novelOn) return;
+    const text = view.state.doc.toString();
+    const next = withNovel(text, novelOn);
+    let from = 0;
+    while (from < text.length && from < next.length && text[from] === next[from]) from++;
+    let end = text.length;
+    let nextEnd = next.length;
+    while (end > from && nextEnd > from && text[end - 1] === next[nextEnd - 1]) {
+      end--;
+      nextEnd--;
+    }
+    if (from === end && nextEnd === from) return;
+    view.dispatch({
+      changes: { from, to: end, insert: next.slice(from, nextEnd) },
+      userEvent: 'input',
+      annotations: [isolateHistory.of('full'), appChange.of(true)],
+    });
+    script.forgetBlank();
   }
 
   function canChooseType(type: DocumentType): boolean {
@@ -125,13 +164,21 @@ export function useTemplate(): TemplateChoice {
       return;
     }
     if (type.kind === 'markdown') {
-      if (kind.value === 'markdown') return;
+      if (kind.value === 'markdown') {
+        // Already a Markdown document: a novel, or plain, is a change of its comment.
+        writeMarkdownTemplate(type.id === 'novel');
+        return;
+      }
       // The app's keys still work under the question, so another script may be open by the time
       // it is answered: the answer is about the one it was asked about, or nothing changes.
       const asked = script.project.value?.id;
       if (!(await askToUseMarkdown()) || !canChooseType(type)) return;
       if (script.project.value?.id !== asked) return;
       await script.setKind('markdown');
+      // Nothing changed (a switch began, or the tab became read-only): no comment is written.
+      if (type.id === 'novel' && (kind.value as DocumentKind) === 'markdown') {
+        writeMarkdownTemplate(true);
+      }
       return;
     }
     if (kind.value === 'markdown') {

@@ -1,7 +1,7 @@
 // What the browser tests' storage state puts in Drafter's database before each test (see
 // playwright.config.ts). test/e2e-seed.test.ts checks it against app/storage/db.ts.
 
-export const sampleSeenRows = ['screenplay', 'stage-play', 'markdown'].map((kind) => ({
+export const sampleSeenRows = ['screenplay', 'stage-play', 'novel', 'markdown'].map((kind) => ({
   key: `sample-seen:${kind}`,
   value: true,
 }));

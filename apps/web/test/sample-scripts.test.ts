@@ -8,6 +8,7 @@ import { SAMPLES } from '../app/editor/sample-kinds';
 import { SAMPLE_SCRIPTS } from '../app/editor/sample-scripts';
 import { templateIdOf } from '../app/editor/template';
 import { markdownTitle } from '../app/markdown/title';
+import { isNovel } from '../app/novel/kind';
 
 // Help → Sample scripts: one tiny, original sample for each built-in template and for Markdown,
 // each under a page: the screenplay with every Fountain element, the stage play with its acts,
@@ -19,6 +20,7 @@ const file = (name: string) =>
 const screenplay = file('screenplay.fountain');
 const stagePlay = file('stage-play.fountain');
 const markdown = file('markdown.md');
+const novel = file('novel.md');
 
 function check(source: string, templateId: string) {
   const doc = parse(source);
@@ -36,7 +38,7 @@ function check(source: string, templateId: string) {
 describe('the sample scripts', () => {
   test('are one for each sample kind, in the menus’ order, with the files’ text', () => {
     expect(SAMPLE_SCRIPTS.map((s) => s.kind)).toEqual(SAMPLES.map((s) => s.kind));
-    expect(SAMPLE_SCRIPTS.map((s) => s.text)).toEqual([screenplay, stagePlay, markdown]);
+    expect(SAMPLE_SCRIPTS.map((s) => s.text)).toEqual([screenplay, stagePlay, novel, markdown]);
   });
 
   test('the screenplay has no Problems, fits one page, and shows each element once', () => {
@@ -79,6 +81,14 @@ describe('the sample scripts', () => {
     }
     expect(kinds).not.toContain('scene_heading');
     expect(stagePlay).toMatch(/^Title: Sample: Stage play$/m);
+  });
+
+  test('the novel is a novel, with chapters, a scene break, and fewer than 40 lines', () => {
+    expect(isNovel(novel)).toBe(true);
+    expect(novel).toMatch(/^# Chapter /m);
+    expect(novel).toMatch(/^## /m);
+    expect(novel).toMatch(/^\* \* \*$/m);
+    expect(novel.split('\n').length).toBeLessThan(40);
   });
 
   test('the Markdown document has headings, emphasis, a list, a quote, and a link', () => {

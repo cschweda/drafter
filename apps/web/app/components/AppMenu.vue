@@ -5,6 +5,7 @@ import { useEditor } from '~/editor/session';
 import { STARTER_KINDS } from '~/editor/starter-kinds';
 import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
 import { useTemplateMenu } from '~/editor/template-menu';
+import { isNovel } from '~/novel/kind';
 import { EXPORTS } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
 import { kindOf, type Project } from '~/storage/projects';
@@ -57,7 +58,7 @@ const recentItems = computed<DropdownMenuItem[]>(() => {
     const current = script.project.value?.id === p.id;
     return {
       label: current ? `${p.title} (open now)` : p.title,
-      description: typeNameOf(kindOf(p), p.templateId),
+      description: typeNameOf(kindOf(p), p.templateId, false, isNovel(p.source)),
       icon: current ? 'i-lucide-check' : 'i-lucide-file',
       disabled: !canSwitch.value,
       onSelect: () => {

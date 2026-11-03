@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **Novel**, a choice beside Screenplay and Stage play: **New novel** in the Scripts menu and the palette, a **Novel** sample under Samples and in Help, and **Novel** in the document chooser (the chip, the Drafter menu, and the palette's Document commands). A novel is a plain Markdown document that names `"template":"novel"` in its trailing comment; choosing **Markdown (plain text)** removes only that and keeps every other fact.
 - For contributors: `@drafter/novel` keeps a status, a synopsis, and a word target for each passage (and the book) in the metadata comment beside the other keys, reads hostile JSON without throwing, and carries each passage's facts through a rename, a move, or a deletion by following its heading.
 - For contributors: `@drafter/novel` moves a part, chapter, or section (before, after, or into another) byte for byte, one empty line at each seam, the metadata comment untouched, with up and down steps for the keyboard.
 - For contributors: `@drafter/novel` reads a novel's parts, chapters, and sections (headings, setext headings, scene breaks) with their words and spans, in one linear pass, ignoring fenced code and the metadata comment; ids are unique across the book, and an opening `##` reads as a chapter.

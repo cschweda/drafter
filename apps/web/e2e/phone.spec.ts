@@ -134,6 +134,7 @@ test.describe('the toolbar at 320px', () => {
     await expect(page.getByRole('menu').getByRole('menuitem')).toHaveText([
       'New screenplay',
       'New stage play',
+      'New novel',
       'New Markdown document',
       'Open a file…',
     ]);
@@ -173,7 +174,7 @@ test.describe('the template choice in the app menu', () => {
     await openAppMenu(page);
     await expect(appMenu(page).getByText('Template: Screenplay', { exact: true })).toBeVisible();
     const types = appMenu(page).getByRole('menuitemcheckbox');
-    await expect(types).toHaveText(['Screenplay', 'Stage play', 'Markdown (plain text)']);
+    await expect(types).toHaveText(['Screenplay', 'Stage play', 'Novel', 'Markdown (plain text)']);
     await expect(typeItem(page, 'Screenplay')).toHaveAttribute('aria-checked', 'true');
     await expect(typeItem(page, 'Stage play')).toHaveAttribute('aria-checked', 'false');
     await expect(typeItem(page, /^Markdown/)).toHaveAttribute('aria-checked', 'false');

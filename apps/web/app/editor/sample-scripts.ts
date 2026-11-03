@@ -1,5 +1,6 @@
 import { SAMPLES, type SampleKind } from './sample-kinds';
 import markdown from './sample-scripts/markdown.md?raw';
+import novel from './sample-scripts/novel.md?raw';
 import screenplay from './sample-scripts/screenplay.fountain?raw';
 import stagePlay from './sample-scripts/stage-play.fountain?raw';
 
@@ -19,6 +20,7 @@ export interface SampleScript {
 const TEXT: Record<SampleKind, string> = {
   screenplay,
   'stage-play': stagePlay,
+  novel,
   markdown,
 };
 

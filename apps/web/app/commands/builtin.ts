@@ -359,13 +359,15 @@ export function registerBuiltinCommands(): void {
         },
       ]),
     ),
-    // Markdown is a kind of document, not a template: it is listed in a Fountain script (after asking, because
-    // Fountain's formatting stops applying and undo doesn't bring it back), and not in a Markdown document.
+    // Markdown and Novel are kinds of document, not templates. Markdown is listed in a Fountain script (after
+    // asking, because Fountain's formatting stops applying and undo doesn't bring it back) and in a novel (which
+    // only drops its template from the comment); Novel in a Fountain script (same question) and in plain Markdown.
+    // Neither is listed where it already is.
     ...Object.fromEntries(
       DOCUMENT_TYPES.filter((type) => type.kind === 'markdown').map((type): [string, Behavior] => [
-        'document-markdown',
+        `document-${type.id}`,
         {
-          enabled: () => isFountain() && template.canChooseType(type),
+          enabled: () => template.canChooseType(type) && !template.isCurrent(type),
           run: onEditor(() => void template.chooseType(type)),
         },
       ]),
@@ -485,7 +487,7 @@ export function registerBuiltinCommands(): void {
           enabled: canStart,
           run: quietly(async () => {
             const made = await script.addScript(sample.text, {
-              kind: sample.kind === 'markdown' ? 'markdown' : 'fountain',
+              kind: sample.kind === 'markdown' || sample.kind === 'novel' ? 'markdown' : 'fountain',
               baseline: sample.text,
               sampleScript: sample.kind,
             });

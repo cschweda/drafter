@@ -15,6 +15,7 @@ import { usePanes } from '~/composables/usePanes';
 import { useSettings } from '~/settings/settings';
 import { WIDE_QUERY } from '~/utils/panes';
 import type { DocumentKind } from '../markdown/kind';
+import { isNovel } from '../novel/kind';
 import { applyEditorSettings, writingModeSwitch } from './apply-settings';
 import type { ElementMove } from './element-announcer';
 import { sayElement } from './element-notice';
@@ -50,6 +51,8 @@ export interface EditorSession {
   readonly template: Readonly<ShallowRef<Template>>;
   /** What the document is: Fountain, or plain Markdown (no pages, elements, or checks). */
   readonly kind: Readonly<ShallowRef<DocumentKind>>;
+  /** Whether the open document is a novel: Markdown whose metadata comment names the novel template. */
+  readonly novel: Readonly<ShallowRef<boolean>>;
   /** Counts the scripts loaded into the editor (`load`), so a reader of the text can tell a switch of script from an edit. */
   readonly loaded: Readonly<ShallowRef<number>>;
   /**
@@ -136,6 +139,7 @@ function create(): EditorSession {
   /** Read-only for a frozen draft's text (`setFrozen`), apart from the tab lock. */
   let frozen = false;
   const kind = shallowRef<DocumentKind>('fountain');
+  const novel = shallowRef(false);
   const loaded = shallowRef(0);
   /** Changes with every load and change of kind: a Markdown mode that arrives late checks it is still wanted. */
   let languageEpoch = 0;
@@ -145,8 +149,20 @@ function create(): EditorSession {
   const editListeners = new Set<(transactions: readonly Transaction[]) => void>();
 
   /** Brings what the session shows up to date with `state`. */
+  /** The metadata comment is the last non-blank line, so only that line is read, however long the novel. */
+  function followNovel(state: EditorState) {
+    let found = false;
+    if (kind.value === 'markdown') {
+      let n = state.doc.lines;
+      while (n > 1 && state.doc.line(n).text.trim() === '') n--;
+      found = isNovel(state.doc.line(n).text);
+    }
+    if (found !== novel.value) novel.value = found;
+  }
+
   function follow(state: EditorState) {
     doc.value = state.field(parsedDoc);
+    followNovel(state);
     const next = builtins[templateIdOf(doc.value)] as Template;
     if (next !== template.value) {
       template.value = next;
@@ -276,6 +292,7 @@ function create(): EditorSession {
       effects: [language.reconfigure(languageExtension(hooks, next)), ...(switched?.effects ?? [])],
     });
     cursor.value = next === 'fountain' ? cursorElement(view.state) : null;
+    followNovel(view.state);
     // Fountain's lint starts again for the text it now lints (the reconfigure starts it, too, but
     // after its delay). Not in this update: a listener may not dispatch.
     if (next === 'fountain') queueMicrotask(relint);
@@ -352,6 +369,7 @@ function create(): EditorSession {
     template,
     locked,
     kind,
+    novel,
     loaded,
     load,
     setKind,

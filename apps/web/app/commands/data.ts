@@ -137,7 +137,7 @@ export const COMMAND_DATA: readonly CommandData[] = [
   ),
   ...DOCUMENT_TYPES.filter((type) => type.kind === 'markdown').map(
     (type): CommandData => ({
-      id: 'document-markdown',
+      id: `document-${type.id}`,
       title: `Document: ${type.name}`,
       group: 'File',
     }),

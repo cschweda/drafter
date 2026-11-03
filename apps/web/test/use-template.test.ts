@@ -7,6 +7,7 @@ import { useTemplate } from '../app/editor/use-template';
 const state = vi.hoisted(() => ({
   source: 'INT. HALL - DAY\n\nShe waits.\n',
   kind: undefined as undefined | { value: string },
+  novel: undefined as undefined | { value: boolean },
   doc: undefined as undefined | { value: unknown },
   setKind: undefined as undefined | ((kind: string) => Promise<void>),
   openSample: undefined as undefined | ((kind: string) => Promise<void>),
@@ -19,6 +20,8 @@ vi.mock('../app/editor/session', async () => {
     useEditor: () => {
       const doc = shallowRef(parse(state.source));
       const kind = shallowRef('fountain');
+      const novel = shallowRef(false);
+      state.novel = novel;
       state.doc = doc;
       state.kind = kind;
       return {
@@ -26,6 +29,7 @@ vi.mock('../app/editor/session', async () => {
         doc,
         locked: shallowRef(false),
         kind,
+        novel,
       };
     },
   };
@@ -41,7 +45,8 @@ vi.mock('../app/storage/script', async () => {
   return { useScript: () => ({ project, setKind, openSample }) };
 });
 
-const MARKDOWN = DOCUMENT_TYPES.find((t) => t.kind === 'markdown') as DocumentType;
+const MARKDOWN = DOCUMENT_TYPES.find((t) => t.id === 'markdown') as DocumentType;
+const NOVEL = DOCUMENT_TYPES.find((t) => t.id === 'novel') as DocumentType;
 
 beforeEach(() => {
   state.source = 'INT. HALL - DAY\n\nShe waits.\n';
@@ -134,5 +139,49 @@ describe('choosing a type on a sample', () => {
     if (state.kind) state.kind.value = 'markdown';
     await template.chooseType(MARKDOWN);
     expect(state.openSample).not.toHaveBeenCalled();
+  });
+});
+
+describe('a novel', () => {
+  test('is the current type of a Markdown document that names the novel template', () => {
+    const choice = useTemplate();
+    (state.kind as { value: string }).value = 'markdown';
+    expect(choice.isCurrent(MARKDOWN)).toBe(true);
+    expect(choice.isCurrent(NOVEL)).toBe(false);
+    (state.novel as { value: boolean }).value = true;
+    expect(choice.isCurrent(NOVEL)).toBe(true);
+    expect(choice.isCurrent(MARKDOWN)).toBe(false);
+    expect(choice.isCurrent(type('us-screenplay'))).toBe(false);
+  });
+
+  test('is not the current type of a script', () => {
+    expect(useTemplate().isCurrent(NOVEL)).toBe(false);
+  });
+
+  test('on the Markdown sample opens the novel sample, and Markdown on the novel sample the Markdown one', async () => {
+    if (state.project) state.project.value = { id: 'm', sample: 'markdown' };
+    const template = useTemplate();
+    (state.kind as { value: string }).value = 'markdown';
+    await template.chooseType(NOVEL);
+    expect(state.openSample).toHaveBeenLastCalledWith('novel');
+    if (state.project) state.project.value = { id: 'n', sample: 'novel' };
+    (state.novel as { value: boolean }).value = true;
+    await template.chooseType(MARKDOWN);
+    expect(state.openSample).toHaveBeenLastCalledWith('markdown');
+  });
+
+  test('on the screenplay sample opens the novel sample, asking nothing', async () => {
+    if (state.project) state.project.value = { id: 's', sample: 'screenplay' };
+    await useTemplate().chooseType(NOVEL);
+    expect(markdownQuestion.value).toBeNull();
+    expect(state.openSample).toHaveBeenCalledWith('novel');
+  });
+
+  test('on a script asks first, then makes it Markdown', async () => {
+    const done = useTemplate().chooseType(NOVEL);
+    expect(markdownQuestion.value).not.toBeNull();
+    markdownQuestion.value?.answer(true);
+    await done;
+    expect(state.setKind).toHaveBeenCalledWith('markdown');
   });
 });
