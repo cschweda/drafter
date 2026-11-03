@@ -58,6 +58,11 @@ describe('novelStructure properties', () => {
             expect(from).toBe(node.span.to);
           };
           for (const node of tree.nodes) check(node);
+          // Kinds: no root is a section, and no part has a section child.
+          for (const node of tree.nodes) {
+            expect(node.kind).not.toBe('section');
+            if (node.kind === 'part') for (const c of node.children) expect(c.kind).toBe('chapter');
+          }
         },
       ),
       { numRuns: 500 },

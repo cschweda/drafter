@@ -130,6 +130,16 @@ describe('review fixes', () => {
     ]);
   });
 
+  it('gives a part only chapters', () => {
+    const heading = novelStructure('# Part One\n\n## Foo\n\nText.\n');
+    expect(heading.nodes[0].children.map((n) => [n.kind, n.title])).toEqual([['chapter', 'Foo']]);
+    const rule = novelStructure('# Part One\n\nIntro.\n\n***\n\nText.\n');
+    expect(rule.nodes[0].children).toHaveLength(1);
+    expect(rule.nodes[0].children[0].kind).toBe('chapter');
+    expect(rule.nodes[0].children[0].title).toBe('');
+    expect(rule.nodes[0].children[0].id).toBe('chapter::0');
+  });
+
   it('numbers ids across the whole book', () => {
     const tree = novelStructure('# One\n\nA.\n\n***\n\nB.\n\n# Two\n\nC.\n\n***\n\nD.\n');
     const [a, b] = [tree.nodes[0].children[0], tree.nodes[1].children[0]];

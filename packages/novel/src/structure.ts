@@ -29,7 +29,7 @@ export interface NovelTree {
   parts: boolean;
   /**
    * Parts and chapters only. Chapters that come before the first part stay at the root beside the
-   * parts, and a `##` heading (or setext `-` heading) before any chapter or part is a chapter.
+   * parts, and a `##` heading (or setext `-` heading, or scene break) with no chapter open is a chapter. A part's children are always chapters.
    */
   nodes: NovelNode[];
   /** Every word before the metadata comment. */
@@ -96,8 +96,10 @@ export function novelStructure(text: string): NovelTree {
 
   const open = (wanted: NovelKind, title: string, from: number, to: number) => {
     if (firstHeading < 0) firstHeading = from;
-    // Nothing is open yet, so a section heading (an opening "## Prologue") is a chapter.
-    const kind = wanted === 'section' && stack.length === 0 ? 'chapter' : wanted;
+    // With nothing open, or only a part, a section heading (an opening "## Prologue") or a scene
+    // break is a chapter: a part's children are always chapters.
+    const top = stack.length > 0 ? stack[stack.length - 1].node.kind : null;
+    const kind = wanted === 'section' && (top === null || top === 'part') ? 'chapter' : wanted;
     while (stack.length > 0 && RANK[stack[stack.length - 1].node.kind] >= RANK[kind]) {
       const done = stack.pop() as Open;
       done.node.span.to = from;
