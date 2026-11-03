@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- The desktop app's test of View → Show Scaffold waits for the Inspector's header to fit before it opens More tools, as the web app's tests do; a slow Mac runner clicked it as it refit.
+
 ### Fixed
 
 - Report a problem closed with Escape, then Suggest an idea… chosen at once (as the desktop app's Help menu can on Windows), now opens: the first dialog's late close no longer closes the second.

@@ -144,10 +144,20 @@ test('View › Show Scaffold opens Scaffold beside the script', async ({ desktop
   await expect(scaffold.getByRole('heading', { level: 2 })).toBeFocused();
   // Follow the cursor is in the Inspector's header, or behind its "⋯" (More tools) when the window
   // is too narrow for Scaffold's tools (fresh-look design §3.3).
+  // The header is fitted a frame or more after the view shows, and is `data-fitting` until then: a
+  // click on "⋯" before that can land as it refits (a slow Mac runner did, on 2026-11-03).
   const follow = page.getByRole('button', { name: 'Follow the cursor', exact: true });
   const moreTools = page.getByRole('button', { name: 'More tools' });
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  await expect(page.locator('#inspector-tools[data-fitting]')).toHaveCount(0);
   await expect(follow.or(moreTools).first()).toBeVisible();
-  if (!(await follow.isVisible())) await moreTools.click();
+  await expect(async () => {
+    if (!(await follow.isVisible()) && (await moreTools.getAttribute('aria-expanded')) !== 'true')
+      await moreTools.click();
+    await expect(follow).toBeVisible({ timeout: 2000 });
+  }).toPass();
   await expect(follow).toHaveAttribute('aria-pressed', 'true');
 });
 
