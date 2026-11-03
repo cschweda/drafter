@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- For contributors: the plan for Novel (`docs/plans/2026-11-03-novel.md`), ten tasks.
 - For contributors: the design for **Novel** (`docs/drafter-novel-design.md`), approved by the maintainer for v0.26.0: a first-class Novel choice in plain Markdown, chapters and sections in the Outline and on Cards, focus on one passage, counts and targets, a synopsis and a status for each; the manuscript exports follow in v0.26.1.
 
 ## [0.25.1] - 2026-11-03
