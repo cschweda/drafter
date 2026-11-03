@@ -63,7 +63,7 @@ describe('name neighbours', () => {
     expect(pairs).toEqual([]);
   });
 
-  it('a thousand long names that share a start are compared quickly', () => {
+  it('a thousand long names that share a start are compared within a second each', () => {
     // Long names (past the length any name is compared at) and names just within it, every one
     // sharing its start with the rest.
     const long = Array.from({ length: 1_000 }, (_, i) => `${'A'.repeat(195)}${i}`);

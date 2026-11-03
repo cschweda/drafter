@@ -26,6 +26,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Every pull request, and the release gates, now typecheck each package (`pnpm -r --filter "./packages/*" typecheck`), not only the web app.
 - The browser test that walks the Help menu by keyboard to every help page is marked slow, as it now opens sixteen pages.
 - On CI, the trap test that walks every trap in Classic Mode allows twice each trap's time, as its walk is thousands of moves; locally it keeps the trap's own time.
+- Drafter for Claude's timing test for a thousand long names is named like the other timing tests, so CI's slower runners skip it, as they skip the rest; it still runs locally.
 
 ### Fixed
 
