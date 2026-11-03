@@ -362,21 +362,37 @@ function staysOnLine(tr: Transaction): boolean {
 }
 
 /**
- * Whether a change is one the stored line outlives: Classic Mode's own, the writer's typing, or
- * the writer's delete inside the line, so a typo fixed in a name is still a name.
+ * Whether a change leaves the stored line alone: none of it touches the line, or what this stay
+ * made or marked around it. A template chip, a fix, or a cut put back somewhere else doesn't change
+ * what the writer is typing, and what they made must still be tidied when they leave.
  */
-const keepsLine = (tr: Transaction) =>
-  !tr.annotation(appChange) &&
-  (tr.annotation(classicEdit) === true ||
-    tr.isUserEvent('input.type') ||
-    (tr.isUserEvent('delete') && staysOnLine(tr)));
+function clearOf(line: StoredLine, tr: Transaction): boolean {
+  const spans = [line.made, line.madeMark, ...line.added].filter((span) => span != null);
+  const from = Math.min(line.from, ...spans.map((span) => span.from));
+  const to = Math.max(tr.startState.doc.lineAt(line.from).to, ...spans.map((span) => span.to));
+  return !tr.changes.touchesRange(from, to);
+}
+
+/**
+ * Whether a change is one the stored line outlives: Classic Mode's own, the writer's typing, the
+ * writer's delete inside the line, so a typo fixed in a name is still a name, or a change the app
+ * makes somewhere else. An app change that touches the line drops it (Review Focus 2).
+ */
+const keepsLine = (line: StoredLine, tr: Transaction) =>
+  tr.annotation(appChange)
+    ? clearOf(line, tr)
+    : tr.annotation(classicEdit) === true ||
+      tr.isUserEvent('input.type') ||
+      (tr.isUserEvent('delete') && staysOnLine(tr));
 
 /**
  * Whether an element command made the line something else (it carries a plain `input` and isn't
- * Classic Mode's own), which may write nothing: what's stored about the line then no longer holds.
+ * Classic Mode's own or the app's), which may write nothing: what's stored about the line then no longer holds.
  */
 const remade = (tr: Transaction) =>
-  tr.annotation(Transaction.userEvent) === 'input' && !tr.annotation(classicEdit);
+  tr.annotation(Transaction.userEvent) === 'input' &&
+  !tr.annotation(classicEdit) &&
+  !tr.annotation(appChange);
 
 /** What the effects of a transaction make of the line, in the positions of the new text. */
 function applyEffects(line: StoredLine | null, tr: Transaction): StoredLine | null {
@@ -445,7 +461,7 @@ export const classicLine: StateField<StoredLine | null> = StateField.define<Stor
     if (!tr.docChanged && !tr.selection && tr.effects.length === 0) return value;
     let line = value;
     if (line && tr.docChanged) {
-      line = keepsLine(tr) ? mapLine(line, tr.changes) : null;
+      line = keepsLine(line, tr) ? mapLine(line, tr.changes) : null;
       if (line?.dismissed && tr.isUserEvent('input.type')) line = { ...line, dismissed: false };
     }
     line = applyEffects(line, tr);

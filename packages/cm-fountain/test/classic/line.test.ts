@@ -194,10 +194,14 @@ describe('the stored line', () => {
       expect(element(next).kind).toBe('action');
     }
 
+    // An app change on the line drops it; one somewhere else maps it (the final review).
     const onText = type(classicEditor('She waits.\n\n|'), 'He');
     expect(onText.field(classicLine)).not.toBeNull();
-    const dropped = onText.update({ changes, annotations: appChange.of(true) }).state;
+    const onLine = { from: onText.doc.length - 1, insert: 'x' };
+    const dropped = onText.update({ changes: onLine, annotations: appChange.of(true) }).state;
     expect(dropped.field(classicLine)).toBeNull();
+    const kept = onText.update({ changes, annotations: appChange.of(true) }).state;
+    expect(kept.field(classicLine)).toMatchObject({ from: 13 });
   });
 
   test('the writer’s typing and Classic’s own edits keep it, mapped through the change', () => {
@@ -361,9 +365,9 @@ describe('the stored line', () => {
     expect(element(emptied)).toMatchObject({ kind: 'action', pending: true, soft: true });
   });
 
-  test('classicEdit keeps the line with no user event, and appChange beats it', () => {
+  test('classicEdit keeps the line with no user event, and appChange on the line beats it', () => {
     const typed = type(classicEditor('She waits.\n\n|'), 'He');
-    const changes = { from: 0, insert: 'x' };
+    const changes = { from: typed.doc.length - 1, insert: 'x' };
     expect(
       typed.update({ changes, annotations: classicEdit.of(true) }).state.field(classicLine),
     ).not.toBeNull();

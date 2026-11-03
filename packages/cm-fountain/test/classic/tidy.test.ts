@@ -2,6 +2,7 @@ import { history, redo, undo, undoDepth } from '@codemirror/commands';
 import type { EditorState } from '@codemirror/state';
 import { appChange } from '@drafter/cm-fountain';
 import { describe, expect, test } from 'vitest';
+import { classicLine, savedText } from '../../src/classic';
 import { apply } from '../helpers';
 import { classicEditor, keys, render, type } from './harness';
 
@@ -87,6 +88,56 @@ describe('§4.4, an empty line left behind', () => {
     }).state;
     expect(after.sliceDoc()).toBe('XShe waits.\n\n\n\nHe leaves.');
     expect(click(after, 0).sliceDoc()).toBe('XShe waits.\n\n\n\nHe leaves.');
+  });
+
+  // A template chip, Fix from Problems, Put back a cut, a module's edit: an app change somewhere
+  // else leaves the cursor where it was, on a line this stay made.
+  const elsewhere = (state: EditorState, at: number, insert: string) =>
+    state.update({
+      changes: { from: at, insert },
+      annotations: appChange.of(true),
+      userEvent: 'input',
+    }).state;
+
+  test.each([
+    [
+      'Enter',
+      'JUNE\nOne.|\nTwo.\n\nShe waits.',
+      'JUNE\nOne.\n\nTwo.\n\nShe waits.X',
+      'JUNE\nOne.\nTwo.\n\nShe waits.X',
+    ],
+    [
+      'Tab',
+      'JUNE\nOne.|\n\nShe waits.',
+      'JUNE\nOne.\n()\n\nShe waits.X',
+      'JUNE\nOne.\n\nShe waits.X',
+    ],
+  ])('an app change elsewhere keeps a made line tidyable (%s)', (key, start, raw, tidy) => {
+    const made = keys(classicEditor(start), key);
+    const after = elsewhere(made, made.doc.length, 'X');
+    expect(after.sliceDoc()).toBe(raw);
+    expect(after.field(classicLine)?.made).not.toBeNull();
+    expect(savedText(after).toString()).toBe(tidy);
+    expect(click(after, 0).sliceDoc()).toBe(tidy);
+  });
+
+  test('an app change at the start keeps it too, mapped', () => {
+    const made = keys(classicEditor('JUNE\nOne.|\nTwo.'), 'Enter');
+    const after = elsewhere(made, 0, 'Hi.\n\n');
+    expect(savedText(after).toString()).toBe('Hi.\n\nJUNE\nOne.\nTwo.');
+    expect(click(after, 0).sliceDoc()).toBe('Hi.\n\nJUNE\nOne.\nTwo.');
+  });
+
+  test('an app change that touches the made line drops it, and tidies nothing', () => {
+    const made = keys(classicEditor('JUNE\nOne.|\n\nShe waits.'), 'Tab');
+    const at = made.sliceDoc().indexOf('()');
+    const after = made.update({
+      changes: { from: at + 1, insert: 'x' },
+      annotations: appChange.of(true),
+      userEvent: 'input',
+    }).state;
+    expect(after.field(classicLine)?.made ?? null).toBeNull();
+    expect(click(after, 0).sliceDoc()).toBe('JUNE\nOne.\n(x)\n\nShe waits.');
   });
 
   test('a bare selection, as goto and reveal send, tidies', () => {
