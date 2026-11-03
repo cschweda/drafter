@@ -84,6 +84,10 @@ const CORPUS: Script[] = [
     .filter((name) => name.endsWith('.fountain'))
     .map((name) => ({ name, text: read(`apps/web/app/editor/sample-scripts/${name}`) })),
   { name: 'Signal Hill', text: read('apps/web/scripts/ui-shots-script.fountain') },
+  {
+    name: 'an Action paragraph with capitals in it',
+    text: 'INT. HALL - DAY\n\nA door.\nBANG\nIt echoes.\n\nJUNE\nHi.\n',
+  },
   { name: 'buildScript(40 KB)', text: buildScript(40_000) },
   ...fc
     .sample(fountainScript, { numRuns: 12, seed: SEED })
@@ -281,8 +285,12 @@ const showKeys = (ks: readonly Key[]) => ks.map((k) => JSON.stringify(k)).join('
 /** What §4.1 lets Classic Mode write beside the writer's own characters: its marks, `()`, and spaces. */
 const MARKS = new Set(['!', '@', '.', '>', '<', '~', '#', '=', ' ', '(', ')']);
 
-/** The most of §4.1's own characters one key writes: `!!`, `()`, a mark and its space, or a `!` above as well. */
-const MOST_PER_KEY = 3;
+/** The most of §4.1's own characters one key writes: `()` and a `!` above, or `===` and its space. */
+const MOST_PER_KEY = 4;
+
+/** Where a mark may go on a line: in its leading run of marks, or its closing one. */
+const LEADING = /^[﻿\s!@.>~#=(]*/;
+const TRAILING = /[\s<)]*$/;
 
 /** Characters, as a count of each. */
 function counted(text: string): Map<string, number> {
@@ -291,41 +299,145 @@ function counted(text: string): Map<string, number> {
   return counts;
 }
 
-/**
- * Why `after` isn't `before` plus only what §4.1 allows, or null. Every character of `before` must
- * still be there, in order and in its case (no change to existing text). What's new must be the
- * writer's own characters (in either case, as a heading, a name, and a transition arrive in
- * capitals), line breaks, and at most a few of §4.1's characters for each key. A line of spaces
- * alone counts as empty, as the first letter on a speech's two spaces takes them.
- */
-function notAllowed(was: string, now: string, typed: string, presses: number): string | null {
-  // A line of only spaces (a speech's two) gives them up to the first letter typed on it (§6.4).
-  const unspaced = (text: string) => text.replace(/^[ \t]+$/gm, '');
-  const before = unspaced(was);
-  const after = unspaced(now);
-  let at = 0;
-  for (const ch of before) {
-    const found = after.indexOf(ch, at);
-    if (found === -1) return `existing text changed: ${JSON.stringify(ch)} is gone`;
-    at = found + ch.length;
-  }
-  const extra = counted(after);
-  for (const [ch, n] of counted(before)) extra.set(ch, (extra.get(ch) ?? 0) - n);
-  const mine = counted(typed);
-  let own = 0;
-  for (const [ch, n] of extra) {
-    if (n <= 0 || ch === '\n') continue;
-    const asTyped =
-      (mine.get(ch) ?? 0) + (mine.get(ch.toLowerCase()) ?? 0) * (ch.toLowerCase() === ch ? 0 : 1);
-    const left = n - Math.min(n, asTyped);
-    if (left === 0) continue;
-    if (!MARKS.has(ch)) return `wrote ${JSON.stringify(ch)}, which isn't §4.1's`;
-    own += left;
-  }
-  return own > MOST_PER_KEY * presses
-    ? `wrote ${own} of its own characters in ${presses} keys`
-    : null;
+/** What one key did to the text, as far as the checker can tell. */
+interface KeyText {
+  /** The text before the key, the cursor's line among its lines. */
+  before: string;
+  cursorLine: number;
+  after: string;
+  /** The writer's own characters for the key: typed, or an accepted suggestion's words. */
+  typed: string;
 }
+
+/**
+ * Why one key's change isn't §4.1's, or null. `made` holds what keys before it added, which a later
+ * one may take back (a tidy), and is updated. A key either adds: every character before it is still
+ * there, in order and in its case, but the spaces of the cursor's line when that's all it holds
+ * (the first letter on a speech's two spaces takes them, §6.4); and what's new is the writer's own
+ * characters (in either case, as a heading, a name, and a transition arrive in capitals), line
+ * breaks, and at most a few of §4.1's marks, each in its line's leading or closing run. Or it takes
+ * away, and only what keys before it added.
+ */
+function keyNotAllowed(text: KeyText, made: Map<string, number>): string | null {
+  // Equal characters can be matched either way round; the key is allowed if one reading allows it.
+  const forward = new Map(made);
+  const why = keyNotAllowedBy(text, forward, true);
+  if (why === null) {
+    for (const [ch, n] of forward) made.set(ch, n);
+    return null;
+  }
+  const backward = new Map(made);
+  if (keyNotAllowedBy(text, backward, false) !== null) return why;
+  for (const [ch, n] of backward) made.set(ch, n);
+  return null;
+}
+
+function keyNotAllowedBy(
+  { before, cursorLine, after, typed }: KeyText,
+  made: Map<string, number>,
+  leftToRight: boolean,
+): string | null {
+  if (before === after) return null;
+  const lines = before.split('\n');
+  const spaced = lines[cursorLine] ?? '';
+  const free = /^[ \t]+$/.test(spaced);
+  const old = lines.flatMap((line, n) => [
+    ...(n === cursorLine && free ? '' : line),
+    ...(n < lines.length - 1 ? ['\n'] : []),
+  ]);
+  // The positions in `after` the old characters stand at, by a walk one way or the other.
+  const kept = new Set<number>();
+  const points = [...after];
+  let missing: string | null = null;
+  if (leftToRight) {
+    let at = 0;
+    for (const ch of old) {
+      while (at < points.length && points[at] !== ch) at++;
+      if (at >= points.length) {
+        missing = ch;
+        break;
+      }
+      kept.add(at++);
+    }
+  } else {
+    let at = points.length - 1;
+    for (let i = old.length - 1; i >= 0; i--) {
+      const ch = old[i] as string;
+      while (at >= 0 && points[at] !== ch) at--;
+      if (at < 0) {
+        missing = ch;
+        break;
+      }
+      kept.add(at--);
+    }
+  }
+  const mine = counted(typed);
+  const take = (ch: string) => {
+    for (const one of [ch, ch.toLowerCase(), ch.toUpperCase()]) {
+      const n = mine.get(one) ?? 0;
+      if (n > 0) {
+        mine.set(one, n - 1);
+        return true;
+      }
+    }
+    return false;
+  };
+  if (missing !== null) {
+    // Not only an addition: what goes must be what keys before it made (a tidy, a mark this stay
+    // wrote coming off), and what comes is the writer's, breaks, or a few marks.
+    const gone = counted(before);
+    const come = counted(after);
+    for (const [ch, n] of counted(after)) gone.set(ch, (gone.get(ch) ?? 0) - n);
+    for (const [ch, n] of counted(before)) come.set(ch, (come.get(ch) ?? 0) - n);
+    for (const [ch, n] of gone) {
+      if (n > 0 && (made.get(ch) ?? 0) < n) {
+        return `existing text changed: ${JSON.stringify(ch)} is gone`;
+      }
+    }
+    for (const [ch, n] of gone) if (n > 0) made.set(ch, (made.get(ch) ?? 0) - n);
+    let marks = 0;
+    for (const [ch, n] of come) {
+      for (let k = 0; k < n; k++) {
+        made.set(ch, (made.get(ch) ?? 0) + 1);
+        if (ch === '\n' || take(ch)) continue;
+        if (!MARKS.has(ch)) return `wrote ${JSON.stringify(ch)}, which isn't §4.1's`;
+        marks++;
+      }
+    }
+    return marks > MOST_PER_KEY ? `wrote ${marks} of its own characters in one key` : null;
+  }
+  let own = 0;
+  let offset = 0;
+  for (let i = 0; i < points.length; offset += (points[i] as string).length, i++) {
+    if (kept.has(i)) continue;
+    const ch = points[i] as string;
+    made.set(ch, (made.get(ch) ?? 0) + 1);
+    if (ch === '\n') continue;
+    const start = after.lastIndexOf('\n', offset - 1) + 1;
+    const end = after.indexOf('\n', offset);
+    const line = after.slice(start, end === -1 ? after.length : end);
+    const column = offset - start;
+    const lead = LEADING.exec(line)?.[0].length ?? 0;
+    const close = line.length - (TRAILING.exec(line)?.[0].length ?? 0);
+    const edge = column < lead || column >= close;
+    // A mark at a line's edge is Classic's own; anything else must be the writer's.
+    if (MARKS.has(ch) && edge) own++;
+    else if (!take(ch)) {
+      return MARKS.has(ch)
+        ? `wrote ${JSON.stringify(ch)} mid-line: ${JSON.stringify(line)}`
+        : `wrote ${JSON.stringify(ch)}, which isn't §4.1's`;
+    }
+  }
+  return own > MOST_PER_KEY ? `wrote ${own} of its own characters in one key` : null;
+}
+
+/** A key's text, from the states either side of it. */
+const keyText = (state: EditorState, next: EditorState, typed: string): KeyText => ({
+  before: state.doc.toString(),
+  cursorLine: state.doc.lineAt(state.selection.main.head).number - 1,
+  after: next.doc.toString(),
+  typed,
+});
 
 // ---- The properties ---------------------------------------------------------------------------
 
@@ -337,17 +449,16 @@ describe('Classic only adds what it may', () => {
         fc.double({ min: 0, max: 1, noNaN: true }),
         fc.array(writerKey, { minLength: 1, maxLength: 14 }),
         (one, where, ks) => {
-          const start = opened(one, Math.floor(where * one.text.length));
-          const before = start.doc.toString();
-          let state = start;
-          let typed = '';
-          for (const k of ks) {
+          let state = opened(one, Math.floor(where * one.text.length));
+          const made = new Map<string, number>();
+          for (const [i, k] of ks.entries()) {
             if (leftOut(state, k)) continue;
-            typed += typedBy(state, k);
-            state = pressKey(state, k);
+            const typed = typedBy(state, k);
+            const next = pressKey(state, k);
+            const why = keyNotAllowed(keyText(state, next, typed), made);
+            expect(why, `${one.name}: key ${i + 1} of ${showKeys(ks)}`).toBeNull();
+            state = next;
           }
-          const why = notAllowed(before, state.doc.toString(), typed, ks.length);
-          expect(why, `${one.name}: ${showKeys(ks)}`).toBeNull();
         },
       ),
       { numRuns: RUNS, seed: SEED },
@@ -378,10 +489,18 @@ describe('Classic only adds what it may', () => {
   });
 
   test('the diff checker finds a change to existing text, and a character §4.1 doesn’t list', () => {
-    expect(notAllowed('int. a', 'INT. a', '', 1)).toMatch(/existing text changed/);
-    expect(notAllowed('a', 'a\n\nX', '', 1)).toMatch(/isn't §4.1's/);
-    expect(notAllowed('a', 'a\n\n!!!!', '', 1)).toMatch(/of its own characters/);
-    expect(notAllowed('a', 'a\n\n.FLASHBACK', 'flashback', 2)).toBeNull();
+    const key = (before: string, after: string, typed = '', made = new Map<string, number>()) =>
+      keyNotAllowed({ before, cursorLine: 0, after, typed }, made);
+    expect(key('int. a', 'INT. a')).toMatch(/existing text changed/);
+    expect(key('a', 'a\n\nX')).toMatch(/isn't §4.1's/);
+    expect(key('a', 'a\n\n!!!!!')).toMatch(/of its own characters/);
+    expect(key('a b', 'a ! b')).toMatch(/mid-line/);
+    expect(key('a', 'a\n\n.FLASHBACK', 'flashback')).toBeNull();
+    expect(key('BANG\nx', '!BANG\nx')).toBeNull();
+    expect(key('  ', 'x', 'x')).toBeNull();
+    expect(key('a\n  ', 'a', '')).toMatch(/existing text changed/);
+    expect(key('a\n\n\nb', 'a\nb')).toMatch(/existing text changed/);
+    expect(key('a\n\n\nb', 'a\n\nb', '', new Map([['\n', 1]]))).toBeNull();
   });
 });
 
@@ -415,12 +534,18 @@ describe('moving writes nothing', () => {
         fc.array(move, { minLength: 1, maxLength: 6 }),
         (one, where, moves) => {
           const start = opened(one, Math.floor(where * one.text.length));
-          const made = keys(start, 'Enter');
-          const view = new EditorView({ state: made });
+          const entered = keys(start, 'Enter');
+          const view = new EditorView({ state: entered });
           try {
             for (const m of moves) moveIn(view, m);
             const after = view.state.doc.toString();
-            const why = notAllowed(start.doc.toString(), after, '', 1);
+            // Enter's breaks are what it made, and the moves may take back those and no more.
+            const made = new Map<string, number>();
+            expect(keyNotAllowed(keyText(start, entered, ''), made)).toBeNull();
+            const why = keyNotAllowed(
+              { before: entered.doc.toString(), cursorLine: -1, after, typed: '' },
+              made,
+            );
             expect(why, `${one.name}: ${JSON.stringify(moves)}`).toBeNull();
           } finally {
             view.destroy();
@@ -545,9 +670,19 @@ describe('Action stays Action', () => {
     fc.assert(
       fc.property(
         fc.array(actionKey, { minLength: 1, maxLength: 16 }),
-        fc.constantFrom('', 'INT. HALL - DAY\n\nA door.\n\n'),
-        (ks, text) => {
-          let state = classicEditor(`${text}|`, { with: [history()] });
+        fc.constantFrom(
+          '',
+          'INT. HALL - DAY\n\nA door.\n\n',
+          // Capitals inside an Action paragraph, which a break above can make a paragraph's start.
+          'A door.\nBANG\nIt echoes.',
+          'INT. HALL - DAY\n\nA door.\nTHUD\nSilence.\n\nJUNE\nHi.\n',
+        ),
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        (ks, text, where) => {
+          const at = Math.floor(where * text.length);
+          let state = classicEditor(`${text.slice(0, at)}|${text.slice(at)}`, {
+            with: [history()],
+          });
           for (const k of ks) {
             if ('key' in k) {
               state = k.key.startsWith('Arrow')
@@ -568,6 +703,13 @@ describe('Action stays Action', () => {
             const pool = element?.kind === 'character' ? NAMES : LOUD;
             state = type(state, pool[k.words % pool.length] as string);
           }
+          // An empty line a key made, the cursor on it, is the moment §4.2's exception allows: the
+          // text under it reads apart until a letter heals it, or leaving takes it. So it's read as
+          // it will stand, once the writer goes on.
+          const here = state.doc.lineAt(state.selection.main.head);
+          if (!here.text.trim()) {
+            state = state.update({ selection: { anchor: 0 }, userEvent: 'select.pointer' }).state;
+          }
           for (const block of state.field(parsedDoc).blocks) {
             if (block.kind !== 'character') continue;
             const name = block.sem.name;
@@ -583,7 +725,8 @@ describe('Action stays Action', () => {
   });
 
   // Found by the property above: under the line the cursor came back to, Shift+Enter, Tab, or a
-  // letter made the capitals a cue. The ruling: the line above gets its `!` in the same transaction.
+  // letter made the capitals a cue. The rulings: Action is pending there, and a letter gives the
+  // line above its `!` in the same transaction.
   test('capitals left and come back to stay Action under Shift+Enter on the line below', () => {
     let state = keys(classicEditor('|'), 'BANG', 'Enter');
     const view = new EditorView({ state });
@@ -595,7 +738,7 @@ describe('Action stays Action', () => {
     }
     expect(render(state)).toBe('BANG\n|\n');
     state = keys(state, 'Shift-Enter');
-    expect(render(state)).toBe('!BANG\n  |\n');
+    expect(render(state)).toBe('BANG\n|\n');
     expect(parse(state.doc.toString()).blocks[0]?.kind).toBe('action');
   });
 

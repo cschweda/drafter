@@ -82,7 +82,9 @@ in-memory transport, as an AI app calls it.
   refused in Open's words whatever its name, then an import by its name, then strict text. So a
   PDF named `.fountain` is refused, and an export named `.fountain` is read for its script, as
   Open does. Only the caps' words are the server's (“it is larger than 5 MB”); no trap has an
-  `mcp` outcome of its own.
+  `mcp` outcome of its own. One is kept out (`keptOut`, with its reason in the manifest):
+  `classic-5mb`, whose overview takes longer than the server's 10-second call limit
+  (docs/DEFERRED.md).
 - **Path traps** ([`mcp-traps.ts`](mcp-traps.ts), `MCP_PATH_TRAPS`): `..` first, in the middle,
   and last; a full path; a link to a file and to a folder outside (refused as outside); a loop of
   links; a folder named `x.fountain`; a pipe; a socket; `/dev/zero` behind a link; a file swapped

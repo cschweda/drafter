@@ -14,7 +14,7 @@ import { parse } from '@drafter/fountain';
 import { builtins, type Template } from '@drafter/templates';
 import 'fake-indexeddb/auto';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
-import { measured } from '../../../fixtures/trap/check';
+import { measured, memoryBound } from '../../../fixtures/trap/check';
 import { LIMIT_MS, LIST_BREAKER_LABEL, type Trap, trapsFor } from '../../../fixtures/trap/traps';
 import { choosePending, offerAt } from '../../../packages/cm-fountain/src/classic';
 import { type App, app, dropped, happened } from './trap-app';
@@ -142,6 +142,11 @@ describe('classic: every trap that opens as Fountain, in Classic Mode', () => {
       expect((window as { __trapped?: unknown }).__trapped, trap.id).toBeUndefined();
       const limit = trap.limitMs ?? LIMIT_MS;
       expect(cost.ms, `${trap.id} took ${Math.round(cost.ms)} ms`).toBeLessThan(limit);
+      // A trap with an allowance of its own is held to it here too (without `gc`, the peak).
+      if (trap.memoryMB !== undefined) {
+        const kept = cost.kept ?? cost.peak;
+        expect(kept, `${trap.id} kept ${kept} bytes`).toBeLessThan(memoryBound(trap, text.length));
+      }
       // Vitest's own timeout is no judge: the trap's limit is, past the time its Open takes.
     },
     120_000,

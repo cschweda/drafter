@@ -18,7 +18,7 @@
   },
   "trap": {
     "traps": 277,
-    "checks": 1255,
+    "checks": 1254,
     "byFormat": {
       "fountain": 58,
       "markdown": 31,

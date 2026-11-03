@@ -65,6 +65,8 @@ export interface Trap {
   limitMs?: number;
   /** Generated at test time because it is large (over 1 MB). */
   large?: boolean;
+  /** Entry points it would go through by default and is kept out of, each with the reason. */
+  keptOut?: Partial<Record<Entry, string>>;
   /** What it opens as, where its name doesn't say: a Drafter export whose block is Markdown. */
   opensAs?: 'fountain' | 'markdown';
   /**
@@ -758,12 +760,9 @@ const CLASSIC_5MB_SIZE = SCRIPT_CAP - KiB;
 
 /** A script of `CLASSIC_5MB_SIZE` characters (all ASCII), every element and mark in it, made when asked. */
 function classic5mb(): string {
-  // A section, a heading, and a synopsis every hundred parts: a long play's worth of acts and
-  // scenes, not ten thousand of them.
-  const head = (n: number) =>
-    n % 100 === 1 ? `# Part ${n}\n\nINT. SIGNAL BOX ${n} - NIGHT\n\n= She waits.\n\n` : '';
+  // Every part a scene of its own, with a section and a synopsis: about 25,000 of each.
   const scene = (n: number) =>
-    `${head(n)}!BANG. A lever waits. [[a note]] *it* **is** _late_.\n\n@McGRAW\n(softly)\nIs it on?\n~La la la.\n\nJUNE ^\nIt's on.\n\n>THE END<\n\n/* cut ${n} */\n\n>FADE OUT.\n\n===\n\n`;
+    `# Part ${n}\n\nINT. SIGNAL BOX ${n} - NIGHT\n\n= She waits.\n\n!BANG. A lever waits. [[a note]] *it* **is** _late_.\n\n@McGRAW\n(softly)\nIs it on?\n~La la la.\n\nJUNE ^\nIt's on.\n\n>THE END<\n\n/* cut ${n} */\n\n>FADE OUT.\n\n===\n\n`;
   const parts: string[] = [];
   let length = 0;
   for (let n = 1; ; n++) {
@@ -839,9 +838,12 @@ const CLASSIC_TRAPS: Trap[] = [
     format: 'fountain',
     name: 'classic-5mb.fountain',
     tests:
-      'A script of nearly 5 MB with every element and mark: the left pane drawn and every line walked in time.',
+      'A script of nearly 5 MB, about 25,000 scenes with every element and mark: the left pane drawn and every line walked in time.',
     bytes: () => enc(classic5mb()),
     expect: { 'web-open': opens(undefined, { chars: CLASSIC_5MB_SIZE }) },
+    keptOut: {
+      mcp: 'Drafter for Claude stops a call at 10 seconds, and its overview of 25,000 scenes, sections, and synopses takes longer (docs/DEFERRED.md)',
+    },
     large: true,
     limitMs: 20_000,
     memoryMB: 1024,
@@ -2793,6 +2795,7 @@ function withDefaults(trap: Trap): Trap {
     if (MCP_FORMATS.has(trap.format)) expect.mcp ??= mcpOutcome(web);
     if (web.kind !== 'refused' && opensAs(trap) === 'fountain') expect.classic ??= opens();
   }
+  for (const entry of Object.keys(trap.keptOut ?? {}) as Entry[]) delete expect[entry];
   return { ...trap, expect };
 }
 
