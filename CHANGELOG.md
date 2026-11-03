@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- Report a problem closed with Escape, then Suggest an idea… chosen at once (as the desktop app's Help menu can on Windows), now opens: the first dialog's late close no longer closes the second.
+
 ## [0.25.0] - 2026-11-03
 
 **Classic Mode.** One switch in the top bar, **Fountain | Classic**, lets you type the way many screenwriting apps work: Enter and Tab move from element to element, names and places fill themselves in, capitals and marks are done for you, and the left side looks like a script. Your file stays plain Fountain, and Fountain Mode stays the default.

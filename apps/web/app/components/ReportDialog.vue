@@ -101,6 +101,9 @@ onBeforeUnmount(() => {
 });
 
 function onClose() {
+  // A dialog's close event comes a task after it closes. Opened again in between (Escape, then at
+  // once Suggest an idea… from the desktop app's Help menu), it stays open.
+  if (dialog.value?.open) return;
   shown.value = false;
   reportOpen.value = null;
 }
