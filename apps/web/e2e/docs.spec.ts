@@ -805,6 +805,8 @@ test.describe('from the app', () => {
   });
 
   test('reaches the pages from Help with the keyboard alone', async ({ page }) => {
+    // A fresh start and a walk down the menu for each of the sixteen pages: over 30 s on CI.
+    test.slow();
     for (const { title, path } of HELP_PAGES) {
       await start(page);
       await helpButton(page).focus();

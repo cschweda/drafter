@@ -24,6 +24,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `appChange`, the annotation that marks a change made by the app rather than the writer, moved from the web app's `editor/typewriter.ts` to `@drafter/cm-fountain`, so the editor package's filters can step back for it; `typewriter.ts` re-exports it, so nothing that imports it changed.
 - On a phone narrower than 480px the top bar shows Drafter's mark in place of the wordmark, so **Save** and **Export** stay on the bar beside the writing-mode switch.
 - Every pull request, and the release gates, now typecheck each package (`pnpm -r --filter "./packages/*" typecheck`), not only the web app.
+- The browser test that walks the Help menu by keyboard to every help page is marked slow, as it now opens sixteen pages.
 
 ### Fixed
 
