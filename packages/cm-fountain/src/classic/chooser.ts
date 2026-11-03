@@ -1,4 +1,5 @@
 import {
+  ChangeSet,
   type ChangeSpec,
   type EditorState,
   type Extension,
@@ -20,7 +21,7 @@ import {
 } from '../elements';
 import { BOM } from '../keymap';
 import { isBlankScript } from './hidden';
-import { type Here, hereIn, key, openChooser, writeParens } from './keys';
+import { type Here, hereIn, key, onward, writeParens } from './keys';
 import {
   type ClassicKind,
   classicLine,
@@ -77,16 +78,23 @@ const SPEECH: Wanted[] = [
   { kind: 'parenthetical', label: 'Parenthetical', wanted: 'p' },
 ];
 
-/** The rows for a template. A custom template can want one letter twice: the later row takes another of its own. */
+/**
+ * The rows for a template. Each row takes the letter it's meant to have, and only then does a row
+ * that lost its letter to another (in a custom template) take a free one from its label.
+ */
 export function chooserItems(structure: ElementStructure, inSpeech: boolean): ChooserItem[] {
+  const wanted = [...wantedItems(structure), ...(inSpeech ? SPEECH : [])];
   const taken = new Set<string>();
-  return [...wantedItems(structure), ...(inSpeech ? SPEECH : [])].map(({ wanted, ...item }) => {
-    const free = [wanted, ...item.label.toLowerCase()].find(
-      (letter) => letter !== ' ' && !taken.has(letter),
-    );
-    const letter = free ?? wanted;
+  const letters = wanted.map(({ wanted: letter }) => {
+    if (taken.has(letter)) return null;
     taken.add(letter);
-    return { ...item, letter };
+    return letter;
+  });
+  return wanted.map(({ kind, label }, index) => {
+    const letter =
+      letters[index] ?? [...label.toLowerCase()].find((ch) => ch !== ' ' && !taken.has(ch));
+    if (letter) taken.add(letter);
+    return { kind, label, letter: letter ?? '' };
   });
 }
 
@@ -117,9 +125,9 @@ function apart(here: Here, kind: ClassicKind, insert = ''): TransactionSpec {
     changes.push({ from, to: line.to, insert });
   }
   if (breakUnder) changes.push({ from: line.to, insert: lineBreak });
-  const start = line.from + (breakAbove ? 1 : 0);
-  const at = insert ? start + insert.length : head + (breakAbove ? 1 : 0);
-  if (insert) return { changes, selection: { anchor: at }, effects: writtenAs(kind, start) };
+  const start = line.from + (breakAbove ? 1 : 0) + (line.text.startsWith(BOM) ? 1 : 0);
+  if (insert) return { changes, selection: { anchor: start + insert.length } };
+  const at = head + (breakAbove ? 1 : 0);
   const from = made?.from ?? at - (breakAbove ? 1 : 0);
   const to = Math.max((made?.to ?? 0) + (breakAbove ? 1 : 0), at + (breakUnder ? 1 : 0));
   return {
@@ -129,20 +137,27 @@ function apart(here: Here, kind: ClassicKind, insert = ''): TransactionSpec {
   };
 }
 
-const writtenAs = (kind: ClassicKind, from: number) =>
-  setStored.of({ from, kind, made: null, madeMark: null, beganEmpty: false });
-
-/** `===`, set apart. On a blank script `keepMetadata` keeps it off the block. */
-const pageBreak = (here: Here): TransactionSpec => {
+/**
+ * `===`, set apart, and the cursor on the Action line under it, as Enter goes from a page break: a
+ * line drawn as a rule isn't a place to type. On a blank script the
+ * block's two breaks go in too, as the cursor must stand clear of it.
+ */
+function pageBreak(here: Here): TransactionSpec {
   const { state, line } = here;
-  if (!isBlankScript(state, line)) return apart(here, 'page_break', '===');
-  const from = line.text.startsWith(BOM) ? 1 : 0;
-  return {
-    changes: { from, insert: '===' },
-    selection: { anchor: from + 3 },
-    effects: writtenAs('page_break', 0),
-  };
-};
+  const { lineBreak } = state;
+  if (isBlankScript(state, line)) {
+    const from = line.text.startsWith(BOM) ? 1 : 0;
+    return {
+      changes: { from, insert: `===${lineBreak.repeat(4)}` },
+      selection: { anchor: from + 5 },
+    };
+  }
+  const written = state.update({ ...apart(here, 'page_break', '==='), filter: false });
+  const after = hereIn(written.state) as Here;
+  const go = onward(after, 'action', 'enter');
+  const more = ChangeSet.of(go.changes ?? [], written.newDoc.length, lineBreak);
+  return { ...go, changes: written.changes.compose(more) };
+}
 
 /** What a pick on an empty line writes (§9.1). A parenthetical is its `()`, as nothing else makes one. */
 const pick = (kind: ClassicKind): StateCommand =>
@@ -261,8 +276,14 @@ function createChooser(view: EditorView) {
   list.id = open.id;
   list.setAttribute('role', 'listbox');
   list.setAttribute('aria-label', 'Choose an element');
-  // A list that scrolls must be reachable, though Tab closes this one before it gets there.
+  // A list that scrolls must be reachable. But in Tab mode the view hands Tab to the browser before
+  // any handler, and focus landing on a list about to close would fall to the page. So it steps
+  // out of the order in the capture phase, ahead of the view.
   list.tabIndex = 0;
+  const onTab = (event: KeyboardEvent) => {
+    if (event.key === 'Tab') list.tabIndex = -1;
+  };
+  view.contentDOM.addEventListener('keydown', onTab, true);
   const rows = open.items.map((item, index) => {
     const row = document.createElement('li');
     row.id = rowId(open, index);
@@ -280,17 +301,30 @@ function createChooser(view: EditorView) {
   // The press would take focus from the text box, and on a phone the keyboard with it.
   dom.addEventListener('mousedown', (event) => event.preventDefault());
 
+  /** Only the list scrolls: the tooltip is off the page until it's measured. */
+  const reveal = (active: number) => {
+    const row = rows[active] as HTMLElement;
+    const top = row.offsetTop - list.offsetTop;
+    const bottom = top + row.offsetHeight;
+    if (top < list.scrollTop) list.scrollTop = top;
+    else if (bottom > list.scrollTop + list.clientHeight) {
+      list.scrollTop = bottom - list.clientHeight;
+    }
+  };
   const show = (active: number) => {
     rows.forEach((row, index) => {
       row.setAttribute('aria-selected', index === active ? 'true' : 'false');
     });
-    rows[active]?.scrollIntoView?.({ block: 'nearest' });
+    reveal(active);
   };
   let shown = open.active;
   show(shown);
   say(view, `Choose an element, ${open.items.length} choices: ${open.items[shown]?.label}`);
   return {
     dom,
+    // Only a list on the page has a height to scroll in.
+    mount: () => reveal(shown),
+    destroy: () => view.contentDOM.removeEventListener('keydown', onTab, true),
     update({ state }: ViewUpdate) {
       const next = state.field(chooserState);
       if (!next || next.active === shown) return;
@@ -303,7 +337,7 @@ function createChooser(view: EditorView) {
 
 const tooltip = showTooltip.compute([chooserState], (state): Tooltip | null => {
   const open = state.field(chooserState);
-  return open && { pos: open.pos, above: false, arrow: false, create: createChooser };
+  return open && { pos: open.pos, create: createChooser };
 });
 
 /** The open state, on the text box. `aria-expanded` isn't allowed on a text box, so it's `aria-haspopup`, as completion's is. */

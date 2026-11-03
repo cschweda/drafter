@@ -12,7 +12,13 @@ import {
   keepHiddenMarks,
 } from './caret';
 import { classicChooser, pendingElementKey } from './chooser';
-import { classicEnter, classicShiftEnter, classicShiftTab, classicTab } from './keys';
+import {
+  classicEnter,
+  classicShiftEnter,
+  classicShiftTab,
+  classicTab,
+  typeOffPageBreak,
+} from './keys';
 import { classicLine, keepLineInHistory, typedLine } from './line';
 import { classicMarks, settleBreaks, settleDeletes, tidyLeft } from './marks';
 import { blockKeptClear, keepMetadata, metadataHidden } from './metadata';
@@ -129,6 +135,7 @@ export function classic({ say }: ClassicOptions = {}): Extension {
     settleDeletes,
     keepHiddenMarks,
     classicMarks,
+    typeOffPageBreak,
     tidyLeft,
     classicLine,
     typedLine,

@@ -16,7 +16,7 @@ import { builtins, type Template } from '@drafter/templates';
 import { afterEach, describe, expect, test } from 'vitest';
 import { classic, classicEdit, classicLine, classicTab, elementAt } from '../../src/classic';
 import { setStored } from '../../src/classic/line';
-import { apply, editor, run } from '../helpers';
+import { apply, BOM, editor, run } from '../helpers';
 import { classicEditor, render, type } from './harness';
 
 Range.prototype.getClientRects ??= () => [] as unknown as DOMRectList;
@@ -112,6 +112,14 @@ describe('chooserItems', () => {
     const items = chooserItems(structure, true);
     expect(new Set(items.map(({ letter }) => letter)).size).toBe(items.length);
     for (const { label, letter } of items) expect(label.toLowerCase()).toContain(letter);
+  });
+
+  test('a row that loses its letter doesn’t take another row’s', () => {
+    const items = chooserItems({ ...SCREENPLAY_STRUCTURE, actDepth: 2 }, false);
+    const letterOf = (wanted: string) => items.find(({ kind }) => kind === wanted)?.letter;
+    expect(letterOf('action')).toBe('a');
+    expect(letterOf('character')).toBe('c');
+    expect(letterOf('transition')).toBe('t');
   });
 });
 
@@ -326,6 +334,14 @@ describe('keys while it’s open', () => {
     expect(list(view)).toBeNull();
   });
 
+  test('Tab takes the list out of the tab order first, for Tab mode', () => {
+    const view = chooser('A.\n\n|');
+    const held = list(view) as HTMLElement;
+    expect(held.tabIndex).toBe(0);
+    press(view, 'Tab');
+    expect(held.tabIndex).toBe(-1);
+  });
+
   test('Tab closes it and does what Tab does', () => {
     const view = chooser('A.\n\n|');
     press(view, 'Tab');
@@ -402,21 +418,22 @@ describe('a pick', () => {
   test('a click picks a page break too', () => {
     const view = chooser('A.\n\n|');
     (rows(view)[8] as HTMLElement).click();
-    expect(render(view.state)).toBe('A.\n\n===|');
+    expect(render(view.state)).toBe('A.\n\n===\n\n|');
   });
 
-  test('a chosen Page break writes ===', () => {
+  test('a chosen Page break writes ===, and the caret goes on to Action', () => {
     const view = chooser('A.\n\n|');
     press(view, 'b');
-    expect(render(view.state)).toBe('A.\n\n===|');
+    expect(render(view.state)).toBe('A.\n\n===\n\n|');
     expect(list(view)).toBeNull();
-    expect(elementAt(view.state)).toMatchObject({ kind: 'page_break', pending: false });
+    expect(elementAt(view.state)).toMatchObject({ kind: 'action', pending: true, soft: true });
+    expect(type(view.state, 'Go').sliceDoc()).toBe('A.\n\n===\n\nGo');
   });
 
   test('a Page break under a speech keeps the speech whole', () => {
     const speech = chooser('JUNE\nHi.\n|');
     press(speech, 'b');
-    expect(render(speech.state)).toBe('JUNE\nHi.\n\n===|');
+    expect(render(speech.state)).toBe('JUNE\nHi.\n\n===\n\n|');
   });
 
   test('a Page break on the line Enter made under a name stays, and the name’s break too', () => {
@@ -429,19 +446,33 @@ describe('a pick', () => {
     expect(render(view.state)).toBe('JUNE\n|');
     press(view, 'Enter');
     press(view, 'b');
-    expect(render(view.state)).toBe('JUNE\n\n===|');
+    expect(render(view.state)).toBe('JUNE\n\n===\n\n|');
   });
 
   test('a Page break with text straight under is set apart from it', () => {
     const view = chooser('A.\n\n|\nB.');
     press(view, 'b');
-    expect(render(view.state)).toBe('A.\n\n===|\n\nB.');
+    expect(render(view.state)).toBe('A.\n\n===\n\n|\n\nB.');
   });
 
   test('a Page break on a blank script writes it above the block', () => {
     const state = classicEditor(`|${BLOCK}`, { template: PLAY });
     const next = apply(state, elementCommand('page_break'));
-    expect(next.sliceDoc()).toBe(`===\n\n${BLOCK}`);
+    expect(next.sliceDoc()).toBe(`===\n\n\n\n${BLOCK}`);
+    expect(next.selection.main.head).toBe(5);
+  });
+
+  test('a Page break after a byte-order mark has its caret below', () => {
+    const view = chooser(`${BOM}|`);
+    press(view, 'b');
+    expect(render(view.state)).toBe(`${BOM}===\n\n|`);
+  });
+
+  test('left unused, the Action line under a page break goes', () => {
+    const view = chooser('A.\n\n|\n\nB.');
+    press(view, 'b');
+    view.dispatch({ selection: { anchor: 0 }, userEvent: 'select' });
+    expect(view.state.sliceDoc()).toBe('A.\n\n===\n\nB.');
   });
 
   test('one undo takes the page break back', () => {
@@ -509,6 +540,39 @@ describe('a pick', () => {
     press(view, 's');
     undo(view);
     expect(render(view.state)).toBe('JUNE\nHi.\n|');
+  });
+});
+
+describe('typing on a page break', () => {
+  test.each([
+    ['at its end', '===|', '===\n\nGo|'],
+    ['at its start', '|===', '===\n\nGo|'],
+    ['with text below', 'A.\n\n===|\n\nB.', 'A.\n\n===\n\nGo|\n\nB.'],
+    ['with text straight below', '===|\nB.', '===\n\nGo|\n\nB.'],
+  ])('a letter goes on to Action: %s', (_name, before, after) => {
+    expect(render(type(classicEditor(before), 'Go'))).toBe(after);
+  });
+
+  test('the letter is soft Action, as a heading typed there shows', () => {
+    expect(type(classicEditor('===|'), 'INT. BAR').sliceDoc()).toBe('===\n\nINT. BAR');
+  });
+
+  test('one undo takes the letter and the line', () => {
+    const state = classicEditor('A.\n\n===|', { with: [history()] });
+    expect(render(apply(type(state, 'G'), undo))).toBe('A.\n\n===|');
+  });
+
+  test('a space does nothing', () => {
+    expect(render(type(classicEditor('===|'), ' '))).toBe('===|');
+  });
+
+  test('`===` typed on a line of Action stays the writer’s words', () => {
+    const typed = type(classicEditor('A b.\n\n|'), '===x');
+    expect(typed.sliceDoc().split('\n').length).toBe(3);
+  });
+
+  test('with Classic Mode off the letter goes on the line', () => {
+    expect(render(type(editor('===|'), 'G'))).toBe('===G|');
   });
 });
 

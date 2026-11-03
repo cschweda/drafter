@@ -2,15 +2,17 @@ import {
   Annotation,
   type AnnotationType,
   type ChangeSpec,
-  type EditorState,
+  EditorState,
+  type Extension,
   type Line,
   type StateCommand,
+  type Transaction,
   type TransactionSpec,
 } from '@codemirror/state';
 import type { Span } from '@drafter/fountain';
 import { blocked, elementStructure, isBlank, underSpeech } from '../elements';
 import { BOM, command } from '../keymap';
-import { insideRegion, parsedDoc, regionAt } from '../state';
+import { appChange, insideRegion, parsedDoc, regionAt } from '../state';
 import { isBlankScript, visibleEnd, visibleStart } from './hidden';
 import {
   BLANK_SPEECH,
@@ -21,6 +23,7 @@ import {
   elementAt,
   lineKindAt,
   NEXT,
+  type StoredLine,
   setStored,
   showChooser,
   WRITES,
@@ -288,13 +291,61 @@ export const classicEnter: StateCommand = key((state) => {
   const { element, line, head } = here;
   if (isEmptyParens(here)) return removeParens(here);
   if (element.enter === 'chooser') return { effects: showChooser.of(null) };
-  if (element.pending || element.enter === null) return {};
   const { kind } = element;
+  const enter = element.enter as ClassicKind;
   if (kind === 'parenthetical' || kind === 'page_break' || head >= visibleEnd(state, line)) {
-    return onward(here, element.enter, 'enter');
+    return onward(here, enter, 'enter');
   }
   if (head <= visibleStart(state, line)) return pushDown(here);
   return split(here);
+});
+
+/** The one piece of text a transaction types at a cursor, or null. */
+function typedAtCursor(tr: Transaction): string | null {
+  const { main } = tr.startState.selection;
+  let text: string | null = null;
+  let count = 0;
+  tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
+    count++;
+    if (fromA === main.head && toA === fromA && inserted.lines === 1) text = inserted.toString();
+  });
+  return count === 1 ? text : null;
+}
+
+/**
+ * A line drawn as a rule isn't a place to type: `===Go` is a Synopsis that doesn't print. A letter
+ * typed there goes where Enter goes, in one transaction, and is typed there as any letter is, so
+ * one undo takes it all. A space has nothing to start.
+ */
+export const typeOffPageBreak: Extension = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || !tr.isUserEvent('input.type') || tr.isUserEvent('input.type.compose')) {
+    return tr;
+  }
+  const start = tr.startState;
+  if (tr.annotation(appChange)) return tr;
+  const here = hereIn(start);
+  if (here?.element.kind !== 'page_break' || here.element.pending) return tr;
+  const text = typedAtCursor(tr);
+  if (text === null) return tr;
+  if (!text.trim()) return {};
+  const go = onward(here, here.element.enter as ClassicKind, 'enter');
+  const onLine = start.update({ ...go, filter: false });
+  const at = onLine.state.selection.main.head;
+  const typed = onLine.state.update({
+    changes: { from: at, insert: text },
+    selection: { anchor: at + text.length },
+    userEvent: 'input.type',
+  });
+  // The line as typing it left it: read from the end, it would seem never to have been empty.
+  const stored = typed.state.field(classicLine) as StoredLine;
+  return {
+    changes: onLine.changes.compose(typed.changes),
+    selection: typed.newSelection,
+    effects: [...typed.effects, setStored.of(stored)],
+    annotations: classicEdit.of(true),
+    userEvent: 'input.type',
+    scrollIntoView: true,
+  };
 });
 
 /** Tab (§6): what comes next, from anywhere on the line, and it never splits it. */
