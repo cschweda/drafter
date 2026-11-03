@@ -360,3 +360,15 @@ From the [privacy audit](privacy-audit-2026-11-03.md); finding 1 and the rest we
 - **Plausible's script runs in the editor's page on drafter.dev**, by the maintainer's choice (every page, for the basic traffic). It is the one outside code there, and the security policy lets it send to plausible.io. Only page views and time on a page leave, cut down (`apps/web/scripts/plausible.mjs`), but the script itself could change on Plausible's side. If that ever matters more: host a reviewed copy on drafter.dev, with `connect-src` narrowed to `https://plausible.io/api/event`.
 - **Plausible's dashboard settings** (outbound links, file downloads, form submissions) live outside the repository. The snippet drops those events whatever they say; turning them off on the dashboard would only tidy it.
 
+## Red/blue team audit, 3 November 2026
+
+From the [red/blue team audit](redblue-audit-2026-11-03.md); everything else it found is fixed.
+
+- **GitHub and npm settings for the maintainer (S1, S4).** A tag ruleset on `refs/tags/v*`, a ruleset on `main` requiring `e2e`, a `release` environment with the maintainer as reviewer, a `gh` token without `workflow` scope, the stored npm token removed, and `drafter-mcp@0.0.0-stage` deprecated. The audit lists them in order.
+- **A deadline on each export job (W2).** The marks check stops the one known stall, but an export that hangs for another reason still holds the queue: terminate and recreate the worker past a minute, and say so.
+- **A `will-download` handler in the desktop app (D3)** that refuses downloads a page starts, once it's confirmed no feature uses one.
+- **Delete this cut (P5):** an action in the Cuts tab that also rewrites the cuts file beside the script.
+- **Opened paths in the desktop app (P8):** `granted-files.json` keeps up to 1,000; Remove from this browser could drop a script's entry.
+- **Smaller notes (S8, D4):** a hardlink in a named folder (refuse `nlink > 1`, or a trap for it), npm provenance (`actions/attest-build-provenance`), a `+sha512` hash on `packageManager`, `windows-latest` pinned, and the module consent fingerprint kept whole (256 bits).
+- **Reopen trusts its marker (W7):** a page can show one script in a browser and reopen as another in Drafter; a sentence in Open formats would say so.
+

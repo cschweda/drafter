@@ -6,6 +6,13 @@ import { writeXml, type XmlElement, type XmlNode } from './xml';
 // The text of every paragraph comes from the lines' styled runs, never from the source, so
 // emphasis markers, boneyard, and escapes are the parser's business alone; only notes are put
 // back, as `[[…]]`, because Final Draft's own notes anchor to text ranges Drafter can't map yet.
+// Final Draft prints those as script text, so `notes: 'leave-out'` (the app's Export options)
+// leaves out every note, note block, and synopsis instead (red/blue audit, 2026-11-03).
+
+export interface FdxOptions {
+  /** Notes and synopses: kept for a round trip (the default), or left out, as in the PDF. */
+  notes?: 'include' | 'leave-out';
+}
 
 /** A styled stretch of a paragraph's text. */
 interface Piece {
@@ -103,11 +110,15 @@ class Exporter {
   /** The synopses a scene heading has taken into its properties (a heading comes before them). */
   private readonly collected = new Set<number>();
 
+  private readonly withNotes: boolean;
+
   constructor(
     private readonly doc: Doc,
     private readonly template: Template,
+    options: FdxOptions = {},
   ) {
     this.regions = outerRegions(doc);
+    this.withNotes = options.notes !== 'leave-out';
   }
 
   /**
@@ -135,7 +146,7 @@ class Exporter {
     for (let r = firstFrom(this.regions, line.span.from); r < this.regions.length; r++) {
       const region = this.regions[r] as Region;
       if (!inLine(region.span.from)) break;
-      if (claimed.has(region) || region.kind !== 'note') continue;
+      if (claimed.has(region) || region.kind !== 'note' || !this.withNotes) continue;
       at.push({ from: region.span.from, pieces: [plain(this.noteText(region))] });
     }
     at.sort((a, b) => a.from - b.from);
@@ -148,7 +159,7 @@ class Exporter {
 
   private splitRun(run: InlineRun, inside: Region[], source: string): Piece[] {
     const style = { bold: run.bold, italic: run.italic, underline: run.underline };
-    const notes = inside.filter((region) => region.kind === 'note');
+    const notes = this.withNotes ? inside.filter((region) => region.kind === 'note') : [];
     if (inside.length === 0) return [{ ...style, text: run.text }];
 
     let cuts: string[] = [];
@@ -170,7 +181,7 @@ class Exporter {
     cuts.forEach((cut, k) => {
       pieces.push({ ...style, text: cut });
       const region = inside[k];
-      if (region?.kind === 'note') pieces.push(plain(this.noteText(region)));
+      if (region?.kind === 'note' && this.withNotes) pieces.push(plain(this.noteText(region)));
     });
     return pieces;
   }
@@ -227,6 +238,7 @@ class Exporter {
   }
 
   private synopsisOf(index: number): string {
+    if (!this.withNotes) return '';
     const parts: string[] = [];
     for (let i = index + 1; i < this.doc.blocks.length; i++) {
       const block = this.doc.blocks[i] as Block;
@@ -279,7 +291,7 @@ class Exporter {
         case 'synopsis':
           // One a scene took is already in its properties; any other has no scene to ride on, so
           // it is a General paragraph in its place, marked so import can write it back as `=`.
-          if (!this.collected.has(index)) {
+          if (this.withNotes && !this.collected.has(index)) {
             this.push([
               this.paragraph('General', { DrafterSynopsis: 'Yes' }, this.blockPieces(block)),
             ]);
@@ -304,6 +316,7 @@ class Exporter {
           return;
         }
         case 'note': {
+          if (!this.withNotes) return;
           // Only the regions from the block's start on, as `blockPieces` walks them: a filter of
           // every region for each note block took time in the square of the notes.
           const notes: Region[] = [];
@@ -392,6 +405,6 @@ const CENTERED = new Set(['title', 'credit', 'author', 'authors', 'source']);
  * The script as Final Draft XML. Nothing the script holds can make this throw: text XML forbids
  * is dropped, and a stray or unclosed boneyard simply hides what it covers, as it does in print.
  */
-export function toFdx(doc: Doc, template: Template): string {
-  return writeXml(new Exporter(doc, template).run());
+export function toFdx(doc: Doc, template: Template, options: FdxOptions = {}): string {
+  return writeXml(new Exporter(doc, template, options).run());
 }

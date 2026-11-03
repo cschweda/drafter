@@ -107,3 +107,21 @@ describe('tokenize', () => {
     expect(words('snake_case')).toEqual(['snake', 'case']);
   });
 });
+
+// A chain of hyphenated words took time in its length squared: each word worked out the whole
+// run's compound again (red/blue audit, 2026-11-03).
+describe('a long hyphen chain (timing; skipped on CI by its name: within 2 seconds)', () => {
+  test('is split in linear time', () => {
+    const time = (n: number) => {
+      const text = 'aa-'.repeat(n);
+      const start = performance.now();
+      tokenize(text);
+      return performance.now() - start;
+    };
+    time(1000);
+    const small = Math.min(time(20_000), time(20_000));
+    const large = Math.min(time(80_000), time(80_000));
+    expect(large / Math.max(small, 1)).toBeLessThan(8);
+    expect(large).toBeLessThan(2000);
+  });
+});

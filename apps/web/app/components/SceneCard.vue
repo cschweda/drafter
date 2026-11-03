@@ -96,7 +96,7 @@ function onEditKeydown(event: KeyboardEvent) {
         </button>
       </MenuButton>
     </div>
-    <input
+    <input autocomplete="off"
       v-if="props.editing"
       :id="`${props.domId}-field`"
       v-model="draft"

@@ -260,7 +260,7 @@ function make() {
 
       <div class="field">
         <label for="story-map-logline">Logline</label>
-        <input
+        <input autocomplete="off"
           id="story-map-logline"
           v-model="logline"
           type="text"
@@ -275,7 +275,7 @@ function make() {
 
       <div class="field">
         <label for="story-map-greeting">The line under your name</label>
-        <input id="story-map-greeting" v-model="greeting" type="text" maxlength="200" />
+        <input autocomplete="off" id="story-map-greeting" v-model="greeting" type="text" maxlength="200" />
       </div>
 
       <div class="field">
@@ -283,7 +283,7 @@ function make() {
           <input v-model="explainOn" type="checkbox" />
           Explain the page
         </label>
-        <input
+        <input autocomplete="off"
           v-if="explainOn"
           v-model="explain"
           type="text"
@@ -303,7 +303,7 @@ function make() {
           <input v-model="include.contact" type="checkbox" aria-describedby="story-map-contact-hint" />
           Your contact
         </label>
-        <input
+        <input autocomplete="off"
           v-if="include.contact"
           v-model="contact"
           type="text"
@@ -352,7 +352,7 @@ function make() {
             <p v-if="leads.length === 0" class="hint">No characters yet.</p>
             <div v-for="(lead, k) in leads" :key="lead.key" class="field">
               <label :for="`story-map-hook-${k}`">{{ lead.name }}</label>
-              <input
+              <input autocomplete="off"
                 :id="`story-map-hook-${k}`"
                 v-model="hooks[lead.key]"
                 type="text"

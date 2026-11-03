@@ -5,7 +5,7 @@ one outcome every way in must give it. A trap either **opens** with specific tex
 warning** (a note count, a notice), or is **refused** with a specific plain message. It never
 crashes or hangs, never runs anything, never fetches anything, and never uses unbounded memory.
 
-[MANIFEST.md](MANIFEST.md) lists every trap, generated from [`traps.ts`](traps.ts): 277 of them,
+[MANIFEST.md](MANIFEST.md) lists every trap, generated from [`traps.ts`](traps.ts): 278 of them,
 across Fountain, Markdown, plain text, Final Draft (`.fdx`), Highland, Fade In, HTML and EPUB
 reopening, special files (pipes, links, folders), the desktop app's modules folder, and the
 drafts and cuts files read back from beside a work.

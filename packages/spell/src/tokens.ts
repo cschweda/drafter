@@ -69,17 +69,25 @@ export function tokenize(text: string, offset = 0): Token[] {
       }
       runOf.push(first);
     });
+    // Each run's compound, worked out once for the run and shared by its words: worked out for
+    // each word, a chain of 80,000 `a-` took time in its length squared (red/blue audit, 2026-11-03).
+    const compounds = new Map<number, string | undefined>();
     const compoundOf = (i: number): string | undefined => {
       const start = runOf[i] as number;
-      let end = i;
+      if (compounds.has(start)) return compounds.get(start);
+      let end = start;
       while (end + 1 < matches.length && runOf[end + 1] === start) end++;
-      if (start === end) return undefined;
       const a = matches[start] as RegExpExecArray;
       const b = matches[end] as RegExpExecArray;
-      return chunk[0]
-        .slice(a.index, b.index + b[0].length)
-        .replaceAll('*', '')
-        .replaceAll('’', "'");
+      const compound =
+        start === end
+          ? undefined
+          : chunk[0]
+              .slice(a.index, b.index + b[0].length)
+              .replaceAll('*', '')
+              .replaceAll('’', "'");
+      compounds.set(start, compound);
+      return compound;
     };
     matches.forEach((match, i) => {
       const word = match[0].replaceAll('*', '').replaceAll('’', "'");

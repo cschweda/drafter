@@ -30,6 +30,7 @@ describe('settings', () => {
       checkForUpdates: true,
       scrollSync: true,
       elementBar: true,
+      hideTitle: false,
       cardSize: 'medium',
       spellLanguage: 'en-US',
       spellNotes: false,

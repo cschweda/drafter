@@ -567,7 +567,7 @@ const nameOfRow = (row: Row) =>
               </button>
             </MenuButton>
           </div>
-          <input
+          <input autocomplete="off"
             v-if="row.item.kind === 'scene' && editing === row.id"
             :id="`${domId(row.id)}-synopsis`"
             v-model="draft"

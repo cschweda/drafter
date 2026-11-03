@@ -2,6 +2,7 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFootnoteFromMarkdown } from 'mdast-util-gfm-footnote';
 import { gfmFootnote } from 'micromark-extension-gfm-footnote';
 import { containerDepth, MAX_NESTING } from './depth';
+import { denseMarks, MAX_BRACKETS, MAX_MARKS } from './marks';
 import type { MdNode } from './types';
 
 /**
@@ -9,6 +10,16 @@ import type { MdNode } from './types';
  * out of stack is, and its message says "nested too deeply", so the Preview and the export say it as
  * they say that (`previewProblem`), here or from a worker that sends only the message.
  */
+/** A paragraph with more than MAX_MARKS marks, which only a broken or hostile file has (`marks.ts`). */
+export class MarkedTooDensely extends Error {
+  constructor() {
+    super(
+      `This document has a paragraph with too many marks to read: more than ${MAX_MARKS.toLocaleString('en-US')} of * and _, or ${MAX_BRACKETS.toLocaleString('en-US')} of ] with no [.`,
+    );
+    this.name = 'MarkedTooDensely';
+  }
+}
+
 export class NestedTooDeeply extends RangeError {
   constructor() {
     super(`This document is nested too deeply to read: more than ${MAX_NESTING} levels.`);
@@ -78,6 +89,7 @@ export function parseMarkdown(source: string): MdNode {
   // off here, so the nesting scan and the parser read exactly the same text.
   const text = source.charCodeAt(0) === 0xfeff ? source.slice(1) : source;
   if (containerDepth(text, MAX_NESTING) > MAX_NESTING) throw new NestedTooDeeply();
+  if (denseMarks(text)) throw new MarkedTooDensely();
   return fromMarkdown(text, {
     extensions: [FOOTNOTES],
     mdastExtensions: [gfmFootnoteFromMarkdown()],

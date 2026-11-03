@@ -251,5 +251,42 @@ export function navigationFor(url: string): 'app' | 'external' | 'refuse' {
   return 'refuse';
 }
 
+/**
+ * The sites Drafter's own pages link to (the help, About, Report a problem): a page sends these to
+ * the browser at once. Any other https address a page asks for, the writer is asked about first,
+ * by its host: a page that a hostile file had somehow made run code could otherwise put the
+ * script in an address and hand it to the browser, past the network block and the page's policy
+ * (red/blue audit, 2026-11-03). On GitHub, only this repository's pages.
+ */
+const TRUSTED_HOSTS = new Set([
+  'drafter.dev',
+  'fountain.io',
+  'plausible.io',
+  'nodejs.org',
+  'docs.docker.com',
+  'scripts.sil.org',
+  'metaincognita.com',
+]);
+
+/** Whether a page may send `url` to the browser without asking: one of Drafter's own links. */
+export function trustedExternal(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol === 'mailto:') return navigationFor(url) === 'external';
+  if (parsed.protocol !== 'https:' || parsed.username !== '' || parsed.password !== '')
+    return false;
+  if (parsed.port !== '') return false;
+  const host = parsed.hostname.toLowerCase();
+  if (host === 'github.com') {
+    const [, owner, repo] = parsed.pathname.split('/');
+    return owner?.toLowerCase() === 'cschweda' && repo?.toLowerCase() === 'drafter';
+  }
+  return TRUSTED_HOSTS.has(host);
+}
+
 /** The maintainer's address, the one `mailto:` the app hands to the system (apps/web/app/report/issue.ts). */
 export const CONTACT_EMAIL = 'cschweda@gmail.com';

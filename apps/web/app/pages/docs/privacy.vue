@@ -110,13 +110,17 @@ useDocsHead({
       after a <code>?</code> or <code>#</code> (<code>drafter.dev/</code> or a help page), the site
       that sent you there if your browser says, the kind of device and browser, the country, and
       how far you scrolled and how long the page was open. Drafter sends Plausible nothing else: no
-      clicks, no downloads, no forms. It never sees your script, its title, anything you type, or
-      which files you open or save.
+      clicks, no downloads, no forms. Drafter never gives it your script, its title, anything you
+      type, or which files you open or save.
     </p>
     <p>
       Plausible’s small script comes from plausible.io and runs in the same page as the editor on
       drafter.dev, so it is the one piece of outside code there. Drafter lets only a page view and
-      the time on the page through, cut down first (<code>apps/web/scripts/plausible.mjs</code>).
+      the time on the page through, cut down first (<code>apps/web/scripts/plausible.mjs</code>),
+      and the page’s security policy lets it load that one script and send to that one address,
+      nothing else on plausible.io. What Drafter can’t do is check Plausible’s own code: like any
+      script in a page, it could read the page. If that matters to you, use the desktop app, which
+      has no analytics, or block plausible.io; Drafter works the same.
       Before 3 November 2026, Plausible also counted clicks on outside links, and the address of
       Open on GitHub in Report a problem went whole, with what the report said; the privacy audit
       found that, and it was fixed the same day.
@@ -156,6 +160,14 @@ useDocsHead({
     <p>
       Remove a script with <strong>Remove from this browser</strong>, or clear this site’s data in
       your browser’s settings, and it is gone from the device. Neither touches a file you saved.
+    </p>
+    <p>
+      <strong>What your browser keeps on its own.</strong> A browser keeps each tab’s title in its
+      history, and can sync open tabs and history to your account with Google, Microsoft, Apple, or
+      Mozilla. Drafter’s tab is titled with the script’s title, so turn on
+      <strong>Hide the script’s title in the tab</strong> in Settings if that matters: the tab and
+      the window then say only “Drafter”. Drafter’s text fields turn off the browser’s form history,
+      so a logline or a synopsis isn’t kept there.
     </p>
 
     <h2 id="offline">The service worker</h2>

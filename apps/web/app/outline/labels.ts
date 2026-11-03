@@ -31,7 +31,8 @@ export const colorName = (value: string): string => value;
 
 /** The swatch for a color note's value, or none for a word Drafter doesn't know. */
 export const swatchOf = (value: string): string | undefined =>
-  (SWATCH as Record<string, string | undefined>)[value];
+  // Only Drafter's own colors: a note saying `constructor` named the object's prototype.
+  Object.hasOwn(SWATCH, value) ? (SWATCH as Record<string, string>)[value] : undefined;
 
 /** "Scene 12" or "Scene 12A": the locked number if it has one, else its place. */
 export const sceneNumber = (scene: Scene): string => scene.number ?? String(scene.ordinal);

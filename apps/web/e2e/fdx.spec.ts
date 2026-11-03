@@ -242,6 +242,11 @@ test.describe('exporting as Final Draft', () => {
     expect(parsed.root).toBe('FinalDraft');
     expect(parsed.headings.length).toBeGreaterThan(0);
     expect(parsed.headings.every((heading) => /^(INT|EXT)/.test(heading))).toBe(true);
+    // The sample's notes (it has ten) stay out, as Export options' Leave out says: Final Draft
+    // would print them as script text (red/blue audit, 2026-11-03).
+    await expect(page.locator('.cm-content')).toContainText('[[');
+    expect(xml).not.toContain('[[');
+    expect(xml).not.toContain('DrafterNote');
   });
 
   test('is offered for a script, and not for a Markdown document', async ({ page, isMobile }) => {

@@ -26,6 +26,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Security
 
+The red/blue team audit of 3 November 2026 ([the report](docs/redblue-audit-2026-11-03.md)); each fix has a test that fails without it.
+
+- **A Final Draft export leaves notes out when Include notes says Leave out** (the default). It carried every note, scene note, and synopsis as text Final Draft prints; the help said it never did. With Include, notes are `[[…]]` in the text, and the help and the dialog say so.
+- **The desktop app asks before a page opens any address but Drafter's own links.** A page made to run code could have handed the browser an address holding the script, past the network block; now any other site shows a box from the app, naming it. A new app window always gets the app's own chrome.
+- **A Markdown paragraph thick with `*` and `_` no longer freezes the app.** 160 KB of `*_` held the tab for over 14 seconds, again on every reload, and stalled the Preview and every export. The Source pane reads such a paragraph as plain text, and the Preview and exports refuse it, with a new trap document.
+- **`drafter build` never writes through a link** planted where its output goes: it writes beside the target and renames over it.
+- **Drafter for Claude lists a folder even with a huge file in it:** a file of over 300,000 paragraphs is refused on its own.
+- **No text field fills the browser's form history** (the Story map's logline and contact, the synopses), with a test over every field.
+- **drafter.dev's security policy names only Plausible's one script and its one event address**, not all of plausible.io.
+- **Hide the script's title in the tab**, a new setting (off by default): browsers keep a tab's title in their history and sync open tabs.
+- An EPUB with no title page gets a random identifier, so a blind copy can't be tied to the named one.
+- A script naming its template `constructor` no longer stops Cuts and History; a color note naming one reads as no color; a Story map contact can't carry another address.
+- The spellcheck splits a long hyphen chain in linear time.
+- The self-hosted Docker image no longer caches a 404 as immutable.
+- `publish.sh` takes only a push of the tag at the tag's own commit; Dependabot and pnpm wait a week before taking a new version; `.gitignore` covers signing keys and `.npmrc`.
+- The help warns that cuts are shared in a shared folder, says what the browser keeps on its own, and says the Story map shows synopses.
+
 - **drafter.dev's analytics no longer receive what a report says.** Plausible's script for the site counts clicks on outside links and sent each link's whole address, and Report a problem's **Open on GitHub** is a link whose address holds everything the writer typed in the report. Every Plausible event is now cut down before it is sent: whatever follows `?` or `#` is dropped from the page's address, the referrer, and every property. It happened only on drafter.dev, only when a report was opened on GitHub, and only with what that report said (which could include lines pasted into it); the script itself was never sent, and the desktop app and self-hosted copies never load Plausible. Found by the privacy audit of 2026-11-03.
 
 ## [0.25.0] - 2026-11-03

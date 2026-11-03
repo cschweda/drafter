@@ -135,20 +135,48 @@ Drafter is built to open files from anyone without putting you at risk.
 - **The desktop app** never loads an opened file into a window. It reads the bytes of only the files you chose, and hands them to the editor.
 - **Reopening an HTML or EPUB file** reads only the script Drafter embedded in it, as text. A browser opening an HTML file outside Drafter is outside Drafter's control, so treat one someone sent you like any downloaded page (see [Open formats](https://drafter.dev/docs/open-formats/)).
 - **Drafter for Claude only reads, and only the folders you name.** It has no code that writes, moves, or deletes a file, starts a program, or opens a connection. A path leading outside your folders, through `..` or a link, is refused, hidden files are never read, and every file is judged by what is inside it, exactly as Open judges it, with the app's size limits. Each request runs in a worker stopped at 10 seconds, answers are capped at 40,000 characters with signed cursors for the rest, and your notes are left out unless you ask. The trap documents have an entry point for it, with path, size, no-write, no-fetch, and no-run traps.
-- **The trap documents.** Drafter is tested against [277 deliberately broken and hostile files](fixtures/trap/README.md) for every format it opens: Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB, and the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs, or fetches anything, and that each finishes within its time limit. The readers and the command line run in a worker that is stopped at the limit, so a hang fails the test. The app's own Open runs in the test's thread, so it is timed but can't be stopped mid-hang ([what is enforced](fixtures/trap/README.md#running-it)). The suite runs with `pnpm test` once the packages are built (`pnpm -r build`), and in the desktop app's CI on every push to `main`.
+- **The trap documents.** Drafter is tested against [278 deliberately broken and hostile files](fixtures/trap/README.md) for every format it opens: Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB, and the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs, or fetches anything, and that each finishes within its time limit. The readers and the command line run in a worker that is stopped at the limit, so a hang fails the test. The app's own Open runs in the test's thread, so it is timed but can't be stopped mid-hang ([what is enforced](fixtures/trap/README.md#running-it)). The suite runs with `pnpm test` once the packages are built (`pnpm -r build`), and in the desktop app's CI on every push to `main`.
 - **Found a security problem?** Please report it privately: choose **Report a vulnerability** on the repository's [Security tab](https://github.com/cschweda/drafter/security) ([SECURITY.md](SECURITY.md) says what to include), or email cschweda@gmail.com with the details. Never in a public issue.
 
-The [Technical details](docs/technical-details.md#security) give the specifics. [Audits](docs/AUDITS.md) lists every security and clean-room audit, newest first.
+The [Technical details](docs/technical-details.md#security) give the specifics.
 
-The latest security audit: [1 November 2026](docs/security-audit-2026-11-01.md), no exploitable hole found.
+### Audit record
 
-The latest privacy audit: [3 November 2026](docs/privacy-audit-2026-11-03.md). Nothing about a script is stored in the cloud, no AI is used, and no request in a full writing session in three browsers carried the script. One leak was found and fixed the same day: on drafter.dev, what a report said could reach the analytics when it was opened on GitHub. See [Privacy](#privacy-your-script-stays-with-you).
+Every audit of Drafter, newest first. The newest is in full; each earlier one is kept here in a line, with its full report in [`docs/`](docs/AUDITS.md).
+
+**Newest: [red/blue team audit, 3 November 2026](docs/redblue-audit-2026-11-03.md).** Four red-team attackers each took one area (the web app and its file formats, the desktop app, the supply chain and release, and privacy) and tried to break it. A blue team then checked each finding, fixed what was real with a test that fails without the fix, and left only GitHub and npm settings for the maintainer. **No attack ran code from a script, a file, or an export, got past the security policy, or reached the network from a page.**
+
+| | Severity | Finding | Mitigation | Status |
+|---|---|---|---|---|
+| P1 | High | Final Draft exports carried notes and synopses as printed text, even with notes left out | Leave out now leaves them all out; Include says they print | Fixed |
+| D1 | High | A compromised desktop page could hand the browser an address holding the script, past every network block | Only Drafter's own links open at once; any other site asks you first | Fixed |
+| S1 | High | One stolen credential could push a release, with no tag or branch protection | 7-day waits on new dependencies; tag and branch rulesets and a release environment are for the maintainer | Maintainer |
+| W1 | Medium | 160 KB of `*_` in a Markdown file froze the tab, again on every reload | Past 4,000 marks in a paragraph, they're plain text | Fixed |
+| W2 | Medium | The same file stalled the Preview and every export after it | That paragraph is refused before parsing, with a trap document to hold it | Fixed |
+| P2 | Medium | The script's title goes into the browser's history and tab sync | Settings → Hide the script's title in the tab | Mitigated |
+| P3 | Medium | The Story map's logline and synopses went into the browser's form history | `autocomplete="off"` on every text field, with a test | Fixed |
+| P4 | Medium | Plausible's script could read the page, and the policy allowed all of plausible.io | The policy allows one script and one address; the help says what can't be checked | Mitigated |
+| S2 | Medium | `drafter build` wrote through a planted link, overwriting a file outside the folder | Written beside and renamed, so a link is replaced | Fixed |
+| D2 | Low–Medium | A page could open a hidden window with the app's bridge | New windows always get the app's own chrome | Fixed |
+| S3–S5, W3–W4, P5–P7, D3 | Low | One huge file broke Drafter for Claude's listing; PR checks unenforced; Docker cached 404s; a template named `constructor` broke Cuts; a slow spellcheck on hyphen chains; cuts in shared folders; EPUB ids linking blind copies; a help line | Each fixed with a test, or warned about in the help; a download handler deferred | Fixed (D3 deferred) |
+| W5–W6, S6–S8, D4, P8 | Info | Extra addresses in a contact link, prototype lookups, a loose release check, ignore rules, and smaller notes | Fixed or recorded in [DEFERRED](docs/DEFERRED.md) | Fixed / recorded |
+
+**Earlier audits:**
+
+- **[Privacy audit, 3 November 2026](docs/privacy-audit-2026-11-03.md):** nothing about a script is stored in the cloud, and there's no AI. A writing session in three browsers on live drafter.dev sent the script in no request. One leak was fixed the same day: on drafter.dev, a report's text could reach the analytics.
+- **[Security audit, 1 November 2026](docs/security-audit-2026-11-01.md):** the first formal audit. No exploitable hole and nothing leaves the device. Fixed: private vulnerability reporting, the desktop's drop grant, Nuxt 4.6.3, and Dependabot.
+- **[Clean-room audit, 1 November 2026](docs/clean-room-audit-2026-11-01.md):** no copied code, no screenwriting package, no GPL code shipped. A film catchphrase and an unrecorded source were fixed.
+- **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 278, each with the one outcome it must have, run on every pull request.
+- **Reopenable exports review, 1 November 2026 (v0.23.1):** only the embedded source is read, as text, with caps before unpacking.
+- **Accessibility pass, 28 October 2026 (v0.9.0):** automated axe checks in every browser and both themes. Screen-reader passes are still to come.
+- **[Clean-room audit, 27 October 2026](docs/clean-room-audit-2026-10-27.md):** passed, with two fixes.
+- **Desktop review, 27 October 2026 (v0.4.0):** WebRTC closed, folder modules kept apart, and updates checked by SHA-512.
 
 ## Testing
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.25.0, there are **7,914 unit and property tests** (in 21 packages, the web app, and the desktop app), **1,352 browser tests**, each run in five browser setups (6,760 runs), 137 end-to-end tests of the desktop app, and **277 trap documents** with 1,254 checks:
+**What runs.** As of v0.25.0, there are **7,914 unit and property tests** (in 21 packages, the web app, and the desktop app), **1,352 browser tests**, each run in five browser setups (6,760 runs), 137 end-to-end tests of the desktop app, and **278 trap documents** with 1,258 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.

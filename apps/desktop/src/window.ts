@@ -8,6 +8,7 @@ import {
   app,
   BrowserWindow,
   type BrowserWindowConstructorOptions,
+  dialog,
   type IpcMainEvent,
   type IpcMainInvokeEvent,
   shell,
@@ -15,7 +16,7 @@ import {
 } from 'electron';
 import { VERSION_ARG } from './channels';
 import { allowsModuleFrame } from './module-folder';
-import { APP_URL, navigationFor } from './protocol';
+import { APP_URL, navigationFor, trustedExternal } from './protocol';
 
 /** The URL of the frame that started a navigation, or undefined (none, or one that is gone). */
 function initiatorUrl(event: { initiator?: { url: string } | null }): string | undefined {
@@ -103,6 +104,39 @@ export function openExternal(url: string): void {
 }
 
 /**
+ * An address a page asked to open outside the app: one of Drafter's own links goes at once, and
+ * any other only once the writer says yes to its host, in a box from the app itself, which no page
+ * can answer (`trustedExternal`). The e2e suite's log says `asked <url>` instead.
+ */
+export function openFromPage(url: string, contents: WebContents): void {
+  if (navigationFor(url) !== 'external') return;
+  if (trustedExternal(url)) {
+    openExternal(url);
+    return;
+  }
+  const log = app.isPackaged ? undefined : process.env.DRAFTER_E2E_EXTERNAL_LOG;
+  if (log) {
+    appendFileSync(log, `asked ${url}\n`);
+    return;
+  }
+  const host = new URL(url).host;
+  const owner = BrowserWindow.fromWebContents(contents);
+  const options = {
+    type: 'question' as const,
+    buttons: ['Open in Browser', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    message: `Open ${host} in your browser?`,
+    detail: `A page in Drafter asked to open ${host}, which isn’t one of Drafter’s own links. Open it only if you just chose a link to it.`,
+  };
+  void (owner ? dialog.showMessageBox(owner, options) : dialog.showMessageBox(options)).then(
+    ({ response }) => {
+      if (response === 0) openExternal(url);
+    },
+  );
+}
+
+/**
  * Applies the navigation rules to a window's contents: it stays on app://drafter/; an https link
  * goes to the system browser; `window.open` of an app page opens a window of the app's own (with
  * these same rules), and of anything else, nothing. main.ts calls this for every window created.
@@ -118,7 +152,7 @@ export function guard(
     const where = navigationFor(event.url);
     if (where === 'app') return;
     event.preventDefault();
-    if (where === 'external' && event.isMainFrame) openExternal(event.url);
+    if (where === 'external' && event.isMainFrame) openFromPage(event.url, contents);
   });
   contents.on('will-redirect', (event) => {
     if (navigationFor(event.url) !== 'app') event.preventDefault();
@@ -128,10 +162,19 @@ export function guard(
     if (where === 'app') {
       return {
         action: 'allow',
-        overrideBrowserWindowOptions: { ...windowOptions(preload), show: true },
+        // The app's own chrome, whatever the page asked for: shown, solid, focusable, and centred,
+        // so a page can't open a hidden window that keeps the app's bridge (red/blue audit).
+        overrideBrowserWindowOptions: {
+          ...windowOptions(preload),
+          show: true,
+          opacity: 1,
+          focusable: true,
+          transparent: false,
+          center: true,
+        },
       };
     }
-    if (where === 'external') openExternal(url);
+    if (where === 'external') openFromPage(url, contents);
     return { action: 'deny' };
   });
   contents.on('will-attach-webview', (event) => event.preventDefault());

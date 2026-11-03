@@ -44,3 +44,24 @@ describe('list_scripts and an importer that fails unexpectedly', () => {
     expect(listing.manifest.refused).toBe(1);
   });
 });
+
+// A file of 540,000 one-line scenes and actions outgrew the reader's heap, and the reader stopping failed
+// the whole folder's listing (red/blue audit, 2026-11-03). Now that file alone is refused.
+describe('list_scripts and a file with too many paragraphs', () => {
+  it('lists the folder, with that file refused as too long', async () => {
+    const dir = tempFolder();
+    put(join(dir, 'Lib', 'a.fountain'), 'INT. HALL - DAY\n\nA line.\n');
+    put(join(dir, 'Lib', 'huge.fountain'), 'INT. A\n\nB\n\n'.repeat(270_000));
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    const result = await open.call('list_scripts', {});
+    expect(result.isError).toBeFalsy();
+    const listing = result.structuredContent as {
+      files: Array<{ path: string; content: string; refused: string | null }>;
+    };
+    expect(listing.files.map((f) => [f.path, f.content])).toEqual([
+      ['Lib/a.fountain', 'fountain'],
+      ['Lib/huge.fountain', 'not a script'],
+    ]);
+    expect(listing.files[1]?.refused).toContain('more than 300,000 paragraphs');
+  });
+});

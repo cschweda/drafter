@@ -10,6 +10,16 @@ const sorted = (sketch: Uint32Array) =>
   [...sketch].every((v, i) => i === 0 || (sketch[i - 1] as number) < v);
 
 describe('scenePrints', () => {
+  // A script naming a template by a prototype's key read the object's prototype, and every print
+  // threw: Cuts kept nothing and History read nothing (red/blue audit, 2026-11-03).
+  test('reads a script naming `constructor` or `__proto__` as its template as a screenplay', () => {
+    for (const id of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) {
+      const source = `INT. HALL - DAY\n\nA line.\n\n/* drafter\n{"template":"${id}"}\n*/\n`;
+      expect(() => scenePrints(source), id).not.toThrow();
+      expect(scenePrints(source).slots, id).toHaveLength(1);
+    }
+  });
+
   test('prints every scene of a screenplay and a stage play', () => {
     const film = scenePrints(LAST_FERRY);
     expect(film.slots).toHaveLength(12);

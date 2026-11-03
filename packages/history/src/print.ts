@@ -70,10 +70,16 @@ const WORD = /[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu;
 
 const SCREENPLAY = builtins['us-screenplay'] as Template;
 
-/** The template `doc` names in its settings, else the screenplay. */
+/**
+ * The template `doc` names in its settings, else the screenplay. Only a built-in's own name: a
+ * script naming `constructor` or `__proto__` got the object's prototype, and Cuts and History
+ * stopped reading it (red/blue audit, 2026-11-03).
+ */
 export function templateOf(doc: Doc): Template {
   const id = doc.meta?.template;
-  return (typeof id === 'string' ? builtins[id] : undefined) ?? SCREENPLAY;
+  return typeof id === 'string' && Object.hasOwn(builtins, id)
+    ? (builtins[id] as Template)
+    : SCREENPLAY;
 }
 
 /**

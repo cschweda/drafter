@@ -128,6 +128,63 @@ describe('toFdx', () => {
     ]);
   });
 
+  // Final Draft prints `[[…]]` as script text, so Export options' Leave out (the app's default)
+  // must leave every note and synopsis out (red/blue audit, 2026-11-03).
+  it('with notes left out, writes no note, note block, scene note, or synopsis anywhere', () => {
+    const source = [
+      '# ACT ONE',
+      '',
+      'INT. LAB - NIGHT',
+      '',
+      '= SYNOPSIS SECRET the lab burns',
+      '',
+      '[[Goal: GOAL SECRET]] [[Setup: SETUP SECRET]]',
+      '',
+      'A lamp. [[PRIVATE SECRET]] It flickers.',
+      '',
+      'WREN',
+      'Hi [[DIALOGUE SECRET]] there.',
+      '',
+      '[[BLOCK SECRET on its own]]',
+      '',
+      '= ORPHAN SECRET synopsis',
+      '',
+    ].join('\n');
+    const xml = toFdx(parse(source), screenplay, { notes: 'leave-out' });
+    expect(xml).not.toMatch(/SECRET|\[\[|DrafterNote|DrafterSynopsis|Summary=/);
+    const kept = content(source).length;
+    const tree = (strip(readXml(xml)).children[0] as XmlElement).children;
+    expect(tree).toEqual([
+      P('General', { DrafterSection: '1' }, T('ACT ONE')),
+      P('Scene Heading', {}, T('INT. LAB - NIGHT')),
+      // The parser's own text, as the PDF prints it: the spaces on both sides of a note stay.
+      P('Action', {}, T('A lamp.  It flickers.')),
+      P('Character', {}, T('WREN')),
+      P('Dialogue', {}, T('Hi  there.')),
+    ]);
+    // With the default, all of it is still there, for Drafter to read back.
+    expect(kept).toBeGreaterThan(tree.length);
+    expect(toFdx(parse(source), screenplay)).toContain('[[PRIVATE SECRET]]');
+  });
+
+  it('with notes left out, no note text from any script survives', () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.constantFrom('INT. A - DAY', 'A line.', 'WREN', 'Hello.', '= a synopsis'), {
+          maxLength: 8,
+        }),
+        fc.stringMatching(/^[A-Z]{3,8}$/),
+        (lines, word) => {
+          const marker = `ZQ${word}`;
+          const source = lines.map((line) => `${line} [[${marker}]]`).join('\n\n');
+          const xml = toFdx(parse(source), screenplay, { notes: 'leave-out' });
+          expect(xml).not.toContain(marker);
+          expect(xml).not.toContain('[[');
+        },
+      ),
+    );
+  });
+
   it('keeps a note in its place in a line that holds an escape', () => {
     expect(content('He \\*x\\* [[n]] goes.\n')).toEqual([P('Action', {}, T('He *x* [[n]] goes.'))]);
   });

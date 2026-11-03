@@ -166,7 +166,7 @@ describe('drafter build --story-map', () => {
     const out = help.out.replace(/\s+/g, ' ');
     expect(out).toContain('--story-map <file>');
     expect(out).toContain(
-      'write a story map: one picture-first HTML page of the script so far, to send to anyone (notes left out)',
+      'write a story map: one picture-first HTML page of the script so far, to send to anyone (your notes left out; synopses and setups and payoffs shown)',
     );
     expect(out).toContain('--status <in-progress|finished>');
   });

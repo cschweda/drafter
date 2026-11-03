@@ -2,7 +2,8 @@
 # runs, on Linux, minus packaging the desktop app (desktop.yml does that on main and on tags):
 # formatting and lint, the build, every package's typecheck and tests, the trap documents, the web app's
 # typecheck and unit tests, the desktop shell's unit tests, and the browser tests in Chromium on
-# macOS and Linux. Every job is required.
+# macOS and Linux. Every job is meant to be required: GitHub enforces that only once a ruleset on
+# main requires the `e2e` check (docs/DEFERRED.md, red/blue audit 2026-11-03).
 #
 # It uses no secret. A pull request from a fork, or from Dependabot, gets a read-only token.
 name: checks
