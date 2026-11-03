@@ -423,6 +423,12 @@ importers:
         specifier: workspace:*
         version: link:../fountain
 
+  packages/novel:
+    dependencies:
+      '@drafter/markdown':
+        specifier: workspace:*
+        version: link:../markdown
+
   packages/outline:
     dependencies:
       '@drafter/fountain':
