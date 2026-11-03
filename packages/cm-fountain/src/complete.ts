@@ -22,12 +22,12 @@ const TRANSITIONS = ['CUT TO:', 'DISSOLVE TO:', 'SMASH CUT TO:', 'FADE OUT.'];
 const EXTENSIONS = ['(V.O.)', '(O.S.)'];
 
 /** A scene heading's prefix and the space after it, as the parser reads a prefix (§2.5, rule 11). */
-const HEADING_PREFIX = /^(?:INT\.?\/EXT\.?|INT\.?|EXT\.?|EST\.?|I\/E\.?)\s+/i;
+export const HEADING_PREFIX = /^(?:INT\.?\/EXT\.?|INT\.?|EXT\.?|EST\.?|I\/E\.?)\s+/i;
 
 const NONE: readonly string[] = [];
 
 /** Where a completion starts, and what it offers there. */
-interface Target {
+export interface Target {
   /** The start of the text it replaces, which runs to the cursor. */
   from: number;
   /**
@@ -40,6 +40,8 @@ interface Target {
    * replaces the `>` too (the element bar writes it on an empty line, then opens this list).
    */
   mark?: number;
+  /** What's offered past a name or a place, for a mode that treats them differently. */
+  role?: 'extension' | 'time';
 }
 
 /**
@@ -142,10 +144,10 @@ export function optionsAfter(query: string, labels: readonly string[]): Completi
 }
 
 /** The end of the text before the cursor, in a `[[Setup:` or `[[Payoff:` not yet closed: the label so far. */
-const OPEN_MARK = /\[\[\s*(?:setup|payoff)\s*:[ \t]*([^\]]*)$/i;
+export const OPEN_MARK = /\[\[\s*(?:setup|payoff)\s*:[ \t]*([^\]]*)$/i;
 
 /** How many characters of `text` the pattern, anchored at its start, matches. */
-const lengthOf = (pattern: RegExp, text: string) => pattern.exec(text)?.[0].length ?? 0;
+export const lengthOf = (pattern: RegExp, text: string) => pattern.exec(text)?.[0].length ?? 0;
 
 /** The places where the cursor's line can be completed, best first; most lines have none. */
 function targets(state: EditorState, pos: number, explicit: boolean): Target[] {
@@ -194,7 +196,7 @@ function wordStart(text: string): number {
  * Ctrl+Space anywhere (Phase 1 design §5.3): every name that goes on from the word before the
  * cursor, as text. It is no cue, so a name that needs an `@` to be one is offered like the rest.
  */
-function anywhereTarget(line: Line, text: string, start: number): Target {
+export function anywhereTarget(line: Line, text: string, start: number): Target {
   const at = wordStart(text);
   // With no word yet, the cast is listed only where a word may begin: not after `)` or a `,`.
   const none = at === text.length && text !== '' && !/\s$/u.test(text);
@@ -202,13 +204,17 @@ function anywhereTarget(line: Line, text: string, start: number): Target {
 }
 
 /** After a scene heading's prefix and its space: a location, or after the last ` - `, a time. */
-function headingTargets(rest: string, from: number): Target[] {
+export function headingTargets(
+  rest: string,
+  from: number,
+  placesIn: (doc: Doc) => string[] = places,
+): Target[] {
   // The parser splits a heading on its last hyphen or en dash with a space on each side.
   const dash = Math.max(rest.lastIndexOf(' - '), rest.lastIndexOf(' \u2013 '));
-  if (dash === -1) return [{ from, labels: (d) => places(d) }];
+  if (dash === -1) return [{ from, labels: (d) => placesIn(d) }];
   const time = dash + 3;
   const skipped = lengthOf(/^\s*/, rest.slice(time));
-  return [{ from: from + time + skipped, labels: (d) => times(d) }];
+  return [{ from: from + time + skipped, labels: (d) => times(d), role: 'time' }];
 }
 
 /**
@@ -234,19 +240,24 @@ function cueTargets(
   const from = start + mark;
   const name = body.slice(0, /[(^]/.exec(body)?.index ?? body.length);
   if (!forced && (/\p{Ll}/u.test(name) || !(explicit || hasTwoLetters(name)))) return [];
+  return nameTargets(line, body, from, forced);
+}
 
+/** What goes on from `body`, a cue's text after any `@`, which starts at `from`. */
+export function nameTargets(line: Line, body: string, from: number, forced: boolean): Target[] {
+  const name = body.slice(0, /[(^]/.exec(body)?.index ?? body.length);
   const paren = body.lastIndexOf('(');
   if (paren === -1) {
     const found: Target[] = [{ from, labels: (d) => names(d, line.from, forced) }];
     // After a name and a space, unless the name goes on (`OLD MAN`).
     if (body.length > body.trimEnd().length) {
-      found.push({ from: from + body.length, labels: (d) => extensions(d) });
+      found.push({ from: from + body.length, labels: (d) => extensions(d), role: 'extension' });
     }
     return found;
   }
   // From the last parenthesis, if it is still open and a name comes before it.
   const open = name !== '' && !body.includes(')', paren);
-  return open ? [{ from: from + paren, labels: (d) => extensions(d) }] : [];
+  return open ? [{ from: from + paren, labels: (d) => extensions(d), role: 'extension' }] : [];
 }
 
 /** Blank as the parser reads it: empty or spaces, except exactly two spaces, which join lines. */

@@ -167,7 +167,7 @@ function speechOf(state: EditorState, name: Line): { speech: Line | null; last: 
 }
 
 /** Goes from the end of the cursor's line to the element `kind` under it, writing what it needs. */
-function onward(here: Here, kind: ClassicKind, by: Key): TransactionSpec {
+export function onward(here: Here, kind: ClassicKind, by: Key): TransactionSpec {
   const { state, element } = here;
   const { doc, lineBreak } = state;
   let { line } = here;

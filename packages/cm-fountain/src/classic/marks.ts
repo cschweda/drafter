@@ -342,7 +342,7 @@ export function settleLine(
 export const classicTidied: AnnotationType<true> = Annotation.define<true>();
 
 /** The one change that turns `from` into `to`, in a text where they start at `at`. */
-function difference(from: string, to: string, at: number) {
+export function difference(from: string, to: string, at: number) {
   const most = Math.min(from.length, to.length);
   let start = 0;
   while (start < most && from[start] === to[start]) start++;
@@ -417,7 +417,7 @@ const sameSpans = (a: readonly Span[], b: readonly Span[]) =>
   a.length === b.length && a.every((span, i) => span.from === b[i]?.from && span.to === b[i]?.to);
 
 /** The stored line, or what a line the cursor has no stored line for is. */
-function ownLine(state: EditorState, line: Line): StoredLine {
+export function ownLine(state: EditorState, line: Line): StoredLine {
   const held = state.field(classicLine, false);
   if (held?.from === line.from) return held;
   const kind = lineKindAt(state, line) ?? pendingAt(state, line.from);

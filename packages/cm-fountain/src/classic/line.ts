@@ -1,3 +1,4 @@
+import { pickedCompletion } from '@codemirror/autocomplete';
 import { invertedEffects } from '@codemirror/commands';
 import {
   Annotation,
@@ -386,11 +387,13 @@ function applyEffects(line: StoredLine | null, tr: Transaction): StoredLine | nu
 /**
  * Keeps what can't be worked out in the undo history: a made line must be tidied after undo or redo
  * brings the cursor back to it, and a mark this stay wrote must still come off. Only a change adds
- * to the history, so a move or a row walk stays out of it.
+ * to the history, so a move or a row walk stays out of it. An accepted suggestion comes back to the
+ * element it was typed in, as a name with no speech yet is nothing else to the parser.
  */
 export const keepLineInHistory: Extension = invertedEffects.of((tr) => {
   const line = tr.docChanged ? tr.startState.field(classicLine, false) : null;
-  return line && (line.made || line.added.length) ? [restoreLine.of(line)] : [];
+  const keep = line && (line.made || line.added.length || tr.annotation(pickedCompletion));
+  return keep ? [restoreLine.of(line)] : [];
 });
 
 /**
