@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- The browser tests of the Source's element colours and the pages' ink read the colours as each pane draws them, mixed by its contrast slider, not the theme's token alone.
 - The browser test of Back to Drafter counts WebKit's "Page closed" error as the help tab going away, as it can come a moment before the tab says it has closed.
 - **drafter.dev's analytics send only page views and time on a page.** Plausible stays on every page, the app included, only to see the basic traffic and which pages people look at, as a reference for improving Drafter. Clicks on outside links, downloads, and form submissions are no longer sent at all, and the help and the README say that Plausible is privacy-first, with no cookies and no ads.
 - **A Privacy section in the README, and Your script stays with you at the top of Help → Privacy** (on drafter.dev and in the desktop app): nothing about a script is stored in the cloud, Drafter uses no AI, the script leaves only when the writer sends it, every request Drafter makes in one table, and the audit that checks it.
