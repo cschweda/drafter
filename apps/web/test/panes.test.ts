@@ -76,10 +76,10 @@ describe('panes', () => {
         more: ['stats', 'problems', 'history'],
       });
     });
-    test("a novel's bar is Write, Preview, and its Outline; More as a Markdown document's", () => {
+    test("a novel's bar is Write, Preview, and its Outline; More leads with its Cards", () => {
       expect(phoneTabs('novel')).toEqual({
         row: ['source', 'script', 'outline'],
-        more: ['stats', 'problems', 'history'],
+        more: ['cards', 'stats', 'problems', 'history'],
       });
     });
     test('Drafts and the draft being read lead More after Compare while open', () => {
@@ -132,9 +132,9 @@ describe('panes', () => {
       ]);
     });
 
-    test("a novel's row is Preview, Outline, and Stats; More as a Markdown document's", () => {
+    test("a novel's row is Preview, Outline, Cards, and Stats; More as a Markdown document's", () => {
       expect(inspectorTabs('novel')).toEqual({
-        row: ['script', 'outline', 'stats'],
+        row: ['script', 'outline', 'cards', 'stats'],
         more: ['problems', 'compare', 'cuts', 'drafts', 'draft-steps', 'draft'],
       });
     });

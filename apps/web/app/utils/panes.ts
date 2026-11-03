@@ -52,7 +52,7 @@ const DRAFT_TABS: InspectorTabId[] = ['cuts', 'drafts', 'draft-steps', 'draft'];
  * order. A script: Script, Outline, Cards, Stats, Scaffold in the row; Notes, Problems, Compare,
  * Cuts, Drafts, the draft being read, then the modules' tabs (`modules`) under More. A Markdown
  * document: Preview and Stats; Problems, Compare, Cuts, Drafts, the draft being read, and the
- * modules' tabs under More. A novel: Preview, Outline, and Stats, and the same More. Compare, Cuts, and the drafts' two are listed only while open
+ * modules' tabs under More. A novel: Preview, Outline, Cards, and Stats, and the same More. Compare, Cuts, and the drafts' two are listed only while open
  * (AppPane leaves them out otherwise); when the Inspector is too narrow for its row, AppPane moves
  * tabs from the row's right end into More, measured.
  */
@@ -63,7 +63,7 @@ export function inspectorTabs(
   const own = modules as InspectorTabId[];
   if (kind !== 'fountain') {
     const row: InspectorTabId[] =
-      kind === 'novel' ? ['script', 'outline', 'stats'] : ['script', 'stats'];
+      kind === 'novel' ? ['script', 'outline', 'cards', 'stats'] : ['script', 'stats'];
     return { row, more: ['problems', 'compare', ...DRAFT_TABS, ...own] };
   }
   return {
@@ -200,7 +200,14 @@ export function phoneTabs(
   if (kind !== 'fountain') {
     return {
       row: kind === 'novel' ? ['source', 'script', 'outline'] : ['source', 'script'],
-      more: [...lead, 'stats', 'problems', ...modules, HISTORY_ITEM],
+      more: [
+        ...lead,
+        ...(kind === 'novel' ? ['cards'] : []),
+        'stats',
+        'problems',
+        ...modules,
+        HISTORY_ITEM,
+      ],
     };
   }
   return {

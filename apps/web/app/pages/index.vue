@@ -63,13 +63,15 @@ const { view, kind, novel } = useEditor();
 
 // A Markdown document has no scenes or notes, so no Outline, Cards, Notes, or Scaffold tab (Phase 2
 // design §5.7; seeing-the-script design §10): the Inspector showing one shows the Preview. A
-// novel keeps the Outline, its own (Novel plan, Task 5).
+// novel keeps the Outline and Cards, its own (Novel plan, Task 5).
 const NOT_FOR_MARKDOWN = ['outline', 'cards', 'notes', 'scaffold'];
 watch(
   [kind, novel],
   ([now, isNovel]) => {
     if (now !== 'markdown') return;
-    const gone = NOT_FOR_MARKDOWN.filter((tab) => !(isNovel && tab === 'outline'));
+    const gone = NOT_FOR_MARKDOWN.filter(
+      (tab) => !(isNovel && (tab === 'outline' || tab === 'cards')),
+    );
     for (const tab of gone) tabs.value = dropTab(tabs.value, tab);
     if (gone.includes(phoneTab.value)) phoneTab.value = PHONE_DEFAULT_TAB;
   },

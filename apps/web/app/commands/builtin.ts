@@ -668,7 +668,10 @@ export function registerBuiltinCommands(): void {
       run: () => showTab('outline'),
     },
     // Not core tabs (design §5.8): showing one puts it in its pane's slot. None for Markdown.
-    'show-cards': { enabled: isFountain, run: () => showTab('cards') },
+    'show-cards': {
+      enabled: () => isFountain() || editor.novel.value,
+      run: () => showTab('cards'),
+    },
     'show-notes': { enabled: isFountain, run: () => showTab('notes') },
     // Show changes (version-history design §4.1): the Script pane shows, marked or clean.
     'show-changes': {
