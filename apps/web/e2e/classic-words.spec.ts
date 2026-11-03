@@ -29,6 +29,20 @@ async function classic(page: Page, seen = true) {
   if (seen) await hint(page).getByRole('button', { name: 'Got it' }).click();
 }
 
+/** A setting as IndexedDB holds it, as classic-switch.spec.ts reads `writingMode`. */
+const stored = (page: Page, key: string) =>
+  page.evaluate(
+    (name) =>
+      new Promise((done) => {
+        const open = indexedDB.open('drafter');
+        open.onsuccess = () => {
+          const get = open.result.transaction('settings').objectStore('settings').get(name);
+          get.onsuccess = () => done(get.result?.value);
+        };
+      }),
+    key,
+  );
+
 /** To the end of the line of action. */
 async function toAction(page: Page) {
   await page.keyboard.press('ControlOrMeta+End');
@@ -58,7 +72,7 @@ test.describe('on a wide screen', () => {
     await expect(keys(page)).toHaveText('Enter: Choose an element · Tab: Transition');
     await expect(chip(page)).toHaveAttribute(
       'aria-description',
-      'Enter: Choose an element · Tab: Transition',
+      'Enter: Choose an element · Tab: Transition. Opens the Classic Mode help.',
     );
   });
 
@@ -121,8 +135,53 @@ test('the same word is said twice, and an arrow onto the same element says nothi
   const before = (await heard()).length;
   await page.keyboard.press('ArrowUp');
   await page.keyboard.press('ArrowDown');
-  await page.waitForTimeout(100);
-  expect((await heard()).length).toBe(before);
+  // Then a key that does speak: what's heard after the arrows is that key's word alone.
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await heard()).slice(before).filter(Boolean)).toEqual(['Action']);
+});
+
+test('a switch says one thing: the hint the first time, the notice after', async ({ page }) => {
+  await start(page);
+  await setText(page, SCRIPT);
+  await showSource(page);
+  await page.evaluate(() => {
+    const changed: string[] = [];
+    (window as unknown as { changed: string[] }).changed = changed;
+    for (const [name, selector] of [
+      ['announcer', '.announcer'],
+      ['notice', '[data-classic-notice]'],
+      ['hint', '[data-classic-hint-said]'],
+    ]) {
+      const region = document.querySelector(selector as string) as HTMLElement;
+      new MutationObserver(() => {
+        if (region.textContent?.trim()) changed.push(name as string);
+      }).observe(region, { childList: true, characterData: true, subtree: true });
+    }
+  });
+  const changed = () => page.evaluate(() => (window as unknown as { changed: string[] }).changed);
+  const toggle = async (now: 'Fountain' | 'Classic', to: 'Fountain' | 'Classic') => {
+    if (wide(page)) {
+      await page
+        .getByRole('group', { name: 'Writing mode' })
+        .getByRole('button', { name: to })
+        .click();
+    } else {
+      await page.getByRole('button', { name: new RegExp(`^Writing mode: ${now}\\.`) }).click();
+    }
+  };
+  await toggle('Fountain', 'Classic');
+  await expect(hint(page)).toBeVisible();
+  await expect.poll(changed).toEqual(['hint']);
+  await hint(page).getByRole('button', { name: 'Got it' }).click();
+  await page.evaluate(() => {
+    (window as unknown as { changed: string[] }).changed.length = 0;
+  });
+  await toggle('Classic', 'Fountain');
+  await expect.poll(changed).toEqual(['notice']);
+  await toggle('Fountain', 'Classic');
+  await expect.poll(changed).toEqual(['notice', 'notice']);
+  await expect(page.locator('[data-classic-notice]')).toContainText('Classic Mode. Enter and Tab');
 });
 
 test('the text box says how to leave, always on the page', async ({ page }) => {
@@ -145,10 +204,9 @@ test('the hint shows once, and takes no focus', async ({ page }) => {
   await hint(page).getByRole('button', { name: 'Got it' }).click();
   await expect(hint(page)).toHaveCount(0);
   await expect(page.locator('[data-classic-hint-said]')).toHaveText('');
-  await page.waitForTimeout(300); // the setting's write to IndexedDB
+  await expect.poll(() => stored(page, 'classicHintSeen')).toBe(true);
   await page.reload();
   await expect(editor(page)).toHaveAttribute('aria-label', 'Source, Classic Mode');
-  await page.waitForTimeout(200);
   await expect(hint(page)).toHaveCount(0);
 });
 

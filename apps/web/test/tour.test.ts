@@ -75,6 +75,11 @@ describe('the tour’s steps', () => {
     expect(mode?.target).toBe('[data-tour="mode"]');
     expect(mode?.content).toContain('Classic');
     expect(TOUR_VERSION).toBe(1);
+    // Over a Markdown document there's no switch to point at, so the step doesn't say "here".
+    const markdown = buildSteps(true, true, new Set(), false).find((s) => s.id === 'mode');
+    expect(mode?.content).toMatch(/\bhere\b/);
+    expect(markdown?.content).not.toMatch(/\bhere\b/);
+    expect(markdown?.content).toContain('script');
   });
 
   test('say what Save does where it does it, and where typewriter scrolling is', () => {

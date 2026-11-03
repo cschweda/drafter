@@ -568,7 +568,7 @@ watch(
         data-bar-item="here"
         :tabindex="stopOf('here')"
         :aria-describedby="classic ? undefined : 'element-bar-here-tip'"
-        :aria-description="keys || undefined"
+        :aria-description="classic ? why : undefined"
         @pointerdown="onPointerDown($event, 'here')"
         @pointerup="onPointerEnd"
         @pointercancel="onPointerEnd"

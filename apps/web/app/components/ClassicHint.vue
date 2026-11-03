@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useEditor } from '~/editor/session';
-import { CLASSIC_HELP } from '~/editor/writing-mode';
+import { CLASSIC_HELP, hintDue } from '~/editor/writing-mode';
 import { useSettings } from '~/settings/settings';
 
 // The first-run hint (Classic Mode design §9.3): a small card under the top bar, the first time
@@ -12,12 +12,7 @@ const HINT =
 
 const { settings, set } = useSettings();
 const { kind, view } = useEditor();
-const shown = computed(
-  () =>
-    settings.value.writingMode === 'classic' &&
-    !settings.value.classicHintSeen &&
-    kind.value === 'fountain',
-);
+const shown = computed(() => hintDue(settings.value, kind.value));
 
 // Set after the region is drawn: a live region that first appears with its words says nothing.
 const said = ref('');
@@ -91,6 +86,12 @@ function learnMore() {
   font: inherit;
   font-weight: 500;
   cursor: pointer;
+}
+/* A finger's target on a touch screen. */
+@media (pointer: coarse) {
+  .action {
+    min-height: 44px;
+  }
 }
 .action:hover {
   background: var(--overlay);

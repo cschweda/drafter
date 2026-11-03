@@ -62,6 +62,7 @@ export function buildSteps(
   _wide: boolean,
   statusBar = true,
   folded: ReadonlySet<string> = new Set(),
+  script = true,
 ): TourStep[] {
   const at = (name: string) => (folded.has(name) ? FOLDED_TARGET : target(name));
   const where = (name: string) =>
@@ -91,8 +92,10 @@ export function buildSteps(
       id: 'mode',
       target: target('mode'),
       title: 'Fountain or Classic',
-      content:
-        'Don’t want to type marks? Switch to Classic here: Enter and Tab move through the script, and the file stays Fountain.',
+      // A Markdown document has no switch on screen, so the step can't point at it.
+      content: script
+        ? 'Don’t want to type marks? Switch to Classic here: Enter and Tab move through the script, and the file stays Fountain.'
+        : 'Don’t want to type marks? A script has a Fountain | Classic switch in the top bar. In Classic, Enter and Tab move through it, and the file stays Fountain.',
     },
     {
       id: 'problems',

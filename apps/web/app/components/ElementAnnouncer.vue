@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { structureOf } from '@drafter/cm-fountain';
-import { announcer } from '~/editor/element-announcer';
-import { classicElementName, ELEMENT_NAMES } from '~/editor/element-names';
+import { announcedWord, announcer } from '~/editor/element-announcer';
 import { useEditor } from '~/editor/session';
 import { useSettings } from '~/settings/settings';
 
@@ -15,16 +14,18 @@ const { settings } = useSettings();
 const classic = computed(
   () => settings.value.writingMode === 'classic' && kind.value === 'fountain',
 );
-const word = computed(() => {
-  if (classic.value) {
-    return element.value ? classicElementName(element.value, structureOf(template.value)) : '';
-  }
-  const now = cursor.value?.kind;
-  return now ? ELEMENT_NAMES[now] : '';
-});
+const word = computed(() =>
+  announcedWord(
+    classic.value,
+    element.value,
+    cursor.value?.kind ?? null,
+    structureOf(template.value),
+  ),
+);
 const announcement = announcer(
   () => word.value,
   () => moved.value,
+  () => (classic.value ? 'classic' : 'fountain'),
 );
 </script>
 

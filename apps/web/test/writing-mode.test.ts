@@ -38,7 +38,24 @@ describe('setWritingMode', () => {
     expect(classicIsOn(useEditor().view.state)).toBe(true);
   });
 
+  test('the first switch leaves the words to the hint, and later ones say the notice', async () => {
+    const { set } = useSettings();
+    await set('classicHintSeen', false);
+    classicNotice.value = '';
+    setWritingMode('classic');
+    await nextTick();
+    await nextTick();
+    expect(classicNotice.value).toBe('');
+    setWritingMode('fountain');
+    await set('classicHintSeen', true);
+    setWritingMode('classic');
+    await nextTick();
+    await nextTick();
+    expect(classicNotice.value).toBe(CLASSIC_NOTICE);
+  });
+
   test('a switch says its notice', async () => {
+    await useSettings().set('classicHintSeen', true);
     setWritingMode('classic');
     await nextTick();
     await nextTick();

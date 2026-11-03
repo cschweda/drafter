@@ -52,9 +52,11 @@ test('Fountain to start, one click to Classic and back, and the text never chang
 
   await chooseClassic(page);
   await expect(editor(page)).toBeFocused();
-  await expect(page.locator('[data-classic-notice]')).toHaveText(
-    'Classic Mode. Enter and Tab move between elements.',
+  // The first time, the hint says it, beginning the same way, and the notice leaves it to it.
+  await expect(page.locator('[data-classic-hint-said]')).toContainText(
+    'Classic Mode. Press Enter and Tab',
   );
+  await expect(page.locator('[data-classic-notice]')).toHaveText('');
   expect(await textOf(page)).toBe(SCRIPT);
 
   if (wide(page)) await group(page).getByRole('button', { name: 'Fountain' }).click();
@@ -262,6 +264,15 @@ test('the switch is said on a phone’s Script tab, with the Source not on the p
   await start(page);
   await page.getByRole('tab', { name: 'Script', exact: true }).click();
   await expect(page.locator('.cm-content')).toBeHidden();
+  await one(page, 'Fountain').click();
+  await expect(page.locator('[data-classic-hint-said]')).toContainText(
+    'Classic Mode. Press Enter and Tab',
+  );
+  await page.locator('[data-classic-hint]').getByRole('button', { name: 'Got it' }).click();
+  await one(page, 'Classic').click();
+  await expect(page.locator('[data-classic-notice]')).toHaveText(
+    'Fountain Mode. You type the marks.',
+  );
   await one(page, 'Fountain').click();
   await expect(page.locator('[data-classic-notice]')).toHaveText(
     'Classic Mode. Enter and Tab move between elements.',

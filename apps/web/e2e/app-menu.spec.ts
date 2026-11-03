@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { files, nextFileName, picks, removePickers, stubPickers } from './fs-stub';
+import { pressToolbarButton } from './modules';
 
 // The accessibility test for the open menu is in a11y.spec.ts; keyboard behavior is tested here.
 
@@ -176,9 +177,23 @@ test.describe('the app menu', () => {
     await expect(page.locator('.toast [role="status"]')).toHaveText('Exported The Call.txt.');
 
     // The toolbar's menu runs the same commands: its PDF is the palette's and the menu's.
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    // On a phone the mode switch keeps its place in the top bar, so Export may fold into More
+    // actions, where it's a submenu of the same commands.
+    await pressToolbarButton(page, 'Export', { focus: true });
+    const folded = await page.evaluate(
+      () => document.activeElement?.getAttribute('role') === 'menuitem',
+    );
     const pdf = page.waitForEvent('download');
-    await page.getByRole('group', { name: 'Export' }).getByRole('button', { name: 'PDF' }).click();
+    if (folded) {
+      await page.keyboard.press('ArrowRight');
+      await page.getByRole('menuitem', { name: /PDF/ }).first().click();
+    } else {
+      await page.keyboard.press('Enter');
+      await page
+        .getByRole('group', { name: 'Export' })
+        .getByRole('button', { name: 'PDF' })
+        .click();
+    }
     expect((await pdf).suggestedFilename()).toBe('The Call.pdf');
   });
 

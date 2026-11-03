@@ -1,6 +1,7 @@
+import { SCREENPLAY_STRUCTURE } from '@drafter/cm-fountain';
 import { describe, expect, test } from 'vitest';
-import { nextTick, ref, shallowRef } from 'vue';
-import { announcer, type ElementMove } from '../app/editor/element-announcer';
+import { nextTick, ref, shallowRef, watch } from 'vue';
+import { announcedWord, announcer, type ElementMove } from '../app/editor/element-announcer';
 
 // The live region's words (Classic Mode design §12): a change of element is said, and a key that
 // moves says where it went even when the word is the same.
@@ -8,11 +9,13 @@ import { announcer, type ElementMove } from '../app/editor/element-announcer';
 function setup(first = '') {
   const word = ref(first);
   const moved = shallowRef<ElementMove | null>(null);
+  const mode = ref<'fountain' | 'classic'>('fountain');
   const said = announcer(
     () => word.value,
     () => moved.value,
+    () => mode.value,
   );
-  return { word, moved, said };
+  return { word, moved, mode, said };
 }
 
 /** Every state the region goes through, flush by flush. */
@@ -29,8 +32,22 @@ describe('the element announcer', () => {
     expect(said.value).toBe('Character');
   });
 
-  test('Fountain Mode’s announcer says nothing on a blank line', async () => {
-    // In Fountain Mode the word is the cursor's element's, and a blank line has none.
+  test('Fountain Mode’s announcer says nothing on a blank line', () => {
+    // The cursor's element is null on a blank line in Fountain Mode, whatever Classic would say.
+    const pending = {
+      kind: 'action',
+      pending: true,
+      soft: true,
+      enter: 'chooser',
+      tab: 'character',
+    } as const;
+    expect(announcedWord(false, pending, null, SCREENPLAY_STRUCTURE)).toBe('');
+    expect(announcedWord(false, null, 'dialogue', SCREENPLAY_STRUCTURE)).toBe('Dialogue');
+    expect(announcedWord(true, pending, null, SCREENPLAY_STRUCTURE)).toBe('Action');
+    expect(announcedWord(true, null, 'dialogue', SCREENPLAY_STRUCTURE)).toBe('');
+  });
+
+  test('a word that empties leaves the region empty', async () => {
     const { word, said } = setup('Action');
     word.value = 'Dialogue';
     await settle();
@@ -78,5 +95,30 @@ describe('the element announcer', () => {
     moved.value = { said: false };
     await settle();
     expect(said.value).toBe('Character');
+  });
+
+  test('a switch’s own change of element says nothing, and the next move does', async () => {
+    const { word, moved, mode, said } = setup('');
+    mode.value = 'classic';
+    word.value = 'Action';
+    await settle();
+    expect(said.value).toBe('');
+    moved.value = { said: false };
+    await settle();
+    expect(said.value).toBe('Action');
+  });
+
+  test('a word that a watcher of the switch changes later in the flush says nothing', async () => {
+    const { word, mode, said } = setup('Action');
+    // As the settings' watcher reconfigures the editor for a switch made in Settings.
+    watch(mode, () => {
+      word.value = 'Character';
+    });
+    mode.value = 'classic';
+    await settle();
+    expect(said.value).toBe(''); // Character was left unsaid
+    word.value = 'Dialogue';
+    await settle();
+    expect(said.value).toBe('Dialogue');
   });
 });
