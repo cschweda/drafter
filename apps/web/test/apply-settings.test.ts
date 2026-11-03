@@ -1,17 +1,21 @@
 // @vitest-environment jsdom
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { acceptCompletion } from '@codemirror/autocomplete';
 import { redo, undo, undoDepth } from '@codemirror/commands';
 import { EditorSelection, EditorState } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
-import { classicEnter, classicLine, setSpellMarks, spellMarksOf } from '@drafter/cm-fountain';
+import { EditorView, keymap } from '@codemirror/view';
+import {
+  classicEnter,
+  classicLine,
+  classicTab,
+  setSpellMarks,
+  spellMarksOf,
+} from '@drafter/cm-fountain';
 import { builtins } from '@drafter/templates';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { applyEditorSettings } from '../app/editor/apply-settings';
 import {
   classicIsOn,
   editorExtensions,
-  language,
   typewriter,
   writingMode,
   writingModeExtension,
@@ -197,12 +201,19 @@ describe('the writing mode', () => {
     expect(classicIsOn(view.state)).toBe(true);
   });
 
-  test('the compartment comes before language', () => {
-    // Filters and keys of the same precedence run in order, and Classic's Tab must run first.
-    const source = readFileSync(resolve(__dirname, '../app/editor/extensions.ts'), 'utf8');
-    expect(source.indexOf('writingMode.of(NOTHING)')).toBeGreaterThan(0);
-    expect(source.indexOf('writingMode.of(NOTHING)')).toBeLessThan(source.indexOf('language.of('));
-    expect(language).toBeDefined();
+  test('the compartment comes before language: Classic’s Enter is ahead of the list’s', () => {
+    // Both sit at Prec.highest, so only the order of the two compartments settles it.
+    const view = script('JUNE\nOne.\n\nTwo.\n', EditorSelection.single(9));
+    applyEditorSettings(view, CLASSIC, 'fountain');
+    const enters = view.state
+      .facet(keymap)
+      .flat()
+      .filter((binding) => binding.key === 'Enter');
+    const list = enters.findIndex((binding) => binding.run === acceptCompletion);
+    expect(list).toBeGreaterThan(0);
+    // The first Enter is Classic's own: it runs here, and writes what Classic writes after a speech.
+    expect(enters[0]?.run?.(view)).toBe(true);
+    expect(view.state.field(classicLine)?.kind).toBe('character');
   });
 
   test('a selection in the block is stopped above it, as the block is about to go', () => {
@@ -225,5 +236,19 @@ describe('the writing mode', () => {
     applyEditorSettings(view, DEFAULT_SETTINGS, 'fountain');
     expect(view.state.doc.toString()).toBe(doc);
     expect(view.state.selection.main.head).toBe(9);
+  });
+
+  test('a made () goes with its line, and Undo brings it back', () => {
+    const doc = 'JUNE\nOne.\nTwo.\n';
+    const view = script(doc, EditorSelection.single(9));
+    applyEditorSettings(view, CLASSIC, 'fountain');
+    view.dispatch({ selection: { anchor: 8 } });
+    view.dispatch({ selection: { anchor: 9 } });
+    classicTab(view);
+    expect(view.state.doc.toString()).toBe('JUNE\nOne.\n()\nTwo.\n');
+    applyEditorSettings(view, DEFAULT_SETTINGS, 'fountain');
+    expect(view.state.doc.toString()).toBe(doc);
+    undo(view);
+    expect(view.state.doc.toString()).toBe('JUNE\nOne.\n()\nTwo.\n');
   });
 });

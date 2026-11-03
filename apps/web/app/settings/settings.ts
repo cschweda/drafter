@@ -3,6 +3,9 @@ import type { Paper } from '@drafter/templates';
 import { type Ref, readonly, shallowRef } from 'vue';
 import { DIFF_COLORS, type DiffColors } from '../compare/colors';
 import { db } from '../storage/db';
+import { WRITING_MODES, type WritingMode } from './writing-modes';
+
+export { WRITING_MODES, type WritingMode };
 
 export interface Settings {
   /** Follow the system's light or dark appearance; off by default (Phase 1 design §8). */
@@ -56,10 +59,6 @@ export interface Settings {
   /** Classic Mode's first-run hint has been dismissed (Classic Mode design §9.3). */
   classicHintSeen: boolean;
 }
-
-export type WritingMode = 'fountain' | 'classic';
-/** The writing modes, as Settings lists them. */
-export const WRITING_MODES: readonly WritingMode[] = ['fountain', 'classic'];
 
 export type CompareView = 'changes' | 'pages';
 export type DiffLayout = 'unified' | 'split';

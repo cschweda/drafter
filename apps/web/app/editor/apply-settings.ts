@@ -1,3 +1,4 @@
+import { closeCompletion } from '@codemirror/autocomplete';
 import type { Compartment, EditorSelection, Extension, StateEffect } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { selectionClear, tidiedSpeech } from '@drafter/cm-fountain';
@@ -17,15 +18,17 @@ import {
 } from './extensions';
 
 /**
- * What a change of writing mode dispatches, with no text in it (Classic Mode design §3.4). Leaving
- * Classic Mode first takes a line Enter made in a speech, which would stay to cut it in two, and is
- * the one thing a switch can write. A selection is stopped above the metadata block Classic Mode is
+ * What a change of writing mode dispatches, with no text in it (Classic Mode design §3.4). An open
+ * list closes first, as its options' `apply` belongs to the mode that offered them. Leaving Classic
+ * Mode then takes a line Enter made in a speech, which would stay to cut it in two, and an empty
+ * `()` it made, which would print: the one thing a switch can write, and Undo brings it back. A selection is stopped above the metadata block Classic Mode is
  * about to hide, and the snapshot keeps the writer's place on the screen.
  */
 export function writingModeSwitch(
   view: EditorView,
   next: Extension,
 ): { effects: StateEffect<unknown>[]; selection?: EditorSelection } {
+  closeCompletion(view);
   const tidy = view.composing ? null : tidiedSpeech(view.state);
   if (tidy) view.dispatch(tidy);
   const selection = next === CLASSIC_OFF ? null : selectionClear(view.state);

@@ -7,6 +7,8 @@
 import { SAMPLES } from '../editor/sample-kinds';
 import { STARTER_KINDS } from '../editor/starter-kinds';
 import { DOCUMENT_TYPES } from '../editor/template';
+import type { DocumentKind } from '../markdown/kind';
+import type { WritingMode } from '../settings/writing-modes';
 import { SPRINT_MINUTES } from '../stats/sprint-minutes';
 import type { CommandGroup } from './registry';
 
@@ -30,8 +32,11 @@ export interface CommandData {
 const MODE_WORDS = ['final draft', 'mode', 'typing'];
 
 /** Whether Switch to Classic Mode or Switch to Fountain Mode would do something: a Fountain script, in the other mode. */
-export const modeSwitchApplies = (target: string, current: string, kind: string): boolean =>
-  kind === 'fountain' && target !== current;
+export const modeSwitchApplies = (
+  target: WritingMode,
+  current: WritingMode,
+  kind: DocumentKind,
+): boolean => kind === 'fountain' && target !== current;
 
 export interface HelpPage {
   id: string;

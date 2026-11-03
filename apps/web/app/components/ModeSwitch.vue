@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useEditor } from '~/editor/session';
 import { CLASSIC_TIP, FOUNTAIN_TIP, setWritingMode } from '~/editor/writing-mode';
-import { useSettings, type WritingMode } from '~/settings/settings';
+import { useSettings, WRITING_MODES, type WritingMode } from '~/settings/settings';
 
 // Fountain | Classic (Classic Mode design §3.2), which stays in sight the whole time a script is
 // being written: in the top bar, and in focus mode's marker. Both words show on a wide screen, as
@@ -13,13 +13,12 @@ const { kind } = useEditor();
 const { settings } = useSettings();
 const wide = useWideScreen();
 
-const MODES: ReadonlyArray<{ mode: WritingMode; word: string; tip: string }> = [
-  { mode: 'fountain', word: 'Fountain', tip: FOUNTAIN_TIP },
-  { mode: 'classic', word: 'Classic', tip: CLASSIC_TIP },
-];
+const MODES: Readonly<Record<WritingMode, { word: string; tip: string }>> = {
+  fountain: { word: 'Fountain', tip: FOUNTAIN_TIP },
+  classic: { word: 'Classic', tip: CLASSIC_TIP },
+};
 const current = computed(() => settings.value.writingMode);
-const now = computed(() => MODES.find(({ mode }) => mode === current.value) ?? MODES[0]);
-const other = computed(() => MODES.find(({ mode }) => mode !== current.value) ?? MODES[1]);
+const next = computed<WritingMode>(() => (current.value === 'classic' ? 'fountain' : 'classic'));
 </script>
 
 <template>
@@ -32,15 +31,15 @@ const other = computed(() => MODES.find(({ mode }) => mode !== current.value) ??
       data-tour="mode"
     >
       <button
-        v-for="{ mode, word, tip } in MODES"
+        v-for="mode in WRITING_MODES"
         :key="mode"
         type="button"
         class="mode-button"
-        :title="tip"
+        :title="MODES[mode].tip"
         :aria-pressed="current === mode ? 'true' : 'false'"
         @click="setWritingMode(mode)"
       >
-        {{ word }}
+        {{ MODES[mode].word }}
       </button>
     </div>
     <button
@@ -48,11 +47,11 @@ const other = computed(() => MODES.find(({ mode }) => mode !== current.value) ??
       type="button"
       class="mode-button mode-one"
       data-tour="mode"
-      :title="now?.tip"
-      :aria-label="`Writing mode: ${now?.word}. Switch to ${other?.word}.`"
-      @click="setWritingMode(other?.mode ?? 'fountain')"
+      :title="MODES[current].tip"
+      :aria-label="`Writing mode: ${MODES[current].word}. Switch to ${MODES[next].word}.`"
+      @click="setWritingMode(next)"
     >
-      {{ now?.word }}
+      {{ MODES[current].word }}
     </button>
   </template>
 </template>

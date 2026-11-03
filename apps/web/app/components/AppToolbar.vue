@@ -476,10 +476,13 @@ kbd {
   min-width: 0;
 }
 
-/* Under 1280px the search gives some of its width, so the writing mode's switch leaves the title room. */
+/* Under 1280px the search gives a little of its width, and more only when the bar needs it: it
+   shrinks well ahead of the title, down to what still reads as a search. */
 @media (max-width: 1279.98px) {
   .search {
-    width: 110px;
+    flex: 0 8 220px;
+    width: auto;
+    min-width: 110px;
   }
 }
 
@@ -514,6 +517,8 @@ kbd {
     padding: 0;
   }
   .search {
+    flex: none;
+    min-width: 0;
     border-radius: var(--r-sm);
     background: none;
   }

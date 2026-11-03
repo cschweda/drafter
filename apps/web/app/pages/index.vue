@@ -8,6 +8,7 @@ import { installDesktopMenu } from '~/commands/desktop-menu';
 import { commandById, installGlobalKeys } from '~/commands/registry';
 import { installCuts } from '~/cuts/install';
 import { isDesktopBuild } from '~/desktop';
+import { classicNotice } from '~/editor/element-notice';
 import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
 import { startModules } from '~/modules/host';
@@ -188,6 +189,10 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="shell" :class="{ focusing: focus.on.value }" :style="{ '--split': split }">
+    <!-- Here, not with the Source: a phone showing the Script pane can switch the mode too. -->
+    <div class="sr-only" aria-live="polite" aria-atomic="true" data-classic-notice>
+      {{ classicNotice }}
+    </div>
     <a v-if="!focus.on.value" href="#panel-source" class="skip" @click.prevent="skipToEditor">
       Skip to the editor
     </a>

@@ -1,3 +1,4 @@
+import { isolateHistory } from '@codemirror/commands';
 import {
   Annotation,
   type AnnotationType,
@@ -412,25 +413,32 @@ export const tidyLeft: Extension = EditorState.transactionFilter.of((tr) => {
 });
 
 /**
- * The change that takes the empty line this stay made in the middle of a speech, or null with none.
- * While the cursor stands on that line the text under it reads as Action (§4.2), which is one thing
- * in a stay and another once Classic Mode has gone, so a change of mode takes it. Only that line: a
- * blank that cuts nothing is left under the cursor, as a switch writes nothing it can avoid.
+ * The change that takes what this stay made and left unused, or null with none: an empty `()`,
+ * which would print, or the empty line in the middle of a speech. While the cursor stands on that
+ * line the text under it reads as Action (§4.2), which is one thing in a stay and another once
+ * Classic Mode has gone. A blank that cuts nothing stays under the cursor, as a switch writes
+ * nothing it can avoid.
  */
 export function tidiedSpeech(state: EditorState): TransactionSpec | null {
   const held = state.field(classicLine, false);
   if (!held?.made || state.readOnly) return null;
   const { doc } = state;
   const line = doc.lineAt(held.from);
-  if (line.text.trim() || line.number === doc.lines) return null;
-  if (isBlank(doc.line(line.number + 1).text) || !underSpeech(state, line.from)) return null;
+  const text = line.text.trim();
+  const cuts =
+    !text &&
+    line.number < doc.lines &&
+    !isBlank(doc.line(line.number + 1).text) &&
+    underSpeech(state, line.from);
+  if (text !== '()' && !cuts) return null;
   const mark = held.madeMark;
   return {
     changes: [
       { from: held.made.from, to: Math.max(held.made.to, line.to) },
       ...(mark ? [mark] : []),
     ],
-    annotations: appChange.of(true),
+    // A step of its own, or history joins it to the key that made the line, and Undo shows nothing.
+    annotations: [appChange.of(true), isolateHistory.of('full')],
   };
 }
 

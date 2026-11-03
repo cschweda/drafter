@@ -5,6 +5,7 @@ import { fountain } from '../../src';
 import {
   classic,
   classicEnter,
+  classicTab,
   isBlankScript,
   selectionClear,
   tidiedSpeech,
@@ -49,6 +50,22 @@ describe('tidiedSpeech', () => {
     const spec = tidiedSpeech(state);
     expect(spec).not.toBeNull();
     expect(state.update(spec ?? {}).newDoc.toString()).toBe('JUNE\nOne.\nTwo.\n');
+  });
+
+  test('takes an empty () it made, at the end of the file too, and not one with words in it', () => {
+    const tabbed = (marked: string) => {
+      const view = new EditorView({ state: classicEditor(marked) });
+      classicTab(view);
+      const { state } = view;
+      view.destroy();
+      return state;
+    };
+    const state = tabbed('JUNE\nOne.|');
+    expect(state.doc.toString()).toBe('JUNE\nOne.\n()');
+    expect(state.update(tidiedSpeech(state) ?? {}).newDoc.toString()).toBe('JUNE\nOne.');
+    const words = state.update({ changes: { from: state.doc.length - 1, insert: 'softly' } }).state;
+    expect(tidiedSpeech(words)).toBeNull();
+    expect(tidiedSpeech(classicEditor('JUNE\n(|)\nOne.\n'))).toBeNull(); // a file's own
   });
 
   test('leaves a line that hurts nothing, and a line with words on it', () => {

@@ -10,6 +10,7 @@ export {
   classicEnter,
   classicLine,
   classicSay,
+  classicTab,
   elementAt,
   elementCommand,
   isBlankScript,

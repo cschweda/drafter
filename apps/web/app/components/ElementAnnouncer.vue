@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ELEMENT_NAMES } from '~/editor/element-names';
-import { classicNotice } from '~/editor/element-notice';
 import { useEditor } from '~/editor/session';
 
 // A visually hidden live region: when the cursor moves to another kind of
@@ -19,5 +18,4 @@ watch(
 
 <template>
   <div class="announcer sr-only" aria-live="polite" aria-atomic="true">{{ announcement }}</div>
-  <div class="sr-only" aria-live="polite" aria-atomic="true" data-classic-notice>{{ classicNotice }}</div>
 </template>
