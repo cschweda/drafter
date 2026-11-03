@@ -267,6 +267,16 @@ describe('§6.4, the caret', () => {
     expect(render(to(state, 13, 'select'))).toBe('INT. DINER #1|2#');
   });
 
+  test('Right at the end of a closing mark just above the metadata block stays put', () => {
+    // Found by the byte promise's property: the step off the line went to the block's limit, on
+    // the same line, and asked again, for ever.
+    const block = '/* drafter\n{"v":1,"template":"us-screenplay"}\n*/\n';
+    const state = classicEditor(`|> cake. <\n\n${block}`);
+    const end = moved(state, cursorDocEnd);
+    expect(render(end)).toBe(`> cake.| <\n\n${block}`);
+    expect(render(right(end))).toBe(`> cake.| <\n\n${block}`);
+  });
+
   test('moving writes nothing', () => {
     const text = '>One.<\n\n@JUNE\nHi.\n\n**b** c\n\n\nEnd.';
     let state = classicEditor(`|${text}`);

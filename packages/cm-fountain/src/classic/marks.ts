@@ -387,6 +387,14 @@ function typedOnLine(tr: Transaction): { line: Line; at: number; from: number; t
 }
 
 /**
+ * What's made goes with the line it made, and anything but words left on it. Breaks made above a
+ * blank line of the file, which the cursor went on to, are all that's made: that line stays.
+ */
+function withItsLine(made: Span, line: Line): Span {
+  return { from: made.from, to: made.to >= line.from ? Math.max(made.to, line.to) : made.to };
+}
+
+/**
  * Takes away the empty line or `()` this stay made, in the transaction that leaves it (§4.4). It
  * stands back for what isn't the writer's own move: a change the app makes, a replace-all, undo and
  * redo. An empty line at the end of the file is no trouble to anyone, so it stays.
@@ -405,12 +413,10 @@ export const tidyLeft: Extension = EditorState.transactionFilter.of((tr) => {
   const empty = !line.text.trim() && line.number < tr.newDoc.lines;
   if (!empty && line.text.trim() !== '()') return tr;
   const mark = held.madeMark && mapSpan(held.madeMark, tr.changes);
-  // The line goes whole, with anything but words left on it.
-  const whole = { from: made.from, to: Math.max(made.to, line.to) };
   return [
     tr,
     {
-      changes: [whole, ...(mark ? [mark] : [])],
+      changes: [withItsLine(made, line), ...(mark ? [mark] : [])],
       annotations: classicTidied.of(true),
       sequential: true,
     },
@@ -438,10 +444,7 @@ export function tidiedSpeech(state: EditorState): TransactionSpec | null {
   if (text !== '()' && !cuts) return null;
   const mark = held.madeMark;
   return {
-    changes: [
-      { from: held.made.from, to: Math.max(held.made.to, line.to) },
-      ...(mark ? [mark] : []),
-    ],
+    changes: [withItsLine(held.made, line), ...(mark ? [mark] : [])],
     // A step of its own, or history joins it to the key that made the line, and Undo shows nothing.
     annotations: [appChange.of(true), isolateHistory.of('full')],
   };

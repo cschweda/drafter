@@ -52,6 +52,16 @@ describe('§4.4, an empty line left behind', () => {
     expect(click(state, 0).sliceDoc()).toBe('She waits.\n\nx\n\nHe leaves.');
   });
 
+  test.each(['Enter', 'Tab'])(
+    'with two blank lines below, %s’s one break goes, and the file’s blank lines stay',
+    (key) => {
+      // Found by the byte promise's property: the line went whole, and took a blank line of the file.
+      const state = keys(classicEditor('She waits.|\n\n\nHe leaves.'), key);
+      expect(render(state)).toBe('She waits.\n\n|\n\nHe leaves.');
+      expect(click(state, 0).sliceDoc()).toBe('She waits.\n\n\nHe leaves.');
+    },
+  );
+
   test('a blank line that was in the file stays', () => {
     const state = classicEditor('She waits.\n\n|\n\nHe leaves.');
     expect(click(state, 0).sliceDoc()).toBe('She waits.\n\n\n\nHe leaves.');

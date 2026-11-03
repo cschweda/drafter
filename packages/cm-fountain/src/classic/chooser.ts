@@ -119,7 +119,8 @@ function apart(here: Here, kind: ClassicKind, insert = ''): TransactionSpec {
     insert === '' &&
     (inSpeech
       ? WRITES.by[kind] !== 'blank'
-      : kind === 'action' && !!above && parsedKindAt(state, above) === 'action');
+      : // A paragraph's next line, as Enter from Action or a lyric gives it (§6.1).
+        (kind === 'action' || kind === 'lyric') && !!above && parsedKindAt(state, above) === kind);
   const breakAbove = !!above && !isBlank(above.text) && !staysIn;
   const breakUnder =
     !!under && !isBlank(under.text) && !blocked(state, under.from) && !(staysIn && inSpeech);

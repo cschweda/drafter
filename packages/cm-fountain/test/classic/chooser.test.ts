@@ -537,6 +537,12 @@ describe('a pick', () => {
     expect(render(view.state)).toBe('She waits.\n|');
   });
 
+  test('a Lyric under a lyric stays in it, as Enter from a lyric does', () => {
+    const view = chooser('~La la\n|');
+    press(view, 'l');
+    expect(render(view.state)).toBe('~La la\n|');
+  });
+
   test('a lyric in a speech stays in it', () => {
     const view = chooser('JUNE\n|');
     press(view, 'l');

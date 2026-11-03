@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- In **Classic Mode**, leaving the empty line Enter or Tab made above two blank lines of the script takes back only the break it made, not one of the script's own blank lines; Right at the end of a closing mark just above the hidden metadata block stays put instead of failing; and Lyric chosen under a lyric stays in it with one break, as Enter there does. Each was found by the new byte-promise tests.
+
 ### Changed
 
 - The editor package has the seams **Classic Mode** will use, with Fountain Mode pinned by a snapshot test so it can't change; nothing a writer sees is different.

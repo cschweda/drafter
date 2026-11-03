@@ -121,7 +121,9 @@ function place(state: EditorState, sent: number, travel: Travel): number {
   const end = endAmong(line, spans);
   if (pos > end) {
     const steppedOff = forward && !pointer && from === end;
-    return steppedOff && line.number < doc.lines ? place(state, line.to + 1, travel) : end;
+    // Past the limit (the metadata block) there's nowhere to step on to, and the limit is this line.
+    const onward = line.number < doc.lines && (limit === null || line.to < limit);
+    return steppedOff && onward ? place(state, line.to + 1, travel) : end;
   }
   // The end of a note's words is a place to add to it, which after the `]]` isn't.
   const closing = spans.find(
