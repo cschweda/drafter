@@ -70,6 +70,9 @@ export const restoreLine = StateEffect.define<StoredLine>({
   map: (line, changes) => mapLine(line, changes),
 });
 
+/** Opens the chooser (§9.1), which reads the place from the state this makes. */
+export const showChooser = StateEffect.define<null>();
+
 /** Autofill dismissed on the stored line, or not. */
 export const setDismissed = StateEffect.define<boolean>();
 

@@ -158,6 +158,32 @@ export const theme = EditorView.theme({
     paddingLeft: '0',
   },
 
+  // The chooser (§9.1). The highlighted row has a bar as well as a tint, and its padding takes back
+  // the bar's width. main.css has the rest: a phone's rows and forced colours are at-rules, and
+  // style-mod's `&` doesn't work inside one.
+  [`${CLASSIC} .cm-chooser ul`]: {
+    margin: '0',
+    padding: '4px 0',
+    listStyle: 'none',
+    minWidth: '11em',
+    maxHeight: 'min(70vh, 520px)',
+    overflowY: 'auto',
+  },
+  [`${CLASSIC} .cm-chooser li`]: {
+    display: 'flex',
+    alignItems: 'center',
+    whiteSpace: 'pre',
+    padding: '4px 12px',
+    cursor: 'pointer',
+  },
+  [`${CLASSIC} .cm-chooser li:hover`]: { backgroundColor: 'var(--overlay)' },
+  [`${CLASSIC} .cm-chooser li[aria-selected="true"]`]: {
+    backgroundColor: 'var(--overlay)',
+    borderLeft: '3px solid var(--accent-text)',
+    paddingLeft: '9px',
+  },
+  [`${CLASSIC} .cm-chooser li.cm-chooser-group`]: { borderTop: '1px solid var(--border)' },
+
   // Classic Mode: no colour per element, and the weight and slant are the role's.
   [`${CLASSIC} .cm-f-scene_heading, ${CLASSIC} .cm-f-character, ${CLASSIC} .cm-f-transition`]: {
     color: 'var(--text)',

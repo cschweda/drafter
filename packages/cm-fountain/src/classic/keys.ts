@@ -22,6 +22,7 @@ import {
   lineKindAt,
   NEXT,
   setStored,
+  showChooser,
   WRITES,
 } from './line';
 import { markOf, NO_LINE, settleLine } from './marks';
@@ -93,7 +94,7 @@ export function removeParens({ state, line }: Here): TransactionSpec {
 }
 
 /** Writes `()` on the cursor's empty line, the cursor inside. */
-function writeParens({ state, head }: Here): TransactionSpec {
+export function writeParens({ state, head }: Here): TransactionSpec {
   const from = state.field(classicLine)?.made?.from ?? head;
   return {
     changes: { from: head, insert: '()' },
@@ -272,6 +273,11 @@ function pushDown({ state, element, line }: Here): TransactionSpec {
   };
 }
 
+/** The chooser on an empty line (§9.1). It writes nothing. */
+export const openChooser: StateCommand = key((state) =>
+  hereIn(state)?.element.enter === 'chooser' ? { effects: showChooser.of(null) } : null,
+);
+
 /**
  * Enter (§6): to the next element from the end of a line, and a split inside one. A parenthetical
  * goes past its `)` from anywhere. With a selection or several cursors it's Fountain's.
@@ -281,8 +287,8 @@ export const classicEnter: StateCommand = key((state) => {
   if (!here) return null;
   const { element, line, head } = here;
   if (isEmptyParens(here)) return removeParens(here);
-  // Task 9 opens the chooser here.
-  if (element.pending || element.enter === null || element.enter === 'chooser') return {};
+  if (element.enter === 'chooser') return { effects: showChooser.of(null) };
+  if (element.pending || element.enter === null) return {};
   const { kind } = element;
   if (kind === 'parenthetical' || kind === 'page_break' || head >= visibleEnd(state, line)) {
     return onward(here, element.enter, 'enter');

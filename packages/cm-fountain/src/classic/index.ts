@@ -1,6 +1,7 @@
 import { type Extension, Prec } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { completionOverride } from '../complete';
+import { FORCED_KINDS } from '../keymap';
 import {
   classicArrows,
   classicBackspace,
@@ -10,6 +11,7 @@ import {
   classicHome,
   keepHiddenMarks,
 } from './caret';
+import { classicChooser, pendingElementKey } from './chooser';
 import { classicEnter, classicShiftEnter, classicShiftTab, classicTab } from './keys';
 import { classicLine, keepLineInHistory, typedLine } from './line';
 import { classicMarks, settleBreaks, settleDeletes, tidyLeft } from './marks';
@@ -27,6 +29,13 @@ export {
   keepHiddenMarks,
   passedOver,
 } from './caret';
+export {
+  type ChooserItem,
+  chooserItems,
+  classicChooser,
+  elementCommand,
+  openChooser,
+} from './chooser';
 export { type HiddenSpan, hiddenSpans, visibleEnd, visibleStart } from './hidden';
 export {
   choosePending,
@@ -92,6 +101,11 @@ const classicKeys = Prec.highest(
     { mac: 'Ctrl-a', run: classicHome },
     { key: 'End', mac: 'Cmd-ArrowRight', run: classicEnd },
     { mac: 'Ctrl-e', run: classicEnd },
+    // With a line of text these are false, and Fountain's key runs, with its hints and its list.
+    ...FORCED_KINDS.map((kind, i) => ({
+      key: `Mod-Alt-${i + 1}`,
+      run: pendingElementKey(kind),
+    })),
   ]),
 );
 
@@ -104,6 +118,7 @@ export interface ClassicOptions {
 export function classic({ say }: ClassicOptions = {}): Extension {
   // Filters run last to first: the caret reads what tidying left, and the block's backstop has the last word.
   return [
+    classicChooser,
     classicKeys,
     completionOverride.of(classicSource),
     say ? classicSay.of(say) : [],

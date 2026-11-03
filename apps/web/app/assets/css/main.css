@@ -61,6 +61,20 @@ html:has(dialog:modal) {
   .cm-editor.cm-classic .cm-tooltip-autocomplete ul li[aria-selected][aria-selected] {
     border-left-color: CanvasText;
   }
+  /* The chooser's highlighted row: every border is forced, so the row itself shows it. */
+  .cm-editor.cm-classic .cm-chooser li[aria-selected="true"][aria-selected="true"] {
+    forced-color-adjust: none;
+    background-color: Highlight;
+    color: HighlightText;
+    border-left-color: HighlightText;
+  }
+}
+
+/* The chooser's rows can be tapped on a tablet or a phone (§10). */
+@media (max-width: 1023.98px) {
+  .cm-editor.cm-classic .cm-chooser li {
+    min-height: 44px;
+  }
 }
 
 /* One focus ring for every control, in the brand's goldenrod (design §8, Call 11). */

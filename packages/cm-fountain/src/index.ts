@@ -1,12 +1,17 @@
 export { fountainKeymap } from './bindings';
 export {
+  type ChooserItem,
   type ClassicElement,
   type ClassicKind,
   type ClassicOptions,
+  chooserItems,
   classic,
+  classicChooser,
   classicLine,
   elementAt,
+  elementCommand,
   onlyClearedBlock,
+  openChooser,
 } from './classic';
 export { completionOverride, fountainCompletion, fountainCompletionSource } from './complete';
 export { type CursorElement, cursorElement, onCursorElement } from './cursor';
