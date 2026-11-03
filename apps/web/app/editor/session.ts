@@ -15,6 +15,7 @@ import { usePanes } from '~/composables/usePanes';
 import { useSettings } from '~/settings/settings';
 import { WIDE_QUERY } from '~/utils/panes';
 import type { DocumentKind } from '../markdown/kind';
+import { carryNovelFacts } from '../novel/carry';
 import { isNovel } from '../novel/kind';
 import { applyEditorSettings, writingModeSwitch } from './apply-settings';
 import type { ElementMove } from './element-announcer';
@@ -233,6 +234,8 @@ function create(): EditorSession {
   // Everything but the text, so `load` can make a new state from the same pieces.
   const extensionsFor = (of: DocumentKind) => [
     editorExtensions(hooks, of),
+    // A novel's facts follow their headings through every edit (Novel plan, Task 5).
+    carryNovelFacts({ active: () => kind.value === 'markdown' }),
     EditorView.updateListener.of((update) => {
       if (update.transactions.length > 0) followElement(update.state);
       if (classicIsOn(update.state)) followMove(update.transactions);

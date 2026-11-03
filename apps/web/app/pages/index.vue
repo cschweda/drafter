@@ -59,17 +59,19 @@ function onEscape(event: KeyboardEvent) {
 }
 
 // The editor is parked here whenever the Source tab isn't showing.
-const { view, kind } = useEditor();
+const { view, kind, novel } = useEditor();
 
 // A Markdown document has no scenes or notes, so no Outline, Cards, Notes, or Scaffold tab (Phase 2
-// design §5.7; seeing-the-script design §10): the Inspector showing one shows the Preview.
+// design §5.7; seeing-the-script design §10): the Inspector showing one shows the Preview. A
+// novel keeps the Outline, its own (Novel plan, Task 5).
 const NOT_FOR_MARKDOWN = ['outline', 'cards', 'notes', 'scaffold'];
 watch(
-  kind,
-  (now) => {
+  [kind, novel],
+  ([now, isNovel]) => {
     if (now !== 'markdown') return;
-    for (const tab of NOT_FOR_MARKDOWN) tabs.value = dropTab(tabs.value, tab);
-    if (NOT_FOR_MARKDOWN.includes(phoneTab.value)) phoneTab.value = PHONE_DEFAULT_TAB;
+    const gone = NOT_FOR_MARKDOWN.filter((tab) => !(isNovel && tab === 'outline'));
+    for (const tab of gone) tabs.value = dropTab(tabs.value, tab);
+    if (gone.includes(phoneTab.value)) phoneTab.value = PHONE_DEFAULT_TAB;
   },
   { immediate: true },
 );

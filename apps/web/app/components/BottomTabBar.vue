@@ -38,8 +38,10 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ choose: [tab: TabId] }>();
 
-const { kind } = useEditor();
+const { kind, novel } = useEditor();
 const markdown = computed(() => kind.value === 'markdown');
+/** The tabs follow the kind, and a novel has an Outline. */
+const tabsKind = computed(() => (markdown.value && novel.value ? 'novel' : kind.value));
 const { count } = useProblems();
 const { entries: noteEntries } = useNotes();
 const openNotes = computed(() => openCount(noteEntries.value));
@@ -79,7 +81,7 @@ const iconOf = (id: TabId) =>
 
 const set = computed(() =>
   phoneTabs(
-    kind.value,
+    tabsKind.value,
     moduleTabs.value.map((tab) => tab.id),
     {
       compare: !!comparison.value,

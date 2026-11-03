@@ -114,6 +114,9 @@ importers:
       '@drafter/notes':
         specifier: workspace:*
         version: link:../../packages/notes
+      '@drafter/novel':
+        specifier: workspace:*
+        version: link:../../packages/novel
       '@drafter/outline':
         specifier: workspace:*
         version: link:../../packages/outline

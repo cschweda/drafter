@@ -68,6 +68,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/lint',
       '@drafter/markdown',
       '@drafter/notes',
+      '@drafter/novel',
       '@drafter/outline',
       '@drafter/render-html',
       '@drafter/render-html-file',

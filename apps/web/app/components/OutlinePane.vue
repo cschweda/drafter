@@ -38,6 +38,8 @@ const editor = useEditor();
 const outline = useOutline();
 const { index, idOf, readOnly } = outline;
 const markdown = computed(() => editor.kind.value === 'markdown');
+/** A novel is Markdown with its own Outline: parts, chapters, and sections (`NovelOutline`). */
+const novel = computed(() => markdown.value && editor.novel.value);
 const isPlay = computed(() => editor.template.value.id === 'stage-play-standard');
 /** The open script's rates: each row's time is its pages at the script's minutes a page. */
 const rates = useRates();
@@ -462,7 +464,8 @@ const nameOfRow = (row: Row) =>
 
 <template>
   <div class="outline">
-    <DEmpty v-if="markdown" icon="i-lucide-list-tree">Not available for Markdown documents.</DEmpty>
+    <NovelOutline v-if="novel" />
+    <DEmpty v-else-if="markdown" icon="i-lucide-list-tree">Not available for Markdown documents.</DEmpty>
     <template v-else>
       <div class="tools" data-pane-bar>
         <label class="filter">

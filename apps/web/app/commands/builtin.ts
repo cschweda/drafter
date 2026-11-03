@@ -662,7 +662,11 @@ export function registerBuiltinCommands(): void {
     // The Script tab is the Preview in a Markdown document.
     'show-preview': { enabled: isMarkdown, run: () => showTab('script') },
     'show-problems': { run: () => showTab('problems') },
-    'show-outline': { enabled: isFountain, run: () => showTab('outline') },
+    // A novel has an Outline of its own: its parts, chapters, and sections.
+    'show-outline': {
+      enabled: () => isFountain() || editor.novel.value,
+      run: () => showTab('outline'),
+    },
     // Not core tabs (design §5.8): showing one puts it in its pane's slot. None for Markdown.
     'show-cards': { enabled: isFountain, run: () => showTab('cards') },
     'show-notes': { enabled: isFountain, run: () => showTab('notes') },
