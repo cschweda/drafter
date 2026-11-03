@@ -353,3 +353,10 @@ Known limits the [security audit](security-audit-2026-11-01.md) recorded and tha
 - **What the drop grant still trusts** (F2, fixed in part). Electron gives the main process no drop event for a page, so main trusts the preload's report of a real drop. A renderer compromised below the page could still send one, for any script, Markdown, or text file the writer's account can read (`grants.ts` says so). A dropped file read-only until saved, or a question in main before granting one outside a folder already in use, would narrow it further, at the cost of a dropped script no longer saving in place.
 - **Advisories left in tooling** (F3). After Nuxt 4.6.3, `pnpm audit --prod` lists 20 (6 high, 9 moderate, 5 low): `node-forge` (the dev server's self-signed HTTPS, through `listhen`), `glob` and `minimatch` (workbox-build, @vercel/nft, electron-builder), `esbuild` 0.27 (`@nuxt/fonts`), and `deepmerge` (workbox-build). None ships: drafter.dev is static, and they are in the build and the dev server. They go as their parents release fixes, which Dependabot now brings; a pnpm `overrides` entry would take them sooner if the dev server is ever run on a network others can reach.
 
+## Privacy audit, 3 November 2026
+
+From the [privacy audit](privacy-audit-2026-11-03.md); finding 1 and the rest were fixed the same day.
+
+- **Plausible's script runs in the editor's page on drafter.dev.** It is the one outside code there, and the security policy lets it send to plausible.io. Its events are now cut down before they go (`apps/web/scripts/plausible.mjs`), but the script itself could change on Plausible's side. Two ways to close this: load it only on the help pages (then the app's own visits go uncounted), or host a reviewed copy on drafter.dev with `connect-src` narrowed to `https://plausible.io/api/event`. The maintainer to choose.
+- **Plausible's dashboard settings** (outbound links, file downloads, form submissions) live outside the repository. The cut-down makes them harmless; turning off outbound links on the dashboard would make the events smaller still.
+

@@ -8,7 +8,7 @@ if (!page) throw new Error('The Privacy page is not in the list of help pages.')
 useDocsHead({
   ...page,
   description:
-    'Your script never leaves your device: no account, no cookies, no telemetry. drafter.dev measures visits with Plausible, privacy-focused analytics.',
+    'Your script stays with you: nothing about it is stored in the cloud, no AI reads it, and it never leaves your device unless you send it. Audited 3 November 2026.',
 });
 </script>
 
@@ -16,19 +16,68 @@ useDocsHead({
   <article>
     <h1>{{ page.title }}</h1>
     <p class="docs-lead">
-      Your script never leaves your device. Drafter has no account, no cookies, and no telemetry,
-      and it doesn’t send what you write to anyone, ours included. drafter.dev measures visitor
-      traffic with Plausible, privacy-focused analytics with no cookies; the desktop app sends
-      nothing.
+      Your script stays with you. Nothing about it is stored in the cloud, no AI reads it, and it
+      never leaves your device unless you send it yourself. Drafter has no account, no cookies, and
+      no telemetry. drafter.dev counts visits with Plausible, privacy-focused analytics with no
+      cookies; the desktop app has no analytics at all.
+    </p>
+
+    <h2 id="your-script-stays-with-you">Your script stays with you</h2>
+    <p>
+      Writers worry, rightly, about a script getting out before it’s ready. Drafter is built so it
+      can’t, and this is checked, not just promised.
+    </p>
+    <ul>
+      <li>
+        <strong>Nothing in the cloud.</strong> No server stores anything about your script: not its
+        text, its title, its length, or its name. drafter.dev is a set of files that sends the app to
+        your browser, with no database, no accounts, and nowhere to upload to. The desktop app has no
+        server at all.
+      </li>
+      <li>
+        <strong>Kept on your device only.</strong> Your script is in the files you save, and in a
+        recovery copy, its history, drafts, and cuts in this browser’s own storage, or in the
+        desktop app’s folder on your computer (<a href="#where-your-work-lives">below</a>).
+      </li>
+      <li>
+        <strong>No AI.</strong> Drafter has no AI in it: no AI service, no model, nothing that reads
+        your script to suggest, summarize, or learn from it, and your words never train anything. If
+        you want your own AI app to read your scripts, the separate
+        <a href="#drafter-for-claude">Drafter for Claude</a> does that, only for folders you name,
+        and only if you set it up.
+      </li>
+      <li>
+        <strong>It leaves only when you send it.</strong> A file you share, a report you open on
+        GitHub, an email you write: those go because you chose them, and only what you see goes.
+      </li>
+    </ul>
+    <p>
+      <strong>What does use the network, all of it:</strong> loading Drafter from drafter.dev (the
+      app, its fonts, and its dictionaries all come from drafter.dev itself); on drafter.dev only,
+      Plausible’s count of page visits (<a href="#analytics">below</a>); in the desktop app, a check
+      with GitHub for a new version when it starts, which you can turn off in Settings; and the links
+      and reports you click. None of it carries your script.
+    </p>
+    <p>
+      <strong>The audit.</strong> On 3 November 2026 Drafter was audited for exactly this: every line
+      of code that could reach the network, every place it stores anything, its dependencies, and a
+      writing session on drafter.dev in Chrome, Firefox, and Safari’s engine with every request
+      recorded. A made-up phrase typed into the script appeared in none of them. The audit found one
+      leak, fixed the same day: what a report said could reach drafter.dev’s analytics when it was
+      opened on GitHub.
+      <a href="https://github.com/cschweda/drafter/blob/main/docs/privacy-audit-2026-11-03.md"
+        >Read the audit</a
+      >.
     </p>
 
     <h2 id="what-drafter-doesnt-do">What Drafter doesn’t do</h2>
     <ul>
       <li><strong>No account.</strong> There is nothing to sign up for or sign in to.</li>
-      <li><strong>No cookies, and no tracking of you.</strong> Drafter never follows you from site to site and never records your keystrokes. drafter.dev measures visitor traffic with Plausible, privacy-focused analytics with no cookies (<a href="#analytics">below</a>); the desktop app sends nothing.</li>
-      <li><strong>No telemetry.</strong> It doesn’t report errors, usage, or the state of your browser back to anyone.</li>
+      <li><strong>No cookies, and no tracking of you.</strong> Drafter never follows you from site to site and never records your keystrokes. drafter.dev measures visitor traffic with Plausible, privacy-focused analytics with no cookies (<a href="#analytics">below</a>); the desktop app has no analytics.</li>
+      <li><strong>No telemetry.</strong> Drafter sends no error reports, and nothing about what you do in it or the state of your browser. On drafter.dev only, Plausible counts page visits (<a href="#analytics">below</a>).</li>
       <li><strong>No uploads.</strong> A script, its title, its word count, and your settings never leave the device. Drafter has no server that could receive them.</li>
-      <li><strong>No outside services.</strong> The fonts and icons are part of Drafter and come from drafter.dev itself, not from Google or a content network.</li>
+      <li><strong>No outside services but one.</strong> The fonts, icons, and dictionaries are part of Drafter and come from drafter.dev itself, not from Google or a content network. On drafter.dev, the one outside service is Plausible.</li>
+      <li><strong>No browser spellcheck service.</strong> Chrome’s Enhanced spell check and Edge’s Microsoft Editor send what you type to Google or Microsoft, so Drafter turns the browser’s spellcheck off in every field. Its own spellcheck runs on your device. The one exception is Report a problem, whose text you are about to send anyway.</li>
     </ul>
     <p>
       Like every website, the server that sends Drafter to your browser knows that a browser asked
@@ -38,8 +87,9 @@ useDocsHead({
     <h2 id="analytics">Analytics on drafter.dev: Plausible</h2>
     <p>
       <strong>Only the website, drafter.dev, has analytics. The downloaded desktop app has none:</strong>
-      it doesn’t load Plausible or anything like it, and it sends nothing about you or your use of
-      it to anyone.
+      it doesn’t load Plausible or anything like it, and it sends nothing about you, your scripts,
+      or your use of it. When it checks for a new version, GitHub sees your IP address and which
+      version and system you run, as any download does (<a href="#updates">below</a>).
     </p>
     <p>
       drafter.dev uses <a href="https://plausible.io/privacy-focused-web-analytics">Plausible</a>
@@ -54,10 +104,19 @@ useDocsHead({
       <li><strong>Open and small.</strong> Plausible is open-source software, hosted in the European Union, and its script is a few kilobytes, so drafter.dev stays fast.</li>
     </ul>
     <p>
-      What it records for each page you open: the page’s address (<code>drafter.dev/</code> or a
-      help page), the site that sent you there if your browser says, the kind of device and browser,
-      and the country. It never sees your script, its title, anything you type, or which files you
-      open or save, because none of that leaves your browser.
+      What it records: each page you open, by its address without anything after a <code>?</code>
+      or <code>#</code> (<code>drafter.dev/</code> or a help page), the site that sent you there if
+      your browser says, the kind of device and browser, the country, how far you scrolled and how
+      long the page was open, and the address of an outside link or download you click, also cut
+      before any <code>?</code> or <code>#</code>. It never sees your script, its title, anything
+      you type, or which files you open or save.
+    </p>
+    <p>
+      Plausible’s small script comes from plausible.io and runs in the same page as the editor on
+      drafter.dev, so it is the one piece of outside code there. Drafter hands it nothing but the
+      event, cut down first (<code>apps/web/scripts/plausible.mjs</code>). Before 3 November 2026,
+      the address of Open on GitHub in Report a problem went whole, with what the report said; the
+      privacy audit found that, and it was fixed the same day.
     </p>
     <ul>
       <li><strong>Only on the website.</strong> Analytics runs only when you use Drafter at drafter.dev in a browser. The downloaded desktop app for Windows, Linux, or Mac, and a copy you host yourself, have no analytics at all. Drafter running offline sends nothing either.</li>
@@ -157,8 +216,14 @@ useDocsHead({
       A script module is an extra tool for Drafter, such as one that counts scenes. The modules are
       compiled into Drafter itself. None is downloaded while you work, and each runs in your browser
       on your script only after you turn it on in Settings. The sample scripts are in Drafter too,
-      and need no network. If a module ever needs to use the network, it has to say so and ask you
-      before you can turn it on.
+      and need no network, and no built-in module uses the network.
+    </p>
+    <p>
+      The desktop app also lets you add modules of your own, from its modules folder. Those are code
+      nobody at Drafter has checked. While one is on, it can read and change the open script, and a
+      module that names addresses on the internet (an AI service, say) can send the script there,
+      but only to the addresses it names and only once you agree to them. Drafter asks before you
+      turn such a module on, and keeps every other address closed to it. Add only modules you trust.
     </p>
 
     <h2 id="drafter-for-claude">Drafter for Claude</h2>

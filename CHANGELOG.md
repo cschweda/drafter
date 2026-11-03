@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- **A Privacy section in the README, and Your script stays with you at the top of Help → Privacy** (on drafter.dev and in the desktop app): nothing about a script is stored in the cloud, Drafter uses no AI, the script leaves only when the writer sends it, every request Drafter makes in one table, and the audit that checks it.
+- The browser's own spellcheck is off in every field (Chrome's Enhanced spell check and Edge's Microsoft Editor send typed text to Google or Microsoft, and notes and scene details hold the script's words). Drafter's own spellcheck, on the device, is unchanged, and Report a problem keeps the browser's for its fields.
+- The help and the README now say exactly what goes over the network: Plausible on drafter.dev only, and what it records; the desktop app's update check, and what GitHub sees; and that a module added to the desktop app's modules folder can reach the addresses you agree to.
 - The issue forms' Version info field is now **Technical details** (its id, `version`, is the same, so older links still fill it).
 - The desktop app's test of View → Show Scaffold waits for the Inspector's header to fit before it opens More tools, as the web app's tests do; a slow Mac runner clicked it as it refit.
 

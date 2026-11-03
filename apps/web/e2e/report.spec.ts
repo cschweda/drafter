@@ -145,6 +145,30 @@ test.describe('Report a problem', () => {
     if (canRead(browserName)) expect(await clipboard(page)).toBe(shown);
   });
 
+  // The browser's own spellcheck (which Chrome's Enhanced spell check and Edge's Microsoft Editor
+  // send to Google or Microsoft) is off everywhere, by inheritance, and on only for the report's
+  // fields, whose text is going to GitHub anyway (privacy audit, 2026-11-03).
+  test("turns the browser's spellcheck off for the page, and on only for the report's fields", async ({
+    page,
+  }) => {
+    await start(page);
+    expect(await page.evaluate(() => document.documentElement.spellcheck)).toBe(false);
+    expect(await page.locator('.cm-content').evaluate((el) => (el as HTMLElement).spellcheck)).toBe(
+      false,
+    );
+    await runCommand(page, 'Report a problem…');
+    const fields = report(page).locator('input[type="text"], textarea');
+    expect(await fields.count()).toBeGreaterThan(0);
+    for (const field of await fields.all())
+      expect(await field.evaluate((el) => (el as HTMLElement).spellcheck)).toBe(true);
+    await page.keyboard.press('Escape');
+    // A field elsewhere inherits the page's: Take snapshot's label.
+    await runCommand(page, 'Take snapshot…');
+    const label = page.getByRole('dialog').locator('input[type="text"]').first();
+    await expect(label).toBeVisible();
+    expect(await label.evaluate((el) => (el as HTMLElement).spellcheck)).toBe(false);
+  });
+
   test('leaves the version info out when it is turned off', async ({ page }) => {
     await start(page);
     await runCommand(page, 'Report a problem…');

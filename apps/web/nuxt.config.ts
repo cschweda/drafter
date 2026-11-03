@@ -230,7 +230,12 @@ export default defineNuxtConfig({
   telemetry: false,
   app: {
     head: {
-      htmlAttrs: { lang: 'en' },
+      // The browser's own spellcheck is off on every field, by inheritance: Chrome's Enhanced spell
+      // check and Edge's Microsoft Editor send what is typed to Google or Microsoft, and notes, cards,
+      // and scene details hold the script's words (privacy audit, 2026-11-03). Drafter's own
+      // spellcheck runs on the device; Report a problem turns the browser's back on for its fields.
+      // (Unhead's type for the root's attributes doesn't list `spellcheck`, a global HTML attribute.)
+      htmlAttrs: { lang: 'en', ...({ spellcheck: 'false' } as Record<string, string>) },
       title: SITE_TITLE,
       meta: [
         { name: 'description', content: SITE_DESCRIPTION },
