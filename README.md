@@ -17,7 +17,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.25.0.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Classic Mode is out, for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks; next up is Novel (v0.26.0). See the [roadmap](#roadmap).
+> **Status: v0.25.1.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Classic Mode is out, for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks, and v0.25.1 brings a privacy and a red/blue team audit, a contrast slider for each pane, and typewriter sounds; next up is Novel (v0.26.0). See the [roadmap](#roadmap).
 
 ## Free, no login, private
 
@@ -177,7 +177,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.25.0, there are **7,914 unit and property tests** (in 21 packages, the web app, and the desktop app), **1,352 browser tests**, each run in five browser setups (6,760 runs), 137 end-to-end tests of the desktop app, and **278 trap documents** with 1,258 checks:
+**What runs.** As of v0.25.1, there are **7,960 unit and property tests** (in 21 packages, the web app, and the desktop app), **1,361 browser tests**, each run in five browser setups (6,805 runs), 138 end-to-end tests of the desktop app, and **278 trap documents** with 1,258 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.

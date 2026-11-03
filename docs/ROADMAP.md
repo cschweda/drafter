@@ -4,7 +4,7 @@ The [README](../README.md#roadmap) has the short list: what's next, and what com
 
 ## Where things stand
 
-Drafter is at **v0.25.0**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
+Drafter is at **v0.25.1**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
 
 Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. Lately it brought:
 
@@ -20,6 +20,7 @@ Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. La
 - **Drafter for Claude** (v0.24.2): a local, read-only MCP server, so Claude Desktop, Claude Code, or any app that speaks MCP can read the scripts, drafts, and cuts in folders you choose: ten tools and seven prompts, on npm as `drafter-mcp` and on the GitHub Release ([help](https://drafter.dev/docs/drafter-for-claude/)). Drafter itself never calls an AI.
 - **Self-hosting** (v0.24.3): `docker compose up -d` serves the web app from your own computer or server, with drafter.dev's security headers, no analytics, and nothing that stores scripts ([help](https://drafter.dev/docs/self-hosting/)).
 - **Classic Mode** (v0.25.0): typing the way many screenwriters expect, for anyone who doesn't know Fountain's marks. Enter and Tab move between elements, names and places fill themselves in from the first letter, headings and names are capitalised as you type, and the marks are hidden, so the left side looks like a script. It isn't Fountain typing, but the file is still plain Fountain, key for key what a writer could have typed by hand, so nothing is locked in. **Fountain Mode stays the default**, and the **Fountain | Classic** switch in the top bar, Settings, the command palette, or `Mod+Alt+0` changes it at any time, and changes nothing you've written. Phones get a Next button for Tab. It's built from the convention screenwriting apps share, the maintainer's own words, and the Fountain specification, never by copying any app's screens ([help](https://drafter.dev/docs/classic-mode/), [design](drafter-classic-mode-design.md)).
+- **Your script stays with you** (v0.25.1): a privacy audit and a red/blue team audit, both in the README's [Audit record](../README.md#audit-record), with every finding fixed or listed; a **Contrast** button with a slider for each pane and its WCAG 2.1 ratio; Typewriter sounds; and Copy technical details for bug reports and ideas.
 
 Next, in order:
 

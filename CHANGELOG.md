@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-11-03
+
+**Your script stays with you, and an audit shows it.** A privacy audit and a red/blue team audit, each recorded in the README, with every finding fixed or listed: Final Draft exports no longer carry notes you left out, the desktop app asks before a page opens an outside address, a crafted Markdown file can no longer freeze the app, and drafter.dev's visit counter gets page views only. Also new: a **Contrast** button with a slider for each pane and its WCAG 2.1 ratio, **Typewriter sounds** (off by default), and **Copy technical details** for bug reports and ideas.
+
 ### Added
 
 - **drafter.dev describes itself for search engines and AI assistants** (from a metapeek AI-readiness check the maintainer ran): Schema.org JSON-LD in every page's head (the site, the app as free MIT software for the web, Windows, and Linux, its author, its version, and the date of the commit it was built from), an author tag, a `/llms.txt` in llmstxt.org's shape that links every help page, and a `/robots.txt` that lets every page be read. Public facts only, the ones About and the README already give; a test keeps `llms.txt` in step with the help pages.
@@ -1281,7 +1285,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.25.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.25.1...HEAD
+[0.25.1]: https://github.com/cschweda/drafter/compare/v0.25.0...v0.25.1
 [0.25.0]: https://github.com/cschweda/drafter/compare/v0.24.3...v0.25.0
 [0.24.3]: https://github.com/cschweda/drafter/compare/v0.24.2...v0.24.3
 [0.24.2]: https://github.com/cschweda/drafter/compare/v0.24.1...v0.24.2
