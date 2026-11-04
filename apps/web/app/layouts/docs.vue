@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HELP_PAGES, helpHref } from '~/commands/data';
+import { HELP_PAGES, HELP_SECTIONS, helpHref } from '~/commands/data';
 import { backToEditor } from '~/commands/help-back';
 
 // The frame of a help page (Phase 1 design §4.5): a way back to the app, the other help pages, and the
@@ -8,6 +8,35 @@ import { backToEditor } from '~/commands/help-back';
 // that Help opened closes the tab instead, which is the way back to the editor it came from.
 const route = useRoute();
 const here = computed(() => route.path.replace(/\/$/, ''));
+
+/**
+ * The bar's dropdowns (the maintainer's request of 2026-11-04): Help, then Writing, Files, and
+ * About, each a native `<details>`, so they open with no script, by keyboard, and on a phone. They
+ * share a `name`, so opening one closes the other (a browser too old for that leaves both open).
+ * The dropdown holding this page is marked as the page's link is.
+ */
+const sections = HELP_SECTIONS.map((section) => ({
+  ...section,
+  pages: HELP_PAGES.filter((page) => page.section === section.id),
+}));
+const holdsHere = (pages: readonly { path: string }[]) => pages.some((p) => p.path === here.value);
+
+const nav = ref<HTMLElement>();
+/** The open dropdowns, closed: by Escape (focus back on its summary) or a click outside them. */
+function closeAll(refocus: boolean) {
+  for (const open of nav.value?.querySelectorAll<HTMLDetailsElement>('details[open]') ?? []) {
+    open.open = false;
+    if (refocus && open.contains(document.activeElement)) open.querySelector('summary')?.focus();
+  }
+}
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') closeAll(true);
+}
+function onPointerdown(event: PointerEvent) {
+  if (event.target instanceof Node && !nav.value?.contains(event.target)) closeAll(false);
+}
+onMounted(() => document.addEventListener('pointerdown', onPointerdown));
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown));
 
 /**
  * The editor tab that opened this one (Help opens the pages in a new tab, with an opener): the
@@ -54,16 +83,25 @@ function onBack(event: MouseEvent) {
       <a class="docs-back" href="/" @click="onBack">
         <span aria-hidden="true">←</span> Back to Drafter
       </a>
-      <nav aria-label="Help pages">
+      <nav ref="nav" aria-label="Help pages" @keydown="onKeydown">
         <ul class="docs-nav">
           <li>
-            <a href="/docs/" :aria-current="here === '/docs' ? 'page' : undefined">Help</a>
+            <a class="docs-top" href="/docs/" :aria-current="here === '/docs' ? 'page' : undefined">Help</a>
           </li>
-          <li v-for="page in HELP_PAGES" :key="page.id">
-            <a
-              :href="helpHref(page)"
-              :aria-current="here === page.path ? 'page' : undefined"
-            >{{ page.title }}</a>
+          <li v-for="section in sections" :key="section.id">
+            <details class="docs-group" name="docs-nav">
+              <summary :data-here="holdsHere(section.pages) || undefined">
+                {{ section.title }}<span class="docs-chevron" aria-hidden="true" />
+              </summary>
+              <ul class="docs-menu">
+                <li v-for="page in section.pages" :key="page.id">
+                  <a
+                    :href="helpHref(page)"
+                    :aria-current="here === page.path ? 'page' : undefined"
+                  >{{ page.title }}</a>
+                </li>
+              </ul>
+            </details>
           </li>
         </ul>
       </nav>

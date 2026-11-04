@@ -594,6 +594,11 @@ export function registerBuiltinCommands(): void {
     'export-epub': { enabled: () => exportsHere('epub'), run: () => void exportScript('epub') },
     'export-fdx': { enabled: () => exportsHere('fdx'), run: () => void exportScript('fdx') },
     'export-md': { enabled: () => exportsHere('md'), run: () => void exportScript('md') },
+    // A copy of the script as a .fountain, leaving the script on its own file (Save As moves it).
+    'export-fountain': {
+      enabled: () => exportsHere('fountain'),
+      run: () => void exportScript('fountain'),
+    },
     'export-txt': { run: () => void exportScript('txt') },
     // The story map (story-map design §1.1): a script's, after its dialog.
     'export-story-map': {

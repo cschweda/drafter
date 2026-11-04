@@ -38,39 +38,78 @@ export const modeSwitchApplies = (
   kind: DocumentKind,
 ): boolean => kind === 'fountain' && target !== current;
 
+/**
+ * Where a help page sits in the help pages' bar (layouts/docs.vue): one dropdown each, in this
+ * order, so the bar is four items wide rather than every page in a row.
+ */
+export const HELP_SECTIONS = [
+  { id: 'writing', title: 'Writing' },
+  { id: 'files', title: 'Files' },
+  { id: 'about', title: 'About' },
+] as const;
+export type HelpSection = (typeof HELP_SECTIONS)[number]['id'];
+
 export interface HelpPage {
   id: string;
   /** The route, prerendered, and the service worker's entry. */
   path: string;
   title: string;
+  /** Its dropdown in the help pages' bar. */
+  section: HelpSection;
 }
 
 /** The help pages (Phase 1 design §4.5): prerendered at `path`, and opened from Help and the palette. */
 export const HELP_PAGES: readonly HelpPage[] = [
-  { id: 'help-what-is', path: '/docs/what-is-drafter', title: 'What is Drafter?' },
-  { id: 'help-why', path: '/docs/why', title: 'Why Drafter' },
-  { id: 'help-fountain', path: '/docs/fountain', title: 'Fountain cheat sheet' },
-  { id: 'help-classic-mode', path: '/docs/classic-mode', title: 'Classic Mode' },
-  { id: 'help-novel', path: '/docs/novel', title: 'Novel' },
-  { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
-  { id: 'help-drafts-and-cuts', path: '/docs/drafts-and-cuts', title: 'Drafts and cuts' },
-  { id: 'help-story-map', path: '/docs/story-map', title: 'Story map' },
+  {
+    id: 'help-what-is',
+    path: '/docs/what-is-drafter',
+    title: 'What is Drafter?',
+    section: 'about',
+  },
+  { id: 'help-why', path: '/docs/why', title: 'Why Drafter', section: 'about' },
+  {
+    id: 'help-fountain',
+    path: '/docs/fountain',
+    title: 'Fountain cheat sheet',
+    section: 'writing',
+  },
+  {
+    id: 'help-classic-mode',
+    path: '/docs/classic-mode',
+    title: 'Classic Mode',
+    section: 'writing',
+  },
+  { id: 'help-novel', path: '/docs/novel', title: 'Novel', section: 'writing' },
+  { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser', section: 'files' },
+  {
+    id: 'help-drafts-and-cuts',
+    path: '/docs/drafts-and-cuts',
+    title: 'Drafts and cuts',
+    section: 'writing',
+  },
+  { id: 'help-story-map', path: '/docs/story-map', title: 'Story map', section: 'writing' },
   {
     id: 'help-drafter-for-claude',
     path: '/docs/drafter-for-claude',
     title: 'Drafter for Claude',
+    section: 'files',
   },
-  { id: 'help-self-hosting', path: '/docs/self-hosting', title: 'Self-hosting' },
-  { id: 'help-shortcuts', path: '/docs/shortcuts', title: 'Keyboard shortcuts' },
-  { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy' },
-  { id: 'help-open-formats', path: '/docs/open-formats', title: 'Open formats' },
-  { id: 'help-licences', path: '/docs/licences', title: 'Third-party licences' },
-  { id: 'help-technical', path: '/docs/technical', title: 'Technical details' },
-  { id: 'help-whats-new', path: '/docs/whats-new', title: 'What’s new' },
+  { id: 'help-self-hosting', path: '/docs/self-hosting', title: 'Self-hosting', section: 'files' },
+  {
+    id: 'help-shortcuts',
+    path: '/docs/shortcuts',
+    title: 'Keyboard shortcuts',
+    section: 'writing',
+  },
+  { id: 'help-privacy', path: '/docs/privacy', title: 'Privacy', section: 'about' },
+  { id: 'help-open-formats', path: '/docs/open-formats', title: 'Open formats', section: 'files' },
+  { id: 'help-licences', path: '/docs/licences', title: 'Third-party licences', section: 'about' },
+  { id: 'help-technical', path: '/docs/technical', title: 'Technical details', section: 'about' },
+  { id: 'help-whats-new', path: '/docs/whats-new', title: 'What’s new', section: 'about' },
 ];
 
 /** The Download page: a help page, but not listed with them; Help's entry for it is web-only. */
-export const DOWNLOAD_PAGE: HelpPage = {
+export const DOWNLOAD_PAGE: Omit<HelpPage, 'section'> = {
   id: 'download-desktop',
   path: '/docs/download',
   title: 'Download Drafter',
@@ -266,6 +305,13 @@ export const COMMAND_DATA: readonly CommandData[] = [
     group: 'File',
     icon: 'i-lucide-map',
     keywords: ['visual', 'teaser', 'share', "what I'm writing"],
+  },
+  // A copy of the script's own text; the script stays on its file, as it doesn't after Save As.
+  {
+    id: 'export-fountain',
+    title: 'Export as Fountain (.fountain)',
+    group: 'File',
+    keywords: ['copy', 'duplicate', 'fountain file', 'save a copy'],
   },
   { id: 'export-txt', title: 'Export as plain text', group: 'File' },
   { id: 'export-fdx', title: 'Export as Final Draft (.fdx)', group: 'File' },

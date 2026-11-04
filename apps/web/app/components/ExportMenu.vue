@@ -12,7 +12,7 @@ import {
 // A Markdown document exports as a PDF, its Markdown file, or plain text (Markdown PDF design §10).
 const { kind } = useEditor();
 
-// The toolbar's Export menu (Phase 1 design §9.7): PDF, plain text, Final Draft, Markdown, and the treatment (a Markdown document's are the PDF, the Markdown file, and plain text). The trigger is the toolbar's
+// The toolbar's Export menu (Phase 1 design §9.7): PDF, Fountain, plain text, Final Draft, Markdown, and the treatment (a Markdown document's are the PDF, the Markdown file, and plain text). The trigger is the toolbar's
 // Export button, drawn by the toolbar and given through the slot. Each item runs the export's
 // command (`commands/builtin.ts`), as the app menu and the palette do. The toast says when the file is ready, or why it isn't.
 const open = ref(false);
@@ -137,6 +137,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <!-- A picture of a script for a non-writer: one page, after its dialog (story-map design §1.1). -->
       <button v-if="kind !== 'markdown'" type="button" class="item" @click="chooseStoryMap">
         <UIcon name="i-lucide-map" class="icon" />Story map (.html)…
+      </button>
+      <!-- A copy of the script's own text; the script stays on its own file (Save As moves it). -->
+      <button v-if="kind !== 'markdown'" type="button" class="item" @click="choose('fountain')">
+        <UIcon name="i-lucide-file-pen-line" class="icon" />Fountain (.fountain)
       </button>
       <button v-if="kind === 'markdown'" type="button" class="item" @click="choose('md')">
         <UIcon name="i-lucide-file-text" class="icon" />Markdown (.md)

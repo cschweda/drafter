@@ -116,6 +116,23 @@ watch(
 // submenu of the exports, as its button's menu is.
 const overflowButton = ref<HTMLElement | null>(null);
 const { entry, choose, onCloseAutoFocus } = useCommandMenu(overflowButton);
+
+// Save's caret (the maintainer's request of 2026-11-04): Save As… had been only in the Open menu,
+// the Drafter menu, and the palette, where a writer looking beside Save didn't find it. The caret
+// is a menu of the ways to save, and folds into More actions with Save (its `fold-save-item`).
+const saveCaret = ref<HTMLElement | null>(null);
+const saveOpen = ref(false);
+const saveMenu = useCommandMenu(saveCaret);
+const saveItems = computed<DropdownMenuItem[][]>(() => [
+  [
+    ...saveMenu.entry('save', 'i-lucide-save'),
+    ...saveMenu.entry('save-as', 'i-lucide-save-all'),
+  ],
+  [
+    ...saveMenu.entry('revert-to-saved', 'i-lucide-undo-2', true),
+    ...saveMenu.entry('history', 'i-lucide-history'),
+  ],
+]);
 const exportIds = computed(() =>
   EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].flatMap((kind) =>
     // A script's story map follows its EPUB, as in the Export menu (story-map design §1.1).
@@ -165,7 +182,9 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
   const out: DropdownMenuItem[] = [];
   const has = (item: ToolbarItem) => folded.value.includes(item);
   if (has('open')) out.push(...entry('open', 'i-lucide-folder-open'));
-  if (has('save')) out.push(...entry('save', 'i-lucide-save'));
+  if (has('save')) {
+    out.push(...entry('save', 'i-lucide-save'), ...entry('save-as', 'i-lucide-save-all'));
+  }
   if (has('export')) {
     out.push({
       label: 'Export',
@@ -269,6 +288,22 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
         <UIcon name="i-lucide-save" class="icon" />
         <span class="label">Save</span>
       </button>
+      <MenuButton
+        v-model:open="saveOpen"
+        :items="saveItems"
+        :content="{ align: 'start', onCloseAutoFocus: saveMenu.onCloseAutoFocus }"
+      >
+        <button
+          ref="saveCaret"
+          type="button"
+          class="act save-caret fold-save-item"
+          aria-label="Save options"
+          title="Save As, Revert to Saved, History"
+          data-tour="save-options"
+        >
+          <UIcon name="i-lucide-chevron-down" class="caret" />
+        </button>
+      </MenuButton>
       <ExportMenu v-slot="{ toggle, expanded, controls }">
         <button
           type="button"
@@ -431,6 +466,14 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
   gap: 6px;
   padding: 0 10px;
 }
+/* Save's caret: Save and it read as one split button, the caret a narrow half. */
+.fold-save-item:not(.save-caret) {
+  padding-right: 6px;
+}
+.save-caret {
+  margin-left: -4px;
+  padding: 0 5px;
+}
 .ib {
   justify-content: center;
   width: 30px;
@@ -551,7 +594,7 @@ kbd {
   .search:hover {
     background: var(--raised);
   }
-  .act .caret,
+  .act:not(.save-caret) .caret,
   .structure,
   kbd {
     display: none;

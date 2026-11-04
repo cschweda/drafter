@@ -32,21 +32,22 @@ import { whenIdle } from './turn';
 
 /**
  * `pdf`, `html` (one self-contained page: the printed pages and a Reading view), `epub` (the
- * Reading view as an e-book), `txt`, `fdx` (a Final Draft file), and `md` (the whole script as
+ * Reading view as an e-book), `fountain` (a copy of the script's own text, as Save writes it, that
+ * the script does not follow as it does a Save As), `txt`, `fdx` (a Final Draft file), and `md` (the whole script as
  * Markdown, written in the worker) are a screenplay's or a stage play's; a Markdown document's are
  * `pdf` (drawn in Inter Tight, Markdown PDF design), `html` (the document as the Preview draws
  * it, in one page), `epub` (the same, as an e-book), `md` (its own text), and `txt` (the same
  * text, as a plain text file). `story-map` (story-map design) is a script's too, but made after
  * its dialog (`exportStoryMap`), so it isn't one of `EXPORTS`' files.
  */
-export type ExportKind = 'pdf' | 'html' | 'epub' | 'txt' | 'md' | 'fdx' | 'story-map';
+export type ExportKind = 'pdf' | 'html' | 'epub' | 'fountain' | 'txt' | 'md' | 'fdx' | 'story-map';
 
 /**
  * What each kind of document exports, in the order the menus list them: the PDF first in both,
  * then the HTML page and the EPUB, the other files made to be read as they are.
  */
 export const EXPORTS: Readonly<Record<'fountain' | 'markdown', readonly ExportKind[]>> = {
-  fountain: ['pdf', 'html', 'epub', 'txt', 'fdx', 'md'],
+  fountain: ['pdf', 'html', 'epub', 'fountain', 'txt', 'fdx', 'md'],
   markdown: ['pdf', 'html', 'epub', 'md', 'txt'],
 };
 
@@ -92,6 +93,7 @@ const MIME: Record<ExportKind, string> = {
   pdf: 'application/pdf',
   html: 'text/html',
   epub: 'application/epub+zip',
+  fountain: 'text/plain',
   txt: 'text/plain',
   md: 'text/markdown',
   fdx: 'application/xml',
@@ -101,6 +103,7 @@ const EXTENSION = {
   pdf: '.pdf',
   html: '.html',
   epub: '.epub',
+  fountain: '.fountain',
   txt: '.txt',
   md: '.md',
   fdx: '.fdx',
@@ -137,6 +140,9 @@ function notFor(kind: ExportKind, markdown: boolean): string | null {
   if (markdown && kind === 'fdx') {
     return 'Only a screenplay or a stage play exports as a Final Draft file.';
   }
+  if (markdown && kind === 'fountain') {
+    return 'Only a screenplay or a stage play exports as a Fountain file.';
+  }
   if (markdown && kind === 'story-map') {
     return 'Only a screenplay or a stage play makes a story map.';
   }
@@ -151,8 +157,9 @@ function notFor(kind: ExportKind, markdown: boolean): string | null {
  * HTML export design §3.3, §10a), so only their toasts say "notes".
  */
 function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions): string {
-  // A story map has its own choices, in its dialog, and never carries the script (Call 20).
-  if (kind === 'story-map') return '';
+  // A story map has its own choices, in its dialog, and never carries the script (Call 20). A
+  // Fountain file is the script's text as written: the options shape how it is drawn, not the text.
+  if (kind === 'story-map' || kind === 'fountain') return '';
   // Only an HTML file and an EPUB carry the script inside (reopenable exports), a document's too.
   const inside = options.reopenable && carriesSource(kind) ? { reopenable: true as const } : {};
   if (markdown) {
@@ -197,6 +204,8 @@ function requestFor(
   const { kind } = asked;
   // Made by `storyMapRequest`, after its dialog's changes.
   if (kind === 'story-map') throw new Error('A story map is made from its dialog.');
+  // The script's own text, written as Save writes it (`run`): never the worker's.
+  if (kind === 'fountain') throw new Error('A Fountain file is the script’s own text.');
   const { source, template, options, title, markdown } = open;
   // Only when there is one, so a request without a project has no such key.
   const work = {
@@ -327,9 +336,11 @@ async function run(asked: Asked, job?: StoryMapJob): Promise<'saved' | 'cancelle
     const after = job ? job.write() : '';
     let data: Uint8Array | string;
     let missing: string[] = [];
-    if (markdown && (kind === 'md' || kind === 'txt')) {
+    if (kind === 'fountain' || (markdown && (kind === 'md' || kind === 'txt'))) {
       // A Markdown document is already text: its Markdown and plain text exports are the text as
-      // it stands, written as Save writes it (the file's line breaks, and its byte order mark).
+      // it stands, written as Save writes it (the file's line breaks, and its byte order mark). A
+      // script's Fountain file is the same: a copy of what Save writes, and the script stays bound
+      // to its own file (Save As is the one that moves it).
       data = encodeFile(
         source,
         script.project.value?.lineBreak ?? '\n',

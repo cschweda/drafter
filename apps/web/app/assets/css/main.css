@@ -236,12 +236,15 @@ html:has(dialog:modal) {
   font-family: var(--font-sans);
   line-height: 1.6;
 }
+/* One row: Back on the left, the dropdowns on the right; on a phone they wrap under it. */
 .docs-bar {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px 24px;
-  padding: 12px 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 24px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
@@ -251,10 +254,108 @@ html:has(dialog:modal) {
 .docs-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  align-items: center;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+/* Help, and each dropdown's summary: a 36px target, the dropdowns' drawn as buttons. */
+.docs-top,
+.docs-group > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: var(--r-sm, 4px);
+}
+.docs-group {
+  position: relative;
+}
+.docs-group > summary {
+  color: var(--accent-text);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.docs-group > summary::-webkit-details-marker {
+  display: none;
+}
+.docs-group > summary:hover,
+.docs-group[open] > summary {
+  background: var(--highlight);
+}
+.docs-group > summary:focus-visible,
+.docs-top:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+/* The dropdown that holds this page reads as the page's own link does. */
+.docs-group > summary[data-here] {
+  color: var(--text);
+  font-weight: 700;
+}
+.docs-chevron {
+  width: 0.4em;
+  height: 0.4em;
+  margin-top: -0.2em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+.docs-group[open] .docs-chevron {
+  margin-top: 0.2em;
+  transform: rotate(-135deg);
+}
+.docs-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 15rem;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r, 8px);
+  background: var(--overlay, var(--raised));
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.2),
+    0 8px 24px rgb(0 0 0 / 0.28);
+}
+.docs-menu a {
+  display: block;
+  padding: 8px 10px;
+  border-radius: var(--r-sm, 4px);
+  text-decoration: none;
+}
+.docs-menu a:hover,
+.docs-menu a:focus-visible {
+  outline: none;
+  background: var(--highlight);
+  box-shadow: inset 3px 0 0 var(--focus);
+}
+/* A phone: the menus hang from the whole bar, its width less the margins, so none runs off the
+   screen whichever dropdown it is. */
+@media (max-width: 40rem) {
+  .docs-group {
+    position: static;
+  }
+  .docs-menu {
+    top: 100%;
+    right: 16px;
+    left: 16px;
+    min-width: 0;
+  }
+  .docs-menu a {
+    padding: 10px 12px;
+  }
+}
+@media (forced-colors: active) {
+  .docs-menu {
+    border: 1px solid CanvasText;
+  }
 }
 .docs a {
   color: var(--accent-text);

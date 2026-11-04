@@ -91,6 +91,7 @@ const EXPORT_ICONS: Record<string, string> = {
   'export-epub': 'i-lucide-book',
   'export-story-map': 'i-lucide-map',
   'export-md': 'i-lucide-file-output',
+  'export-fountain': 'i-lucide-file-pen-line',
   'export-txt': 'i-lucide-file-type',
   'export-fdx': 'i-lucide-file-code',
 };
