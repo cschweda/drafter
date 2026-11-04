@@ -460,18 +460,21 @@ test.describe('a first visit on a phone, with the storage toast', () => {
     await page.keyboard.press('Escape');
     await expect(welcome).toBeHidden();
     await expect(toast).toBeVisible();
-    // Every button in the status bar is the element at its own centre: nothing lies over it.
-    const blocked = await page.evaluate(() =>
-      Array.from(document.querySelectorAll<HTMLElement>('[data-tour="status"] button'))
-        .filter((b) => b.offsetParent !== null)
-        .filter((b) => {
-          const r = b.getBoundingClientRect();
-          const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-          return !top || !b.contains(top);
-        })
-        .map((b) => b.textContent?.trim()),
-    );
-    expect(blocked).toEqual([]);
+    // Every button in the status bar is the element at its own centre: nothing lies over it. The
+    // toast has only just come (as the welcome closed), so this waits out its slide in: on a slow
+    // runner it is still crossing the bar for a moment.
+    const blocked = () =>
+      page.evaluate(() =>
+        Array.from(document.querySelectorAll<HTMLElement>('[data-tour="status"] button'))
+          .filter((b) => b.offsetParent !== null)
+          .filter((b) => {
+            const r = b.getBoundingClientRect();
+            const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+            return !top || !b.contains(top);
+          })
+          .map((b) => b.textContent?.trim()),
+      );
+    await expect.poll(blocked).toEqual([]);
     // And the status bar's recovery item opens with a tap.
     await page.getByRole('button', { name: 'Recovery copy: may be cleared' }).click();
     await expect(page.locator('#recovery-why')).toBeVisible();
