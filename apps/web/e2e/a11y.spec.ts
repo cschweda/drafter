@@ -734,6 +734,7 @@ for (const theme of THEMES) {
       '/docs/download/',
       '/docs/fountain/',
       '/docs/classic-mode/',
+      '/docs/novel/',
       '/docs/saving/',
       '/docs/story-map/',
       '/docs/drafter-for-claude/',

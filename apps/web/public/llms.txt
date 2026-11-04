@@ -10,6 +10,7 @@ Drafter is made by Christopher Schweda and is MIT-licensed. It is free with no c
 - [Why Drafter](https://drafter.dev/docs/why/): the idea and the principles
 - [Fountain cheat sheet](https://drafter.dev/docs/fountain/): the plain-text screenplay format, mark by mark
 - [Classic Mode](https://drafter.dev/docs/classic-mode/): typing with Enter and Tab, without Fountain's marks
+- [Novel](https://drafter.dev/docs/novel/): writing a book in plain Markdown, with chapters, an outline, focus, and word targets
 - [Saving and your browser](https://drafter.dev/docs/saving/): where a script is kept, saving to files, and exports
 - [Drafts and cuts](https://drafter.dev/docs/drafts-and-cuts/): numbered drafts, and every cut kept beside the script
 - [Story map](https://drafter.dev/docs/story-map/): a visual page of a script to send to anyone

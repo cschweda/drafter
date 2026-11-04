@@ -45,6 +45,16 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.26.0-novel',
+    date: '2026-11-03',
+    version: '0.26.0',
+    kind: 'New',
+    title: 'Novel: a place to draft a book',
+    text: 'Chapters and sections in plain Markdown, an Outline and Cards with a status and synopsis for each, focus on one chapter at a time, and word targets. Your file stays Markdown any app opens.',
+    link: { href: '/docs/novel/', label: 'Novel' },
+    banner: true,
+  },
+  {
     id: 'v0.25.1-typewriter-sounds',
     date: '2026-11-03',
     version: '0.25.1',

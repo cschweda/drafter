@@ -373,3 +373,14 @@ From the [red/blue team audit](redblue-audit-2026-11-03.md); everything else it 
 - **Smaller notes (S8, D4):** a hardlink in a named folder (refuse `nlink > 1`, or a trap for it), npm provenance (`actions/attest-build-provenance`), a `+sha512` hash on `packageManager`, `windows-latest` pinned, and the module consent fingerprint kept whole (256 bits).
 - **Reopen trusts its marker (W7):** a page can show one script in a browser and reopen as another in Drafter; a sentence in Open formats would say so.
 
+
+## Novel
+
+- **`useNovel`'s per-frame refresh keeps reparsing while a novel is open**, even with no Outline or Cards showing. It should pause when nothing is observing it.
+- **The Status radios use an observer** that relabels Nuxt UI checkbox items. A sturdier popover radio list would be better.
+- **The surrogate-safe synopsis cap lives in the web app**, while the package's `readFacts` cuts with `slice`. It should be one shared helper.
+- **A novel's title in the scripts list is its first heading** ("Chapter One" or "Part One"). Consider the book's own title.
+- **The script Cards' `SceneCard.vue` probably has the nested-interactive axe issue** the novel cards avoided, and it has no axe test.
+- **The synopsis field's position is measured once** and can go stale on a resize.
+- **The long-task test runs alone.** It is skipped on CI by name, and parallel workers stretch it.
+- **`synopsis_cut` never shows in Drafter for Claude**, because `readFacts` already caps at the same length.
