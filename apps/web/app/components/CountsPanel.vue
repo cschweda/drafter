@@ -34,7 +34,8 @@ const bookTarget = computed(() => book.facts.value.bookTarget ?? null);
 const bookText = ref(bookTarget.value ? String(bookTarget.value) : '');
 const bookProblem = ref('');
 const bookSaid = ref('');
-const bookWhy = computed(() => book.readOnly());
+// Read when the panel draws (it follows the locks, which are reactive), not kept from the first time.
+const bookWhy = () => book.readOnly();
 watch(bookTarget, (next) => {
   bookText.value = next ? String(next) : '';
 });
@@ -175,12 +176,12 @@ function onKeydown(event: KeyboardEvent) {
     <section v-if="markdown && isNovel" class="goal book" aria-labelledby="counts-book-title">
       <h3 id="counts-book-title">Book target</h3>
       <p v-if="bookTarget" class="today" data-book-progress>
-        {{ bookLine(known.words ?? 0, bookTarget) }}
+        {{ known.words === null ? 'Counting…' : bookLine(known.words, bookTarget) }}
       </p>
       <p v-else class="note">Set a number of words for the whole book, and this shows how far it has come.</p>
-      <p v-if="bookWhy" class="note">{{ bookWhy }}</p>
+      <p v-if="bookWhy()" class="note">{{ bookWhy() }}</p>
       <form class="goal-form" novalidate @submit.prevent="onBookSubmit">
-        <fieldset :disabled="bookWhy !== null" class="bare">
+        <fieldset :disabled="bookWhy() !== null" class="bare">
           <label for="counts-book-target">Words for the book</label>
           <div class="fields">
             <input

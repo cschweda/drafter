@@ -201,6 +201,56 @@ test.describe('a passage target', () => {
   });
 });
 
+test.describe('closing the target dialog without a target', () => {
+  for (const how of ['Escape', 'Cancel'] as const) {
+    test(`${how} puts focus back on the row and changes nothing`, async ({ page }) => {
+      await openSample(page);
+      await showOutline(page);
+      await menuFor(page, nightWatch(page));
+      await rowMenu(page).getByRole('menuitem', { name: 'Set a target…' }).click();
+      await expect(targetDialog(page)).toBeVisible();
+      await targetDialog(page).getByRole('textbox', { name: 'Words' }).fill('900');
+      if (how === 'Escape') await page.keyboard.press('Escape');
+      else await targetDialog(page).getByRole('button', { name: 'Cancel' }).click();
+      await expect(targetDialog(page)).toBeHidden();
+      await expect(nightWatch(page)).toBeFocused();
+      await expect(nightWatch(page).locator('.target')).toHaveCount(0);
+    });
+  }
+});
+
+test.describe('a card’s target', () => {
+  test('is set from the card’s menu, shows on the card, and Escape returns to the card', async ({
+    page,
+  }) => {
+    await openSample(page);
+    await runCommand(page, 'Show Cards');
+    const cards = page.getByRole('listbox', { name: 'Cards' });
+    const watch = cards.getByRole('option', { name: /^The Night Watch, chapter/ });
+    const menu = page
+      .getByRole('menu', { name: /^Actions for / })
+      .and(page.locator('[data-state="open"]'));
+    await expect(watch).toBeVisible();
+    await expect(watch.locator('.target')).toHaveCount(0);
+    await watch.focus();
+    await page.keyboard.press('Shift+F10');
+    await menu.getByRole('menuitem', { name: 'Set a target…' }).click();
+    await expect(targetDialog(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(targetDialog(page)).toBeHidden();
+    await expect(watch).toBeFocused();
+
+    await page.keyboard.press('Shift+F10');
+    await menu.getByRole('menuitem', { name: 'Set a target…' }).click();
+    await targetDialog(page).getByRole('textbox', { name: 'Words' }).fill('320');
+    await page.keyboard.press('Enter');
+    await expect(targetDialog(page)).toBeHidden();
+    await expect(watch).toContainText('50% of 320');
+    await expect(watch).toHaveAccessibleName(/, 50% of a 320-word target, To do$/);
+    await expect(watch).toBeFocused();
+  });
+});
+
 test.describe('Stats for a novel', () => {
   test('lists each chapter’s words under its part, and says nothing of scenes or pages', async ({
     page,
@@ -211,6 +261,7 @@ test.describe('Stats for a novel', () => {
     const stats = page.getByRole('tabpanel', { name: 'Stats', exact: true });
     const table = stats.getByRole('table', { name: 'Words in each chapter' });
     await expect(table).toBeVisible();
+    await expect(table.getByRole('columnheader')).toHaveText(['Part or chapter', 'Words']);
     await expect(table.getByRole('row')).toHaveCount(1 + 1 + 3);
     await expect(table.getByRole('row', { name: /^Part One 634$/ })).toBeVisible();
     await expect(table.getByRole('row', { name: /^The Salt Road 275$/ })).toBeVisible();
@@ -223,6 +274,8 @@ test.describe('Stats for a novel', () => {
 test.describe('Typing in a long novel', () => {
   test.skip(({ browserName }) => browserName !== 'chromium', 'long tasks are a Chromium API');
 
+  // Run on its own (`-g "long task"`): a busy machine stretches its tasks. Its bursts are sized so
+  // that a refresh for every change, not one a frame, fails it (about 80 ms against under 50).
   test('typing in a 120,000-word novel makes no long task', async ({ page, isMobile }) => {
     test.setTimeout(180_000);
     // 40 chapters of three sections, 3,000 words each: 120,000 words of invented ones.
@@ -264,6 +317,45 @@ test.describe('Typing in a long novel', () => {
     await expect(editor(page)).toBeVisible();
     await settled(page);
 
+    // `burst(n, where)`: n one-letter changes in one task, as a held key or a paste of many would
+    // make them, at the cursor's line start (a paragraph) or the end of the first line (a heading).
+    await page.evaluate(() => {
+      const content = document.querySelector('.cm-content') as
+        | (Element & { cmTile?: unknown; cmView?: unknown })
+        | null;
+      const linked = (content?.cmTile ?? content?.cmView) as {
+        view: {
+          state: {
+            doc: { line(n: number): { from: number; to: number } };
+            selection: { main: { head: number } };
+          };
+          dispatch(spec: object): void;
+        };
+      };
+      // The first lines and every heading line, read without turning the whole book into a string
+      // (which is itself a long task in a book this long).
+      (window as unknown as { peek: () => { head: string[]; headings: string[] } }).peek = () => {
+        const head: string[] = [];
+        const headings: string[] = [];
+        for (const line of linked.view.state.doc.iterLines()) {
+          if (head.length < 6) head.push(line);
+          if (/^#{1,2} /.test(line)) headings.push(line);
+        }
+        return { head, headings };
+      };
+      (window as unknown as { burst: (n: number, where: string) => void }).burst = (n, where) => {
+        const { view } = linked;
+        for (let i = 0; i < n; i++) {
+          const at =
+            where === 'heading' ? view.state.doc.line(1).to : view.state.selection.main.head;
+          view.dispatch({
+            changes: { from: at, insert: where === 'heading' ? 'y' : 'x' },
+            selection: { anchor: at + 1 },
+            userEvent: 'input.type',
+          });
+        }
+      };
+    });
     await page.evaluate(() => {
       const long: number[] = [];
       (window as unknown as { longTasks: number[] }).longTasks = long;
@@ -300,25 +392,49 @@ test.describe('Typing in a long novel', () => {
       (window as unknown as { longTasks: number[] }).longTasks.length = 0;
     });
 
-    // In a paragraph: from the top, two lines down.
+    const burst = (n: number, where: 'paragraph' | 'heading') =>
+      page.evaluate(
+        ([count, at]) =>
+          (window as unknown as { burst: (n: number, where: string) => void }).burst(count, at),
+        [n, where] as const,
+      );
+    const peek = () =>
+      page.evaluate(() =>
+        (window as unknown as { peek: () => { head: string[]; headings: string[] } }).peek(),
+      );
+    const before = await peek();
+
+    // In a paragraph: from the top, down past the chapter heading, a blank line, the first
+    // section's heading, and a blank line, to the start of the first paragraph.
     await editor(page).focus();
     await page.keyboard.press('ControlOrMeta+Home');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('End');
-    const phrase = ' Typing in the novel.';
-    await page.keyboard.type(phrase, { delay: 60 });
-    // In a chapter heading line, which reparses the book in the facts filter.
+    for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Home');
+    const typed = 'Typing in the novel. ';
+    await page.keyboard.type(typed, { delay: 60 });
+    // Then a burst with no pause between keys, and a burst of changes inside one task.
+    await page.keyboard.type('burst ', { delay: 0 });
+    await burst(30, 'paragraph');
+    // The text landed in the first paragraph (line 5), and the headings are as they were.
+    const afterParagraph = await peek();
+    expect(afterParagraph.head[4]).toMatch(/^Typing in the novel\. burst x{30}Tolven0/);
+    expect(afterParagraph.head[2]).toBe('## Section 0 of 0');
+    expect(afterParagraph.headings).toEqual(before.headings);
+
+    // In a chapter heading line, which reparses the book in the facts filter: typed with pauses,
+    // as a burst of keys, and as a burst of changes inside one task.
     await page.keyboard.press('ControlOrMeta+Home');
     await page.keyboard.press('End');
     await page.keyboard.type(' renamed', { delay: 60 });
+    await page.keyboard.type(' quickly', { delay: 0 });
+    await burst(5, 'heading');
     await page.waitForTimeout(700);
     const tasks = await longTasks();
     const keys = await page.evaluate(() => (window as unknown as { keyTimes: number[] }).keyTimes);
     console.log(
       `Typing in a 120,000-word novel: long tasks ${JSON.stringify(tasks)}; keys over 16 ms ${JSON.stringify(keys)}.`,
     );
-    await expect(editor(page)).toContainText('# Chapter 0 Varrow renamed');
+    expect((await peek()).head[0]).toMatch(/^# Chapter 0 Varrow renamed quickly{6}$/);
     expect(tasks).toEqual([]);
   });
 });

@@ -2,6 +2,7 @@ import {
   Annotation,
   EditorState,
   type Extension,
+  StateField,
   type Text,
   type Transaction,
 } from '@codemirror/state';
@@ -64,6 +65,43 @@ export function touchesStructure(tr: Transaction): boolean {
   return touches;
 }
 
+/**
+ * The structure of documents already read, by the document: the tree a transaction's filter reads
+ * for the text after an edit is the one it (or the next frame's refresh) wants for the text before
+ * the next, so a book is parsed once for each text, not once for each use of it.
+ */
+const trees = new WeakMap<Text, NovelTree>();
+
+/** The structure of `doc` (whose text is `text`), read only if no one has read it yet. */
+export function structureOf(
+  doc: Text,
+  text: string,
+  structure: (text: string) => NovelTree = novelStructure,
+): NovelTree {
+  let tree = trees.get(doc);
+  if (!tree) {
+    tree = structure(text);
+    trees.set(doc, tree);
+  }
+  return tree;
+}
+
+/**
+ * Tells the field below that the transaction's final document has the structure of its own
+ * `newDoc`: the filter's extra change rewrites only the metadata comment, which `novelStructure`
+ * does not read, so one parse serves both documents.
+ */
+const sameStructure = Annotation.define<NovelTree>();
+
+const structureCache = StateField.define<null>({
+  create: () => null,
+  update(value, tr) {
+    const tree = tr.annotation(sameStructure);
+    if (tree) trees.set(tr.newDoc, tree);
+    return value;
+  },
+});
+
 /** The facts as one comparable string: the same facts, in any key order, are the same. */
 function factsKey(facts: NovelFacts): string {
   const ids = Object.keys(facts.nodes).sort();
@@ -114,7 +152,7 @@ export interface CarryOptions {
  * transaction itself. (A transaction filter, not an extender: an extender can't add changes.)
  */
 export function carryNovelFacts({ active, structure = novelStructure }: CarryOptions): Extension {
-  return EditorState.transactionFilter.of((tr) => {
+  const filter = EditorState.transactionFilter.of((tr) => {
     if (!tr.docChanged || !active()) return tr;
     if (tr.annotation(novelFacts) || tr.isUserEvent('undo') || tr.isUserEvent('redo')) return tr;
     if (!touchesStructure(tr)) return tr;
@@ -132,12 +170,23 @@ export function carryNovelFacts({ active, structure = novelStructure }: CarryOpt
       if (touched) return tr;
     }
     const after = tr.newDoc.toString();
-    const carried = carryFacts(facts, structure(before), structure(after), (pos, assoc) =>
-      tr.changes.mapPos(pos, assoc),
+    const tree = structureOf(tr.newDoc, after, structure);
+    const carried = carryFacts(
+      facts,
+      structureOf(tr.startState.doc, before, structure),
+      tree,
+      (pos, assoc) => tr.changes.mapPos(pos, assoc),
     );
     if (sameFacts(carried, readFacts(after))) return tr;
     const change = factsChange(after, carried);
     if (!change) return tr;
-    return [tr, { changes: change, sequential: true }];
+    // The comment is rewritten where it stands (it starts at the same place), so the book above
+    // it, which is all the structure reads, is unchanged.
+    const stays = change.from === findMarkdownMeta(after)?.from;
+    return [
+      tr,
+      { changes: change, sequential: true, annotations: stays ? sameStructure.of(tree) : [] },
+    ];
   });
+  return [filter, structureCache];
 }

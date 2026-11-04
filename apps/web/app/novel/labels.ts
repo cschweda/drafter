@@ -37,10 +37,11 @@ export const MAX_TARGET = 10_000_000;
  * (null). Anything else is a problem, said in words.
  */
 export function parseTarget(text: string): { target: number | null } | { problem: string } {
-  const typed = text.trim().replaceAll(',', '');
+  const typed = text.trim();
   if (typed === '') return { target: null };
-  if (/^\d+$/.test(typed)) {
-    const n = Number(typed);
+  // Plain digits, or digits grouped in threes ("90,000"); nothing else.
+  if (/^\d{1,3}(,\d{3})+$|^\d+$/.test(typed)) {
+    const n = Number(typed.replaceAll(',', ''));
     if (n === 0) return { target: null };
     if (n <= MAX_TARGET) return { target: n };
   }

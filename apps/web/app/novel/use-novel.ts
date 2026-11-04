@@ -18,7 +18,7 @@ import { useEditor } from '../editor/session';
 import { appChange } from '../editor/typewriter';
 import { sayOutline } from '../outline/notice';
 import { useScript } from '../storage/script';
-import { factsChange, novelFacts, sameFacts } from './carry';
+import { factsChange, novelFacts, sameFacts, structureOf } from './carry';
 import { focusedPassage, passageOf, setPassage } from './focus';
 
 // The Outline's model for a novel (the Novel design, goal 3): the book's parts, chapters, and
@@ -64,7 +64,7 @@ function create(): NovelSession {
         return;
       }
       const text = editor.view.state.doc.toString();
-      tree.value = novelStructure(text);
+      tree.value = structureOf(editor.view.state.doc, text);
       const next = readFacts(text);
       if (!sameFacts(next, facts.value)) facts.value = next;
     }

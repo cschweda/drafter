@@ -337,9 +337,22 @@ describe('facts follow their headings', () => {
     expect(carryModule.touchesStructure(typed(4, '```'))).toBe(true);
   });
 
+  test('the structure read for an edit serves the document after its facts are written', () => {
+    const structure = vi.fn(novelStructure);
+    let state = makeState(BOOK, structure);
+    const from = at(BOOK, '# The Salt Road');
+    state = state.update({ changes: { from: from + 2, to: from + 5, insert: 'A' } }).state;
+    // The heading's id changed, so its facts were rewritten under the new id in the same step.
+    expect(Object.keys(readFacts(state.doc.toString()).nodes)).toContain('chapter:a-salt-road:0');
+    const reads = structure.mock.calls.length;
+    const cached = env.carry.structureOf(state.doc, state.doc.toString(), structure);
+    expect(structure.mock.calls.length).toBe(reads);
+    expect(cached).toEqual(novelStructure(state.doc.toString()));
+  });
+
   test('an edit to the comment itself is left as it is', () => {
     let state = makeState(BOOK);
-    const from = at(BOOK, '# The Night Watch');
+    const from = at(BOOK, '# The Salt Road');
     const comment = BOOK.indexOf('<!--');
     // Renames a heading and writes the comment in one edit: the comment says what the facts are.
     state = state.update({

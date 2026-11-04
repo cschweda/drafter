@@ -368,6 +368,38 @@ function statusItems(id: string): DropdownMenuItem[][] {
   return [[...STATUSES.map(pick), pick(null)]];
 }
 
+// ---- A card's target ---------------------------------------------------------------------
+
+const targeting = ref<{
+  id: string;
+  name: string;
+  words: number;
+  target: number | undefined;
+} | null>(null);
+
+function startTarget(card: Card) {
+  if (novel.readOnly()) return;
+  targeting.value = {
+    id: card.id,
+    name: titleOf(card.node),
+    words: card.node.words,
+    target: card.facts.target,
+  };
+}
+
+function saveTarget(target: number | null) {
+  const at = targeting.value;
+  if (!at) return;
+  const own = facts.value.nodes[at.id] ?? {};
+  novel.setFacts(at.id, { ...own, target: target ?? undefined });
+}
+
+function endTarget() {
+  const id = targeting.value?.id;
+  targeting.value = null;
+  if (id) requestAnimationFrame(() => void focusCard(id));
+}
+
 function menuItems(card: Card): DropdownMenuItem[][] {
   const why = novel.readOnly();
   const off = why !== null;
@@ -408,6 +440,12 @@ function menuItems(card: Card): DropdownMenuItem[][] {
       icon: 'i-lucide-circle-check',
       disabled: off,
       children: statusItems(card.id),
+    },
+    {
+      label: 'Set a target…',
+      icon: 'i-lucide-target',
+      disabled: off,
+      onSelect: () => afterClosing(() => startTarget(card)),
     },
   ]);
   return groups;
@@ -490,6 +528,7 @@ watch(cards, async () => {
 
 <template>
   <div ref="root" class="novel-cards">
+    <TargetDialog :passage="targeting" @save="saveTarget" @close="endTarget" />
     <DEmpty v-if="cards.length === 0" icon="i-lucide-layout-grid">
       No chapters yet. A chapter starts with <code>#</code> and its title, and a section within it
       with <code>##</code>.

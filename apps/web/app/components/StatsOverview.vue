@@ -298,7 +298,7 @@ function dayLabel(day: DayFigure): string {
         <caption>Words in each chapter</caption>
         <thead>
           <tr>
-            <th scope="col">Chapter</th>
+            <th scope="col">Part or chapter</th>
             <th scope="col" class="num">Words</th>
           </tr>
         </thead>

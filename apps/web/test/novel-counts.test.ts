@@ -39,6 +39,7 @@ describe('parseTarget', () => {
   test('a whole number of words is the target, with or without grouping', () => {
     expect(parseTarget('90000')).toEqual({ target: 90_000 });
     expect(parseTarget(' 90,000 ')).toEqual({ target: 90_000 });
+    expect(parseTarget('1,234,567')).toEqual({ target: 1_234_567 });
     expect(parseTarget('1')).toEqual({ target: 1 });
     expect(parseTarget(String(MAX_TARGET))).toEqual({ target: MAX_TARGET });
   });
@@ -51,7 +52,23 @@ describe('parseTarget', () => {
   });
 
   test('anything else is a problem, in words', () => {
-    for (const bad of ['12.5', '-3', 'lots', '1e5', '9 000', '10000001', '0x10', '90k']) {
+    for (const bad of [
+      '12.5',
+      '-3',
+      'lots',
+      '1e5',
+      '9 000',
+      '10000001',
+      '0x10',
+      '90k',
+      '1,2,3',
+      ',',
+      '1,23',
+      '12,34,567',
+      ',000',
+      '1,000,',
+      '1,,000',
+    ]) {
       const got = parseTarget(bad);
       expect(got, bad).toHaveProperty('problem');
       expect((got as { problem: string }).problem).toMatch(/whole number of words/);
