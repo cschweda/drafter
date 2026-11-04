@@ -233,9 +233,18 @@ test.describe('Cards for a novel', () => {
     await expect(status).toBeFocused();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('menuitemradio', { name: 'Draft' })).toBeVisible();
-    await page.keyboard.press('ArrowDown');
+    // Down the statuses to Revised (Climbing has none yet), and that one is set.
+    const revised = page.getByRole('menuitemradio', { name: 'Revised' });
+    for (
+      let i = 0;
+      i < 6 && !(await revised.evaluate((el) => el === document.activeElement));
+      i++
+    ) {
+      await page.keyboard.press('ArrowDown');
+    }
+    await expect(revised).toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(climbing(page)).toHaveAccessibleName(/, (To do|Draft|Revised|Done)$/);
+    await expect(climbing(page)).toHaveAccessibleName(/, Revised$/);
     await expect(climbing(page)).toBeFocused();
   });
 

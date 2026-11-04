@@ -5,6 +5,8 @@ import { useScrollSync } from '~/editor/use-scroll-sync';
 import { PREVIEW_PROBLEMS, type PreviewProblem, previewProblem } from '~/markdown/preview';
 import { renderMarkdown } from '~/markdown/render';
 import { useMarkdown } from '~/markdown/use-markdown';
+import { passageTree } from '~/novel/focus';
+import { usePassageFocus } from '~/novel/use-focus';
 
 // The Preview (Plan 4 Task 6): the Markdown document as headings, paragraphs, emphasis, lists,
 // quotes, and code, in one column, with its footnotes listed at the end. It is built as DOM from the parsed tree by `renderMarkdown`,
@@ -13,6 +15,14 @@ const { tree, updating, problem } = useMarkdown();
 const content = ref<HTMLElement>();
 const article = ref<HTMLElement>();
 const { view } = useEditor();
+// A novel focused on one chapter or section previews only that passage (Novel plan, Task 7).
+const focus = usePassageFocus();
+const shownTree = computed(() => {
+  const whole = tree.value;
+  const passage = focus.passage.value;
+  const node = focus.node.value;
+  return whole && passage && node ? passageTree(whole, passage, node.kind) : whole;
+});
 const sync = useScrollSync();
 // Scroll sync reads the blocks' offsets (`data-from`, from the tree) and where they stand.
 let syncPane: (SyncPane & { invalidate(): void }) | undefined;
@@ -32,9 +42,9 @@ function draw() {
   if (!content.value) return;
   let drawn: DocumentFragment | string = '';
   drawProblem.value = null;
-  if (tree.value) {
+  if (shownTree.value) {
     try {
-      drawn = renderMarkdown(tree.value, document);
+      drawn = renderMarkdown(shownTree.value, document);
     } catch (error) {
       drawProblem.value = previewProblem(error);
     }
@@ -53,7 +63,9 @@ onMounted(() => {
   draw();
 });
 onBeforeUnmount(() => detachSync?.());
-watch(tree, draw);
+// The passage's offsets change with every letter typed in it, and the tree with them: drawn again
+// when the tree or the focused passage changes, not at each letter twice.
+watch([tree, () => focus.passage.value?.id ?? null, () => focus.node.value?.kind], draw);
 </script>
 
 <template>

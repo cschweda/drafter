@@ -26,6 +26,7 @@ import {
   wrapInNote,
   wrapInUnderline,
 } from '@drafter/cm-fountain';
+import { novelStructure } from '@drafter/novel';
 import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
 import { aboutOpen } from '~/about/dialog';
@@ -52,6 +53,9 @@ import { setWritingMode } from '~/editor/writing-mode';
 import { openSceneHistory } from '~/history/scene-history';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { openNewNote } from '~/notes/use-notes';
+import { focusPassage, passageAt } from '~/novel/focus';
+import { usePassageFocus } from '~/novel/use-focus';
+import { useNovel } from '~/novel/use-novel';
 import { runMove } from '~/outline/move';
 import { sayOutline } from '~/outline/notice';
 import { openSceneDetails } from '~/outline/scene-details';
@@ -182,6 +186,32 @@ export function registerBuiltinCommands(): void {
       if (tab === 'source') view.focus();
       else document.getElementById(`panel-${tab}`)?.focus();
     });
+  }
+
+  /** The chapter or section at the cursor of a novel, from the Outline's tree (a frame behind at most). */
+  function passageHere(kind: 'chapter' | 'section') {
+    if (!isMarkdown() || !editor.novel.value) return null;
+    const tree = useNovel().tree.value;
+    return tree ? passageAt(tree, view.state.selection.main.head, kind) : null;
+  }
+
+  /** Focus on this chapter, or this section: the passage at the cursor shows, and the Source with it. */
+  function focusOn(kind: 'chapter' | 'section'): Behavior {
+    return {
+      enabled: () => !!passageHere(kind),
+      why: () =>
+        !isMarkdown() || !editor.novel.value
+          ? 'Focus is for a novel.'
+          : `The cursor isn’t in a ${kind}.`,
+      run: () => {
+        if (!isMarkdown() || !editor.novel.value) return;
+        const tree = novelStructure(view.state.doc.toString());
+        const node = passageAt(tree, view.state.selection.main.head, kind);
+        if (!node) return;
+        focusPassage(view, node.id);
+        editor.goto(view.state.selection.main.head);
+      },
+    };
   }
 
   /**
@@ -705,6 +735,16 @@ export function registerBuiltinCommands(): void {
       // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.
       enabled: () => !document.querySelector('dialog[open]') && !view.composing,
       run: focus.toggle,
+    },
+    // A novel's focus (Novel plan, Task 7), on the passage at the cursor.
+    'focus-chapter': focusOn('chapter'),
+    'focus-section': focusOn('section'),
+    'show-whole-book': {
+      enabled: () => usePassageFocus().passage.value !== null,
+      run: () => {
+        usePassageFocus().focus(null);
+        editor.goto(view.state.selection.main.head);
+      },
     },
     // Sprints (Phase 1 design §7.3): the three lengths here; any length from the Counts panel.
     ...Object.fromEntries(

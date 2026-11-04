@@ -16,6 +16,7 @@ import { useSettings } from '~/settings/settings';
 import { WIDE_QUERY } from '~/utils/panes';
 import type { DocumentKind } from '../markdown/kind';
 import { carryNovelFacts } from '../novel/carry';
+import { passageFocusExtension } from '../novel/focus';
 import { isNovel } from '../novel/kind';
 import { applyEditorSettings, writingModeSwitch } from './apply-settings';
 import type { ElementMove } from './element-announcer';
@@ -236,6 +237,8 @@ function create(): EditorSession {
     editorExtensions(hooks, of),
     // A novel's facts follow their headings through every edit (Novel plan, Task 5).
     carryNovelFacts({ active: () => kind.value === 'markdown' }),
+    // Focus on one chapter or one section (Novel plan, Task 7): nothing while the whole book shows.
+    passageFocusExtension(),
     EditorView.updateListener.of((update) => {
       if (update.transactions.length > 0) followElement(update.state);
       if (classicIsOn(update.state)) followMove(update.transactions);

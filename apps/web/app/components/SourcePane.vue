@@ -63,6 +63,8 @@ onBeforeUnmount(() => {
 <template>
   <div class="source" :class="{ keyboard: keyboard.open.value }">
     <ElementBar v-if="props.bar" />
+    <!-- One chapter or section focused in a novel: what shows, and the way back (Novel plan, Task 7). -->
+    <PassageBar />
     <div ref="host" class="host" />
     <ElementAnnouncer />
     <!-- What the text box's `aria-describedby` names in Classic Mode (design §12). -->
