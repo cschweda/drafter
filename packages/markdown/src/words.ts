@@ -84,8 +84,8 @@ export function countWords(tree: MdNode): number {
 }
 
 /**
- * A Markdown document's words: its prose's (`markdownProse`), never its trailing drafter comment's,
- * so a draft's, a snapshot's, and the status bar's counts agree with the Outline's.
+ * A Markdown document's words, as `wordsIn` counts raw text: its prose's (`markdownProse`), never its
+ * trailing drafter comment's. Markup such as a heading's `#` still counts, unlike `countWords(tree)`.
  */
 export function markdownWordsIn(text: string): number {
   return wordsIn(markdownProse(text));

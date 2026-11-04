@@ -195,8 +195,8 @@ describe('the drafts store', () => {
   });
 });
 
-// The totals agree everywhere: a Markdown document's draft and snapshot count its prose only, never
-// its drafter comment (a novel's synopses), and a script counts as it always has.
+// A Markdown document's draft and snapshot count its prose only, never its drafter comment (a
+// novel's synopses), and a script counts as it always has.
 describe('words of a Markdown document', () => {
   const BODY = '# The Salt Road\n\nShe walked out at low tide.\n';
   const NOVEL = `${BODY}\n<!-- drafter {"template":"novel","novel":{"nodes":{"chapter:the-salt-road:0":{"synopsis":"Many words of a long synopsis here."}}}} -->\n`;
