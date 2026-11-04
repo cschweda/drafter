@@ -194,3 +194,52 @@ describe('the drafts store', () => {
     expect((await listDrafts(q.id)).map((row) => row.n)).toEqual([1]);
   });
 });
+
+// The totals agree everywhere: a Markdown document's draft and snapshot count its prose only, never
+// its drafter comment (a novel's synopses), and a script counts as it always has.
+describe('words of a Markdown document', () => {
+  const BODY = '# The Salt Road\n\nShe walked out at low tide.\n';
+  const NOVEL = `${BODY}\n<!-- drafter {"template":"novel","novel":{"nodes":{"chapter:the-salt-road:0":{"synopsis":"Many words of a long synopsis here."}}}} -->\n`;
+  const SCRIPT = `${ONE}\n<!-- drafter {"note":"a script's own line"} -->\n`;
+
+  test('a draft, a draft from a file, and a snapshot count the prose; a script all of it', async () => {
+    const { addDraftFromFile } = await import('../app/drafts/store');
+    const { documentWords, wordsIn } = await import('../app/markdown/words');
+    const p = await createProject({ source: NOVEL });
+    const out = await freezeDraft(p.id, NOVEL, '', undefined, 'markdown');
+    if (out.result !== 'frozen') throw new Error(out.why);
+    expect(out.row.words).toBe(wordsIn(BODY));
+    // Another text (the same one is the draft already), with as many words.
+    const fromFile = NOVEL.replace('low tide', 'high tide');
+    await addDraftFromFile(p.id, {
+      n: 5,
+      id: await hashText(fromFile),
+      text: fromFile,
+      frozenAt: NOW,
+      note: '',
+      changed: false,
+      kind: 'markdown',
+      file: 'Draft 05.md',
+      where: 'folder',
+    });
+    expect((await listDrafts(p.id)).find((row) => row.n === 5)?.words).toBe(wordsIn(BODY));
+    await takeSnapshot(p.id, NOVEL, 'manual', { kind: 'markdown' });
+    const { listSnapshots } = await import('../app/storage/snapshots');
+    expect((await listSnapshots(p.id))[0]?.words).toBe(wordsIn(BODY));
+    // A script is unchanged, whatever its last line says.
+    const s = await createProject({ source: SCRIPT });
+    const scripted = await freezeDraft(s.id, SCRIPT, '', undefined, 'fountain');
+    if (scripted.result !== 'frozen') throw new Error(scripted.why);
+    expect(scripted.row.words).toBe(wordsIn(SCRIPT));
+    expect(documentWords(SCRIPT, 'fountain')).toBe(wordsIn(SCRIPT));
+    // A row with no kind, kept before: a text ending in a drafter comment is a document's.
+    expect(documentWords(NOVEL)).toBe(wordsIn(BODY));
+  });
+
+  test('a draft step counts the prose, so a synopsis edited is no words', async () => {
+    const { stepCounts } = await import('../app/drafts/steps');
+    const longer = NOVEL.replace('long synopsis', 'longer and longer synopsis');
+    expect(stepCounts(NOVEL, longer, 'markdown').words).toBe(0);
+    expect(stepCounts(NOVEL, longer, 'markdown').changed).toBe(0);
+  });
+});

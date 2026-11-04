@@ -16,6 +16,8 @@ vi.mock('../app/editor/session', () => ({
         return mock.state;
       },
     },
+    // A script: its snapshots' words are its whole text's.
+    kind: { value: 'fountain' },
     onEdit: (listener: (transactions: readonly Transaction[]) => void) => {
       mock.edits.add(listener);
       return () => mock.edits.delete(listener);

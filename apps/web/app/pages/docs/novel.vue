@@ -71,7 +71,7 @@ useDocsHead({
       The lines under a heading are the chapter’s text. Leave an empty line between paragraphs. A
       scene break before the first chapter is ignored: it has no chapter to divide.
     </p>
-    <pre><code># Part One
+    <pre role="group" tabindex="0" aria-label="A novel’s marks, an example"><code># Part One
 
 # Chapter One
 
@@ -192,3 +192,22 @@ Morning came in grey.</code></pre>
     </div>
   </article>
 </template>
+
+<style scoped>
+/* A line too long for a phone scrolls inside the example's own box, which a keyboard can reach,
+   as the Fountain page's examples do: the page itself never scrolls sideways. */
+pre {
+  max-width: 100%;
+  margin: 0.5em 0 1em;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--raised);
+  font: 13px/1.5 var(--font-mono, monospace);
+}
+pre:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+</style>

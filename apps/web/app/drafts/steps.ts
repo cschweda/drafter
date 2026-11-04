@@ -11,7 +11,7 @@ import {
   sketchOf,
   type WorkKind,
 } from '@drafter/history';
-import { wordsIn } from '../markdown/words';
+import { documentWords, markdownProse, wordsIn } from '../markdown/words';
 import { hashText } from '../storage/hash';
 import type { DraftRow } from './store';
 
@@ -23,7 +23,7 @@ import type { DraftRow } from './store';
 
 /** What changed in one step, in numbers. */
 export interface StepCounts {
-  /** Words in `to` less words in `from` (`wordsIn`, as the Drafts list counts them). */
+  /** Words in `to` less words in `from` (`documentWords`, as the Drafts list counts them). */
   words: number;
   /** Pages, when known: null, since laying out every draft costs a layout each (Task 2's call). */
   pages: number | null;
@@ -68,7 +68,9 @@ const WORD = /[\p{L}\p{N}'’]+/gu;
 const LEVEL = /^ {0,3}(#{1,3})/;
 
 /** A document's opening (the text before its first heading) and each `#`–`###` section. */
-function sectionUnits(text: string): Unit[] {
+function sectionUnits(source: string): Unit[] {
+  // Its prose: the drafter comment is no section's text.
+  const text = markdownProse(source);
   const { lines } = splitLines(text);
   const anchors = markdownAnchors(text);
   const unit = (first: number, end: number, level: number, title: string): Unit => {
@@ -122,7 +124,7 @@ export function stepCounts(before: string, after: string, kind: WorkKind): StepC
   }
   const cut = findCuts(before, after, kind).filter((c) => c.where.within === null).length;
   return {
-    words: wordsIn(after) - wordsIn(before),
+    words: documentWords(after, kind) - documentWords(before, kind),
     pages: null,
     added,
     cut,

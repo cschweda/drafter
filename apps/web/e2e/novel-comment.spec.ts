@@ -69,8 +69,11 @@ test.describe('a novel’s comment', () => {
     await chooseExport(page, 'HTML (.html)');
     await expect.poll(async () => (await files(page)).some((f) => f.endsWith('.html'))).toBe(true);
     const name = (await files(page)).find((f) => f.endsWith('.html')) as string;
+    // The file is made first and written once the export is done.
+    await expect
+      .poll(async () => (await textOf(page, name)) ?? '')
+      .toContain('The second chapter.');
     const html = (await textOf(page, name)) ?? '';
-    expect(html).toContain('The second chapter.');
     expect(html).not.toContain('drafter {');
     expect(html).not.toContain('secret synopsis');
   });

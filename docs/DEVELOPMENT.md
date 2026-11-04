@@ -223,7 +223,10 @@ pnpm --filter @drafter/desktop test
 pnpm vitest run --project trap
 pnpm bench
 pnpm --filter @drafter/web e2e
+DRAFTER_LONG_TASK=1 pnpm --filter @drafter/web e2e -g "120,000-word novel" --workers=1
 ```
+
+The last step is the novel's long-task test (`e2e/novel-counts.spec.ts`), on its own and one worker: it measures the page's main thread, and under the full suite's parallel load the machine's other browsers stretch its tasks past 50 ms whatever Drafter does. So the full run skips it unless `DRAFTER_LONG_TASK=1` is set, and CI skips it by name (`long task`) as well.
 
 **The privacy check** reruns the [privacy audit](privacy-audit-2026-11-03.md)'s writing session against a Drafter site, in Chromium, Firefox, and WebKit, and exits 1 if any request holds the script: `node apps/web/scripts/privacy-check.mjs https://drafter.dev/ privacy.json` (or a local build's address). Plausible's requests are stopped, so it adds no visits.
 

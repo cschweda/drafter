@@ -1,5 +1,9 @@
+import { markdownProse } from './meta';
 import { footnotes } from './notes';
 import type { MdNode } from './types';
+
+// The prose, parser-free, for the counts that must not load the parser.
+export { markdownProse } from './meta';
 
 /**
  * Whether a UTF-16 code unit is one that `/\s/` matches: the ASCII spaces (tab, line feed,
@@ -77,4 +81,12 @@ export function countWords(tree: MdNode): number {
     text += ' ';
   }
   return wordsIn(text);
+}
+
+/**
+ * A Markdown document's words: its prose's (`markdownProse`), never its trailing drafter comment's,
+ * so a draft's, a snapshot's, and the status bar's counts agree with the Outline's.
+ */
+export function markdownWordsIn(text: string): number {
+  return wordsIn(markdownProse(text));
 }

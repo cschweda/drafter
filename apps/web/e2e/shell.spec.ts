@@ -279,7 +279,7 @@ test.describe('on a desktop', () => {
     );
   });
 
-  test('the sample chip offers New screenplay, New stage play, New Markdown document, and Open a file…', async ({
+  test('the sample chip offers New screenplay, New stage play, New novel, New Markdown document, and Open a file…', async ({
     page,
   }) => {
     const chip = page.getByRole('banner').getByRole('button', { name: 'Sample: start your own' });
@@ -290,6 +290,7 @@ test.describe('on a desktop', () => {
     await expect(items).toHaveText([
       'New screenplay',
       'New stage play',
+      'New novel',
       'New Markdown document',
       'Open a file…',
     ]);

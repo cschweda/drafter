@@ -2,7 +2,8 @@
 // numbered from 1 per script, only ever up, never reused, never thinned, and with no Delete. Each is
 // the exact editor text, gzip-compressed as snapshots are, with its SHA-256 (`hashText`) as its ID.
 // They go only with the script (`removeProject`).
-import { wordsIn } from '../markdown/words';
+import type { DocumentKind } from '../markdown/kind';
+import { documentWords } from '../markdown/words';
 import { db } from '../storage/db';
 import { canCompress, canDecompress, gunzip, gzip } from '../storage/gzip';
 import { hashText } from '../storage/hash';
@@ -59,6 +60,8 @@ export interface DraftFromFile {
   from?: DraftFrom;
   /** Its ID didn't match its text. */
   changed: boolean;
+  /** What it is: a Markdown draft's words are its prose's. */
+  kind?: DocumentKind;
   /** The file's name in the drafts folder. */
   file: string;
   /** Where that folder is (`DraftRow.written`'s first part). */
@@ -138,13 +141,15 @@ export async function freezeDraft(
   text: string,
   note: string,
   from?: DraftFrom,
+  kind?: DocumentKind,
 ): Promise<FreezeResult> {
   try {
     const id = await hashText(text);
     const body: Pick<DraftRow, 'gz' | 'source'> = canCompress()
       ? { gz: await gzip(text) }
       : { source: text };
-    const words = wordsIn(text);
+    // A Markdown document's prose only: its drafter comment is no words of it.
+    const words = documentWords(text, kind);
     const kept = cleanNote(note);
     const row = await db.transaction('rw', db.drafts, db.projects, db.settings, async () => {
       if (!(await db.projects.get(projectId))) return null;
@@ -231,7 +236,7 @@ export async function addDraftFromFile(projectId: string, found: DraftFromFile):
   const body: Pick<DraftRow, 'gz' | 'source'> = canCompress()
     ? { gz: await gzip(found.text) }
     : { source: found.text };
-  const words = wordsIn(found.text);
+  const words = documentWords(found.text, found.kind);
   return db.transaction('rw', db.drafts, db.projects, async () => {
     if (!(await db.projects.get(projectId))) return false;
     const same = await db.drafts

@@ -12,6 +12,7 @@ import {
 } from 'vue';
 import { replaceText } from '../editor/replace-text';
 import { useEditor } from '../editor/session';
+import type { DocumentKind } from '../markdown/kind';
 import { sayOutline } from '../outline/notice';
 import { historyReadOnly } from '../snapshots/restore';
 import { useSnapshots } from '../snapshots/use-snapshots';
@@ -55,6 +56,8 @@ export interface DraftsDeps {
   projectId(): string | null;
   /** The editor's text now. */
   text(): string;
+  /** What the editor holds: a Markdown document's draft counts only its prose's words. */
+  kind?(): DocumentKind;
   /** Why the script can't be changed here now (another tab is editing it), or null. */
   readOnly(): string | null;
   /** Why drafts aren't kept for this script (none open, a sample), or null. */
@@ -158,7 +161,7 @@ export function createDrafts(deps: DraftsDeps): DraftsSession {
     busy = true;
     try {
       deps.before('before-draft');
-      const out = await freezeDraft(projectId, deps.text(), note);
+      const out = await freezeDraft(projectId, deps.text(), note, undefined, deps.kind?.());
       if (out.result === 'failed') {
         deps.say(out.why);
         return false;
@@ -192,7 +195,13 @@ export function createDrafts(deps: DraftsDeps): DraftsSession {
       // The text now is kept first, as a draft, unless it is the last draft already (it is safe).
       const last = (await listDrafts(projectId))[0];
       if (!last || (await hashText(now)) !== last.id) {
-        const kept = await freezeDraft(projectId, now, beforeRestoreNote(n));
+        const kept = await freezeDraft(
+          projectId,
+          now,
+          beforeRestoreNote(n),
+          undefined,
+          deps.kind?.(),
+        );
         if (kept.result === 'failed') {
           deps.say(kept.why);
           await load();
@@ -312,6 +321,7 @@ function createApp(): AppDrafts {
   const session = createDrafts({
     projectId: () => script.project.value?.id ?? null,
     text: () => draftSource(editor.view.state),
+    kind: () => editor.kind.value,
     readOnly: () =>
       historyReadOnly() ?? (editor.view.state.readOnly ? 'The script can’t be changed now.' : null),
     notKept: () => notKept.value,

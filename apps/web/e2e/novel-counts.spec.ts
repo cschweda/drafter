@@ -319,10 +319,17 @@ test.describe('A novel’s orphaned notes', () => {
 test.describe('Typing in a long novel', () => {
   test.skip(({ browserName }) => browserName !== 'chromium', 'long tasks are a Chromium API');
 
-  // Run on its own (`-g "long task"`): a busy machine stretches its tasks. CI skips this test by
-  // name, deliberately (checks.yml's `--grep-invert` has "long task"): a shared runner's timing is
-  // not a budget, so the release gate runs it. Its bursts are sized so
-  // that a refresh for every change, not one a frame, fails it (about 80 ms against under 50).
+  // Run on its own, as its own release gate step (docs/DEVELOPMENT.md):
+  // `DRAFTER_LONG_TASK=1 pnpm --filter @drafter/web e2e -g "120,000-word novel" --workers=1`.
+  // It measures the main thread, and under the full suite's parallel load the other browsers on
+  // the machine stretch its tasks past 50 ms whatever Drafter does, so the full run skips it unless
+  // DRAFTER_LONG_TASK is set. CI skips it by name too, deliberately (checks.yml's `--grep-invert`
+  // has "long task"): a shared runner's timing is not a budget. Its bursts are sized so that a
+  // refresh for every change, not one a frame, fails it (about 80 ms against under 50).
+  test.skip(
+    () => !process.env.DRAFTER_LONG_TASK,
+    'a release gate step of its own: DRAFTER_LONG_TASK=1, alone, one worker',
+  );
   test('typing in a 120,000-word novel makes no long task', async ({ page, isMobile }) => {
     test.setTimeout(180_000);
     // 40 chapters of three sections, 3,000 words each: 120,000 words of invented ones.
@@ -499,10 +506,21 @@ test.describe('Typing in a long novel', () => {
     await page.keyboard.type('Focused. ', { delay: 60 });
     await page.keyboard.type('fast ', { delay: 0 });
     await burst(30, 'paragraph');
-    // Up to the section's heading (line 3), the passage's first line, and on to its end.
-    await page.keyboard.press('ArrowUp');
-    await page.keyboard.press('ArrowUp');
-    await page.keyboard.press('End');
+    // To the end of the section's heading (line 3), the passage's first line. Put there directly:
+    // on a phone the paragraph wraps, and an arrow key moves by the lines drawn.
+    await page.evaluate(() => {
+      const content = document.querySelector('.cm-content') as
+        | (Element & { cmTile?: unknown; cmView?: unknown })
+        | null;
+      const linked = (content?.cmTile ?? content?.cmView) as {
+        view: {
+          state: { doc: { line(n: number): { to: number } } };
+          dispatch(spec: object): void;
+        };
+      };
+      const { view } = linked;
+      view.dispatch({ selection: { anchor: view.state.doc.line(3).to } });
+    });
     await page.keyboard.type(' again', { delay: 60 });
     await page.keyboard.type(' now', { delay: 0 });
     await page.waitForTimeout(700);
