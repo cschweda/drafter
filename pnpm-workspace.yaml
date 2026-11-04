@@ -5,3 +5,11 @@ packages:
 # A version must be a week old before pnpm will pick it (minutes): a package published with malware
 # is usually pulled within days (red/blue audit, 2026-11-03; Dependabot's cooldown matches).
 minimumReleaseAge: 10080
+
+# Indirect dependencies held at a patched version (Dependabot's security alerts, 2026-11-04), where
+# no direct dependency's update brings the fix in. All are build-time tools: none ships to a writer.
+overrides:
+  # Through listhen (Nuxt's dev server, for local HTTPS): twelve advisories, fixed in 1.4.1.
+  node-forge: ^1.4.1
+  # fontless's own copy (the build's font step); the rest of the build is on 0.28 already.
+  fontless>esbuild: ^0.28.1

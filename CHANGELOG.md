@@ -58,6 +58,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - For contributors: the novel long-task browser test runs only with `DRAFTER_LONG_TASK=1`, as a release gate step of its own (`docs/DEVELOPMENT.md`), since the full suite's parallel load stretches its tasks; the help pages' Back test opens each page in a tab of its own, under Firefox's limit on a tab's navigations; the sample chip's test expects New novel.
 - For contributors: `markdownProse` (`@drafter/markdown`) is a Markdown document's text without its comment, and `parseMarkdown` reads only that, so everything drawn from the parse leaves the comment out; the order of the focus guard and the facts filter in the editor is explained where they are registered, and tested.
 
+### Security
+
+- **Patched build-time dependencies**: `node-forge` (through Nuxt's dev server; twelve advisories, six high) is held at 1.4.2 and `fontless`'s `esbuild` at 0.28.2, by pnpm overrides, where Dependabot couldn't reach them. None of them ships to a writer: they run only while Drafter is built or developed. Three low and moderate advisories stay open, for build tools only: `glob` and `minimatch` (patched only in new major versions that electron-builder, the offline-app plugin, and Nitro haven't adopted) and `deepmerge` (no fix published).
+
 ## [0.25.1] - 2026-11-03
 
 **Your script stays with you, and an audit shows it.** A privacy audit and a red/blue team audit, each recorded in the README, with every finding fixed or listed: Final Draft exports no longer carry notes you left out, the desktop app asks before a page opens an outside address, a crafted Markdown file can no longer freeze the app, and drafter.dev's visit counter gets page views only. Also new: a **Contrast** button with a slider for each pane and its WCAG 2.1 ratio, **Typewriter sounds** (off by default), and **Copy technical details** for bug reports and ideas.
