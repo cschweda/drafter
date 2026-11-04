@@ -236,6 +236,13 @@ function create(): EditorSession {
   const extensionsFor = (of: DocumentKind) => [
     editorExtensions(hooks, of),
     // A novel's facts follow their headings through every edit (Novel plan, Task 5).
+    //
+    // The order of these two is load-bearing. CodeMirror runs transaction filters from the last
+    // registered to the first, so focus's guard (below) runs before the facts filter: the guard
+    // first takes out every change outside the passage (Replace All's matches in the hidden text,
+    // the comment's ids among them), and the facts filter then carries the facts through what is
+    // left. The other way round, the facts filter would see a change to the comment, let it go, and
+    // the guard would then drop it, losing the facts of a renamed heading (novel-focus.test.ts).
     carryNovelFacts({ active: () => kind.value === 'markdown' }),
     // Focus on one chapter or one section (Novel plan, Task 7): nothing while the whole book shows.
     // An edit at the passage's edge that would reach the hidden text says why it did nothing.

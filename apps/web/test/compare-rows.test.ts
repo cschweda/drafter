@@ -1,3 +1,4 @@
+import { setMarkdownMeta } from '@drafter/markdown';
 import { describe, expect, test } from 'vitest';
 import {
   type ComparedTexts,
@@ -72,6 +73,25 @@ describe('the Changes view model', () => {
     const model = diffModel(doc('The roof.'), doc('The yard.'), 'markdown');
     expect(model.groups.map((g) => g.title)).toEqual(['Notes', 'Places']);
     expect(shownGroups(model).map((g) => g.title)).toEqual(['Places']);
+  });
+
+  test('a Markdown document’s drafter comment is no changed line', () => {
+    const body = '# One\n\nThe hall.\n\n# Two\n\nThe roof.\n';
+    const meta = (synopsis: string) =>
+      setMarkdownMeta(body, {
+        template: 'novel',
+        novel: { nodes: { 'chapter:two:0': { status: 'draft', synopsis } } },
+      });
+    const same = diffModel(meta('Rain.'), meta('Snow, and a long night.'), 'markdown');
+    expect(same.changes).toEqual([]);
+    expect(summaryText(same.summary, 'markdown')).toBe(
+      'No changes: the two versions are the same.',
+    );
+    // Facts cleared, or the comment gone: still no change. A real one is the prose's own.
+    expect(diffModel(meta('Rain.'), body, 'markdown').changes).toEqual([]);
+    const edited = diffModel(meta('Rain.'), meta('Rain.').replace('roof', 'yard'), 'markdown');
+    expect(shownGroups(edited).map((g) => g.title)).toEqual(['Two']);
+    expect(edited.rows.some((row) => row.text.includes('drafter'))).toBe(false);
   });
 
   test('summary counts changed, new, and deleted scenes', () => {

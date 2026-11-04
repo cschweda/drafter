@@ -483,6 +483,38 @@ test.describe('Typing in a long novel', () => {
     );
     expect((await peek()).head[0]).toMatch(/^# Chapter 0 Varrow renamed quickly{6}$/);
     expect(tasks).toEqual([]);
+
+    // With a passage focused (the first section, where the cursor goes): the focus follows every
+    // change, and the bar shows the tree, so typing in the section's paragraph and in its heading
+    // makes no long task either. Focusing itself is one read of the book, so it is let settle first.
+    await page.keyboard.press('ControlOrMeta+Home');
+    for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ControlOrMeta+Alt+f');
+    await expect(page.locator('[data-passage-bar]')).toContainText('Section 0 of 0');
+    await page.waitForTimeout(700);
+    await page.evaluate(() => {
+      (window as unknown as { longTasks: number[] }).longTasks.length = 0;
+    });
+    await page.keyboard.type('Focused. ', { delay: 60 });
+    await page.keyboard.type('fast ', { delay: 0 });
+    await burst(30, 'paragraph');
+    // Up to the section's heading (line 3), the passage's first line, and on to its end.
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('End');
+    await page.keyboard.type(' again', { delay: 60 });
+    await page.keyboard.type(' now', { delay: 0 });
+    await page.waitForTimeout(700);
+    const focusedTasks = await longTasks();
+    console.log(
+      `Typing in a focused passage of a 120,000-word novel: long tasks ${JSON.stringify(focusedTasks)}.`,
+    );
+    const focused = await peek();
+    expect(focused.head[2]).toBe('## Section 0 of 0 again now');
+    expect(focused.head[4]).toMatch(/^Focused\. fast x{30}Typing in the novel\. /);
+    await expect(page.locator('[data-passage-bar]')).toContainText('Section 0 of 0 again now');
+    expect(focusedTasks).toEqual([]);
   });
 });
 

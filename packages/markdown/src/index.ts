@@ -5,6 +5,7 @@ export {
   commentJson,
   findMarkdownMeta,
   type MarkdownMetaBlock,
+  markdownProse,
   readMarkdownMeta,
   setMarkdownMeta,
 } from './meta';

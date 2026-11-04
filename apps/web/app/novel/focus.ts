@@ -13,7 +13,7 @@ import { findMarkdownMeta } from '@drafter/markdown';
 import { type NovelKind, type NovelNode, type NovelTree, novelStructure } from '@drafter/novel';
 import { appChange } from '../editor/typewriter';
 import { type MdNode, startOf } from '../markdown/render';
-import { novelFacts, touchesStructure } from './carry';
+import { novelFacts, structureOf, touchesStructure } from './carry';
 
 // Focus on one chapter or one section (the Novel design, goal 4). The editor shows only that
 // passage: the text before it and the text after it, up to the metadata comment, are hidden by
@@ -114,12 +114,16 @@ function follow(passage: Passage, tr: Transaction): Passage | null {
       meta: changes.mapPos(passage.meta, -1),
     };
   }
-  const text = tr.newDoc.toString();
-  const tree = novelStructure(text);
-  // The heading's first character, where it went; null when it was deleted. A heading deleted and
-  // put back elsewhere (the Outline's move) is found by its id, which a move keeps.
+  // The heading's first character, where it went; null when it was deleted, and the focus ends.
+  // Never looked up by its id then: a heading of the same name later in the book takes the id when
+  // this one goes, and the focus would land on another passage. (The Outline's move sets the
+  // passage itself, `setPassage`, so it never comes here.)
   const at = changes.mapPos(passage.from, 1, MapMode.TrackDel);
-  const node = at === null ? findIn(tree.nodes, passage.id) : nodeWithHeadingAt(tree.nodes, at);
+  if (at === null) return null;
+  const text = tr.newDoc.toString();
+  // The facts filter read this document already (`structureOf` keeps its tree), or will.
+  const tree = structureOf(tr.newDoc, text);
+  const node = nodeWithHeadingAt(tree.nodes, at);
   if (!node) return null;
   return {
     id: node.id,
@@ -308,7 +312,7 @@ export function focusPassage(view: EditorView, id: string | null): void {
     return;
   }
   const text = view.state.doc.toString();
-  const tree = novelStructure(text);
+  const tree = structureOf(view.state.doc, text);
   const passage = passageOf(text, id, tree);
   if (!passage) return;
   const heading = findIn(tree.nodes, id)?.heading.to ?? passage.from;

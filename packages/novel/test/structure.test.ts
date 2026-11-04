@@ -112,8 +112,10 @@ describe('review fixes', () => {
   it('totals agree with the status bar on prose', () => {
     const body =
       'A dedication, short.\n\n# Part One\n\n# The *Lighthouse* Keeper\n\nShe climbed [the stairs](http://x.test/a b) at dusk.\n\n## Arrival\n\nThe boat came in.\n\n***\n\nLater, it left.\n\nSecond Chapter\n=============\n\nOne more line here.\n\n# Two #\n\nEnd.\n';
-    const text = `${body}\n<!-- drafter {"template":"novel"} -->\n`;
-    expect(novelStructure(text).words).toBe(countWords(parseMarkdown(body)));
+    const text = `${body}\n<!-- drafter {"template":"novel","novel":{"nodes":{"chapter:two:0":{"synopsis":"Four words of synopsis."}}}} -->\n`;
+    // The status bar counts the parse of the whole text, comment and all (the comment is not prose).
+    expect(novelStructure(text).words).toBe(countWords(parseMarkdown(text)));
+    expect(countWords(parseMarkdown(text))).toBe(countWords(parseMarkdown(body)));
   });
 
   it('reads an opening ## as a chapter', () => {

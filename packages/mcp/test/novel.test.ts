@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { besideNames, draftFile, draftFileName } from '@drafter/history';
+import { wordsIn } from '@drafter/markdown';
 import { afterEach, describe, expect, it } from 'vitest';
 import { answerOf, type Connected, connect } from './connect';
 import { put, tempFolder } from './temp';
@@ -153,5 +154,33 @@ describe('a novel through Drafter for Claude', () => {
     const titles = compared.groups.map((g) => g.title);
     expect(titles).toContain('Part One');
     expect(titles).toContain('The Light');
+  });
+  it('counts a draft’s words without its drafter comment', async () => {
+    const scripts = join(tempFolder(), 'Scripts');
+    put(join(scripts, 'Low Tide.md'), NOVEL);
+    const names = besideNames('Low Tide.md');
+    if (!names) throw new Error('no names');
+    const body = '# The Salt Road\n\nShe walked out.\n';
+    const withFacts = `${body}\n<!-- drafter ${JSON.stringify(META)} -->\n`;
+    const facts = (draft: number, text: string) => ({
+      draft,
+      id: createHash('sha256').update(text, 'utf8').digest('hex'),
+      frozen: '2026-10-01T09:00:00.000Z',
+      note: 'First',
+    });
+    put(
+      join(scripts, names.folder, draftFileName(names.work, 1, 'markdown')),
+      draftFile(body, facts(1, body), 'markdown'),
+    );
+    put(
+      join(scripts, names.folder, draftFileName(names.work, 2, 'markdown')),
+      draftFile(withFacts, facts(2, withFacts), 'markdown'),
+    );
+    open = await connect({ folders: [scripts] });
+    const drafts = answerOf<{ drafts: Array<{ words: number }> }>(
+      await open.call('list_drafts', { script: 'Scripts/Low Tide.md' }),
+    );
+    // The body's words, and none of the synopsis's.
+    expect(drafts.drafts.map((d) => d.words)).toEqual([wordsIn(body), wordsIn(body)]);
   });
 });

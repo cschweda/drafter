@@ -15,7 +15,7 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import { cardsKey } from '~/cards/grid';
 import { useEditor } from '~/editor/session';
 import { fillPercent, KIND_WORD, nodeName, targetLine, titleOf, wordsLabel } from '~/novel/labels';
-import { useNovel } from '~/novel/use-novel';
+import { useLiveNovel } from '~/novel/use-novel';
 import { sayOutline } from '~/outline/notice';
 import { useSettings } from '~/settings/settings';
 
@@ -29,7 +29,7 @@ import { useSettings } from '~/settings/settings';
 // its card, outside the listbox: an option may hold no field.
 
 const editor = useEditor();
-const novel = useNovel();
+const novel = useLiveNovel();
 const { tree, facts } = novel;
 const { settings } = useSettings();
 const wide = useWideScreen();

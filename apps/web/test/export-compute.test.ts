@@ -1010,3 +1010,60 @@ describe('Let Drafter reopen this file', () => {
     expect(await embeddedSource(new TextEncoder().encode(reply.data as string))).toBeNull();
   });
 });
+
+// A Markdown document's trailing drafter comment is Drafter's, not prose: no export draws it (a
+// novel's synopses, a draft's note), but a file made to reopen in Drafter carries it inside.
+describe('the drafter comment in a Markdown export', () => {
+  const { createExporter } = compute;
+  const BODY = '# The Salt Road\n\nShe walked out at low tide.\n';
+  const SOURCE_WITH = `${BODY}\n<!-- drafter {"template":"novel","novel":{"nodes":{"chapter:the-salt-road:0":{"status":"draft","synopsis":"A secret synopsis."}}}} -->\n`;
+  const meta = { title: 'The Salt Road', lang: 'en', generator: 'Drafter 9.9.9' };
+  const text = (reply: ExportReply) => {
+    if (!('data' in reply) || typeof reply.data !== 'string') throw new Error('no text');
+    return reply.data;
+  };
+  async function zipText(bytes: Uint8Array) {
+    const listed = listZip(bytes);
+    const out: string[] = [];
+    for (const entry of listed) {
+      if (!/\.(x?html|opf|ncx|css)$/.test(entry.name)) continue;
+      out.push(new TextDecoder().decode(await readEntry(bytes, entry)));
+    }
+    return out.join('\n');
+  }
+
+  test('the HTML draws only the prose, and an embedded source keeps the comment', async () => {
+    const exporter = createExporter(realFonts);
+    const page = text(await exporter({ kind: 'markdown-html', source: SOURCE_WITH, ...meta }));
+    expect(page).not.toContain('drafter {');
+    expect(page).not.toContain('secret synopsis');
+    expect(page).toContain('She walked out at low tide.');
+    expect(page).toBe(text(await exporter({ kind: 'markdown-html', source: BODY, ...meta })));
+    const reopenable = text(
+      await exporter({ kind: 'markdown-html', source: SOURCE_WITH, embed: SOURCE_WITH, ...meta }),
+    );
+    expect(reopenable).not.toContain('secret synopsis');
+    const found = await embeddedSource(new TextEncoder().encode(reopenable));
+    expect(found && new TextDecoder().decode(found.bytes)).toBe(SOURCE_WITH);
+  });
+
+  test('the EPUB draws only the prose, and an embedded source keeps the comment', async () => {
+    const exporter = createExporter(realFonts);
+    const request = { kind: 'markdown-epub', source: SOURCE_WITH, modified: 0, ...meta } as const;
+    const book = await zipText(bytesOf(await exporter(request)));
+    expect(book).not.toContain('drafter {');
+    expect(book).not.toContain('secret synopsis');
+    expect(book).toContain('She walked out at low tide.');
+    const reopenable = bytesOf(await exporter({ ...request, embed: SOURCE_WITH }));
+    expect(await zipText(reopenable)).not.toContain('secret synopsis');
+    const found = await embeddedSource(reopenable);
+    expect(found && new TextDecoder().decode(found.bytes)).toBe(SOURCE_WITH);
+  });
+
+  test('the PDF is the same as the prose’s', async () => {
+    const exporter = createExporter(realFonts, realDocumentFonts);
+    const withComment = bytesOf(await exporter(markdownPdf(SOURCE_WITH)));
+    const without = bytesOf(await exporter(markdownPdf(BODY)));
+    expect(Buffer.from(withComment).equals(Buffer.from(without))).toBe(true);
+  });
+});

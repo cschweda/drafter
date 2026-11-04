@@ -1,8 +1,8 @@
 import type { NovelNode } from '@drafter/novel';
-import { novelStructure } from '@drafter/novel';
 import { type ComputedRef, computed, effectScope, type Ref, shallowRef, watch } from 'vue';
 import { useEditor } from '../editor/session';
 import { sayOutline } from '../outline/notice';
+import { structureOf } from './carry';
 import { focusedPassage, focusPassage, type Passage, passageNumber } from './focus';
 import { titleOf } from './labels';
 import { useNovel } from './use-novel';
@@ -67,7 +67,7 @@ function create(): PassageFocusSession {
       if (!next) {
         if (before) void sayOutline(focusNotice(null, 0));
       } else if (!before || before.kind !== next.kind) {
-        const tree = novelStructure(editor.view.state.doc.toString());
+        const tree = structureOf(editor.view.state.doc, editor.view.state.doc.toString());
         const found = find(tree.nodes, next.id);
         if (found) void sayOutline(focusNotice(found, passageNumber(tree, found.id) ?? 1));
       }
@@ -80,14 +80,30 @@ function create(): PassageFocusSession {
       if ((kind !== 'markdown' || !isNovel) && passage.value) focusPassage(editor.view, null);
     });
 
+    // While a passage is focused, the bar and the Preview show its node, so the book's tree is held
+    // fresh; while the whole book shows, focus reads none of it.
+    let release: (() => void) | null = null;
+    watch(
+      () => passage.value !== null,
+      (focused) => {
+        if (focused && !release) release = novel.hold();
+        if (!focused && release) {
+          release();
+          release = null;
+        }
+      },
+      { immediate: true },
+    );
+
     const id = computed(() => passage.value?.id ?? null);
     const node = computed(() => {
+      if (!id.value) return null;
       const tree = novel.tree.value;
-      return tree && id.value ? find(tree.nodes, id.value) : null;
+      return tree ? find(tree.nodes, id.value) : null;
     });
     const label = computed(() => {
-      const tree = novel.tree.value;
       const found = node.value;
+      const tree = found ? novel.tree.value : null;
       if (!tree || !found) return '';
       return passageLabel(found, passageNumber(tree, found.id) ?? 1);
     });

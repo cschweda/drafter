@@ -55,12 +55,21 @@ useDocsHead({
             <th scope="row"><code>***</code>, <code>* * *</code>, <code>---</code>, or <code>___</code> on a line of its own</th>
             <td>A scene break, which also starts a new section, with no title</td>
           </tr>
-          <tr><th scope="row"><code># Part One</code></th><td>A part: a chapter heading that starts with the word “Part”. The chapters after it belong to it</td></tr>
+          <tr>
+            <th scope="row">A line of text with <code>---</code> directly under it (no empty line between)</th>
+            <td>
+              A section heading: that line is the section’s title, as with <code>##</code>
+              (<code>===</code> under it makes a chapter, as with <code>#</code>). Leave an empty line
+              above <code>---</code> when you mean a scene break
+            </td>
+          </tr>
+          <tr><th scope="row"><code># Part One</code></th><td>A part: a chapter heading that starts with the word “Part”, in any case (<code>PART</code> and <code>part</code> too). The chapters after it belong to it</td></tr>
         </tbody>
       </table>
     </div>
     <p>
-      The lines under a heading are the chapter’s text. Leave an empty line between paragraphs.
+      The lines under a heading are the chapter’s text. Leave an empty line between paragraphs. A
+      scene break before the first chapter is ignored: it has no chapter to divide.
     </p>
     <pre><code># Part One
 
@@ -100,7 +109,8 @@ Morning came in grey.</code></pre>
     <p>
       <strong>Cards</strong> show the same book as cards, one for each chapter and section, in the
       book’s order, with its synopsis, status, words, and target. They move with the same keys, or
-      by dragging on a wide screen. A plain Markdown document has an Outline but no Cards.
+      by dragging on a wide screen. A plain Markdown document has neither: the Outline and Cards are
+      a novel’s.
     </p>
 
     <h2 id="focus">Focus on one chapter</h2>
@@ -147,14 +157,16 @@ Morning came in grey.</code></pre>
       any Markdown app, and you read your book. What Drafter keeps beyond the text, the statuses,
       synopses, and targets, lives in one comment at the very end of the file,
       <code>&lt;!-- drafter {…} --&gt;</code>, which other apps do not show. That comment also says
-      <code>"template":"novel"</code>, which is how Drafter knows it is a novel. Choose
+      <code>"template":"novel"</code>, which is how Drafter knows it is a novel. It is never part
+      of your book: the Preview, printing, every export, and the word counts leave it out. Choose
       <strong>Markdown (plain text)</strong> in the document chooser to take that one note out and
       keep everything else.
     </p>
     <p>
       Your book stays on your device. Nothing is sent anywhere, and
       <a href="/docs/drafter-for-claude/">Drafter for Claude</a>, if you set it up, sees a novel
-      with its chapters and sections, and only reads it.
+      with its parts, chapters, and sections, and each one’s notes (its status, synopsis, and
+      target) and words, and only reads it.
     </p>
 
     <h2 id="shortcuts">Keys at a glance</h2>

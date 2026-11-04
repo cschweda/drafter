@@ -36,6 +36,11 @@ vi.mock('../app/editor/session', () => ({
     },
   }),
 }));
+// Every read of the book's structure, counted (the session and the filter both read through it).
+vi.mock('@drafter/novel', async (original) => {
+  const real = await original<typeof import('@drafter/novel')>();
+  return { ...real, novelStructure: vi.fn(real.novelStructure) };
+});
 vi.mock('../app/storage/script', async () => {
   const { ref } = await import('vue');
   return { useScript: () => ({ fileLocked: ref(false) }) };
@@ -270,6 +275,43 @@ describe('useNovel', () => {
     const novel = await session();
     novel.goto('chapter:the-night-watch:0');
     expect(env.goto).toHaveBeenCalledWith(BOOK.indexOf('# The Night Watch'));
+  });
+
+  test('typing reads nothing while nothing shows the tree, and a fresh tree once the Outline opens', async () => {
+    const novel = await session();
+    const { novelStructure: reads } = (await import('@drafter/novel')) as unknown as {
+      novelStructure: ReturnType<typeof vi.fn> & typeof novelStructure;
+    };
+    const frame = () => new Promise((done) => setTimeout(done, 40));
+    const typeWords = (words: string) => {
+      const at = text().indexOf('The tide went out.');
+      env.view.dispatch({ changes: { from: at, insert: words }, userEvent: 'input.type' });
+      for (const listener of env.changeListeners) listener(null);
+    };
+    reads.mockClear();
+    for (let i = 0; i < 5; i++) {
+      typeWords('Then ');
+      await frame();
+    }
+    expect(reads).not.toHaveBeenCalled();
+    // The Outline opens: it reads the book at once, as it is now.
+    const release = novel.hold();
+    expect(reads).toHaveBeenCalledTimes(1);
+    expect(novel.tree.value?.words).toBe(novelStructure(text()).words);
+    reads.mockClear();
+    // While it shows, the tree follows the typing, once a frame.
+    typeWords('More ');
+    typeWords('words ');
+    await frame();
+    expect(reads).toHaveBeenCalledTimes(1);
+    expect(novel.tree.value?.words).toBe(novelStructure(text()).words);
+    // Closed: typing reads nothing again, and a read later (a command) reads the text then.
+    release();
+    reads.mockClear();
+    typeWords('Later ');
+    await frame();
+    expect(reads).not.toHaveBeenCalled();
+    expect(novel.tree.value?.words).toBe(novelStructure(text()).words);
   });
 
   test('a plain Markdown document has no tree', async () => {

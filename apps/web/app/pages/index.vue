@@ -12,6 +12,7 @@ import { classicNotice } from '~/editor/element-notice';
 import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
 import { startModules } from '~/modules/host';
+import { keepNovelTabs } from '~/novel/tabs';
 import { applySettings } from '~/settings/apply';
 import { useSettings } from '~/settings/settings';
 import { useSnapshots } from '~/snapshots/use-snapshots';
@@ -23,7 +24,6 @@ import { useScript } from '~/storage/script';
 import { installSpeechMenu } from '~/story-map/desktop-speech';
 import { installDesktopUpdates } from '~/update/desktop-source';
 import { guardEditorSelection, leavesOnEscape } from '~/utils/focus';
-import { dropTab, PHONE_DEFAULT_TAB } from '~/utils/panes';
 
 const desktopBuild = isDesktopBuild();
 const { tabs, phoneTab, split, inspect, resize } = usePanes();
@@ -59,24 +59,11 @@ function onEscape(event: KeyboardEvent) {
 }
 
 // The editor is parked here whenever the Source tab isn't showing.
-const { view, kind, novel } = useEditor();
+const { view, kind, novel, loaded } = useEditor();
 
-// A Markdown document has no scenes or notes, so no Outline, Cards, Notes, or Scaffold tab (Phase 2
-// design §5.7; seeing-the-script design §10): the Inspector showing one shows the Preview. A
-// novel keeps the Outline and Cards, its own (Novel plan, Task 5).
-const NOT_FOR_MARKDOWN = ['outline', 'cards', 'notes', 'scaffold'];
-watch(
-  [kind, novel],
-  ([now, isNovel]) => {
-    if (now !== 'markdown') return;
-    const gone = NOT_FOR_MARKDOWN.filter(
-      (tab) => !(isNovel && (tab === 'outline' || tab === 'cards')),
-    );
-    for (const tab of gone) tabs.value = dropTab(tabs.value, tab);
-    if (gone.includes(phoneTab.value)) phoneTab.value = PHONE_DEFAULT_TAB;
-  },
-  { immediate: true },
-);
+// A Markdown document has no Outline, Cards, Notes, or Scaffold tab; a novel keeps the Outline and
+// Cards, and gets them back after a moment of being plain Markdown (`keepNovelTabs`).
+keepNovelTabs({ kind, novel, loaded, tabs, phoneTab });
 const holder = ref<HTMLElement>();
 // Opens the current script, and starts keeping its recovery copy.
 const { dirty } = useScript();

@@ -3,6 +3,7 @@ import { gfmFootnoteFromMarkdown } from 'mdast-util-gfm-footnote';
 import { gfmFootnote } from 'micromark-extension-gfm-footnote';
 import { containerDepth, MAX_NESTING } from './depth';
 import { denseMarks, MAX_BRACKETS, MAX_MARKS } from './marks';
+import { markdownProse } from './meta';
 import type { MdNode } from './types';
 
 /**
@@ -83,11 +84,16 @@ const FOOTNOTES = footnoteSyntax();
  * nested deeper than `MAX_NESTING` throws `NestedTooDeeply` at once, which only a broken or hostile
  * file is: the parser's time grows with depth times length, and a few kilobytes of it held the page
  * for seconds.
+ *
+ * The trailing `<!-- drafter {json} -->` metadata comment is not prose, so it is never in the tree
+ * (`markdownProse`): the Preview, Print, and every export, which all draw this tree, never show it,
+ * and the word count never counts it. The opt-in reopenable exports embed the whole source apart
+ * from the tree, comment and all. Offsets are unchanged: the comment is the text's end.
  */
 export function parseMarkdown(source: string): MdNode {
   // One byte-order mark first is no text (the parser would skip it anyway, offsets and all): taken
   // off here, so the nesting scan and the parser read exactly the same text.
-  const text = source.charCodeAt(0) === 0xfeff ? source.slice(1) : source;
+  const text = markdownProse(source.charCodeAt(0) === 0xfeff ? source.slice(1) : source);
   if (containerDepth(text, MAX_NESTING) > MAX_NESTING) throw new NestedTooDeeply();
   if (denseMarks(text)) throw new MarkedTooDensely();
   return fromMarkdown(text, {

@@ -7,6 +7,7 @@ import { savedText } from '@drafter/cm-fountain';
 import { setMarkdownMeta } from '@drafter/markdown';
 import * as novel from '@drafter/novel';
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { appChange } from '../app/editor/typewriter';
 import { parseMarkdown } from '../app/markdown/parse';
 import type { MdNode } from '../app/markdown/render';
 import { carryNovelFacts, novelFacts } from '../app/novel/carry';
@@ -19,8 +20,10 @@ import {
   passageFocus,
   passageFocusExtension,
   passageNumber,
+  passageOf,
   passageToFocus,
   passageTree,
+  setPassage,
 } from '../app/novel/focus';
 
 // Focus on one chapter or one section (Novel plan, Task 7): the rest of the book is hidden, never
@@ -228,11 +231,14 @@ describe('the focus follows its passage', () => {
       after: 'chapter:the-night-watch:0',
     });
     if (!done) throw new Error('no move');
-    // As the Outline dispatches it (use-novel.ts): the cursor travels with the moved text.
+    // As the Outline dispatches it (use-novel.ts): the cursor travels with the moved text, and the
+    // move says where the passage went (its heading was deleted and put back elsewhere).
     const head = done.mapPos(v.state.selection.main.head);
+    const out = v.state.changes(done.changes).apply(v.state.doc).toString();
     v.dispatch({
       changes: done.changes,
       selection: { anchor: head },
+      effects: setPassage.of(passageOf(out, 'chapter:a-letter:0')),
       userEvent: 'input',
       annotations: [novelFacts.of(true)],
     });
@@ -256,6 +262,25 @@ describe('the focus follows its passage', () => {
     undo(v);
     expect(v.state.doc.toString()).toBe(BOOK);
     expect(v.state.field(passageFocus)).toBeNull();
+  });
+
+  test('deleting its heading ends the focus, never landing on a same-named chapter', () => {
+    const text = BOOK.replace('# The Night Watch', '# A Letter\n\nAnother.\n\n# The Night Watch');
+    const v = make(text);
+    focusPassage(v, 'chapter:a-letter:0');
+    const heading = nodeOf(v, 'chapter:a-letter:0').heading;
+    // The second "A Letter" takes the id `chapter:a-letter:0` once the first heading is gone: here
+    // with the blank line before it, as a Revert or a Restore to a text without it takes it away.
+    const gone = heading.to + 1 - (heading.from - 1);
+    v.dispatch({
+      changes: { from: heading.from - 1, to: heading.to + 1 },
+      // The cursor in the other chapter, so only the follow itself can end the focus.
+      selection: { anchor: at(text, 'Another.') - gone },
+      annotations: appChange.of(true),
+    });
+    expect(nodeOf(v, 'chapter:a-letter:0').title).toBe('A Letter');
+    expect(v.state.field(passageFocus)).toBeNull();
+    expect(focusRanges(v.state)).toEqual([]);
   });
 
   test('loading another text ends it', () => {
@@ -336,6 +361,38 @@ describe('Replace All while focused', () => {
     // Undo takes back what it changed, and nothing else.
     undo(v);
     expect(v.state.doc.toString()).toBe(BOOK);
+  });
+
+  test('keeps the facts of the heading it renames (the guard runs before the facts filter)', () => {
+    const v = make();
+    focusPassage(v, 'chapter:a-letter:0');
+    // "Letter" is in the focused chapter's heading, and (as "letter") in its id in the comment.
+    expect(replaceEvery(v, 'Letter', 'Note')).toBe(true);
+    const text = v.state.doc.toString();
+    expect(text).toContain('# A Note\n');
+    expect(novel.readFacts(text).nodes).toEqual({ 'chapter:a-note:0': { status: 'draft' } });
+    expect(v.state.field(passageFocus)).toBe('chapter:a-note:0');
+    undo(v);
+    expect(v.state.doc.toString()).toBe(BOOK);
+  });
+
+  test('the other order, facts filter first, would lose them', () => {
+    // As session.ts must not register them: the guard last-but-one, so it runs after the facts filter.
+    view = new EditorView({
+      state: EditorState.create({
+        doc: BOOK,
+        extensions: [
+          history(),
+          search(),
+          passageFocusExtension(),
+          carryNovelFacts({ active: () => true }),
+        ],
+      }),
+    });
+    focusPassage(view, 'chapter:a-letter:0');
+    replaceEvery(view, 'Letter', 'Note');
+    expect(view.state.doc.toString()).toContain('# A Note\n');
+    expect(novel.readFacts(view.state.doc.toString()).nodes['chapter:a-note:0']).toBeUndefined();
   });
 
   test('with no match in the passage changes nothing, and says so', () => {

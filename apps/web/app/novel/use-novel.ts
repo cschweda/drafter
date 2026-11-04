@@ -13,7 +13,15 @@ import {
   novelStructure,
   readFacts,
 } from '@drafter/novel';
-import { effectScope, type Ref, shallowRef, watch } from 'vue';
+import {
+  customRef,
+  effectScope,
+  getCurrentScope,
+  onScopeDispose,
+  type Ref,
+  shallowRef,
+  watch,
+} from 'vue';
 import { useEditor } from '../editor/session';
 import { appChange } from '../editor/typewriter';
 import { sayOutline } from '../outline/notice';
@@ -26,9 +34,19 @@ import { focusedPassage, passageOf, setPassage } from './focus';
 // transaction and one undo step, and writes its own facts (so `carry.ts` leaves it alone).
 
 export interface NovelSession {
-  /** The book's structure, or null when the open document is not a novel. */
+  /**
+   * The book's structure, or null when the open document is not a novel. Kept a frame behind the
+   * text while something that shows it holds it (`hold`); otherwise read when it is read.
+   */
   tree: Readonly<Ref<NovelTree | null>>;
   facts: Readonly<Ref<NovelFacts>>;
+  /**
+   * Keeps `tree` and `facts` fresh, a frame behind every edit, until the function it returns is
+   * called: what shows the book (the Outline, Cards, Stats, Counts, the passage bar) holds it while
+   * it is there. The first hold reads the book at once, so it starts with a fresh tree. With no
+   * hold, typing reads nothing.
+   */
+  hold(): () => void;
   /** The id of the node the last move put in place (ids can renumber in a move), or null. */
   moved: Readonly<Ref<string | null>>;
   /** Why nothing can be changed from the Outline now, or null when it can. */
@@ -51,22 +69,77 @@ function create(): NovelSession {
   const editor = useEditor();
   const script = useScript();
   return effectScope(true).run(() => {
-    const tree = shallowRef<NovelTree | null>(null);
-    const facts = shallowRef<NovelFacts>(emptyFacts());
+    // The tree and the facts are read lazily: a read of either while the text has moved on reads
+    // the book first (once for each text: `structureOf` keeps its tree), and while anything holds
+    // them they are read a frame after each edit, so what shows them follows the typing.
+    let treeNow: NovelTree | null = null;
+    let factsNow: NovelFacts = emptyFacts();
+    /** The text has changed since the last read. */
+    let stale = true;
+    let holds = 0;
+    let changedTree = () => {};
+    let changedFacts = () => {};
+    const tree = customRef<NovelTree | null>((track, trigger) => {
+      changedTree = trigger;
+      return {
+        get() {
+          if (stale) refresh();
+          track();
+          return treeNow;
+        },
+        set() {},
+      };
+    });
+    const facts = customRef<NovelFacts>((track, trigger) => {
+      changedFacts = trigger;
+      return {
+        get() {
+          if (stale) refresh();
+          track();
+          return factsNow;
+        },
+        set() {},
+      };
+    });
     const moved = shallowRef<string | null>(null);
 
     /** Reads the book again, now. */
     function refresh() {
       cancel();
-      if (editor.kind.value !== 'markdown' || !editor.novel.value) {
-        tree.value = null;
-        facts.value = emptyFacts();
-        return;
+      stale = false;
+      let nextTree: NovelTree | null = null;
+      let nextFacts = emptyFacts();
+      if (editor.kind.value === 'markdown' && editor.novel.value) {
+        const text = editor.view.state.doc.toString();
+        nextTree = structureOf(editor.view.state.doc, text);
+        nextFacts = readFacts(text);
       }
-      const text = editor.view.state.doc.toString();
-      tree.value = structureOf(editor.view.state.doc, text);
-      const next = readFacts(text);
-      if (!sameFacts(next, facts.value)) facts.value = next;
+      if (nextTree !== treeNow) {
+        treeNow = nextTree;
+        changedTree();
+      }
+      if (!sameFacts(nextFacts, factsNow)) {
+        factsNow = nextFacts;
+        changedFacts();
+      }
+    }
+
+    /** The text changed: read it in a frame while held, else when next read. */
+    function changed() {
+      stale = true;
+      if (holds > 0) schedule();
+    }
+
+    function hold() {
+      holds++;
+      if (holds === 1 && stale) refresh();
+      let held = true;
+      return () => {
+        if (!held) return;
+        held = false;
+        holds--;
+        if (holds === 0) cancel();
+      };
     }
 
     // One read a frame, however many changes came in it.
@@ -90,9 +163,11 @@ function create(): NovelSession {
         refresh();
       });
     }
-    editor.onChange(schedule);
-    watch([editor.kind, editor.novel], refresh);
-    refresh();
+    editor.onChange(changed);
+    watch([editor.kind, editor.novel], () => {
+      stale = true;
+      if (holds > 0) refresh();
+    });
 
     const readOnly = () => {
       if (editor.locked.value) return 'This novel is open for editing in another tab.';
@@ -203,6 +278,7 @@ function create(): NovelSession {
       tree,
       facts,
       moved,
+      hold,
       readOnly,
       setFacts,
       setBookTarget,
@@ -233,4 +309,15 @@ function findAt(list: NovelNode[], at: number): NovelNode | null {
 export function useNovel(): NovelSession {
   session ??= create();
   return session;
+}
+
+/**
+ * The novel's model, held fresh while the calling component (or scope) lasts: for what shows the
+ * book's tree or its facts, so they follow the typing. Elsewhere `useNovel`, whose reads are read
+ * when they are made.
+ */
+export function useLiveNovel(): NovelSession {
+  const novel = useNovel();
+  if (getCurrentScope()) onScopeDispose(novel.hold());
+  return novel;
 }

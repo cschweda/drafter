@@ -1,3 +1,4 @@
+import { markdownProse } from '@drafter/markdown';
 import {
   type ComputedRef,
   computed,
@@ -80,7 +81,7 @@ function create(): MarkdownSession {
           if (refused === 'deep' || refused === 'dense') {
             wanted = null;
             tree.value = null;
-            counted.value = wordsIn(view.state.doc.toString());
+            counted.value = wordsIn(markdownProse(view.state.doc.toString()));
             problem.value = refused;
             updating.value = false;
             return;
@@ -112,7 +113,7 @@ function create(): MarkdownSession {
         tree.value = null;
         problem.value = previewProblem(error);
         // A document too deep to parse still has words: its plain text's.
-        counted.value = problem.value === 'other' ? 0 : wordsIn(text);
+        counted.value = problem.value === 'other' ? 0 : wordsIn(markdownProse(text));
       }
       updating.value = false;
     };

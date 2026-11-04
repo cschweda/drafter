@@ -23,7 +23,7 @@ import {
   type WorkKind,
 } from '@drafter/history';
 import { paginate } from '@drafter/layout';
-import { wordsIn } from '@drafter/markdown';
+import { markdownProse, wordsIn } from '@drafter/markdown';
 import { sceneIndex } from '@drafter/outline';
 import * as z from 'zod/v4';
 import { LoadCache } from '../cache';
@@ -227,7 +227,8 @@ function figures(
     return {
       pages: null,
       scenes: (novel ? novelAnchors(text) : markdownAnchors(text)).length,
-      words: wordsIn(text),
+      // The drafter comment is not prose: its facts and synopses are no words of the document.
+      words: wordsIn(markdownProse(text)),
     };
   const doc = parse(text);
   const template = templateFor(doc);

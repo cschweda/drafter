@@ -5,7 +5,7 @@ import { useEditor } from '~/editor/session';
 import { templateIdOf } from '~/editor/template';
 import { useMarkdown } from '~/markdown/use-markdown';
 import { fmt, titleOf } from '~/novel/labels';
-import { useNovel } from '~/novel/use-novel';
+import { useLiveNovel } from '~/novel/use-novel';
 import { runningTime } from '~/stats/count';
 import { useCounts } from '~/stats/counts';
 import { progressLabel, useGoal } from '~/stats/goal';
@@ -31,7 +31,7 @@ import { useScript } from '~/storage/script';
 // moved here unchanged: today, the script as a whole with its rates, and the last 30 days
 // (docs/drafter-stats-design.md §4). Drawn only while the tab shows, so a key costs nothing else.
 const { doc, kind, novel: isNovel } = useEditor();
-const book = useNovel();
+const book = useLiveNovel();
 const { tree, words: markdownWords } = useMarkdown();
 const { counts, known } = useCounts();
 const { progress } = useGoal();

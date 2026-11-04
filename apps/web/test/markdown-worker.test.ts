@@ -1,4 +1,6 @@
+import { novelStructure } from '@drafter/novel';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import novelSample from '../app/editor/sample-scripts/novel.md?raw';
 import { createMarkdownClient } from '../app/markdown/client';
 import { computeMarkdown, type MarkdownRequest } from '../app/markdown/compute';
 import { PREVIEW_DELAY_MS } from '../app/markdown/preview';
@@ -31,6 +33,14 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe('computeMarkdown', () => {
+  test('a novel’s comment is not in the Preview, and the status bar counts what the Outline does', () => {
+    expect(novelSample).toContain('<!-- drafter {');
+    const reply = computeMarkdown({ seq: 1, source: novelSample });
+    expect(JSON.stringify(reply)).not.toContain('drafter');
+    // The status bar's count (the Preview's words) is the Outline's and Stats' total.
+    expect('words' in reply && reply.words).toBe(novelStructure(novelSample).words);
+  });
+
   test('answers with the tree, without positions, and the words', () => {
     const reply = computeMarkdown({ seq: 3, source: '# Title\n\nOne *two* three.\n' });
     expect(reply).toMatchObject({ seq: 3, words: 4 });

@@ -15,7 +15,7 @@ import {
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { useEditor } from '~/editor/session';
 import { fillPercent, KIND_WORD, nodeName, targetLine, titleOf, wordsLabel } from '~/novel/labels';
-import { useNovel } from '~/novel/use-novel';
+import { useLiveNovel } from '~/novel/use-novel';
 import { sayOutline } from '~/outline/notice';
 import { type TreeRow, treeKey, typeAhead } from '~/outline/tree';
 
@@ -26,7 +26,7 @@ import { type TreeRow, treeKey, typeAhead } from '~/outline/tree';
 // a status from the row's status button. Every change is one text change, undone in one step.
 
 const editor = useEditor();
-const novel = useNovel();
+const novel = useLiveNovel();
 const { tree, facts } = novel;
 
 const closed = ref(new Set<string>());

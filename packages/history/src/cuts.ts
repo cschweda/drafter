@@ -1,5 +1,5 @@
 import { diffLines, MAX_TOKENS, markdownAnchors, splitLines } from '@drafter/compare';
-import { wordsIn } from '@drafter/markdown';
+import { markdownProse, wordsIn } from '@drafter/markdown';
 import { CANDIDATES_MAX, Candidates } from './candidates';
 import { cutText } from './cuts-file';
 import type { WorkKind } from './draft-file';
@@ -492,8 +492,10 @@ function trimCommon(a: string, b: string): { a: [number, number]; b: [number, nu
  * whose sections are all gone is one cut. A unit whose every line is still in `after` is not.
  */
 function markdownCuts(before: string, after: string): FoundCut[] {
-  const was = parseMarkdown(before);
-  const now = parseMarkdown(after);
+  // The trailing drafter comment is not prose: a synopsis edited, or facts cleared, is never a cut,
+  // and Put back never brings JSON back into the text. Offsets before the comment are unchanged.
+  const was = parseMarkdown(markdownProse(before));
+  const now = parseMarkdown(markdownProse(after));
   const nowUnits = now.units;
   const indexOf = new Map(nowUnits.map((u, i) => [u, i]));
   const byHash = new Map<string, Unit>();

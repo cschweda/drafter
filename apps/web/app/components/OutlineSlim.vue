@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useEditor } from '~/editor/session';
 import { novelSummary } from '~/novel/labels';
-import { useNovel } from '~/novel/use-novel';
+import { useLiveNovel } from '~/novel/use-novel';
 import { lengthLabel } from '~/outline/labels';
 import { useOutline } from '~/outline/use-outline';
 
@@ -9,7 +9,7 @@ import { useOutline } from '~/outline/use-outline';
 // novel, its chapters, sections, and words, and the book's target when it has one.
 const editor = useEditor();
 const { index } = useOutline();
-const novel = useNovel();
+const novel = useLiveNovel();
 const summary = computed(() => {
   if (editor.kind.value === 'markdown' && editor.novel.value) {
     return novelSummary(novel.tree.value, novel.facts.value.bookTarget ?? null);

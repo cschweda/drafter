@@ -22,6 +22,7 @@ import type { StarterKind } from '../editor/starter-kinds';
 import type { NewKind } from '../editor/template';
 import { appChange } from '../editor/typewriter';
 import type { DocumentKind } from '../markdown/kind';
+import { novelFacts } from '../novel/carry';
 import { useSnapshots } from '../snapshots/use-snapshots';
 import { db } from './db';
 import type { FileRef } from './files';
@@ -694,7 +695,8 @@ function create(): ScriptSession {
       scrollIntoView: true,
       userEvent: 'input.replace',
       // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
-      annotations: [isolateHistory.of('full'), appChange.of(true)],
+      // The text brings its own facts (a novel's comment): the facts filter leaves it alone.
+      annotations: [isolateHistory.of('full'), appChange.of(true), novelFacts.of(true)],
     });
     // A new blank document is unchanged, as one made by New is; the offer goes with it.
     // The copy held here changes at once (the bar goes now); the stored one when its turn comes.
@@ -798,7 +800,8 @@ function create(): ScriptSession {
       effects: EditorView.scrollIntoView(at, { y: 'start', yMargin: 24 }),
       userEvent: 'input.replace',
       // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
-      annotations: [isolateHistory.of('full'), appChange.of(true)],
+      // The text brings its own facts (a novel's comment): the facts filter leaves it alone.
+      annotations: [isolateHistory.of('full'), appChange.of(true), novelFacts.of(true)],
     });
     return true;
   }
@@ -1049,7 +1052,8 @@ function create(): ScriptSession {
       scrollIntoView: true,
       userEvent: 'input.replace',
       // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
-      annotations: [isolateHistory.of('full'), appChange.of(true)],
+      // The text brings its own facts (a novel's comment): the facts filter leaves it alone.
+      annotations: [isolateHistory.of('full'), appChange.of(true), novelFacts.of(true)],
     });
     // A whole-text replacement makes no cuts (drafts-and-cuts design §3.1).
     void useCutRecorder().replaced(id, file.text);

@@ -2,7 +2,7 @@
 import { estimateSeconds } from '@drafter/outline';
 import { useEditor } from '~/editor/session';
 import { bookLine, parseTarget } from '~/novel/labels';
-import { useNovel } from '~/novel/use-novel';
+import { useLiveNovel } from '~/novel/use-novel';
 import { runningTime } from '~/stats/count';
 import { useCounts } from '~/stats/counts';
 import { isGoal, progressLabel, useGoal } from '~/stats/goal';
@@ -29,7 +29,7 @@ const root = ref<HTMLElement>();
 onMounted(() => root.value?.focus());
 
 // ---- The book's target (a novel) -----------------------------------------------------------
-const book = useNovel();
+const book = useLiveNovel();
 const bookTarget = computed(() => book.facts.value.bookTarget ?? null);
 const bookText = ref(bookTarget.value ? String(bookTarget.value) : '');
 const bookProblem = ref('');
