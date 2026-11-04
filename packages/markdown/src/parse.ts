@@ -4,6 +4,7 @@ import { gfmFootnote } from 'micromark-extension-gfm-footnote';
 import { containerDepth, MAX_NESTING } from './depth';
 import { denseMarks, MAX_BRACKETS, MAX_MARKS } from './marks';
 import { markdownProse } from './meta';
+import { cutsOf, readInPieces, readPlain } from './pieces';
 import type { MdNode } from './types';
 
 /**
@@ -96,6 +97,15 @@ export function parseMarkdown(source: string): MdNode {
   const text = markdownProse(source.charCodeAt(0) === 0xfeff ? source.slice(1) : source);
   if (containerDepth(text, MAX_NESTING) > MAX_NESTING) throw new NestedTooDeeply();
   if (denseMarks(text)) throw new MarkedTooDensely();
+  // A long document is read in pieces where it can be cut, each the plain way where it is plain
+  // prose: the same tree, many times faster (`pieces.ts`).
+  const cuts = cutsOf(text);
+  if (cuts.length === 0) return readWhole(text);
+  return readInPieces(text, cuts, (piece) => readPlain(piece) ?? readWhole(piece));
+}
+
+/** `text` read by the parser in one go. */
+export function readWhole(text: string): MdNode {
   return fromMarkdown(text, {
     extensions: [FOOTNOTES],
     mdastExtensions: [gfmFootnoteFromMarkdown()],
