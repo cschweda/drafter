@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
+import { besideNames, draftFile, draftFileName } from '@drafter/history';
 import { afterEach, describe, expect, it } from 'vitest';
 import { answerOf, type Connected, connect } from './connect';
 import { put, tempFolder } from './temp';
@@ -77,7 +79,7 @@ describe('a novel through Drafter for Claude', () => {
       ['part', 'Part One'],
       ['chapter', 'The Salt Road'],
       ['section', 'Low Tide'],
-      ['section', '(untitled section)'],
+      ['section', 'Scene break'],
       ['chapter', 'The Light'],
     ]);
     expect(got.sections[1]).toMatchObject({
@@ -86,6 +88,15 @@ describe('a novel through Drafter for Claude', () => {
       target: 3000,
     });
     expect(got.sections[2]).toMatchObject({ status: 'done' });
+    // A chapter's words are the whole passage: its own text and its sections'.
+    const [, chapter, lowTide, sceneBreak] = got.sections as Array<{
+      words: number;
+      own_words: number;
+    }>;
+    expect(chapter?.words).toBe(
+      (chapter?.own_words as number) + (lowTide?.words as number) + (sceneBreak?.words as number),
+    );
+    expect(chapter?.words).toBeGreaterThan(chapter?.own_words as number);
     expect(got.sections[4]).not.toHaveProperty('status');
   });
 
@@ -100,24 +111,47 @@ describe('a novel through Drafter for Claude', () => {
   });
 
   it('hostile facts are capped or ignored, never thrown', async () => {
-    const hostile = {
-      template: 'novel',
-      novel: {
-        nodes: {
-          'chapter:the-salt-road:0': { status: 'nope', synopsis: 'x'.repeat(50_000), target: -1 },
-          __proto__: { status: 'done' },
-        },
-      },
-    };
-    const text = NOVEL.replace(
-      /<!-- drafter .* -->/,
-      `<!-- drafter ${JSON.stringify(hostile)} -->`,
-    );
+    // Written as a string, so the file really holds a `__proto__` key.
+    const hostile = `{"template":"novel","novel":{"nodes":{"chapter:the-salt-road:0":{"status":"nope","synopsis":"${'x'.repeat(50_000)}","target":-1},"__proto__":{"status":"done","synopsis":"p"},"constructor":{"status":"done"}}}}`;
+    expect(hostile).toContain('"__proto__"');
+    const text = NOVEL.replace(/<!-- drafter .* -->/, `<!-- drafter ${hostile} -->`);
     const server = await novel(text);
     const got = answerOf<{ sections: Array<{ synopsis?: string; status?: string }> }>(
       await server.call('script_overview', { script: 'Scripts/Low Tide.md' }),
     );
     expect(got.sections[1]?.status).toBeUndefined();
     expect((got.sections[1]?.synopsis ?? '').length).toBeLessThanOrEqual(2000);
+    expect(got.sections.every((s) => s.status !== 'done' && s.synopsis !== 'p')).toBe(true);
+  });
+
+  it('drafts and compares number a novel by the same units as read_scene', async () => {
+    const scripts = join(tempFolder(), 'Scripts');
+    put(join(scripts, 'Low Tide.md'), NOVEL);
+    const names = besideNames('Low Tide.md');
+    if (!names) throw new Error('no names');
+    const old =
+      '# The Salt Road\n\nShe walked out.\n\n## Low Tide\n\nThe gulls.\n\n***\n\nA beat.\n';
+    const facts = {
+      draft: 1,
+      id: createHash('sha256').update(old, 'utf8').digest('hex'),
+      frozen: '2026-10-01T09:00:00.000Z',
+      note: 'First',
+    };
+    put(
+      join(scripts, names.folder, draftFileName(names.work, 1, 'markdown')),
+      draftFile(old, facts, 'markdown'),
+    );
+    open = await connect({ folders: [scripts] });
+    const drafts = answerOf<{ drafts: Array<{ scenes: number }> }>(
+      await open.call('list_drafts', { script: 'Scripts/Low Tide.md' }),
+    );
+    // A chapter, a section, and a scene break: three units (plain Markdown would count two).
+    expect(drafts.drafts[0]?.scenes).toBe(3);
+    const compared = answerOf<{ groups: Array<{ title: string; tag: string }> }>(
+      await open.call('compare_drafts', { script: 'Scripts/Low Tide.md', from: 1, to: 'now' }),
+    );
+    const titles = compared.groups.map((g) => g.title);
+    expect(titles).toContain('Part One');
+    expect(titles).toContain('The Light');
   });
 });

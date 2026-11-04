@@ -248,7 +248,10 @@ const overviewOutput = z.object({
       z.object({
         n: z.number().int(),
         title: z.string(),
+        /** A novel's: the whole passage, its sections and chapters included. */
         words: z.number().int(),
+        /** A novel's: the words before its first section or chapter. */
+        own_words: z.number().int().optional(),
         // A novel's: what each of its parts, chapters, and sections is, and what the writer keeps.
         kind: z.enum(['part', 'chapter', 'section']).optional(),
         status: z.enum(['todo', 'draft', 'revised', 'done']).optional(),
@@ -330,6 +333,8 @@ function markdownOverview(
 ): OverviewOutput {
   const { text, sections } = loaded;
   const shown = visibleMarkdownIn(text);
+  // Each section's own text; the document's total is these and what comes before the first.
+  const own = sections.map((section) => sectionWords(shown(section.from, section.to)));
   const items = sections.map((section, i) => {
     const unit = loaded.novel?.[i];
     const synopsis =
@@ -337,10 +342,11 @@ function markdownOverview(
     return {
       n: i + 1,
       title: clipText(section.title, TEXT_LIMITS.heading).text,
-      words: sectionWords(shown(section.from, section.to)),
+      words: unit ? unit.words : own[i],
       ...(unit
         ? {
             kind: unit.kind,
+            own_words: unit.ownWords,
             ...(unit.status === undefined ? {} : { status: unit.status }),
             ...(synopsis ? { synopsis: synopsis.text } : {}),
             ...(synopsis?.cut ? { synopsis_cut: true as const } : {}),
@@ -350,7 +356,7 @@ function markdownOverview(
     };
   });
   const before = shown(0, sections[0]?.from ?? text.length);
-  const words = wordsIn(before) + items.reduce((sum, s) => sum + s.words, 0);
+  const words = wordsIn(before) + items.reduce((sum, _s, i) => sum + (own[i] as number), 0);
   const now = cursorBase('script_overview', loaded, { script: args.script, include });
   const start = startOf(ctx, args.cursor, now, items.length);
   const title = loaded.title === null ? null : clipText(loaded.title, TEXT_LIMITS.heading).text;

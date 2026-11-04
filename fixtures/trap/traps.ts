@@ -74,6 +74,8 @@ export interface Trap {
    * (a few copies of its bytes) too small; see docs/DEFERRED.md for the Markdown parser's.
    */
   memoryMB?: number;
+  /** For the `novel` entry point: the structure it must find, and that it makes a move. */
+  novel?: { parts: number; chapters: number; sections: number; moves: boolean };
 }
 
 /** The time one trap may take at one entry point, by default. */
@@ -1022,7 +1024,7 @@ const NOVEL_META = novelMeta();
 
 /** 100,000 bare `#` lines: the heading scan must stay linear, and ids must not collide into a stall. */
 const HEADING_FLOOD = `${'#\n'.repeat(100_000)}\n${NOVEL_META}`;
-const FENCE_UNCLOSED = `# The First Chapter\n\nThe tide came in.\n\n\`\`\`\n# Not a chapter\n## Nor a section\n***\n\nThe fence never closes, and the comment below is inside it.\n\n${NOVEL_META}`;
+const FENCE_UNCLOSED = `# The First Chapter\n\nThe tide came in.\n\n# The Second Chapter\n\nThe tide went out.\n\n\`\`\`\n# Not a chapter\n## Nor a section\n***\n\nThe fence never closes, and the comment below is inside it.\n\n${NOVEL_META}`;
 /** 20,000 parts, each with a chapter of two sections: the deepest tree the scan can make wide. */
 const DEEP_PARTS = `${Array.from(
   { length: 20_000 },
@@ -1044,8 +1046,7 @@ const NOVEL_TRAPS: Trap[] = [
       '100,000 `#` lines open as a novel and are read as chapters in linear time, and one move keeps every line.',
     bytes: () => enc(HEADING_FLOOD),
     expect: { 'web-open': opens(HEADING_FLOOD) },
-    limitMs: 5000,
-    memoryMB: 1536,
+    novel: { parts: 0, chapters: 100_000, sections: 0, moves: true },
   },
   {
     id: 'novel-fence-unclosed',
@@ -1055,6 +1056,7 @@ const NOVEL_TRAPS: Trap[] = [
       'A code fence that never closes hides the headings after it: they are text, not chapters, and nothing is lost.',
     bytes: () => enc(FENCE_UNCLOSED),
     expect: { 'web-open': opens(FENCE_UNCLOSED) },
+    novel: { parts: 0, chapters: 2, sections: 0, moves: true },
   },
   {
     id: 'novel-meta-hostile',
@@ -1064,6 +1066,7 @@ const NOVEL_TRAPS: Trap[] = [
       'A novel’s comment holding `__proto__` and `constructor` keys, wrong types, an unknown status, and a 1 MB synopsis opens; the facts are ignored or capped, never thrown.',
     bytes: () => enc(HOSTILE_NOVEL_META),
     expect: { 'web-open': opens(HOSTILE_NOVEL_META) },
+    novel: { parts: 0, chapters: 2, sections: 0, moves: true },
   },
   {
     id: 'novel-deep-parts',
@@ -1073,8 +1076,7 @@ const NOVEL_TRAPS: Trap[] = [
       '20,000 parts, each holding a chapter and two sections, are read in linear time and one move keeps every line.',
     bytes: () => enc(DEEP_PARTS),
     expect: { 'web-open': opens(DEEP_PARTS) },
-    limitMs: 5000,
-    memoryMB: 1536,
+    novel: { parts: 20_000, chapters: 20_000, sections: 40_000, moves: true },
   },
   {
     id: 'novel-crlf',
@@ -1084,6 +1086,7 @@ const NOVEL_TRAPS: Trap[] = [
       'A novel written with CRLF line breaks opens with line feeds; read raw, its structure is the same and a move keeps its CRLF.',
     bytes: () => enc(CRLF_NOVEL),
     expect: { 'web-open': opens(CRLF_NOVEL.replace(/\r\n/g, '\n')) },
+    novel: { parts: 1, chapters: 2, sections: 2, moves: true },
   },
 ];
 

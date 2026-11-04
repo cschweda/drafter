@@ -29,7 +29,7 @@ import * as z from 'zod/v4';
 import { LoadCache } from '../cache';
 import { makeCursor } from '../cursor';
 import { ABOUT, type Include, type LeftOut } from '../envelope';
-import { type Loaded, load, templateFor } from '../load';
+import { type Loaded, load, novelAnchors, templateFor } from '../load';
 import { answerBudget, clipText, itemCost, partsOf } from '../paging';
 import { type Checked, Missing, Refusal, resolvePath } from '../paths';
 import { headingsOf, oneScene, wordsOf } from '../scenes';
@@ -221,9 +221,14 @@ const draftSummaries = new LoadCache<DraftSummary>(MAX_DRAFTS);
 function figures(
   text: string,
   kind: WorkKind,
+  novel = false,
 ): { pages: number | null; scenes: number; words: number } {
   if (kind === 'markdown')
-    return { pages: null, scenes: markdownAnchors(text).length, words: wordsIn(text) };
+    return {
+      pages: null,
+      scenes: (novel ? novelAnchors(text) : markdownAnchors(text)).length,
+      words: wordsIn(text),
+    };
   const doc = parse(text);
   const template = templateFor(doc);
   const layout = paginate(doc, template);
@@ -238,7 +243,7 @@ function figures(
 const summarised = (file: Checked) =>
   draftSummaries.get(file.real, file.size, file.mtimeMs) !== undefined;
 
-async function summaryOf(file: Checked, kind: WorkKind): Promise<DraftSummary> {
+async function summaryOf(file: Checked, kind: WorkKind, novel = false): Promise<DraftSummary> {
   const cached = draftSummaries.get(file.real, file.size, file.mtimeMs);
   if (cached !== undefined) return cached;
   const read = await readDraft(file, kind);
@@ -257,7 +262,7 @@ async function summaryOf(file: Checked, kind: WorkKind): Promise<DraftSummary> {
         ...(note.cut ? { note_cut: true as const } : {}),
         ...(file.size > MAX_SCRIPT_BYTES
           ? { pages: null, scenes: null, words: null, figures: false as const }
-          : figures(read.text, kind)),
+          : figures(read.text, kind, novel)),
         matches: read.matches,
       },
     };
@@ -269,6 +274,7 @@ async function summaryOf(file: Checked, kind: WorkKind): Promise<DraftSummary> {
 async function listDrafts(args: DraftsInput, ctx: ToolContext): Promise<DraftsOutput> {
   const loaded = await load(args.script, ctx);
   const kind = kindOf(loaded);
+  const isNovel = loaded.kind === 'markdown' && loaded.novel !== null;
   const files = await draftFiles(loaded, ctx);
   const now = cursorBase('list_drafts', loaded, {
     script: args.script,
@@ -301,7 +307,7 @@ async function listDrafts(args: DraftsInput, ctx: ToolContext): Promise<DraftsOu
       (read + size > PAGE_READ_BYTES || (parsed > 0 && parsed + parse > PAGE_PARSE_BYTES))
     )
       break;
-    const summary = checked ? await summaryOf(checked, kind) : null;
+    const summary = checked ? await summaryOf(checked, kind, isNovel) : null;
     read += size;
     parsed += parse;
     if (!summary) {
@@ -525,7 +531,13 @@ async function compareDrafts(args: CompareInput, ctx: ToolContext): Promise<Comp
     left.notes += shown.leftOut.notes;
     left.boneyard += shown.leftOut.boneyard;
   }
-  const anchorsOf = kind === 'markdown' ? markdownAnchors : sceneAnchors;
+  // A novel's drafts are numbered by its parts, chapters, and sections, as `read_scene` numbers them.
+  const anchorsOf =
+    kind !== 'markdown'
+      ? sceneAnchors
+      : loaded.kind === 'markdown' && loaded.novel !== null
+        ? novelAnchors
+        : markdownAnchors;
   const oldAnchors = anchorsOf(shownOld.text);
   const newAnchors = anchorsOf(shownNew.text);
   const { rows } = diffRows(shownOld.text, shownNew.text, { old: oldAnchors, new: newAnchors });

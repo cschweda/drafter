@@ -7,7 +7,14 @@ import { lint, STRICT_RULES } from '@drafter/lint';
 import { type ComputedRef, computed, type ShallowRef, shallowRef } from 'vue';
 import { moduleProblems } from '../modules/problems';
 import { reportModuleFailure } from '../modules/registry';
-import { mayHaveOrphans, ORPHAN_RULE, orphanCount, orphanMessage } from '../novel/orphans';
+import { novelFacts } from '../novel/carry';
+import {
+  clearOrphansChange,
+  mayHaveOrphans,
+  ORPHAN_RULE,
+  orphanCount,
+  orphanMessage,
+} from '../novel/orphans';
 import { useSettings } from '../settings/settings';
 import { useSnapshots } from '../snapshots/use-snapshots';
 import { type SpellingRow, spellingReader } from '../spell/rows';
@@ -131,7 +138,7 @@ const sameRows = (a: readonly SpellingRow[], b: readonly SpellingRow[]) =>
 /** Reads the lint state and the spelling marks of the one editor, after every update. */
 function start() {
   started = true;
-  const { view, onUpdate, locked, kind } = useEditor();
+  const { view, onUpdate, onChange, locked, kind } = useEditor();
   const readSpelling = spellingReader();
   // A novel's orphaned notes: counted a moment after the last edit (the book is read whole), for
   // the document as it stood then, and listed as one line of advice at the metadata comment.
@@ -159,6 +166,25 @@ function start() {
         read(now);
       }
     }, ORPHAN_DELAY_MS);
+  }
+
+  /** Takes the orphaned notes out of the comment, in one undo step of its own. */
+  function clearOrphans() {
+    if (locked.value || view.state.readOnly) return;
+    const text = view.state.doc.toString();
+    const change = clearOrphansChange(text, view.state.doc);
+    if (!change) return;
+    view.dispatch({
+      changes: change,
+      userEvent: 'input',
+      annotations: [isolateHistory.of('full'), appChange.of(true), novelFacts.of(true)],
+    });
+    // The advice goes now, not after the delay.
+    orphans = 0;
+    orphanDoc = undefined;
+    clearTimeout(orphanTimer);
+    orphanTimer = undefined;
+    read(view.state);
   }
 
   function read(state: EditorState) {
@@ -200,6 +226,7 @@ function start() {
         from: at.from,
         to: at.to,
         line: at.number,
+        fix: { title: 'Clear them', apply: clearOrphans },
       });
     }
     found.sort((a, b) => a.from - b.from || a.to - b.to);
@@ -210,6 +237,14 @@ function start() {
     if (!sameRows(marked.value, rows)) marked.value = rows;
   }
 
+  // A document loaded (`changes` is null) is another book: its count is its own, not the last's.
+  onChange((changes) => {
+    if (changes !== null) return;
+    clearTimeout(orphanTimer);
+    orphanTimer = undefined;
+    orphanDoc = undefined;
+    orphans = 0;
+  });
   read(view.state);
   // Typing makes an update per keystroke; the list is read once a frame, from the state then.
   const readSoon = oncePerFrame(() => read(view.state));

@@ -7,8 +7,8 @@
     "web": 2529,
     "desktop": 444,
     "modules": 58,
-    "trapHarness": 714,
-    "total": 7960
+    "trapHarness": 751,
+    "total": 7997
   },
   "e2e": {
     "web": 1361,

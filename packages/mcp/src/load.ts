@@ -61,6 +61,10 @@ export type Loaded =
 /** What a novel keeps of one of its parts, chapters, or sections. */
 export interface NovelUnit {
   kind: NovelKind;
+  /** The whole passage's words, everything under it included, as the app's Outline counts them. */
+  words: number;
+  /** The words before its first child. */
+  ownWords: number;
   status?: Status;
   synopsis?: string;
   target?: number;
@@ -75,8 +79,12 @@ export function isNovelText(text: string): boolean {
   }
 }
 
-/** The title of an untitled section (a scene break), which has none of its own. */
-export const UNTITLED_SECTION = '(untitled section)';
+/**
+ * The title of a unit with none of its own. An untitled section is the one a scene break starts,
+ * which the app calls "Scene break"; a part or chapter with an empty heading is named by its kind.
+ */
+export const untitled = (kind: NovelKind): string =>
+  kind === 'section' ? 'Scene break' : `(untitled ${kind})`;
 
 function flatten(nodes: NovelNode[], into: NovelNode[]): NovelNode[] {
   for (const node of nodes) {
@@ -84,6 +92,20 @@ function flatten(nodes: NovelNode[], into: NovelNode[]): NovelNode[] {
     flatten(node.children, into);
   }
   return into;
+}
+
+/**
+ * A novel's units as comparison anchors (their heading lines from 0, as `markdownAnchors` gives
+ * for plain Markdown), so drafts and compares number them as `read_scene` does.
+ */
+export function novelAnchors(text: string): Array<{ line: number; title: string }> {
+  const { starts } = splitLines(text);
+  let line = 0;
+  return novelNodes(text).map((node) => {
+    // Nodes come in document order, so the line only moves forward.
+    while (line + 1 < starts.length && (starts[line + 1] as number) <= node.heading.from) line++;
+    return { line, title: node.title === '' ? untitled(node.kind) : node.title };
+  });
 }
 
 /** A novel's parts, chapters, and sections in document order: the units every tool numbers. */
@@ -242,11 +264,16 @@ function loadNovel(
     text,
     title: markdownTitle(text) ?? null,
     sections: nodes.map((node, i) => ({
-      title: node.title === '' ? UNTITLED_SECTION : node.title,
+      title: node.title === '' ? untitled(node.kind) : node.title,
       from: node.heading.from,
       to: Math.min(end, nodes[i + 1]?.heading.from ?? end),
     })),
-    novel: nodes.map((node) => ({ kind: node.kind, ...facts[node.id] })),
+    novel: nodes.map((node) => ({
+      kind: node.kind,
+      words: node.words,
+      ownWords: node.ownWords,
+      ...facts[node.id],
+    })),
   };
 }
 

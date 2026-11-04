@@ -1,6 +1,6 @@
 import type { Text } from '@codemirror/state';
 import { orphanedFacts, readFacts } from '@drafter/novel';
-import { docIsNovel, structureOf } from './carry';
+import { docIsNovel, factsChange, structureOf } from './carry';
 
 /** The Problems rule a novel's orphaned facts are listed under (advice, not a fault). */
 export const ORPHAN_RULE = 'novel-orphaned-notes';
@@ -34,4 +34,19 @@ export function orphanCount(doc: Text): number {
   if (!mayHaveOrphans(doc)) return 0;
   const text = doc.toString();
   return orphanedFacts(readFacts(text), structureOf(doc, text)).length;
+}
+
+/**
+ * The one change that takes every orphaned note out of the metadata comment and leaves the other
+ * facts (and the book's target) as they are; null when there is nothing to clear.
+ */
+export function clearOrphansChange(
+  text: string,
+  doc: Text,
+): { from: number; to: number; insert: string } | null {
+  const facts = readFacts(text);
+  const orphans = orphanedFacts(facts, structureOf(doc, text));
+  if (orphans.length === 0) return null;
+  for (const id of orphans) delete facts.nodes[id];
+  return factsChange(text, facts);
 }

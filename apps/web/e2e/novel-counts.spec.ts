@@ -292,6 +292,22 @@ test.describe('A novel’s orphaned notes', () => {
     const panel = page.getByRole('tabpanel', { name: /^Problems/ });
     await expect(panel).toContainText("2 passages' notes no longer match a chapter or section.");
     await expect(panel.locator('.problem')).toHaveCount(1);
+    // Clear them: the other notes stay, and the advice goes.
+    await panel.getByRole('button', { name: 'Clear them' }).click();
+    await expect(panel).not.toContainText('no longer match');
+    await expect
+      .poll(async () =>
+        (await storedSources(page)).some(
+          (source) => source.includes('chapter:one:0') && !source.includes('chapter:gone:0'),
+        ),
+      )
+      .toBe(true);
+    // One undo step brings the notes (and the advice) back.
+    await showSource(page);
+    await editor(page).focus();
+    await page.keyboard.press('ControlOrMeta+z');
+    await runCommand(page, 'Show Problems');
+    await expect(panel).toContainText("2 passages' notes no longer match a chapter or section.");
     await pasteText(page, book({ 'chapter:one:0': { status: 'draft' } }));
     // On a phone, pasting showed the Source in the Problems' place.
     await runCommand(page, 'Show Problems');

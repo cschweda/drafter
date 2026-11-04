@@ -167,7 +167,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 - **[Privacy audit, 3 November 2026](docs/privacy-audit-2026-11-03.md):** nothing about a script is stored in the cloud, and there's no AI. A writing session in three browsers on live drafter.dev sent the script in no request. One leak was fixed the same day: on drafter.dev, a report's text could reach the analytics.
 - **[Security audit, 1 November 2026](docs/security-audit-2026-11-01.md):** the first formal audit. No exploitable hole and nothing leaves the device. Fixed: private vulnerability reporting, the desktop's drop grant, Nuxt 4.6.3, and Dependabot.
 - **[Clean-room audit, 1 November 2026](docs/clean-room-audit-2026-11-01.md):** no copied code, no screenwriting package, no GPL code shipped. A film catchphrase and an unrecorded source were fixed.
-- **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 278, each with the one outcome it must have, run on every pull request.
+- **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 283, each with the one outcome it must have, run on every pull request.
 - **Reopenable exports review, 1 November 2026 (v0.23.1):** only the embedded source is read, as text, with caps before unpacking.
 - **Accessibility pass, 28 October 2026 (v0.9.0):** automated axe checks in every browser and both themes. Screen-reader passes are still to come.
 - **[Clean-room audit, 27 October 2026](docs/clean-room-audit-2026-10-27.md):** passed, with two fixes.
@@ -177,7 +177,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.25.1, there are **7,960 unit and property tests** (in 21 packages, the web app, and the desktop app), **1,361 browser tests**, each run in five browser setups (6,805 runs), 138 end-to-end tests of the desktop app, and **283 trap documents** with 1,305 checks:
+**What runs.** As of v0.25.1, there are **7,997 unit and property tests** (in 21 packages, the web app, and the desktop app), **1,361 browser tests**, each run in five browser setups (6,805 runs), 138 end-to-end tests of the desktop app, and **283 trap documents** with 1,305 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
