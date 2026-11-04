@@ -238,7 +238,8 @@ function create(): EditorSession {
     // A novel's facts follow their headings through every edit (Novel plan, Task 5).
     carryNovelFacts({ active: () => kind.value === 'markdown' }),
     // Focus on one chapter or one section (Novel plan, Task 7): nothing while the whole book shows.
-    passageFocusExtension(),
+    // An edit at the passage's edge that would reach the hidden text says why it did nothing.
+    passageFocusExtension({ onBlocked: (hint) => void sayElement(hint) }),
     EditorView.updateListener.of((update) => {
       if (update.transactions.length > 0) followElement(update.state);
       if (classicIsOn(update.state)) followMove(update.transactions);

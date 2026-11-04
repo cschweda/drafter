@@ -1,6 +1,8 @@
 import type { NovelNode } from '@drafter/novel';
+import { novelStructure } from '@drafter/novel';
 import { type ComputedRef, computed, effectScope, type Ref, shallowRef, watch } from 'vue';
 import { useEditor } from '../editor/session';
+import { sayOutline } from '../outline/notice';
 import { focusedPassage, focusPassage, type Passage, passageNumber } from './focus';
 import { titleOf } from './labels';
 import { useNovel } from './use-novel';
@@ -30,11 +32,19 @@ function find(list: NovelNode[], id: string): NovelNode | null {
   return null;
 }
 
+/** The passage's name, numbered `n`: "Chapter 3 · The Night Watch", "Section 1 · Scene break". */
+export function passageTitle(node: NovelNode, n: number): string {
+  return `${node.kind === 'section' ? 'Section' : 'Chapter'} ${n} · ${titleOf(node)}`;
+}
+
 /** The bar's sentence for `node`, numbered `n`. */
 export function passageLabel(node: NovelNode, n: number): string {
-  return node.kind === 'section'
-    ? `Section ${n} · ${titleOf(node)} — showing this section.`
-    : `Chapter ${n} · ${titleOf(node)} — showing this chapter.`;
+  return `${passageTitle(node, n)} — showing this ${node.kind === 'section' ? 'section' : 'chapter'}.`;
+}
+
+/** What is said when the focus starts, or ends (`node` null). */
+export function focusNotice(node: NovelNode | null, n: number): string {
+  return node ? `Showing ${passageTitle(node, n)}.` : 'Showing the whole book.';
 }
 
 function create(): PassageFocusSession {
@@ -42,9 +52,25 @@ function create(): PassageFocusSession {
   const novel = useNovel();
   return effectScope(true).run(() => {
     const passage = shallowRef<Passage | null>(focusedPassage(editor.view.state));
+    /** The script read last: a focus that ends because another one was loaded isn't announced. */
+    let loadedSeen = editor.loaded.value;
     const read = () => {
       const next = focusedPassage(editor.view.state);
-      if (next !== passage.value) passage.value = next;
+      const before = passage.value;
+      const loaded = editor.loaded.value !== loadedSeen;
+      loadedSeen = editor.loaded.value;
+      if (next === before) return;
+      passage.value = next;
+      if (loaded) return;
+      // Said when it starts, when it widens or narrows, and every time it ends, however it ends:
+      // Show the whole book, a search match elsewhere, Go to, a deleted heading, an undo.
+      if (!next) {
+        if (before) void sayOutline(focusNotice(null, 0));
+      } else if (!before || before.kind !== next.kind) {
+        const tree = novelStructure(editor.view.state.doc.toString());
+        const found = find(tree.nodes, next.id);
+        if (found) void sayOutline(focusNotice(found, passageNumber(tree, found.id) ?? 1));
+      }
     };
     editor.onState(read);
     editor.onUpdate(read);

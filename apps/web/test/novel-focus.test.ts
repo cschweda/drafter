@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { history, undo } from '@codemirror/commands';
+import { replaceAll, SearchQuery, search, setSearchQuery } from '@codemirror/search';
 import { EditorSelection, EditorState, Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { savedText } from '@drafter/cm-fountain';
@@ -13,10 +14,12 @@ import {
   focusedPassage,
   focusPassage,
   focusRanges,
+  HIDDEN_HINT,
   passageAt,
   passageFocus,
   passageFocusExtension,
   passageNumber,
+  passageToFocus,
   passageTree,
 } from '../app/novel/focus';
 
@@ -65,11 +68,28 @@ afterEach(() => {
   reads.mockClear();
 });
 
+const hints: string[] = [];
+let clock = 0;
+/** Every announcement the editor made (`EditorView.announce`), in order. */
+const announced: string[] = [];
+
 function make(text = BOOK) {
+  hints.length = 0;
+  announced.length = 0;
+  clock = 0;
   view = new EditorView({
     state: EditorState.create({
       doc: text,
-      extensions: [history(), carryNovelFacts({ active: () => true }), passageFocusExtension()],
+      extensions: [
+        history(),
+        search(),
+        carryNovelFacts({ active: () => true }),
+        passageFocusExtension({ onBlocked: (hint) => hints.push(hint), now: () => clock }),
+        EditorView.updateListener.of((u) => {
+          for (const tr of u.transactions)
+            for (const e of tr.effects) if (e.is(EditorView.announce)) announced.push(e.value);
+        }),
+      ],
     }),
   });
   return view;
@@ -291,7 +311,100 @@ describe('the cursor stays in the passage', () => {
   });
 });
 
+describe('Replace All while focused', () => {
+  const replaceEvery = (v: EditorView, find: string, by: string) => {
+    v.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: find, replace: by })) });
+    return replaceAll(v);
+  };
+
+  test('changes only the passage, leaves the rest byte for byte, and says so', () => {
+    const v = make();
+    focusPassage(v, 'chapter:a-letter:0');
+    const letter = nodeOf(v, 'chapter:a-letter:0');
+    const before = BOOK.slice(0, letter.span.from);
+    const after = BOOK.slice(letter.span.to);
+    // "The" is in every chapter, and "a" in the comment's ids too.
+    expect(replaceEvery(v, 'The', 'Thy')).toBe(true);
+    const text = v.state.doc.toString();
+    expect(text.startsWith(before)).toBe(true);
+    expect(text.endsWith(after)).toBe(true);
+    expect(text.slice(before.length, text.length - after.length)).toBe(
+      BOOK.slice(letter.span.from, letter.span.to).replaceAll('The', 'Thy'),
+    );
+    expect(announced.at(-1)).toBe('Replaced 1 match in this chapter.');
+    expect(v.state.field(passageFocus)).toBe('chapter:a-letter:0');
+    // Undo takes back what it changed, and nothing else.
+    undo(v);
+    expect(v.state.doc.toString()).toBe(BOOK);
+  });
+
+  test('with no match in the passage changes nothing, and says so', () => {
+    const v = make();
+    focusPassage(v, 'section:low-tide:0');
+    replaceEvery(v, 'bottle', 'jar');
+    expect(v.state.doc.toString()).toBe(BOOK);
+    expect(announced.at(-1)).toBe('No matches in this section.');
+  });
+
+  test('replaces the whole book once the focus ends', () => {
+    const v = make();
+    replaceEvery(v, 'The', 'Thy');
+    expect(v.state.doc.toString()).not.toContain('The ');
+  });
+});
+
+describe('an edit that would reach the hidden text', () => {
+  test('is dropped with one hint, said again only after a while', () => {
+    const v = make();
+    focusPassage(v, 'chapter:a-letter:0');
+    const letter = nodeOf(v, 'chapter:a-letter:0');
+    v.dispatch({
+      changes: { from: letter.span.from - 1, to: letter.span.from },
+      userEvent: 'delete.backward',
+    });
+    expect(hints).toEqual([HIDDEN_HINT]);
+    // Mod-Shift-K and Alt-Down on the passage's last line, a moment later: no second hint yet.
+    v.dispatch({ selection: { anchor: letter.span.to - 1 } });
+    clock = 1000;
+    // Mod-Shift-K's and Alt-Down's changes, as `deleteLine` and `moveLineDown` dispatch them (they
+    // measure the page, which jsdom can't): the last line with its line break, and a swap.
+    const last = v.state.doc.lineAt(letter.span.to - 1);
+    v.dispatch({ changes: { from: last.from, to: last.to + 1 }, userEvent: 'delete.line' });
+    const swap = () =>
+      v.dispatch({
+        changes: { from: letter.span.to - 1, to: letter.span.to + 1, insert: '\n#' },
+        userEvent: 'move.line',
+      });
+    swap();
+    expect(v.state.doc.toString()).toBe(BOOK);
+    expect(hints).toEqual([HIDDEN_HINT]);
+    clock = 10_000;
+    swap();
+    expect(hints).toEqual([HIDDEN_HINT, HIDDEN_HINT]);
+    expect(v.state.doc.toString()).toBe(BOOK);
+  });
+});
+
 describe('the pieces the bar and the commands read', () => {
+  test('passageToFocus takes the section, then widens to its chapter', () => {
+    const t = novel.novelStructure(BOOK);
+    const pos = at(BOOK, 'A bottle');
+    expect(passageToFocus(t, pos, null)?.id).toBe('section:what-the-sand-kept:0');
+    const section = {
+      id: 'section:what-the-sand-kept:0',
+      kind: 'section' as const,
+      from: 0,
+      to: 0,
+      meta: 0,
+    };
+    expect(passageToFocus(t, pos, section)?.id).toBe('chapter:the-salt-road:0');
+    expect(
+      passageToFocus(t, pos, { ...section, id: 'chapter:the-salt-road:0', kind: 'chapter' })?.id,
+    ).toBe('section:what-the-sand-kept:0');
+    // A chapter with no sections: the chapter.
+    expect(passageToFocus(t, at(BOOK, 'Ninety'), null)?.id).toBe('chapter:the-night-watch:0');
+  });
+
   test('passageAt finds the chapter and the section at the cursor', () => {
     const t = novel.novelStructure(BOOK);
     const pos = at(BOOK, 'A bottle');
@@ -320,7 +433,7 @@ describe('the pieces the bar and the commands read', () => {
     const t = novel.novelStructure(text);
     const passage = (id: string) => {
       const node = novel.findNode(t, id) as novel.NovelNode;
-      return { id, from: node.span.from, to: node.span.to, meta: metaOf(text) };
+      return { id, kind: node.kind, from: node.span.from, to: node.span.to, meta: metaOf(text) };
     };
     const types = (root: MdNode) =>
       (root.children ?? []).map((n) => `${n.type}${n.depth ? n.depth : ''}`);

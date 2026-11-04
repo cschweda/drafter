@@ -158,6 +158,8 @@ const LAYOUT: Record<Group, Section[]> = {
   View: [
     { pick: ['show-source', 'show-script', 'show-preview', 'show-problems'] },
     { pick: ['focus-mode'], fixed: [{ role: 'togglefullscreen' }] },
+    // A novel's focus on one passage (Novel plan, Task 7), beside focus mode.
+    { pick: ['focus-passage', 'focus-chapter', 'focus-section', 'show-whole-book'] },
     { pick: prefix('sprint-'), submenu: 'Sprint' },
     { pick: ['show-stats'] },
     { pick: ['switch-theme'] },

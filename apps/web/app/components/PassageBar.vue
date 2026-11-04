@@ -22,7 +22,7 @@ function showAll() {
 </script>
 
 <template>
-  <section v-if="focus.passage.value" class="bar" aria-label="Focus" data-passage-bar>
+  <section v-if="focus.passage.value" class="bar" aria-label="Passage" data-passage-bar>
     <p class="text">{{ label }}</p>
     <button type="button" class="action" @click="showAll">Show the whole book</button>
   </section>

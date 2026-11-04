@@ -221,6 +221,32 @@ describe('menuTemplate', () => {
     });
   });
 
+  test('puts the novel focus commands in View after focus mode, Focus on this passage on CmdOrCtrl+Alt+F', () => {
+    const view = [
+      cmd('focus-passage', 'View', 'Focus on this passage', { keys: ['Mod-Alt-f'] }),
+      cmd('focus-chapter', 'View', 'Focus on this chapter'),
+      cmd('focus-section', 'View', 'Focus on this section'),
+      cmd('show-whole-book', 'View', 'Show the whole book', { keys: ['Mod-Alt-Shift-f'] }),
+    ];
+    const m = menus(menuTemplate([...COMMANDS, ...view], () => {}, { platform: 'linux' }));
+    const ids = submenu(m.View).map((i) => i.id ?? i.role ?? i.type);
+    const at = ids.indexOf('focus-passage');
+    expect(at).toBeGreaterThan(ids.indexOf('focus-mode'));
+    expect(ids.slice(at - 1, at + 5)).toEqual([
+      'separator',
+      'focus-passage',
+      'focus-chapter',
+      'focus-section',
+      'show-whole-book',
+      'separator',
+    ]);
+    const template = menuTemplate(view, () => {}, { platform: 'linux' });
+    expect(named(template, 'focus-passage')).toMatchObject({ accelerator: 'CmdOrCtrl+Alt+F' });
+    expect(named(template, 'show-whole-book')).toMatchObject({
+      accelerator: 'CmdOrCtrl+Alt+Shift+F',
+    });
+  });
+
   test('on Windows, as on Linux: Alt opens each menu by its underlined letter, and Quit ends File', () => {
     const template = menuTemplate(COMMANDS, () => {}, { platform: 'win32' });
     expect(template.map((item) => item.label)).toEqual(['&File', '&Edit', '&View', '&Go', '&Help']);

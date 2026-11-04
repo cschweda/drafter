@@ -53,7 +53,7 @@ import { setWritingMode } from '~/editor/writing-mode';
 import { openSceneHistory } from '~/history/scene-history';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { openNewNote } from '~/notes/use-notes';
-import { focusPassage, passageAt } from '~/novel/focus';
+import { focusedPassage, focusPassage, passageAt, passageToFocus } from '~/novel/focus';
 import { usePassageFocus } from '~/novel/use-focus';
 import { useNovel } from '~/novel/use-novel';
 import { runMove } from '~/outline/move';
@@ -139,6 +139,8 @@ export function registerBuiltinCommands(): void {
   const drafts = useDrafts();
   const steps = useDraftSteps();
   const technicalDetails = useTechnicalDetails();
+  // Made now, so the focus's start and end are announced from the first one on.
+  usePassageFocus();
   /**
    * Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus; with
    * no comparison open, Show changes' marks on the Script pane, which shows.
@@ -737,6 +739,25 @@ export function registerBuiltinCommands(): void {
       run: focus.toggle,
     },
     // A novel's focus (Novel plan, Task 7), on the passage at the cursor.
+    'focus-passage': {
+      enabled: () => !!passageHere('chapter'),
+      why: () =>
+        !isMarkdown() || !editor.novel.value
+          ? 'Focus is for a novel.'
+          : 'The cursor isn’t in a chapter or a section.',
+      run: () => {
+        if (!isMarkdown() || !editor.novel.value) return;
+        const tree = novelStructure(view.state.doc.toString());
+        const node = passageToFocus(
+          tree,
+          view.state.selection.main.head,
+          focusedPassage(view.state),
+        );
+        if (!node) return;
+        focusPassage(view, node.id);
+        editor.goto(view.state.selection.main.head);
+      },
+    },
     'focus-chapter': focusOn('chapter'),
     'focus-section': focusOn('section'),
     'show-whole-book': {

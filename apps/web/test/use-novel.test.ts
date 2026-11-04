@@ -1,5 +1,6 @@
 import { history, redo, undo } from '@codemirror/commands';
 import { EditorState, type TransactionSpec } from '@codemirror/state';
+import type { EditorView } from '@codemirror/view';
 import { setMarkdownMeta } from '@drafter/markdown';
 import { MAX_SYNOPSIS, novelStructure, readFacts } from '@drafter/novel';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
@@ -187,6 +188,40 @@ describe('useNovel', () => {
     expect(novel.moved.value).toBe('chapter:again:0');
     cmd(undo);
     expect(text()).toBe(book);
+  });
+
+  test('a move of the focused passage whose id renumbers keeps the focus on it (Task 7)', async () => {
+    const book = setMarkdownMeta('# Again\n\nOne.\n\n# Again\n\nTwo.\n', { template: 'novel' });
+    // The same focus module the session imports (each test imports them afresh).
+    const focus = await import('../app/novel/focus');
+    env.view = {
+      state: EditorState.create({
+        doc: book,
+        extensions: [
+          history(),
+          env.carry.carryNovelFacts({ active: () => true }),
+          focus.passageFocusExtension(),
+        ],
+      }),
+      dispatch(spec) {
+        this.state = this.state.update(spec).state;
+      },
+    };
+    const novel = await session();
+    focus.focusPassage(env.view as unknown as EditorView, 'chapter:again:1');
+    expect(env.view.state.field(focus.passageFocus)).toBe('chapter:again:1');
+    expect(novel.move('chapter:again:1', { before: 'chapter:again:0' })).toBe(true);
+    expect(text().startsWith('# Again\n\nTwo.')).toBe(true);
+    // Renumbered to :0, and still the passage that says "Two.".
+    expect(env.view.state.field(focus.passageFocus)).toBe('chapter:again:0');
+    const passage = focus.focusedPassage(env.view.state);
+    expect(text().slice(passage?.from, passage?.to)).toBe('# Again\n\nTwo.\n\n');
+    expect(focus.focusRanges(env.view.state)).toEqual([
+      { from: passage?.to, to: text().indexOf('<!-- drafter') },
+    ]);
+    // The cursor came with it.
+    const head = env.view.state.selection.main.head;
+    expect(head >= (passage?.from ?? 0) && head < (passage?.to ?? 0)).toBe(true);
   });
 
   test('an illegal move changes nothing', async () => {

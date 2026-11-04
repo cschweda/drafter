@@ -39,6 +39,8 @@ import { novelFacts, touchesStructure } from './carry';
 /** The focused passage: its node's id, where its text runs, and where the metadata comment starts. */
 export interface Passage {
   id: string;
+  /** A chapter or a section. */
+  kind: NovelKind;
   /** The heading's start, which is the span's. */
   from: number;
   /** The span's end: the next sibling-or-ancestor's heading, or the comment. */
@@ -80,7 +82,13 @@ const metaOf = (text: string) => findMarkdownMeta(text)?.from ?? text.length;
 export function passageOf(text: string, id: string, tree: NovelTree = novelStructure(text)) {
   const node = findIn(tree.nodes, id);
   if (!node) return null;
-  return { id, from: node.span.from, to: node.span.to, meta: metaOf(text) } satisfies Passage;
+  return {
+    id,
+    kind: node.kind,
+    from: node.span.from,
+    to: node.span.to,
+    meta: metaOf(text),
+  } satisfies Passage;
 }
 
 function findIn(list: NovelNode[], id: string): NovelNode | null {
@@ -100,6 +108,7 @@ function follow(passage: Passage, tr: Transaction): Passage | null {
     // written again) keeps the comment's start, and so the last passage's end, where it was.
     return {
       id: passage.id,
+      kind: passage.kind,
       from: changes.mapPos(passage.from, 1),
       to: changes.mapPos(passage.to, -1),
       meta: changes.mapPos(passage.meta, -1),
@@ -112,7 +121,13 @@ function follow(passage: Passage, tr: Transaction): Passage | null {
   const at = changes.mapPos(passage.from, 1, MapMode.TrackDel);
   const node = at === null ? findIn(tree.nodes, passage.id) : nodeWithHeadingAt(tree.nodes, at);
   if (!node) return null;
-  return { id: node.id, from: node.span.from, to: node.span.to, meta: metaOf(text) };
+  return {
+    id: node.id,
+    kind: node.kind,
+    from: node.span.from,
+    to: node.span.to,
+    meta: metaOf(text),
+  };
 }
 
 /** The ranges focus hides: the text before the passage, and the text after it up to the comment. */
@@ -156,6 +171,7 @@ export const passageState = StateField.define<Passage | null>({
     }
     if (
       next.id === value.id &&
+      next.kind === value.kind &&
       next.from === value.from &&
       next.to === value.to &&
       next.meta === value.meta
@@ -188,48 +204,91 @@ export function focusRanges(state: EditorState): Array<{ from: number; to: numbe
   return passage ? hiddenRanges(passage) : [];
 }
 
+/** What the hint says when an edit at the passage's edge would reach the hidden text. */
+export const HIDDEN_HINT = 'The rest of the book is hidden. Show the whole book to join passages.';
+
+/** How long the hint waits before it is said again. */
+const HINT_EVERY_MS = 5000;
+
+export interface PassageFocusOptions {
+  /** Called (at most once in HINT_EVERY_MS) when an edit that would reach the hidden text is dropped. */
+  onBlocked?: (hint: string) => void;
+  /** The clock, for a test. */
+  now?: () => number;
+}
+
+const plural = (n: number) => `${n} ${n === 1 ? 'match' : 'matches'}`;
+
 /**
  * Keeps the cursor in the passage and the hidden text out of the writer's reach: the keys and the
- * pointer's selections are held to the passage, and an edit typed or deleted into the hidden text
- * is dropped. The Outline's edits, the facts written, a replace from Find, and undo go through.
+ * pointer's selections are held to the passage, and an edit typed, deleted, or moved into the
+ * hidden text is dropped, with a hint. Replace and Replace All change only the matches in the
+ * passage, and say so. The Outline's edits, the facts written, and undo go through.
  */
-const guard = EditorState.transactionFilter.of((tr) => {
-  const passage = tr.startState.field(passageState, false);
-  if (!passage || tr.effects.some((e) => e.is(setPassage))) return tr;
-  const doc = tr.startState.doc;
-  if (tr.docChanged) {
-    if (tr.annotation(appChange) || tr.annotation(novelFacts)) return tr;
-    const typed =
-      (tr.isUserEvent('input') && !tr.isUserEvent('input.replace')) ||
-      tr.isUserEvent('delete') ||
-      tr.isUserEvent('move');
-    if (!typed) return tr;
-    let reaches = false;
-    tr.changes.iterChangedRanges((fromA, toA) => {
-      // The comment is not hidden (it starts after the passage, or the hidden text ends at it).
-      if (!inside(doc, passage, fromA, toA) && fromA < passage.meta) reaches = true;
-    });
-    return reaches ? [] : tr;
-  }
-  if (!tr.selection || !tr.isUserEvent('select') || tr.isUserEvent('select.search')) return tr;
-  const last = lastPos(doc, passage);
-  const clamp = (pos: number) => Math.min(last, Math.max(passage.from, pos));
-  const ranges = tr.selection.ranges.map((r) =>
-    EditorSelection.range(clamp(r.anchor), clamp(r.head)),
-  );
-  const held = EditorSelection.create(ranges, tr.selection.mainIndex);
-  if (held.eq(tr.selection)) return tr;
-  return {
-    selection: held,
-    effects: tr.effects,
-    scrollIntoView: tr.scrollIntoView,
-    userEvent: tr.annotation(Transaction.userEvent),
+function guard({ onBlocked, now = Date.now }: PassageFocusOptions) {
+  let hinted = Number.NEGATIVE_INFINITY;
+  const blocked = () => {
+    const at = now();
+    if (at - hinted < HINT_EVERY_MS) return;
+    hinted = at;
+    onBlocked?.(HIDDEN_HINT);
   };
-});
+  return EditorState.transactionFilter.of((tr) => {
+    const passage = tr.startState.field(passageState, false);
+    if (!passage || tr.effects.some((e) => e.is(setPassage))) return tr;
+    const doc = tr.startState.doc;
+    // The comment is not hidden (it starts after the passage, or the hidden text ends at it).
+    const allowed = (from: number, to: number) =>
+      inside(doc, passage, from, to) || from >= passage.meta;
+    if (tr.docChanged) {
+      if (tr.annotation(appChange) || tr.annotation(novelFacts)) return tr;
+      if (tr.isUserEvent('input.replace')) {
+        const kept: Array<{ from: number; to: number; insert: Text }> = [];
+        let all = 0;
+        tr.changes.iterChanges((fromA, toA, _fromB, _toB, insert) => {
+          all++;
+          if (inside(doc, passage, fromA, toA)) kept.push({ from: fromA, to: toA, insert });
+        });
+        if (!tr.isUserEvent('input.replace.all')) return kept.length === all ? tr : [];
+        const said = EditorView.announce.of(
+          kept.length > 0
+            ? `Replaced ${plural(kept.length)} in this ${passage.kind}.`
+            : `No matches in this ${passage.kind}.`,
+        );
+        const effects = [...tr.effects.filter((e) => !e.is(EditorView.announce)), said];
+        if (kept.length === 0) return { effects };
+        return { changes: kept, effects, userEvent: 'input.replace.all' };
+      }
+      const typed = tr.isUserEvent('input') || tr.isUserEvent('delete') || tr.isUserEvent('move');
+      if (!typed) return tr;
+      let reaches = false;
+      tr.changes.iterChangedRanges((fromA, toA) => {
+        if (!allowed(fromA, toA)) reaches = true;
+      });
+      if (!reaches) return tr;
+      blocked();
+      return [];
+    }
+    if (!tr.selection || !tr.isUserEvent('select') || tr.isUserEvent('select.search')) return tr;
+    const last = lastPos(doc, passage);
+    const clamp = (pos: number) => Math.min(last, Math.max(passage.from, pos));
+    const ranges = tr.selection.ranges.map((r) =>
+      EditorSelection.range(clamp(r.anchor), clamp(r.head)),
+    );
+    const held = EditorSelection.create(ranges, tr.selection.mainIndex);
+    if (held.eq(tr.selection)) return tr;
+    return {
+      selection: held,
+      effects: tr.effects,
+      scrollIntoView: tr.scrollIntoView,
+      userEvent: tr.annotation(Transaction.userEvent),
+    };
+  });
+}
 
 /** Everything focus needs in the editor: the passage, its id, its hidden ranges, and the guard. */
-export function passageFocusExtension(): Extension {
-  return [passageState, passageFocus, guard];
+export function passageFocusExtension(options: PassageFocusOptions = {}): Extension {
+  return [passageState, passageFocus, guard(options)];
 }
 
 /**
@@ -277,6 +336,21 @@ export function passageAt(tree: NovelTree, pos: number, kind: NovelKind): NovelN
     if (hit.kind === kind) found = hit;
     list = hit.children;
   }
+}
+
+/**
+ * What Focus on this passage focuses: the section at the cursor, or its chapter when there is no
+ * section; with that section focused already, its chapter (the key again widens the focus).
+ */
+export function passageToFocus(
+  tree: NovelTree,
+  pos: number,
+  current: Passage | null,
+): NovelNode | null {
+  const section = passageAt(tree, pos, 'section');
+  const chapter = passageAt(tree, pos, 'chapter');
+  if (section && current?.kind === 'section' && current.id === section.id) return chapter;
+  return section ?? chapter;
 }
 
 /** The 1-based number the bar gives node `id`: a chapter's place in the book, a section's in its chapter. */

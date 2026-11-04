@@ -323,13 +323,20 @@ export const COMMAND_DATA: readonly CommandData[] = [
     global: true,
   },
   // A novel's focus (Novel plan, Task 7): one chapter or one section shows, the rest of the book is
-  // hidden (never removed). Mod+Alt+F for the chapter at the cursor, Mod+Alt+Shift+F for all of it.
+  // hidden (never removed). Mod+Alt+F for the passage at the cursor, Mod+Alt+Shift+F for all of it.
+  // Focus on this passage: the section at the cursor, or its chapter; again, the section's chapter.
+  {
+    id: 'focus-passage',
+    title: 'Focus on this passage',
+    group: 'View',
+    keys: 'Mod-Alt-f',
+    global: true,
+    keywords: ['novel', 'chapter', 'section', 'hide the rest'],
+  },
   {
     id: 'focus-chapter',
     title: 'Focus on this chapter',
     group: 'View',
-    keys: 'Mod-Alt-f',
-    global: true,
     keywords: ['novel', 'passage', 'one chapter', 'hide the rest'],
   },
   {

@@ -107,6 +107,33 @@ describe('the command data', () => {
     for (const k of keys) expect(formatKeys(k, false)).not.toBe('');
   });
 
+  test('a novel’s focus: one key for the passage, one for the whole book, in View after focus mode', () => {
+    const at = (id: string) => COMMAND_DATA.findIndex((c) => c.id === id);
+    const of = (id: string) => COMMAND_DATA[at(id)];
+    expect(of('focus-passage')).toMatchObject({
+      title: 'Focus on this passage',
+      group: 'View',
+      keys: 'Mod-Alt-f',
+      global: true,
+    });
+    expect(of('show-whole-book')).toMatchObject({
+      title: 'Show the whole book',
+      group: 'View',
+      keys: 'Mod-Alt-Shift-f',
+      global: true,
+    });
+    expect(of('focus-chapter')).toMatchObject({ title: 'Focus on this chapter', group: 'View' });
+    expect(of('focus-section')).toMatchObject({ title: 'Focus on this section', group: 'View' });
+    expect(of('focus-chapter').keys).toBeUndefined();
+    expect(of('focus-section').keys).toBeUndefined();
+    expect(at('focus-passage')).toBe(at('focus-mode') + 1);
+    // The shortcuts page lists the keys in both notations.
+    const view = shortcutGroups(COMMAND_DATA).find((g) => g.group === 'View');
+    expect(JSON.stringify(view)).toContain('Focus on this passage');
+    expect(formatKeys('Mod-Alt-Shift-f', true)).toBe('⌘⌥⇧F');
+    expect(formatKeys('Mod-Alt-f', false)).toBe('Ctrl+Alt+F');
+  });
+
   test('export-md is enabled for every kind', () => {
     // One command for both kinds (Call 24), keeping its id and title: a script's whole text as
     // Markdown, a Markdown document's own text. builtin.ts enables it by `exportApplies`.

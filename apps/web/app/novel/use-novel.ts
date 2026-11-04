@@ -1,5 +1,5 @@
 import { isolateHistory } from '@codemirror/commands';
-import { ChangeSet, EditorSelection } from '@codemirror/state';
+import { ChangeSet, EditorSelection, type StateEffect } from '@codemirror/state';
 import {
   carryFacts,
   type Facts,
@@ -19,7 +19,7 @@ import { appChange } from '../editor/typewriter';
 import { sayOutline } from '../outline/notice';
 import { useScript } from '../storage/script';
 import { factsChange, novelFacts, sameFacts } from './carry';
-import { focusedPassage } from './focus';
+import { focusedPassage, passageOf, setPassage } from './focus';
 
 // The Outline's model for a novel (the Novel design, goal 3): the book's parts, chapters, and
 // sections, the facts kept beside them, and the edits the Outline makes. Each edit is one
@@ -100,10 +100,13 @@ function create(): NovelSession {
     };
 
     /** Dispatches `changes` as an edit of the Outline's own: one undo step, its facts written. */
-    function dispatch(changes: ChangeSet, selection?: EditorSelection) {
+    function dispatch(
+      changes: ChangeSet,
+      extra?: { selection: EditorSelection; effects: StateEffect<unknown>[] },
+    ) {
       editor.view.dispatch({
         changes,
-        ...(selection && { selection }),
+        ...extra,
         userEvent: 'input',
         annotations: [isolateHistory.of('full'), appChange.of(true), novelFacts.of(true)],
       });
@@ -151,17 +154,24 @@ function create(): NovelSession {
       const carried = carryFacts(old, before, after, done.mapPos);
       const change = sameFacts(carried, old) ? null : factsChange(out, carried);
       const all = change ? moveSet.compose(ChangeSet.of([change], out.length)) : moveSet;
-      // While a passage is focused, the cursor travels with the text it is in, so a move of the
-      // focused passage keeps the cursor in it, and the focus with it (focus.ts).
-      const selection = focusedPassage(state)
-        ? EditorSelection.create(
+      // While a passage is focused, the focus follows it through the move, by where `done.mapPos`
+      // puts its heading (its id may renumber), and the cursor travels with the text it is in.
+      const focused = focusedPassage(state);
+      let focus: { selection: EditorSelection; effects: StateEffect<unknown>[] } | undefined;
+      if (focused) {
+        const node = findAt(after.nodes, done.mapPos(focused.from));
+        const passage = node ? passageOf(all.apply(state.doc).toString(), node.id) : null;
+        focus = {
+          selection: EditorSelection.create(
             state.selection.ranges.map((r) =>
               EditorSelection.range(done.mapPos(r.anchor), done.mapPos(r.head)),
             ),
             state.selection.mainIndex,
-          )
-        : undefined;
-      dispatch(all, selection);
+          ),
+          effects: [setPassage.of(passage)],
+        };
+      }
+      dispatch(all, focus);
       moved.value = findAt(after.nodes, done.at)?.id ?? null;
       return true;
     }
