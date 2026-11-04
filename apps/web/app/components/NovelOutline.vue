@@ -14,7 +14,7 @@ import {
 } from '@drafter/novel';
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { useEditor } from '~/editor/session';
-import { KIND_WORD, nodeName, percent, targetLine, titleOf, wordsLabel } from '~/novel/labels';
+import { fillPercent, KIND_WORD, nodeName, targetLine, titleOf, wordsLabel } from '~/novel/labels';
 import { useNovel } from '~/novel/use-novel';
 import { sayOutline } from '~/outline/notice';
 import { type TreeRow, treeKey, typeAhead } from '~/outline/tree';
@@ -379,6 +379,38 @@ function statusItems(id: string): DropdownMenuItem[][] {
   return [[...STATUSES.map(pick), pick(null)]];
 }
 
+// ---- A passage's target ------------------------------------------------------------------
+
+const targeting = ref<{
+  id: string;
+  name: string;
+  words: number;
+  target: number | undefined;
+} | null>(null);
+
+function startTarget(row: Row) {
+  if (novel.readOnly()) return;
+  targeting.value = {
+    id: row.id,
+    name: titleOf(row.node),
+    words: row.node.words,
+    target: row.facts.target,
+  };
+}
+
+function saveTarget(target: number | null) {
+  const at = targeting.value;
+  if (!at) return;
+  const own = facts.value.nodes[at.id] ?? {};
+  novel.setFacts(at.id, { ...own, target: target ?? undefined });
+}
+
+function endTarget() {
+  const id = targeting.value?.id;
+  targeting.value = null;
+  if (id) requestAnimationFrame(() => void focusRow(id));
+}
+
 function menuItems(row: Row): DropdownMenuItem[][] {
   const why = novel.readOnly();
   const off = why !== null;
@@ -419,6 +451,12 @@ function menuItems(row: Row): DropdownMenuItem[][] {
       icon: 'i-lucide-circle-check',
       disabled: off,
       children: statusItems(row.id),
+    },
+    {
+      label: 'Set a target…',
+      icon: 'i-lucide-target',
+      disabled: off,
+      onSelect: () => afterClosing(() => startTarget(row)),
     },
   ]);
   return groups;
@@ -499,6 +537,7 @@ watch(rows, async () => {
 
 <template>
   <div ref="root" class="novel-outline">
+    <TargetDialog :passage="targeting" @save="saveTarget" @close="endTarget" />
     <DEmpty v-if="rows.length === 0" icon="i-lucide-list-tree">
       No chapters yet. A chapter starts with <code>#</code> and its title, and a section within it
       with <code>##</code>.
@@ -557,7 +596,7 @@ watch(rows, async () => {
             <span class="bar"
               ><span
                 class="fill"
-                :style="{ width: `${percent(row.node.words, row.facts.target)}%` }"
+                :style="{ width: `${fillPercent(row.node.words, row.facts.target)}%` }"
             /></span>
             {{ targetLine(row.node.words, row.facts.target) }}
           </span>

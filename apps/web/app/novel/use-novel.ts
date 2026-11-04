@@ -35,6 +35,8 @@ export interface NovelSession {
   readOnly(): string | null;
   /** Writes `facts` as the facts of node `id`, in one undo step. Empty facts take them away. */
   setFacts(id: string, facts: Facts): void;
+  /** Writes the whole book's word target, in one undo step. Null takes it away. */
+  setBookTarget(target: number | null): void;
   /** Moves node `id` to `target` with its text and its facts, in one undo step. */
   move(id: string, target: NovelTarget): boolean;
   /** Puts the cursor at node `id`'s heading and shows it in the Source. */
@@ -134,6 +136,22 @@ function create(): NovelSession {
       dispatch(state.changes(change));
     }
 
+    function setBookTarget(target: number | null) {
+      const why = readOnly();
+      if (why) {
+        void sayOutline(why);
+        return;
+      }
+      const state = editor.view.state;
+      const text = state.doc.toString();
+      const all = readFacts(text);
+      if (target) all.bookTarget = target;
+      else delete all.bookTarget;
+      const change = factsChange(text, all);
+      if (!change) return;
+      dispatch(state.changes(change));
+    }
+
     function move(id: string, target: NovelTarget): boolean {
       moved.value = null;
       const why = readOnly();
@@ -181,7 +199,16 @@ function create(): NovelSession {
       if (node) editor.goto(node.heading.from);
     }
 
-    return { tree, facts, moved, readOnly, setFacts, move, goto } satisfies NovelSession;
+    return {
+      tree,
+      facts,
+      moved,
+      readOnly,
+      setFacts,
+      setBookTarget,
+      move,
+      goto,
+    } satisfies NovelSession;
   }) as NovelSession;
 }
 

@@ -13,9 +13,41 @@ export const wordsLabel = (n: number) => `${fmt(n)} ${n === 1 ? 'word' : 'words'
 /** A heading's title, or "Scene break" for the untitled section a break starts. */
 export const titleOf = (node: NovelNode) => node.title || 'Scene break';
 
-/** How far `words` is toward `target`, as a whole percentage no more than 100. */
-export const percent = (words: number, target: number) =>
-  Math.min(100, Math.round((words / target) * 100));
+/**
+ * How far `words` is toward `target`, as a whole percentage rounded down, so it never says 100
+ * before the target is reached. A writer past the target sees the real figure (104).
+ */
+export const percent = (words: number, target: number) => {
+  const whole = Math.floor((words * 100) / target);
+  return words < target ? Math.min(99, whole) : whole;
+};
+
+/** The width of a progress bar's fill, 0 to 100: it stops at full when the target is passed. */
+export const fillPercent = (words: number, target: number) => Math.min(100, percent(words, target));
+
+/** "62,140 of 90,000 words (69%)": the book's progress toward its target. */
+export const bookLine = (words: number, target: number) =>
+  `${fmt(words)} of ${fmt(target)} words (${percent(words, target)}%)`;
+
+/** The most a target can be, as the package keeps it. */
+export const MAX_TARGET = 10_000_000;
+
+/**
+ * A target as typed: a whole number of words from 1 to 10,000,000, or blank or 0 to take it away
+ * (null). Anything else is a problem, said in words.
+ */
+export function parseTarget(text: string): { target: number | null } | { problem: string } {
+  const typed = text.trim().replaceAll(',', '');
+  if (typed === '') return { target: null };
+  if (/^\d+$/.test(typed)) {
+    const n = Number(typed);
+    if (n === 0) return { target: null };
+    if (n <= MAX_TARGET) return { target: n };
+  }
+  return {
+    problem: `Enter a whole number of words, from 1 to ${fmt(MAX_TARGET)}, or leave it empty to clear it.`,
+  };
+}
 
 /** "45% of 1,200", for a row with a target. */
 export const targetLine = (words: number, target: number) =>

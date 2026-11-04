@@ -100,7 +100,7 @@ test.describe('the Outline for a novel', () => {
     await expect(tree(page).getByRole('treeitem')).toHaveCount(11);
     await expect(row(page, 'Part One, part, 634 words')).toHaveAttribute('aria-level', '1');
     await expect(saltRoad(page)).toHaveAccessibleName(
-      'The Salt Road, chapter, 275 words, 23% of a 1,200-word target, Revised',
+      'The Salt Road, chapter, 275 words, 22% of a 1,200-word target, Revised',
     );
     await expect(saltRoad(page)).toHaveAttribute('aria-level', '2');
     await expect(row(page, 'Low Tide, section, 142 words')).toHaveAttribute('aria-level', '3');
@@ -109,7 +109,7 @@ test.describe('the Outline for a novel', () => {
     await expect(
       row(page, 'The Night Watch, chapter, 160 words, To do'),
     ).toHaveAccessibleDescription('Wren takes Alder up to the light.');
-    await expect(saltRoad(page).locator('.target')).toHaveText('23% of 1,200');
+    await expect(saltRoad(page).locator('.target')).toHaveText('22% of 1,200');
     await expect(row(page, /^The Night Watch, chapter/).locator('.target')).toHaveCount(0);
     // Words, chapters, and sections: never a script's words.
     await expect(tree(page)).not.toContainText(/scene heading|INT\.|\d pages?\b|\bpp?\.\s/i);

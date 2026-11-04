@@ -346,6 +346,38 @@ describe('Replace All while focused', () => {
     expect(announced.at(-1)).toBe('No matches in this section.');
   });
 
+  test('drops a match that straddles the passage edge, and says no match', () => {
+    const v = make();
+    focusPassage(v, 'chapter:a-letter:0');
+    // The match starts in the previous chapter and ends in the heading of this one.
+    v.dispatch({
+      effects: setSearchQuery.of(
+        new SearchQuery({ search: 'A bottle.\n\n# A Letter', replace: 'X', literal: true }),
+      ),
+    });
+    expect(BOOK).toContain('A bottle.\n\n# A Letter');
+    replaceAll(v);
+    expect(v.state.doc.toString()).toBe(BOOK);
+    expect(announced.at(-1)).toBe('No matches in this chapter.');
+  });
+
+  test('keeps a multi-line regex match that lies inside the passage', () => {
+    const v = make();
+    focusPassage(v, 'chapter:a-letter:0');
+    v.dispatch({
+      effects: setSearchQuery.of(
+        new SearchQuery({
+          search: 'wet\\.\\n\\n\\* \\* \\*',
+          replace: 'dry.\n\n---',
+          regexp: true,
+        }),
+      ),
+    });
+    replaceAll(v);
+    expect(v.state.doc.toString()).toBe(BOOK.replace('wet.\n\n* * *', 'dry.\n\n---'));
+    expect(announced.at(-1)).toBe('Replaced 1 match in this chapter.');
+  });
+
   test('replaces the whole book once the focus ends', () => {
     const v = make();
     replaceEvery(v, 'The', 'Thy');

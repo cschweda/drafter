@@ -90,9 +90,9 @@ test.describe('Cards for a novel', () => {
     await expect.poll(() => order(page)).toEqual(SAMPLE_ORDER);
     await expect(cards(page).getByRole('group', { name: 'Part One' })).toBeVisible();
     await expect(saltRoad(page)).toHaveAccessibleName(
-      'The Salt Road, chapter, 275 words, 23% of a 1,200-word target, Revised',
+      'The Salt Road, chapter, 275 words, 22% of a 1,200-word target, Revised',
     );
-    await expect(saltRoad(page)).toContainText('23% of 1,200');
+    await expect(saltRoad(page)).toContainText('22% of 1,200');
     await expect(saltRoad(page)).toContainText('Revised');
     await expect(card(page, 'Low Tide, section, 142 words')).toBeVisible();
     await expect(card(page, 'Scene break, section, 38 words')).toBeVisible();

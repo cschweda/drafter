@@ -130,6 +130,32 @@ describe('useNovel', () => {
     expect(readFacts(text()).nodes['chapter:the-night-watch:0']).toEqual({ status: 'revised' });
   });
 
+  test('setting the book target writes the meta in one undo step, and 0 or none clears it', async () => {
+    const novel = await session();
+    novel.setBookTarget(90_000);
+    expect(readFacts(text()).bookTarget).toBe(90_000);
+    expect(novel.facts.value.bookTarget).toBe(90_000);
+    // The other facts and the text are left alone.
+    expect(readFacts(text()).nodes['chapter:the-salt-road:0']?.status).toBe('draft');
+    expect(text().startsWith(BOOK.slice(0, BOOK.indexOf('<!--')))).toBe(true);
+    cmd(undo);
+    expect(text()).toBe(BOOK);
+    cmd(redo);
+    expect(readFacts(text()).bookTarget).toBe(90_000);
+    novel.setBookTarget(null);
+    expect(readFacts(text()).bookTarget).toBeUndefined();
+    expect(novel.facts.value.bookTarget).toBeUndefined();
+    cmd(undo);
+    expect(readFacts(text()).bookTarget).toBe(90_000);
+  });
+
+  test('a book target is not set while the editor is locked', async () => {
+    const novel = await session();
+    env.refs.locked.value = true;
+    novel.setBookTarget(5);
+    expect(text()).toBe(BOOK);
+  });
+
   test('a synopsis is written no longer than the package keeps, never half a surrogate pair', async () => {
     const novel = await session();
     novel.setFacts('chapter:the-night-watch:0', { synopsis: 'x'.repeat(5000) });

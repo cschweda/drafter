@@ -14,7 +14,7 @@ import {
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { cardsKey } from '~/cards/grid';
 import { useEditor } from '~/editor/session';
-import { KIND_WORD, nodeName, percent, targetLine, titleOf, wordsLabel } from '~/novel/labels';
+import { fillPercent, KIND_WORD, nodeName, targetLine, titleOf, wordsLabel } from '~/novel/labels';
 import { useNovel } from '~/novel/use-novel';
 import { sayOutline } from '~/outline/notice';
 import { useSettings } from '~/settings/settings';
@@ -587,7 +587,7 @@ watch(cards, async () => {
               <span v-if="card.facts.target" class="target">
                 {{ targetLine(card.node.words, card.facts.target) }}
                 <span class="bar"
-                  ><span class="fill" :style="{ width: `${percent(card.node.words, card.facts.target)}%` }"
+                  ><span class="fill" :style="{ width: `${fillPercent(card.node.words, card.facts.target)}%` }"
                 /></span>
               </span>
             </div>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { estimateSeconds } from '@drafter/outline';
 import { useEditor } from '~/editor/session';
+import { bookLine, parseTarget } from '~/novel/labels';
+import { useNovel } from '~/novel/use-novel';
 import { runningTime } from '~/stats/count';
 import { useCounts } from '~/stats/counts';
 import { isGoal, progressLabel, useGoal } from '~/stats/goal';
@@ -17,7 +19,7 @@ import { useRates } from '~/stats/timing';
 defineProps<{ id: string }>();
 const emit = defineEmits<{ close: []; stats: [] }>();
 
-const { kind } = useEditor();
+const { kind, novel: isNovel } = useEditor();
 const { counts, known } = useCounts();
 const { goal, progress, canSet, locked, setGoal } = useGoal();
 
@@ -25,6 +27,38 @@ const markdown = computed(() => kind.value === 'markdown');
 const rates = useRates();
 const root = ref<HTMLElement>();
 onMounted(() => root.value?.focus());
+
+// ---- The book's target (a novel) -----------------------------------------------------------
+const book = useNovel();
+const bookTarget = computed(() => book.facts.value.bookTarget ?? null);
+const bookText = ref(bookTarget.value ? String(bookTarget.value) : '');
+const bookProblem = ref('');
+const bookSaid = ref('');
+const bookWhy = computed(() => book.readOnly());
+watch(bookTarget, (next) => {
+  bookText.value = next ? String(next) : '';
+});
+
+function onBookSubmit() {
+  bookSaid.value = '';
+  const parsed = parseTarget(bookText.value);
+  if ('problem' in parsed) {
+    bookProblem.value = parsed.problem;
+    return;
+  }
+  bookProblem.value = '';
+  book.setBookTarget(parsed.target);
+  bookSaid.value = parsed.target
+    ? `Book target set: ${parsed.target.toLocaleString('en-US')} words.`
+    : 'Book target cleared.';
+}
+
+function onBookClear() {
+  bookProblem.value = '';
+  bookText.value = '';
+  book.setBookTarget(null);
+  bookSaid.value = 'Book target cleared.';
+}
 
 // ---- The daily goal ------------------------------------------------------------------------
 const unit = ref<'pages' | 'words'>(goal.value?.unit ?? 'pages');
@@ -137,6 +171,36 @@ function onKeydown(event: KeyboardEvent) {
     <p v-if="!markdown" class="note">
       Pages leave out the title page. Running time is at {{ pageRatePhrase(rates.minutesPerPage) }}. Set the rates in Stats.
     </p>
+
+    <section v-if="markdown && isNovel" class="goal book" aria-labelledby="counts-book-title">
+      <h3 id="counts-book-title">Book target</h3>
+      <p v-if="bookTarget" class="today" data-book-progress>
+        {{ bookLine(known.words ?? 0, bookTarget) }}
+      </p>
+      <p v-else class="note">Set a number of words for the whole book, and this shows how far it has come.</p>
+      <p v-if="bookWhy" class="note">{{ bookWhy }}</p>
+      <form class="goal-form" novalidate @submit.prevent="onBookSubmit">
+        <fieldset :disabled="bookWhy !== null" class="bare">
+          <label for="counts-book-target">Words for the book</label>
+          <div class="fields">
+            <input
+              id="counts-book-target"
+              v-model="bookText"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              :aria-invalid="bookProblem ? 'true' : 'false'"
+              :aria-describedby="bookProblem ? 'counts-book-problem' : undefined"
+              @input="bookProblem = ''"
+            >
+            <DButton type="submit">Set target</DButton>
+            <DButton v-if="bookTarget" @click="onBookClear">Clear target</DButton>
+          </div>
+          <p v-if="bookProblem" id="counts-book-problem" class="problem" role="alert">{{ bookProblem }}</p>
+          <p class="sr-only" role="status">{{ bookSaid }}</p>
+        </fieldset>
+      </form>
+    </section>
 
     <section class="goal" aria-labelledby="counts-goal-title">
       <h3 id="counts-goal-title">Daily goal</h3>

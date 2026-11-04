@@ -4,6 +4,8 @@ import { useCast } from '~/cast/use-cast';
 import { useEditor } from '~/editor/session';
 import { templateIdOf } from '~/editor/template';
 import { useMarkdown } from '~/markdown/use-markdown';
+import { fmt, titleOf } from '~/novel/labels';
+import { useNovel } from '~/novel/use-novel';
 import { runningTime } from '~/stats/count';
 import { useCounts } from '~/stats/counts';
 import { progressLabel, useGoal } from '~/stats/goal';
@@ -28,7 +30,8 @@ import { useScript } from '~/storage/script';
 // The Stats tab's Overview (seeing-the-script design §4.2): the Stats window's three sections,
 // moved here unchanged: today, the script as a whole with its rates, and the last 30 days
 // (docs/drafter-stats-design.md §4). Drawn only while the tab shows, so a key costs nothing else.
-const { doc, kind } = useEditor();
+const { doc, kind, novel: isNovel } = useEditor();
+const book = useNovel();
 const { tree, words: markdownWords } = useMarkdown();
 const { counts, known } = useCounts();
 const { progress } = useGoal();
@@ -100,6 +103,34 @@ const splits = computed(() => {
   ];
 });
 const headings = computed(() => headingCount(tree.value));
+
+/** A novel's chapters and their words, each part's chapters under it (a part has a row of its own). */
+const chapters = computed(() => {
+  const nodes = isNovel.value ? (book.tree.value?.nodes ?? []) : [];
+  const rows: Array<{ id: string; title: string; words: number; part: boolean; under: boolean }> =
+    [];
+  for (const node of nodes) {
+    if (node.kind === 'part') {
+      rows.push({ id: node.id, title: titleOf(node), words: node.words, part: true, under: false });
+      for (const chapter of node.children)
+        rows.push({
+          id: chapter.id,
+          title: titleOf(chapter),
+          words: chapter.words,
+          part: false,
+          under: true,
+        });
+    } else
+      rows.push({
+        id: node.id,
+        title: titleOf(node),
+        words: node.words,
+        part: false,
+        under: false,
+      });
+  }
+  return rows;
+});
 
 // ---- The rates -------------------------------------------------------------------------------
 const rates = useRates();
@@ -263,6 +294,21 @@ function dayLabel(day: DayFigure): string {
           </div>
         </template>
       </dl>
+      <table v-if="chapters.length > 0" class="chapters">
+        <caption>Words in each chapter</caption>
+        <thead>
+          <tr>
+            <th scope="col">Chapter</th>
+            <th scope="col" class="num">Words</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in chapters" :key="row.id" :class="{ 'part-row': row.part }">
+            <th scope="row" :class="{ indent: row.under }">{{ row.title }}</th>
+            <td class="num">{{ fmt(row.words) }}</td>
+          </tr>
+        </tbody>
+      </table>
       <dl v-if="!markdown && counts || (!sample && totals && totals.daysWritten > 0)" class="figures">
         <template v-if="!markdown && counts">
           <dt>{{ ESTIMATE_LABEL }}</dt>
@@ -499,6 +545,41 @@ h3 {
 .note {
   margin: 6px 0 0;
   color: var(--muted);
+}
+/* A novel's chapters: a plain table, each part's chapters indented under its row. */
+.chapters {
+  width: 100%;
+  margin: 0 0 12px;
+  border-collapse: collapse;
+}
+.chapters caption {
+  margin-bottom: 4px;
+  font-weight: 600;
+  text-align: left;
+}
+.chapters th,
+.chapters td {
+  min-height: 32px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+  text-align: left;
+}
+.chapters thead th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.chapters .part-row th,
+.chapters .part-row td {
+  font-weight: 600;
+}
+.chapters .indent {
+  padding-left: 16px;
+}
+.chapters .num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 /* The headings' split: two 100% bars with their lists. */
 .splits {
