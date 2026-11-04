@@ -45,6 +45,8 @@ function lineBefore(text: string, end: number): { from: number; to: number } {
  */
 export function cutsOf(text: string, piece = PIECE): number[] {
   if (text.length < 2 * piece) return [];
+  // A second byte-order mark: micromark skips it without counting it, so later pieces' offsets would be one off.
+  if (text.charCodeAt(0) === 0xfeff) return [];
   if (text.includes('```') || text.includes('~~~') || text.includes('<') || text.includes(']:'))
     return [];
   const cuts: number[] = [];

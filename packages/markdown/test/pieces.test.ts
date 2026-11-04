@@ -101,6 +101,13 @@ describe('a long document read in pieces', () => {
     expect(json(readWhole(`\`\`\`\n${long}`).children?.length)).toBe('1');
   });
 
+  test('never cuts a document that still starts with a byte-order mark', () => {
+    const long = parts(200);
+    expect(cutsOf(`\uFEFF${long}`, 64)).toEqual([]);
+    const text = `\uFEFF\uFEFF${parts(2000)}`;
+    expect(json(parseMarkdown(text))).toBe(json(readWhole(text.slice(1))));
+  });
+
   test('never cuts a short document', () => {
     expect(cutsOf(parts(10))).toEqual([]);
     expect(parts(10).length).toBeLessThan(2 * PIECE);

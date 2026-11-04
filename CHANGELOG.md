@@ -29,7 +29,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - For contributors: the novel's structure cache is keyed on the document and on the reader that read it, and the long-task browser test's comment says CI skips it by name, deliberately.
-- **A novel with many parts reads faster**: the Preview, Print, and the exports read a long Markdown document's text into its parts much sooner, a book of 20,000 parts (1.5 MB) in about 30 ms instead of about a second. A long document is read in pieces cut before its headings, and a piece of only headings, `***` breaks, and plain prose is read without the Markdown parser; the tree is the same, position for position, and a document with code fences, HTML, or link definitions is read whole as before.
+- **A novel with many parts reads faster**: the Preview, Print, and the exports read a long Markdown document's text into its parts much sooner, a book of 20,000 parts (1.5 MB) in about 30 ms instead of about a second. A long document is read in pieces cut before its headings, and a piece of only headings, `***` breaks, and plain prose is read without the Markdown parser; the tree is the same, position for position, and a document with code fences, HTML, or link definitions, or one that starts with a second byte-order mark, is read whole as before.
 - For contributors: `@drafter/markdown` has tests that a long document read in pieces, and a plain piece read without the parser, make the parser's own tree (seeded random documents of every kind of block), and that many parts read in linear time, at a short document's rate.
 
 ### Fixed
