@@ -408,7 +408,13 @@ function saveTarget(target: number | null) {
 function endTarget() {
   const id = targeting.value?.id;
   targeting.value = null;
-  if (id) requestAnimationFrame(() => void focusRow(id));
+  // Back to the row a frame later, unless a menu has opened since: a writer quick enough to open
+  // one in that frame (Shift+F10 on the row) would see it close as the row took focus back.
+  if (id) {
+    requestAnimationFrame(() => {
+      if (menuFor.value === null) void focusRow(id);
+    });
+  }
 }
 
 function menuItems(row: Row): DropdownMenuItem[][] {

@@ -8,6 +8,7 @@ import {
   settled,
   showSource,
   start,
+  submitThenOpenMenu,
 } from './modules';
 
 // Counts and targets for a novel (Novel plan, Task 8): a book target set in the Counts panel and
@@ -67,6 +68,7 @@ async function showOutline(page: Page) {
 
 async function menuFor(page: Page, target: ReturnType<typeof row>) {
   await target.focus();
+  await expect(target).toBeFocused();
   await page.keyboard.press('Shift+F10');
   await expect(rowMenu(page)).toBeVisible();
 }
@@ -185,6 +187,23 @@ test.describe('a passage target', () => {
     await page.keyboard.press('Enter');
     await expect(nightWatch(page).locator('.target')).toHaveCount(0);
     await expect(nightWatch(page)).toBeFocused();
+  });
+
+  test('a menu opened the moment the dialog closes stays open', async ({ page }) => {
+    await openSample(page);
+    await showOutline(page);
+    await menuFor(page, nightWatch(page));
+    await rowMenu(page).getByRole('menuitem', { name: 'Set a target…' }).click();
+    await expect(targetDialog(page).getByRole('textbox', { name: 'Words' })).toBeFocused();
+    await submitThenOpenMenu(page, '100', 'The Night Watch');
+    await expect(nightWatch(page).locator('.target')).toHaveText('160% of 100');
+    await expect(rowMenu(page)).toBeVisible();
+    // Past the frame the dialog hands focus back in, the menu is still open, and has focus.
+    await page.evaluate(
+      () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+    );
+    await expect(rowMenu(page)).toBeVisible();
+    await expect(rowMenu(page).getByRole('menuitem', { name: 'Set a target…' })).toBeVisible();
   });
 
   test('one undo takes the target back', async ({ page }) => {

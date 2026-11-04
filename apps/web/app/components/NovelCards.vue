@@ -397,7 +397,12 @@ function saveTarget(target: number | null) {
 function endTarget() {
   const id = targeting.value?.id;
   targeting.value = null;
-  if (id) requestAnimationFrame(() => void focusCard(id));
+  // Back to the card a frame later, unless a menu has opened since (as the Outline's endTarget).
+  if (id) {
+    requestAnimationFrame(() => {
+      if (menuFor.value === null) void focusCard(id);
+    });
+  }
 }
 
 function menuItems(card: Card): DropdownMenuItem[][] {

@@ -1,6 +1,14 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { runCommand, settled, showSource, start, viewTool } from './modules';
+import {
+  clickViewTool,
+  runCommand,
+  settled,
+  showSource,
+  start,
+  submitThenOpenMenu,
+  viewTool,
+} from './modules';
 
 // Cards for a novel (Novel plan, Task 6): a card for each chapter and section of the sample, under
 // its part's title, with its words, status, and synopsis; dragging a card (or its menu, or Alt+Arrow)
@@ -79,6 +87,9 @@ async function openSample(page: Page) {
 
 async function menuFor(page: Page, target: ReturnType<typeof card>) {
   await target.focus();
+  // The card the keys go to: its tab stop (WebKit reports a card focused from a script, after a Tab
+  // out of the synopsis field, as not focused, though the keys reach it).
+  await expect(target).toHaveAttribute('tabindex', '0');
   await page.keyboard.press('Shift+F10');
   await expect(cardMenu(page)).toBeVisible();
 }
@@ -221,6 +232,22 @@ test.describe('Cards for a novel', () => {
     await expect(page.locator('.cm-content')).toBeFocused();
   });
 
+  test('a menu opened the moment the target dialog closes stays open', async ({ page }) => {
+    await openSample(page);
+    await menuFor(page, climbing(page));
+    await cardMenu(page).getByRole('menuitem', { name: 'Set a target…' }).click();
+    const dialog = page.getByRole('dialog', { name: /^Target for / });
+    await expect(dialog.getByRole('textbox', { name: 'Words' })).toBeFocused();
+    await submitThenOpenMenu(page, '100', 'Climbing');
+    await expect(dialog).toBeHidden();
+    await expect(cardMenu(page)).toBeVisible();
+    // Past the frame the dialog hands focus back in, the menu is still open.
+    await page.evaluate(
+      () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+    );
+    await expect(cardMenu(page)).toBeVisible();
+  });
+
   test('sets a status with the keyboard only', async ({ page }) => {
     await openSample(page);
     await climbing(page).focus();
@@ -255,7 +282,8 @@ test.describe('Cards for a novel', () => {
     const large = sizes.getByRole('button', { name: 'Large' });
     await expect(medium).toHaveAttribute('aria-pressed', 'true');
     const before = (await saltRoad(page).boundingBox())?.height ?? 0;
-    await large.click();
+    // As the script's Cards test: the header may fold the tool again after it is found.
+    await clickViewTool(page, large);
     await expect(large).toHaveAttribute('aria-pressed', 'true');
     await expect
       .poll(async () => (await saltRoad(page).boundingBox())?.height ?? 0)
