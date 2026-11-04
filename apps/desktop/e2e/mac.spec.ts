@@ -102,7 +102,7 @@ test('asks before the window closes with unsaved text, and Quit with no window a
   profile,
 }) => {
   const first = await desktop();
-  await first.page.getByRole('button', { name: 'Open', exact: true }).click();
+  await first.page.getByRole('button', { name: 'File', exact: true }).click();
   await first.page
     .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New screenplay' })
@@ -269,7 +269,7 @@ test('reopened without a restart, the window has the text, can be edited, and Qu
   profile,
 }) => {
   const launched = await desktop();
-  await launched.page.getByRole('button', { name: 'Open', exact: true }).click();
+  await launched.page.getByRole('button', { name: 'File', exact: true }).click();
   await launched.page
     .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New screenplay' })
@@ -307,7 +307,7 @@ test('marks the window edited while the script has unsaved changes', async ({ de
         .filter((window) => window.webContents.getURL() === 'app://drafter/')
         .map((window) => window.isDocumentEdited()),
     );
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await page
     .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New screenplay' })

@@ -261,7 +261,7 @@ async function webPage(route: 'picker' | 'download') {
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 
 async function openFileItem(page: Page) {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await scriptsMenu(page).getByRole('button', { name: 'Open a file…' }).click();
 }
 
@@ -310,7 +310,7 @@ function folder(profile: Profile): string {
 
 async function desktopOpen(page: Page, profile: Profile, path: string, name: string) {
   answerDialogs(profile, [path]);
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await scriptsMenu(page).getByRole('button', { name: 'Open a file…' }).click();
   await expect.poll(() => recordOf(page, name)).not.toBeNull();
 }

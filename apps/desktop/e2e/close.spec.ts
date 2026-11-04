@@ -26,7 +26,7 @@ import {
 const CHANGES = 'Save the changes to';
 const DETAIL = "Your unsaved changes stay in Drafter's recovery copy either way.";
 
-const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const openButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 
 function folder(profile: Profile, name = 'Scripts'): string {
