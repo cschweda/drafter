@@ -51,7 +51,7 @@ function storedSources(page: Page): Promise<string[]> {
 
 async function openSample(page: Page) {
   await start(page);
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await page
     .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'Novel', exact: true })
@@ -378,7 +378,7 @@ test.describe('Typing in a long novel', () => {
     expect(book.split(/\s+/).length).toBeGreaterThan(120_000);
 
     await start(page);
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New novel' })

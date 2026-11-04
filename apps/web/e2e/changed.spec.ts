@@ -12,7 +12,7 @@ async function violations(page: Page) {
 }
 
 const editor = (page: Page) => page.locator('.cm-content');
-const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const openButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
 const saveButton = (page: Page) => page.getByRole('button', { name: 'Save', exact: true });
 const menu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const dialog = (page: Page) => page.getByRole('dialog');

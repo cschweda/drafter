@@ -31,7 +31,7 @@ async function violations(page: Page) {
 }
 
 const editor = (page: Page) => page.locator('.cm-content');
-const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const openButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
 const saveButton = (page: Page) => page.getByRole('button', { name: 'Save', exact: true });
 const menu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const status = (page: Page) => page.locator('[data-tour="status"]');
@@ -185,7 +185,7 @@ test.describe('saving to a file (Chromium)', () => {
     // The first file keeps what it had, and the script follows the second.
     expect(await textOf(page, 'one.fountain')).toMatch(/ALPHA$/);
     expect((await mine(page))?.fileName).toBe('two.fountain');
-    // Focus went back to the Open button with the menu: back to the editor to type.
+    // Focus went back to the File button with the menu: back to the editor to type.
     await editor(page).focus();
     await page.keyboard.insertText(' GAMMA');
     await page.keyboard.press('ControlOrMeta+s');

@@ -11,7 +11,7 @@ const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', e
 
 /** A new screenplay, which (unlike a sample) keeps snapshots, with the Source showing. */
 export async function newScreenplay(page: Page) {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await scriptsMenu(page).getByRole('button', { name: 'New screenplay' }).click();
   await expect(scriptsMenu(page)).toBeHidden();
   await showSource(page);

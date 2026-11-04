@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 test('draws the icons the Scripts menu names in a .ts file', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.cm-content')).toBeAttached();
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   for (const name of ['New screenplay', 'New stage play', 'New Markdown document']) {
     const item = page
       .getByRole('group', { name: 'Scripts', exact: true })

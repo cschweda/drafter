@@ -56,7 +56,7 @@ async function command(page: Page, title: string) {
 async function openPicked(page: Page, name: string, text: string) {
   await putFile(page, name, text);
   await nextFileName(page, name);
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await expect(menu(page)).toBeVisible();
   await menu(page).getByRole('button', { name: 'Open a file…' }).click();
   await expect.poll(() => wholeText(page)).toBe(text);
@@ -251,7 +251,7 @@ test.describe('in Chromium, beside the script', () => {
     await start(page);
     await putAt(page, 'one/Scripts/Boca.fountain', BOCA);
     await nextFileName(page, 'one/Scripts/Boca.fountain');
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await menu(page).getByRole('button', { name: 'Open a file…' }).click();
     await expect.poll(() => wholeText(page)).toBe(BOCA);
     await startDraft(page);
@@ -347,7 +347,7 @@ test.describe('in Chromium, beside the script', () => {
     );
     await putFile(page, 'Boca – Draft 03.fountain', file);
     await nextFileName(page, 'Boca – Draft 03.fountain');
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await menu(page).getByRole('button', { name: 'Open a file…' }).click();
     const bar = page.getByRole('region', { name: 'Draft file' });
     await expect(bar).toContainText('This is Draft 03 of Boca.');
@@ -370,7 +370,7 @@ test.describe('in Chromium, beside the script', () => {
     );
     await putFile(page, 'Boca – Draft 03.fountain', file);
     await nextFileName(page, 'Boca – Draft 03.fountain');
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await menu(page).getByRole('button', { name: 'Open a file…' }).click();
     const bar = page.getByRole('region', { name: 'Draft file' });
     await expect(bar).toContainText('This is Draft 03 of Boca. It is read-only, as it was frozen.');
@@ -398,7 +398,7 @@ test('Export drafts and cuts downloads a zip where nothing can be written beside
 }) => {
   await removePickers(page);
   await start(page);
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await menu(page).getByRole('button', { name: 'New screenplay' }).click();
   await expect(menu(page)).toBeHidden();
   await setText(page, BOCA);

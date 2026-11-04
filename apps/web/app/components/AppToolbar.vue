@@ -3,7 +3,10 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import { formatKeys, isApple } from '~/commands/keys';
 import { openPalette } from '~/commands/palette';
 import { commandById } from '~/commands/registry';
+import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
+import { STARTER_KINDS } from '~/editor/starter-kinds';
+import { DOCUMENT_TYPES } from '~/editor/template';
 import { runContextFor } from '~/modules/context';
 import { useModuleButtons } from '~/modules/host';
 import { runModuleAction } from '~/modules/registry';
@@ -17,7 +20,7 @@ import { TOOLBAR_FOLD_ORDER, type ToolbarItem, useToolbarFolded } from '~/utils/
 
 // The top bar (fresh-look design §3.1): one quiet 44px row. The Drafter mark and wordmark open the
 // app menu, as they always have; then the script's title, whether it has unsaved changes (Task 6),
-// and its state (a sample's chip); Open, Save, and Export (and any module's buttons); the command
+// and its state (a sample's chip); File, Save, and Export (and any module's buttons); the command
 // search; the Structure strip and Focus as icon buttons; the Help menu (Task 3b); and the theme.
 // The template is chosen in the Drafter menu and the status bar.
 const colorMode = useColorMode();
@@ -124,10 +127,7 @@ const saveCaret = ref<HTMLElement | null>(null);
 const saveOpen = ref(false);
 const saveMenu = useCommandMenu(saveCaret);
 const saveItems = computed<DropdownMenuItem[][]>(() => [
-  [
-    ...saveMenu.entry('save', 'i-lucide-save'),
-    ...saveMenu.entry('save-as', 'i-lucide-save-all'),
-  ],
+  [...saveMenu.entry('save', 'i-lucide-save'), ...saveMenu.entry('save-as', 'i-lucide-save-all')],
   [
     ...saveMenu.entry('revert-to-saved', 'i-lucide-undo-2', true),
     ...saveMenu.entry('history', 'i-lucide-history'),
@@ -181,9 +181,32 @@ onBeforeUnmount(() => document.removeEventListener('pointerleave', keepExportOpe
 const overflowItems = computed<DropdownMenuItem[]>(() => {
   const out: DropdownMenuItem[] = [];
   const has = (item: ToolbarItem) => folded.value.includes(item);
-  if (has('open')) out.push(...entry('open', 'i-lucide-folder-open'));
+  // File, folded: its menu as a submenu, so nothing in it is lost (the Drafter menu no longer
+  // repeats it). This browser's scripts are in the palette, which never folds.
+  if (has('open')) {
+    out.push({
+      label: 'File',
+      icon: 'i-lucide-folder-open',
+      children: [
+        ...DOCUMENT_TYPES.flatMap((type) => entry(`new-${type.newKind}`, type.newIcon, true)),
+        ...STARTER_KINDS.flatMap((starter) =>
+          entry(starter.command, 'i-lucide-graduation-cap', true),
+        ),
+        ...entry('open', 'i-lucide-folder-open'),
+        ...entry('open-as-screenplay', 'i-lucide-clapperboard'),
+        ...entry('save-as', 'i-lucide-save-all'),
+        ...SAMPLES.flatMap((sample) =>
+          entry(`open-sample-${sample.kind}`, 'i-lucide-file-text', true),
+        ),
+      ],
+    });
+  }
   if (has('save')) {
-    out.push(...entry('save', 'i-lucide-save'), ...entry('save-as', 'i-lucide-save-all'));
+    out.push(
+      ...entry('save', 'i-lucide-save'),
+      ...entry('save-as', 'i-lucide-save-all'),
+      ...entry('revert-to-saved', 'i-lucide-undo-2', true),
+    );
   }
   if (has('export')) {
     out.push({
@@ -268,21 +291,22 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
         <button
           type="button"
           class="act fold-open-item"
-          title="Open"
+          title="File"
           :aria-expanded="expanded ? 'true' : 'false'"
           :aria-controls="expanded ? controls : undefined"
           @click="toggle"
         >
           <UIcon name="i-lucide-folder-open" class="icon" />
-          <span class="label">Open</span>
+          <span class="label">File</span>
         </button>
       </ScriptsMenu>
+      <!-- Save and its arrow, one split button: the tour's Save step rings both. -->
+      <span class="save-split" data-tour="save">
       <button
         type="button"
         class="act fold-save-item"
         title="Save"
         :aria-disabled="readOnly ? 'true' : undefined"
-        data-tour="save"
         @click="save().catch(() => {})"
       >
         <UIcon name="i-lucide-save" class="icon" />
@@ -299,11 +323,11 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
           class="act save-caret fold-save-item"
           aria-label="Save options"
           title="Save As, Revert to Saved, History"
-          data-tour="save-options"
         >
           <UIcon name="i-lucide-chevron-down" class="caret" />
         </button>
       </MenuButton>
+      </span>
       <ExportMenu v-slot="{ toggle, expanded, controls }">
         <button
           type="button"
@@ -467,12 +491,25 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
   padding: 0 10px;
 }
 /* Save's caret: Save and it read as one split button, the caret a narrow half. */
+.save-split {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
 .fold-save-item:not(.save-caret) {
   padding-right: 6px;
 }
+@media (max-width: 1023.98px) {
+  .fold-save-item:not(.save-caret) {
+    padding-right: 10px;
+  }
+}
 .save-caret {
+  justify-content: center;
+  /* 24px at least: WCAG 2.5.8's target size (axe's target-size). */
+  min-width: 24px;
   margin-left: -4px;
-  padding: 0 5px;
+  padding: 0 6px;
 }
 .ib {
   justify-content: center;
@@ -557,6 +594,11 @@ kbd {
 
 /* One pane, and a bar of icons, below 1024px: the labels drop and the tooltips name the buttons. */
 @media (max-width: 1023.98px) {
+  /* Save's arrow is for the labelled bar: below 1024px the bar is icons, with no room to spare, and
+     the File menu has Save As and Revert to Saved. */
+  .save-caret {
+    display: none;
+  }
   /* The bar never widens the page: what doesn't fit folds into More actions (`fit`). */
   .toolbar {
     padding: 0 8px;

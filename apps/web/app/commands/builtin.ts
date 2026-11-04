@@ -29,8 +29,6 @@ import {
 import { novelStructure } from '@drafter/novel';
 import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
-import { aboutOpen } from '~/about/dialog';
-import { useTechnicalDetails } from '~/about/use-technical-details';
 import { MARKDOWN_WHY, useShowChanges } from '~/compare/baseline';
 import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
@@ -42,11 +40,8 @@ import { useDraftSteps } from '~/drafts/use-steps';
 import { applyTextChanges } from '~/editor/apply-changes';
 import { sayElement } from '~/editor/element-notice';
 import { classicIsOn } from '~/editor/extensions';
-import { firstSceneStart } from '~/editor/first-scene';
-import { SAMPLE_SCRIPTS } from '~/editor/sample-scripts';
 import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
-import { STARTERS } from '~/editor/starters';
 import { DOCUMENT_TYPES } from '~/editor/template';
 import { useTemplate } from '~/editor/use-template';
 import { setWritingMode } from '~/editor/writing-mode';
@@ -59,9 +54,7 @@ import { useNovel } from '~/novel/use-novel';
 import { runMove } from '~/outline/move';
 import { sayOutline } from '~/outline/notice';
 import { openSceneDetails } from '~/outline/scene-details';
-import { treatmentOpen } from '~/outline/treatment';
 import { useOutline } from '~/outline/use-outline';
-import { reportOpen } from '~/report/dialog';
 import { showScaffold } from '~/scaffold/show';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
@@ -76,40 +69,22 @@ import { useSpell } from '~/spell/use-spell';
 import { openCounts } from '~/stats/counts-panel';
 import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { showStats } from '~/stats/tab';
-import { type ExportKind, exportApplies, exportScript, sayInToast } from '~/storage/export';
-import { exportOptionsOpen } from '~/storage/export-options';
+import { type ExportKind, exportApplies } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
 import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen, pickAndOpenAs } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
-import { storyMapOpen } from '~/story-map/options';
 import { markSpeech, speechAt } from '~/story-map/quote-marks';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
-import { requestTour } from '~/tour/state';
-import { updateCheckOpen } from '~/update/use-check';
-import { writeClipboard } from '~/utils/clipboard';
 import { showInInspector, type TabId, WIDE_QUERY } from '~/utils/panes';
-import {
-  COMMAND_DATA,
-  commandsFor,
-  DOWNLOAD_PAGE,
-  HELP_PAGES,
-  helpHref,
-  MARKDOWN_ACTIONS,
-  modeSwitchApplies,
-} from './data';
+import { type Behavior, quietly, type When } from './behavior';
+import { COMMAND_DATA, commandsFor, MARKDOWN_ACTIONS, modeSwitchApplies } from './data';
+import { exportBehaviors } from './export-commands';
+import { helpBehaviors } from './help-commands';
 import { openPalette, togglePalette } from './palette';
 import { type Command, registerCommands } from './registry';
 import { removing } from './remove';
-
-/** What a command does and when it applies; the rest of a `Command` is in `data.ts`. */
-type Behavior = Pick<Command, 'run' | 'enabled' | 'why'> & {
-  /** A title that follows the script, in place of the data's: a stage play's Scene and Stage direction. */
-  liveTitle?: () => string;
-};
-
-const quietly = (action: () => Promise<unknown>) => () => void action().catch(() => {});
 
 let registered = false;
 
@@ -138,7 +113,6 @@ export function registerBuiltinCommands(): void {
   const cuts = useCuts();
   const drafts = useDrafts();
   const steps = useDraftSteps();
-  const technicalDetails = useTechnicalDetails();
   // Made now, so the focus's start and end are announced from the first one on.
   usePassageFocus();
   /**
@@ -167,6 +141,8 @@ export function registerBuiltinCommands(): void {
   const isFountain = () => editor.kind.value === 'fountain';
   const isMarkdown = () => editor.kind.value === 'markdown';
   const exportsHere = (kind: ExportKind) => exportApplies(kind, editor.kind.value);
+  /** When a command applies, for the groups kept in their own modules (help, export). */
+  const when: When = { hasScript, idle, canStart, isFountain, isMarkdown, exportsHere };
 
   // ---- Showing the editor, and the other tabs ---------------------------------------------
 
@@ -495,135 +471,10 @@ export function registerBuiltinCommands(): void {
         if (script.startBlank()) editor.goto(view.state.selection.main.head);
       },
     },
-    // The guided tour (Phase 1 design §4.4): offered once on a first visit, and from here after that. The Help
-    // section of the app menu lists it too. It waits for any dialog or the palette to close.
-    'take-the-tour': { run: requestTour },
-    // The help pages (§4.5), prerendered. Each opens in a new tab, so the writer's script and what is typed stay
-    // as they are (a command runs from a click or a key, which lets a page open one). The tab keeps this one as
-    // its opener (same-origin, so nothing is exposed), and its Back to Drafter closes it and comes back here,
-    // rather than open a second editor, which the two-tab guard would make read-only (`layouts/docs.vue`).
-    ...Object.fromEntries(
-      HELP_PAGES.map((page): [string, Behavior] => [
-        page.id,
-        { run: () => void window.open(helpHref(page), '_blank') },
-      ]),
-    ),
-    // Help → Download the desktop app: the Download page, in a new tab like the help pages. Web only.
-    [DOWNLOAD_PAGE.id]: { run: () => void window.open(helpHref(DOWNLOAD_PAGE), '_blank') },
-    // Help → Sample scripts: a tiny sample of each kind, as a new script of the writer's own with no file, opened
-    // unchanged (its text is where "changed" is measured from). The script that was open is kept, as for any switch.
-    ...Object.fromEntries(
-      SAMPLE_SCRIPTS.map((sample): [string, Behavior] => [
-        `sample-script-${sample.kind}`,
-        {
-          enabled: canStart,
-          run: quietly(async () => {
-            const made = await script.addScript(sample.text, {
-              kind: sample.kind === 'markdown' || sample.kind === 'novel' ? 'markdown' : 'fountain',
-              baseline: sample.text,
-              sampleScript: sample.kind,
-            });
-            await script.open(made.id);
-            // A screenplay starts where the story does, as the first visit does; the others at the top.
-            editor.goto(sample.kind === 'screenplay' ? firstSceneStart(sample.text) : 0);
-          }),
-        },
-      ]),
-    ),
-    // The guided starters (out-the-door design §1.5), from File's New items and Help → Sample scripts:
-    // as a sample script is, a new script of the writer's own with no file, opened unchanged. Each
-    // starts at the top, on its title page, where the lesson does.
-    ...Object.fromEntries(
-      STARTERS.map((starter): [string, Behavior] => [
-        starter.command,
-        {
-          enabled: canStart,
-          run: quietly(async () => {
-            const made = await script.addScript(starter.text, {
-              kind: 'fountain',
-              baseline: starter.text,
-              starter: starter.kind,
-            });
-            await script.open(made.id);
-            editor.goto(0);
-          }),
-        },
-      ]),
-    ),
-    // Help → Check for updates (the service worker's check on the web, the updater's in the desktop app), and
-    // About Drafter (the version, for a bug report, and the links). The desktop app's About Drafter runs this too.
-    'check-for-updates': {
-      run: () => {
-        updateCheckOpen.value = true;
-      },
-    },
-    'about-drafter': {
-      run: () => {
-        aboutOpen.value = true;
-      },
-    },
-    // Help → Report a problem… and Suggest an idea…: the dialog that fills in GitHub's page.
-    'report-problem': {
-      run: () => {
-        reportOpen.value = 'problem';
-      },
-    },
-    'suggest-idea': {
-      run: () => {
-        reportOpen.value = 'idea';
-      },
-    },
-    // Help → Copy technical details: for a GitHub issue, read as the command runs (in its click).
-    'copy-technical-details': {
-      run: async () => {
-        const ok = await writeClipboard(technicalDetails());
-        await sayInToast(
-          ok
-            ? 'Copied the technical details. Paste them into your GitHub issue.'
-            : 'Couldn’t copy. Help → Report a problem… shows the technical details, to select and copy.',
-        );
-      },
-    },
-    // Export: the toolbar's Export menu, the app menu, and the palette run these. What the open kind
-    // exports (`EXPORTS`): a PDF for both, a Markdown document's drawn in Inter Tight (Markdown PDF
-    // design §10); Final Draft for a script; and a Markdown file for both, a script's the whole script
-    // written in the export worker, a document's its own text (Call 24); and an HTML page for both
-    // (HTML export design §1), and an EPUB for both, to read on an e-reader (§10a).
-    'export-pdf': { enabled: () => exportsHere('pdf'), run: () => void exportScript('pdf') },
-    'export-html': { enabled: () => exportsHere('html'), run: () => void exportScript('html') },
-    'export-epub': { enabled: () => exportsHere('epub'), run: () => void exportScript('epub') },
-    'export-fdx': { enabled: () => exportsHere('fdx'), run: () => void exportScript('fdx') },
-    'export-md': { enabled: () => exportsHere('md'), run: () => void exportScript('md') },
-    // A copy of the script as a .fountain, leaving the script on its own file (Save As moves it).
-    'export-fountain': {
-      enabled: () => exportsHere('fountain'),
-      run: () => void exportScript('fountain'),
-    },
-    'export-txt': { run: () => void exportScript('txt') },
-    // The story map (story-map design §1.1): a script's, after its dialog.
-    'export-story-map': {
-      enabled: () => hasScript() && isFountain(),
-      run: () => {
-        storyMapOpen.value = true;
-      },
-    },
-    'export-treatment': {
-      enabled: isFountain,
-      run: () => {
-        treatmentOpen.value = true;
-      },
-    },
-    // How the open script's exports come out (out-the-door design §2.4): scene numbers and the title
-    // page for its PDF, plain text, Final Draft file, and Markdown, and notes for its Markdown alone
-    // (Call 28), and "Let Drafter reopen this file" for its HTML and EPUB (reopenable exports). At
-    // the end of the Export menu. On in a read-only tab, whose dialog shows the choices it can't
-    // change; on for a Markdown document too, whose dialog offers only the last.
-    'export-options': {
-      enabled: () => hasScript(),
-      run: () => {
-        exportOptionsOpen.value = true;
-      },
-    },
+    // Help: the tour, the help pages, the samples and starters, and the Help menu's dialogs.
+    ...helpBehaviors(when),
+    // Export: the toolbar's Export menu, the app menu, and the palette run these.
+    ...exportBehaviors(when),
     // A Markdown outline as a new screenplay (design §6.5): its headings as sections, its items as stubs.
     'screenplay-from-outline': {
       enabled: () => isMarkdown() && canStart(),

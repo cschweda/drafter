@@ -270,7 +270,7 @@ useDocsHead({
     </p>
     <p>
       If the Markdown file holds a screenplay you typed in Fountain, choose
-      <strong>Open as screenplay…</strong> instead (in the palette, the app menu, or the desktop
+      <strong>Open as screenplay…</strong> instead (in the palette, the toolbar’s File menu, or the desktop
       app’s File menu). It opens the file as a new screenplay with its text exactly as written. It
       isn’t saved yet, so Save asks where to put a <code>.fountain</code>, and the Markdown file is
       never changed.

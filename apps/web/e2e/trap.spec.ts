@@ -90,7 +90,7 @@ async function drop(page: Page, name: string, bytes: Uint8Array) {
 
 /** Open a file… with the file input (the browser has no picker). */
 async function chooseWithInput(page: Page, name: string, bytes: Uint8Array) {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   const menu = page.getByRole('group', { name: 'Scripts', exact: true });
   const item = menu.getByRole('button', { name: 'Open a file…' });
   await expect(item).toBeEnabled();

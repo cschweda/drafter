@@ -12,7 +12,7 @@ const chip = (page: Page) => page.locator('.chip.template');
 const chipMenu = (page: Page) => page.getByRole('menu');
 const chipItem = (page: Page, name: string) =>
   chipMenu(page).getByRole('menuitemcheckbox', { name });
-const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const openButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const paletteDialog = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const paletteOption = (page: Page, name: string) =>
@@ -671,14 +671,13 @@ test.describe('Open as screenplay', () => {
     expect(await textOf(page, 'train.md')).toBe(TYPED);
   });
 
-  test('the app menu lists Open as screenplay after Open', async ({ page }) => {
+  test('the File menu lists Open as screenplay after Open a file', async ({ page }) => {
     await start(page);
-    await page.getByRole('button', { name: 'Drafter menu' }).click();
-    const menu = page.getByRole('menu', { name: 'Drafter menu' });
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    const menu = page.getByRole('group', { name: 'Scripts', exact: true });
     await expect(menu).toBeVisible();
-    const shown = (await menu.getByRole('menuitem').allTextContents()).map((n) => n.trim());
-    const at = (label: string) => shown.findIndex((n) => n.startsWith(label));
-    expect(at('Open as screenplay…')).toBe(at('Open…') + 1);
+    const shown = (await menu.locator(':scope > button').allTextContents()).map((n) => n.trim());
+    expect(shown.indexOf('Open as screenplay…')).toBe(shown.indexOf('Open a file…') + 1);
   });
 });
 

@@ -451,7 +451,7 @@ test.describe('script modules', () => {
     const button = countScenes(page);
     if (await button.isVisible()) {
       const box = await button.boundingBox();
-      const open = await page.getByRole('button', { name: 'Open', exact: true }).boundingBox();
+      const open = await page.getByRole('button', { name: 'File', exact: true }).boundingBox();
       expect(Math.round(box?.width ?? 0)).toBe(Math.round(open?.width ?? -1));
       expect(Math.round(box?.height ?? 0)).toBe(Math.round(open?.height ?? -1));
       expect(Math.round(box?.width ?? 0)).toBeGreaterThanOrEqual(24);

@@ -198,7 +198,7 @@ test.describe('one tab at a time', () => {
   }) => {
     const menuOf = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
     const openMenu = async (page: Page) => {
-      await page.getByRole('button', { name: 'Open', exact: true }).click();
+      await page.getByRole('button', { name: 'File', exact: true }).click();
       await expect(menuOf(page)).toBeVisible();
     };
     const a = await openTab(context);
@@ -283,7 +283,7 @@ test.describe('one tab at a time', () => {
     await expect(bar(a)).toBeVisible();
 
     // B is still waiting for A: choosing another script now would take the lock for the wrong one.
-    await b.getByRole('button', { name: 'Open', exact: true }).click();
+    await b.getByRole('button', { name: 'File', exact: true }).click();
     const menu = b.getByRole('group', { name: 'Scripts', exact: true });
     await expect(menu).toBeVisible();
     for (const name of ['Screenplay', 'Stage play']) {
@@ -301,7 +301,7 @@ test.describe('one tab at a time', () => {
     );
     // And the menu works again.
     if (!(await menu.isVisible())) {
-      await b.getByRole('button', { name: 'Open', exact: true }).click();
+      await b.getByRole('button', { name: 'File', exact: true }).click();
     }
     await expect(menu.getByRole('button', { name: 'Stage play', exact: true })).toBeEnabled();
   });
@@ -535,7 +535,7 @@ test.describe('the tab row’s slot', () => {
       await expect(more).toBeHidden();
     }
     // A comparison opens it, in the Inspector (the slot on a phone); closing takes it away.
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     const scripts = page.getByRole('group', { name: 'Scripts', exact: true });
     await scripts.getByRole('button', { name: 'New screenplay' }).click();
     await expect(scripts).toBeHidden();

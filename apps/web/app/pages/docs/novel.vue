@@ -26,7 +26,7 @@ useDocsHead({
     </p>
     <p>
       It sits beside Screenplay and Stage play when you start something new. Choose
-      <strong>New novel</strong> in the Scripts menu or the command palette
+      <strong>New novel</strong> in the File menu or the command palette
       (<kbd>⌘K</kbd>, <kbd>Ctrl+K</kbd> elsewhere), or open <strong>Help → Sample scripts → Novel</strong>
       to see a tiny book first. The manuscript layout, as a PDF or a Word file, comes later, in
       v0.26.1; for now you can print, or export to HTML or EPUB, like any Markdown document.

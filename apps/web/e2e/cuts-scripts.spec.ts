@@ -44,7 +44,7 @@ const BEFORE = script(HALL, CELLAR, YARD, ROOF);
 const NOW = script(HALL, ROOF);
 
 async function newScript(page: Page, kind = 'New screenplay') {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await scriptsMenu(page).getByRole('button', { name: kind }).click();
   await expect(scriptsMenu(page)).toBeHidden();
   await showSource(page);

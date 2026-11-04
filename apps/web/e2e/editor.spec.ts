@@ -164,7 +164,7 @@ test.describe('on a desktop', () => {
     await page.keyboard.press('ControlOrMeta+A');
     expect(await bar()).toContain(focus);
     // Away from the editor, no bar.
-    await page.getByRole('button', { name: 'Open', exact: true }).focus();
+    await page.getByRole('button', { name: 'File', exact: true }).focus();
     await expect(page.locator('.cm-editor.cm-focused')).toHaveCount(0);
     expect(await bar()).toBe('none');
   });

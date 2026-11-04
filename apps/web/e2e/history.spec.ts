@@ -71,7 +71,7 @@ function scriptId(page: Page): Promise<string> {
 }
 
 async function newScreenplay(page: Page) {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await scriptsMenu(page).getByRole('button', { name: 'New screenplay' }).click();
   await expect(scriptsMenu(page)).toBeHidden();
   await showSource(page);

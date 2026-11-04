@@ -11,6 +11,14 @@ export const tourRequests = ref(0);
 /** True while the welcome, the intro card, or a step is showing. `AppTour.vue` sets it. */
 export const tourShowing = ref(false);
 
+/**
+ * True once a visit's welcome is out of the way: there was none (a returning visit, or the tour
+ * was seen), or it was shown and closed (and the tour, if taken, ended). Until then the recovery
+ * copy's toast waits, so a first visit isn't met by a dialog and a warning at once (the
+ * maintainer's fresh-eyes review, 2026-11-04). `AppTour.vue` sets it.
+ */
+export const welcomeSettled = ref(false);
+
 /** Asks for the tour to be offered: its intro card, and then the steps. */
 export function requestTour(): void {
   tourRequests.value++;

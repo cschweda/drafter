@@ -264,7 +264,7 @@ test.describe('the recovery copy', () => {
       );
       // The status bar still says so, and the toast doesn't come back in this visit.
       await expect(status(page)).toContainText('Recovery copy: may be cleared');
-      await page.getByRole('button', { name: 'Open', exact: true }).click();
+      await page.getByRole('button', { name: 'File', exact: true }).click();
       await page
         .getByRole('group', { name: 'Scripts', exact: true })
         .getByRole('button', { name: 'New screenplay' })
@@ -765,7 +765,7 @@ test.describe('the text a closing page left behind', () => {
     // What a tab closing on that script leaves: newer than the stored copy, which is old.
     await leaveStash(page, other.id, `${seeded}LAST WORDS`, now + 5000);
 
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     const menu = page.getByRole('group', { name: 'Scripts', exact: true });
     await menu.locator('li', { hasText: 'Seeded' }).getByRole('button').first().click();
     await expect(editor(page)).toContainText('The stored words.');
@@ -794,7 +794,7 @@ test.describe('the text a closing page left behind', () => {
     const other = (await stored(page)).find((r) => r.source === seeded) as Row;
     await leaveStash(page, other.id, 'A stale stash.', now - 5000);
 
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     const menu = page.getByRole('group', { name: 'Scripts', exact: true });
     await menu.locator('li', { hasText: 'Seeded' }).getByRole('button').first().click();
     await expect(editor(page)).toContainText('The stored words.');

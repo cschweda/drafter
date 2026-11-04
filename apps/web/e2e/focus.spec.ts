@@ -278,7 +278,7 @@ test.describe('focus mode', () => {
 
   test('works in a Markdown document', async ({ page }) => {
     await start(page);
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     const menu = page.getByRole('group', { name: 'Scripts', exact: true });
     await menu.getByRole('button', { name: 'New Markdown document' }).click();
     await expect(menu).toBeHidden();
@@ -344,7 +344,7 @@ test.describe('what the corner keeps from the bars that are gone', () => {
       'Title: The Call\n\nINT. KITCHEN - NIGHT\n\nA phone rings.\n',
     );
     await nextFileName(page, 'The Call.fountain');
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'Open a file…' })
@@ -367,7 +367,7 @@ test.describe('what the corner keeps from the bars that are gone', () => {
     const v1 = 'Title: The Call\n\nINT. KITCHEN - NIGHT\n\nA phone rings.\n';
     await putFile(page, 'The Call.fountain', v1);
     await nextFileName(page, 'The Call.fountain');
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'Open a file…' })

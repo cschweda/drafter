@@ -28,8 +28,6 @@ const chipItems = (page: Page) => page.getByRole('menu').getByRole('menuitem');
 const sample = (page: Page) => chip(page).or(bar(page));
 const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const script = (page: Page) => page.getByRole('region', { name: 'Script' });
-const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
-const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
 // Help is its own menu in the top bar (fresh-look Task 3b).
 const helpButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: 'Help' });
 const helpMenu = (page: Page) => page.getByRole('menu', { name: 'Help' });
@@ -199,9 +197,10 @@ test.describe('a first visit', () => {
     expect((await stored(page)).filter((p) => !p.sample)).toHaveLength(1);
 
     // From the sample again: Open a file… reads a file as a script of its own.
-    await page.getByRole('button', { name: 'Drafter menu' }).click();
-    await menu(page)
-      .getByRole('menuitem', { name: /^Open sample: Screenplay/ })
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'Screenplay', exact: true })
       .click();
     await expect(sample(page)).toBeVisible();
     const chooser = page.waitForEvent('filechooser');
@@ -260,21 +259,20 @@ test.describe('a first visit', () => {
     ).toEqual([]);
   });
 
-  test('leaves the cursor in the editor after New from the app menu and the Scripts menu', async ({
-    page,
-  }) => {
+  test('leaves the cursor in the editor after New from the File menu, twice', async ({ page }) => {
     await removePickers(page);
     await start(page);
-    // The app menu, then the toolbar's Open menu: on a phone each is chosen with another tab
-    // showing, and the editor takes the focus when the new script appears.
-    await mark(page).click();
-    await menu(page)
-      .getByRole('menuitem', { name: /^New stage play/ })
+    // The toolbar's File menu, twice: on a phone the second is chosen with another tab showing,
+    // and the editor takes the focus when the new script appears.
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'New stage play' })
       .click();
     await expect.poll(() => text(page)).toContain('Title: Untitled Play');
     await expect(editor(page)).toBeFocused();
     if (!wide(page)) await page.getByRole('tab', { name: 'Script' }).first().click();
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New screenplay' })
@@ -438,12 +436,13 @@ test.describe('a returning visit', () => {
   });
 });
 
-// The "may be cleared" toast on a first visit at a phone's size (fresh-look design §3.5): the
-// welcome sits above it, and it leaves the bottom row (the status bar) to be tapped.
+// The "may be cleared" toast on a first visit at a phone's size (fresh-look design §3.5): it waits
+// for the welcome to close (the fresh-eyes review, 2026-11-04), so the two never show at once, and
+// it leaves the bottom row (the status bar) to be tapped.
 test.describe('a first visit on a phone, with the storage toast', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test('the welcome sits above the toast, and the bottom row stays clickable', async ({ page }) => {
+  test('the toast waits for the welcome, and the bottom row stays clickable', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 740 });
     await page.addInitScript(() => {
       Object.defineProperty(navigator, 'storage', {
@@ -455,14 +454,9 @@ test.describe('a first visit on a phone, with the storage toast', () => {
     const welcome = page.getByRole('alertdialog', { name: 'Welcome to Drafter' });
     const toast = page.locator('[data-warning="not-persistent"]');
     await expect(welcome).toBeVisible();
-    await expect(toast).toBeVisible();
-    // Where the toast is, the welcome (or its backdrop) is on top.
-    const covered = await toast.evaluate((el) => {
-      const box = el.getBoundingClientRect();
-      const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
-      return !!top && !el.contains(top);
-    });
-    expect(covered).toBe(true);
+    // The status bar says so meanwhile; the toast isn't drawn over or beside the welcome.
+    await expect(page.getByRole('button', { name: 'Recovery copy: may be cleared' })).toBeVisible();
+    await expect(toast).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(welcome).toBeHidden();
     await expect(toast).toBeVisible();

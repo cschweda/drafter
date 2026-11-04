@@ -8,7 +8,7 @@ import { useEditor } from '~/editor/session';
 import { isFirstVisit, useScript } from '~/storage/script';
 import { announceTour } from '~/tour/announce';
 import { watchScrollFocus } from '~/tour/scroll-focus';
-import { tourRequests, tourShowing, whenClear } from '~/tour/state';
+import { tourRequests, tourShowing, welcomeSettled, whenClear } from '~/tour/state';
 import {
   buildSteps,
   INTRO_SLIDES,
@@ -68,6 +68,10 @@ const stage = ref<'welcome' | 'intro' | null>(null);
 watchEffect(() => {
   tourShowing.value = stage.value !== null || isActive.value;
 });
+// The welcome, and the tour if it was taken from there, are over: the warnings it held back may show.
+watch(tourShowing, (now, was) => {
+  if (was && !now) welcomeSettled.value = true;
+});
 
 // The intro card's text gets a tab stop while it scrolls (tour/scroll-focus.ts).
 let stopScrollFocus: (() => void) | null = null;
@@ -126,6 +130,8 @@ watch(
   () => ready.value && isFirstVisit(),
   (first) => {
     if (first && !hasCompletedTour.value) void offer(true);
+    // No welcome on this visit: nothing to wait for.
+    else if (ready.value) welcomeSettled.value = true;
   },
   { immediate: true },
 );

@@ -29,7 +29,7 @@ const LAMP = `<?xml version="1.0" encoding="UTF-8"?>
 `;
 
 const editor = (page: Page) => page.locator('.cm-content');
-const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const openButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
 const scripts = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const alert = (page: Page) => status(page).getByRole('alert');
@@ -266,7 +266,9 @@ test.describe('exporting as Final Draft', () => {
     const appMenu = page.getByRole('menu', { name: 'Drafter menu' });
     await page.getByRole('button', { name: 'Drafter menu' }).click();
     await expect(appMenu.getByRole('menuitem', { name: /^Export as Final Draft/ })).toBeVisible();
-    await appMenu.getByRole('menuitem', { name: /^New Markdown document/ }).click();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await scripts(page).getByRole('button', { name: 'New Markdown document' }).click();
     await expect(editor(page)).toContainText('# Untitled');
 
     await exportButton(page).click();

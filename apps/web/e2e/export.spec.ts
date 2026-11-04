@@ -353,7 +353,7 @@ test.describe('a Markdown document’s PDF', () => {
     const { width, height } = (await PDFDocument.load(bytes)).getPage(0).getSize();
     expect([width, height]).toEqual([595.28, 841.89]);
     // A screenplay's PDF keeps its template's paper.
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New screenplay' })
@@ -673,6 +673,7 @@ test.describe('export options', () => {
       'HTML (.html)',
       'EPUB (.epub)',
       'Story map (.html)…',
+      'Fountain (.fountain)',
       'Plain text (.txt)',
       'Final Draft (.fdx)',
       'Markdown (.md)',
@@ -819,7 +820,7 @@ test.describe('export options', () => {
       expect(found?.kind).toBe('fountain');
       expect(new TextDecoder().decode(found?.bytes)).toContain('INT. KITCHEN - NIGHT');
       // The file opens again: the script inside comes in as a new script, as it was.
-      await page.getByRole('button', { name: 'Open', exact: true }).click();
+      await page.getByRole('button', { name: 'File', exact: true }).click();
       const chooser = page.waitForEvent('filechooser');
       await page
         .getByRole('group', { name: 'Scripts', exact: true })

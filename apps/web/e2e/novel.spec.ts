@@ -6,7 +6,7 @@ import { expect, type Page, test } from '@playwright/test';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const status = (page: Page) => page.locator('[data-tour="status"]');
-const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const openButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const paletteDialog = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const paletteOption = (page: Page, name: string) =>

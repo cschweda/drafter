@@ -1,29 +1,19 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
-import { SAMPLES } from '~/editor/samples';
 import { useEditor } from '~/editor/session';
-import { STARTER_KINDS } from '~/editor/starter-kinds';
-import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
 import { useTemplateMenu } from '~/editor/template-menu';
-import { isNovel } from '~/novel/kind';
 import { EXPORTS } from '~/storage/export';
-import { useGuard } from '~/storage/guard';
-import { kindOf, type Project } from '~/storage/projects';
 import { revertNotice } from '~/storage/save';
 import { useScript } from '~/storage/script';
 
 // The app menu (Phase 1 design §9.1): the Drafter mark opens it. Every item runs its registered
 // command (`useCommandMenu`), so this menu, the palette, and the keys never disagree; an item
-// whose command is off shows disabled. The recent scripts are the one list that isn't commands:
-// they open a script by id, as the Scripts menu does. Help is a menu of its own in the top bar
-// (`HelpMenu.vue`, fresh-look Task 3b), so it isn't a section here.
+// whose command is off shows disabled. Since 2026-11-04 it holds the script's own things (its
+// template, its history and drafts, its exports, stats) and Settings: starting, opening, and saving
+// a script are the toolbar's File menu and Save's arrow, which this menu repeated (the maintainer's
+// fresh-eyes review). Help is a menu of its own in the top bar (`HelpMenu.vue`, fresh-look Task 3b).
 const script = useScript();
 const editor = useEditor();
-const { taking } = useGuard();
-
-/** How many recent scripts the menu lists. */
-const RECENT = 8;
-const recent = ref<Project[]>([]);
 
 const mark = ref<HTMLElement | null>(null);
 const { entry, choose, onCloseAutoFocus } = useCommandMenu(mark);
@@ -46,31 +36,6 @@ const templateSection = computed<DropdownMenuItem[]>(() => [
   ...templateNote.value,
   ...templateItems.value,
 ]);
-
-// A script that is not open can be switched to while nothing else is switching.
-const canSwitch = computed(() => !!script.project.value && !script.busy.value && !taking.value);
-
-const recentItems = computed<DropdownMenuItem[]>(() => {
-  if (recent.value.length === 0) {
-    return [{ type: 'label', label: 'Scripts you start are kept here.' }];
-  }
-  return recent.value.map((p) => {
-    const current = script.project.value?.id === p.id;
-    return {
-      label: current ? `${p.title} (open now)` : p.title,
-      description: typeNameOf(kindOf(p), p.templateId, {
-        novel: kindOf(p) === 'markdown' && isNovel(p.source),
-      }),
-      icon: current ? 'i-lucide-check' : 'i-lucide-file',
-      disabled: !canSwitch.value,
-      onSelect: () => {
-        choose(true);
-        if (current) return;
-        script.open(p.id).catch(() => {});
-      },
-    };
-  });
-});
 
 // A Fountain script exports as a PDF, an HTML page, an EPUB, plain text, a Final Draft file, or
 // Markdown; a Markdown document as a PDF, an HTML page, an EPUB, its Markdown file, or plain text
@@ -97,27 +62,13 @@ const EXPORT_ICONS: Record<string, string> = {
 };
 
 const items = computed<DropdownMenuItem[][]>(() => [
-  [
-    ...DOCUMENT_TYPES.flatMap((type) => entry(`new-${type.newKind}`, type.newIcon, true)),
-    ...STARTER_KINDS.flatMap((starter) => entry(starter.command, 'i-lucide-graduation-cap', true)),
-    ...entry('open', 'i-lucide-folder-open'),
-    ...entry('open-as-screenplay', 'i-lucide-clapperboard'),
-  ],
   templateSection.value,
-  [{ type: 'label', label: 'Recent scripts' }, ...recentItems.value],
   [
-    { type: 'label', label: 'Samples' },
-    ...SAMPLES.flatMap((sample) => entry(`open-sample-${sample.kind}`, 'i-lucide-file-text', true)),
-  ],
-  [
-    ...entry('save', 'i-lucide-save'),
-    ...entry('save-as', 'i-lucide-save-all'),
-    ...entry('revert-to-saved', 'i-lucide-undo-2', true),
     ...entry('history', 'i-lucide-history'),
     ...entry('start-draft', 'i-lucide-milestone'),
     ...entry('drafts', 'i-lucide-milestone'),
     ...entry('cuts', 'i-lucide-scissors'),
-    // File, as in the palette: Start blank only while a first document still has its sample's untouched text.
+    // Start blank only while a first document still has its sample's untouched text.
     ...(script.canStartBlank.value ? entry('start-blank', 'i-lucide-eraser', true) : []),
   ],
   [
@@ -129,33 +80,11 @@ const items = computed<DropdownMenuItem[][]>(() => [
   ],
   [...entry('show-stats', 'i-lucide-chart-column'), ...entry('settings', 'i-lucide-settings')],
 ]);
-
-async function readRecent() {
-  try {
-    recent.value = (await script.scripts()).slice(0, RECENT);
-  } catch {
-    recent.value = [];
-  }
-}
-async function onOpen(open: boolean) {
-  if (open) await readRecent();
-}
-// Read again whenever another script opens, not only as the menu opens: else the menu opens on the
-// list as it was when it last opened, and the read that follows moves its rows a moment later,
-// under a click on its way to one.
-watch(
-  () => script.project.value?.id,
-  () => void readRecent(),
-);
 </script>
 
 <template>
   <!-- MenuButton: non-modal, with Tab closing the menu and giving focus back to the mark. -->
-  <MenuButton
-    :items="items"
-    :content="{ align: 'start', onCloseAutoFocus }"
-    @update:open="onOpen"
-  >
+  <MenuButton :items="items" :content="{ align: 'start', onCloseAutoFocus }">
     <button
       ref="mark"
       type="button"

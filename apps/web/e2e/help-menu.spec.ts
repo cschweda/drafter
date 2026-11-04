@@ -11,7 +11,6 @@ const VERSION = (
 ).version;
 
 const editor = (page: Page) => page.locator('.cm-content');
-const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
 // Help is its own menu in the top bar (fresh-look Task 3b).
 const helpButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: 'Help' });
 const helpMenu = (page: Page) => page.getByRole('menu', { name: 'Help' });
@@ -282,17 +281,20 @@ test.describe('the guided starters', () => {
     expect(made?.sampleScript).toBeUndefined();
     // Opened unchanged: the title has no unsaved mark, and the Scripts menu lists it.
     await expect(page).toHaveTitle('Your Title Here — Drafter');
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     const scripts = page.getByRole('group', { name: 'Scripts', exact: true });
     await expect(scripts).toContainText('Your Title Here');
   });
 
-  test('New guided stage play from the app menu opens the play with the stage-play template', async ({
+  test('New guided stage play from the File menu opens the play with the stage-play template', async ({
     page,
   }) => {
     await start(page);
-    await mark(page).click();
-    await item(page, /^New guided stage play/).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'New guided stage play' })
+      .click();
     await expect.poll(() => wholeText(page)).toContain('> CHARACTERS <');
     await expect.poll(() => cursorAt(page)).toBe(0);
     const made = (await stored(page)).find((r) => r.starter === 'stage-play');

@@ -140,7 +140,7 @@ export function buildSteps(
       target: at('export'),
       title: 'Export, and open almost anything',
       // Folded, the card says where it went in place of the last clause, to fit the card.
-      content: `Export a PDF, a Final Draft file (.fdx), Markdown, plain text, a web page, or an e-book. Open, in the Drafter menu, reads Final Draft, Highland, Fade In, Markdown, and plain text${
+      content: `Export a PDF, a Final Draft file (.fdx), Markdown, plain text, a web page, or an e-book. File → Open a file… reads Final Draft, Highland, Fade In, Markdown, and plain text${
         folded.has('export')
           ? `.${where('export')}`
           : ', so a script can come from the apps people use and go back to them.'

@@ -1,16 +1,21 @@
 <script setup lang="ts">
+import { commandById } from '~/commands/registry';
 import DDialog from '~/components/ui/DDialog.vue';
 import { SAMPLES, type SampleKind } from '~/editor/sample-kinds';
+import { STARTER_KINDS } from '~/editor/starter-kinds';
 import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
 import { isNovel } from '~/novel/kind';
 import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
 import { kindOf, type Project } from '~/storage/projects';
-import { READ_ONLY_HINT, saveAs } from '~/storage/save';
+import { canRevert, READ_ONLY_HINT, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
 
-// The Open menu (Phase 1 design §9.3): new scripts, this browser's scripts, and the samples. The
-// trigger is the toolbar's Open button, drawn by the toolbar and given through the slot.
+// The File menu (Phase 1 design §9.3; called Open until 2026-11-04, when it was named for what it
+// holds): new scripts and the guided starters, Open and Open as screenplay, Save As and Revert
+// to Saved, this
+// browser's scripts, and the samples. The trigger is the toolbar's File button, drawn by the
+// toolbar and given through the slot.
 // The same actions are commands too (`commands/builtin.ts`), with their keys, in the palette.
 const script = useScript();
 const { project, busy } = script;
@@ -20,6 +25,9 @@ const idle = computed(() => !!project.value && !busy.value && !taking.value);
 // A tab that only shows a script another tab is editing may show old text: it starts, saves, and
 // opens nothing until the writer chooses "Edit here instead". Switching to a script stays possible.
 const canStart = computed(() => idle.value && !readOnly.value);
+
+// Read as the menu draws, as the command's own `enabled` is.
+const revertable = computed(() => canRevert());
 
 const open = ref(false);
 const scripts = ref<Project[]>([]);
@@ -78,6 +86,11 @@ async function run(action: () => Promise<unknown>, refocus = true) {
     return;
   }
   close(refocus);
+}
+
+/** Runs a registered command from the menu, as the Drafter menu and the palette do. */
+async function runCommand(id: string) {
+  await commandById(id)?.run();
 }
 
 const isCurrent = (p: Project) => project.value?.id === p.id;
@@ -199,6 +212,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       >
         <UIcon :name="type.newIcon" class="icon" />{{ type.newTitle }}
       </button>
+      <!-- The guided starters: a first screenplay or stage play that teaches as it goes. -->
+      <button
+        v-for="starter in STARTER_KINDS"
+        :key="starter.command"
+        type="button"
+        class="item"
+        :disabled="!canStart"
+        @click="run(() => runCommand(starter.command), false)"
+      >
+        <UIcon name="i-lucide-graduation-cap" class="icon" />{{ starter.title }}
+      </button>
       <button
         type="button"
         class="item"
@@ -207,8 +231,26 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       >
         <UIcon name="i-lucide-folder-open" class="icon" />Open a file…
       </button>
+      <!-- Open's picker, but a .md or .markdown comes in as a new screenplay (Call 23). -->
+      <button
+        type="button"
+        class="item"
+        :disabled="!idle"
+        @click="run(() => runCommand('open-as-screenplay'), false)"
+      >
+        <UIcon name="i-lucide-clapperboard" class="icon" />Open as screenplay…
+      </button>
       <button type="button" class="item" :disabled="busy || readOnly" @click="run(() => saveAs())">
         <UIcon name="i-lucide-save-all" class="icon" />Save As…
+      </button>
+      <!-- Off with no saved file to go back to, or no changes; it says what it did, and undo reverses it. -->
+      <button
+        type="button"
+        class="item"
+        :disabled="!revertable"
+        @click="run(() => runCommand('revert-to-saved'), false)"
+      >
+        <UIcon name="i-lucide-undo-2" class="icon" />Revert to Saved
       </button>
       <p v-if="readOnly" class="message">{{ READ_ONLY_HINT }}</p>
 
