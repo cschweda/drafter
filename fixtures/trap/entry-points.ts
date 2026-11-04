@@ -10,7 +10,8 @@ export type Entry =
   | 'desktop-modules'
   | 'beside-read'
   | 'mcp'
-  | 'classic';
+  | 'classic'
+  | 'novel';
 
 export interface EntryPoint {
   id: Entry;
@@ -73,6 +74,12 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
     code: 'packages/mcp/src (paths.ts, load.ts, inside.ts, tools/) → @drafter/archive (notAScript, reopenFormatOf, embeddedSource), @drafter/archive/node (readCapped, strictText), and each format’s reader',
     harness:
       'fixtures/trap/harness.test.ts (in the trap worker, through the SDK’s in-memory transport)',
+  },
+  {
+    id: 'novel',
+    what: 'A Markdown file read as a novel: its parts, chapters, and sections found (`novelStructure`), the facts kept in its metadata comment read (`readFacts`), and one chapter or section moved. Every Markdown trap that opens goes through it, as the text Open makes and, where it has other line breaks, as the raw text too. The move must keep every non-blank line.',
+    code: 'packages/novel/src (`novelStructure`, `readFacts`, `downTarget`/`upTarget`, `moveNode`)',
+    harness: 'fixtures/trap/harness.test.ts (in the trap worker)',
   },
   {
     id: 'classic',

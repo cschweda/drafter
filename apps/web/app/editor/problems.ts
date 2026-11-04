@@ -7,6 +7,7 @@ import { lint, STRICT_RULES } from '@drafter/lint';
 import { type ComputedRef, computed, type ShallowRef, shallowRef } from 'vue';
 import { moduleProblems } from '../modules/problems';
 import { reportModuleFailure } from '../modules/registry';
+import { mayHaveOrphans, ORPHAN_RULE, orphanCount, orphanMessage } from '../novel/orphans';
 import { useSettings } from '../settings/settings';
 import { useSnapshots } from '../snapshots/use-snapshots';
 import { type SpellingRow, spellingReader } from '../spell/rows';
@@ -96,6 +97,9 @@ export function problemsLabel(count: number): string {
   return count === 1 ? '1 problem' : `${count} problems`;
 }
 
+/** How long a novel's orphaned notes wait to be counted after the last edit: a book is read whole. */
+export const ORPHAN_DELAY_MS = 400;
+
 const problems = shallowRef<readonly Problem[]>([]);
 /** The spellcheck's marks as rows, read with the problems (Plan D, Call 13). */
 const marked = shallowRef<readonly SpellingRow[]>([]);
@@ -127,8 +131,35 @@ const sameRows = (a: readonly SpellingRow[], b: readonly SpellingRow[]) =>
 /** Reads the lint state and the spelling marks of the one editor, after every update. */
 function start() {
   started = true;
-  const { view, onUpdate, locked } = useEditor();
+  const { view, onUpdate, locked, kind } = useEditor();
   const readSpelling = spellingReader();
+  // A novel's orphaned notes: counted a moment after the last edit (the book is read whole), for
+  // the document as it stood then, and listed as one line of advice at the metadata comment.
+  let orphans = 0;
+  let orphanTimer: ReturnType<typeof setTimeout> | undefined;
+  let orphanDoc: EditorState['doc'] | undefined;
+
+  function watchOrphans(state: EditorState) {
+    if (kind.value !== 'markdown' || !mayHaveOrphans(state.doc)) {
+      clearTimeout(orphanTimer);
+      orphanTimer = undefined;
+      orphanDoc = undefined;
+      if (orphans !== 0) orphans = 0;
+      return;
+    }
+    if (state.doc === orphanDoc) return;
+    orphanDoc = state.doc;
+    clearTimeout(orphanTimer);
+    orphanTimer = setTimeout(() => {
+      orphanTimer = undefined;
+      const now = view.state;
+      const count = kind.value === 'markdown' ? orphanCount(now.doc) : 0;
+      if (count !== orphans) {
+        orphans = count;
+        read(now);
+      }
+    }, ORPHAN_DELAY_MS);
+  }
 
   function read(state: EditorState) {
     const found: Omit<Problem, 'key'>[] = [];
@@ -155,6 +186,22 @@ function start() {
         }),
       });
     });
+    watchOrphans(state);
+    const advice = orphanMessage(kind.value === 'markdown' ? orphans : 0);
+    if (advice !== null) {
+      // At the comment that holds the notes: the last line with text on it.
+      let n = state.doc.lines;
+      while (n > 1 && state.doc.line(n).text.trim() === '') n--;
+      const at = state.doc.line(n);
+      found.push({
+        ruleId: ORPHAN_RULE,
+        severity: 'info',
+        message: advice,
+        from: at.from,
+        to: at.to,
+        line: at.number,
+      });
+    }
     found.sort((a, b) => a.from - b.from || a.to - b.to);
     const keys = occurrenceKeys(found.map((p) => p.ruleId));
     const keyed = found.map((p, i) => ({ ...p, key: keys[i] as string }));

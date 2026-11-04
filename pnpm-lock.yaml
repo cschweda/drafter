@@ -397,6 +397,9 @@ importers:
       '@drafter/notes':
         specifier: workspace:*
         version: link:../notes
+      '@drafter/novel':
+        specifier: workspace:*
+        version: link:../novel
       '@drafter/outline':
         specifier: workspace:*
         version: link:../outline

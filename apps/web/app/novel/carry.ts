@@ -70,19 +70,22 @@ export function touchesStructure(tr: Transaction): boolean {
  * for the text after an edit is the one it (or the next frame's refresh) wants for the text before
  * the next, so a book is parsed once for each text, not once for each use of it.
  */
-const trees = new WeakMap<Text, NovelTree>();
+const trees = new WeakMap<Text, { structure: (text: string) => NovelTree; tree: NovelTree }>();
 
-/** The structure of `doc` (whose text is `text`), read only if no one has read it yet. */
+/**
+ * The structure of `doc` (whose text is `text`), read only if no one has read it yet with this
+ * reader: the cache is keyed on the document and on the reader, so a tree another reader made is
+ * not served (in the app there is one reader, `novelStructure`).
+ */
 export function structureOf(
   doc: Text,
   text: string,
   structure: (text: string) => NovelTree = novelStructure,
 ): NovelTree {
-  let tree = trees.get(doc);
-  if (!tree) {
-    tree = structure(text);
-    trees.set(doc, tree);
-  }
+  const kept = trees.get(doc);
+  if (kept && kept.structure === structure) return kept.tree;
+  const tree = structure(text);
+  trees.set(doc, { structure, tree });
   return tree;
 }
 
@@ -91,13 +94,16 @@ export function structureOf(
  * `newDoc`: the filter's extra change rewrites only the metadata comment, which `novelStructure`
  * does not read, so one parse serves both documents.
  */
-const sameStructure = Annotation.define<NovelTree>();
+const sameStructure = Annotation.define<{
+  structure: (text: string) => NovelTree;
+  tree: NovelTree;
+}>();
 
 const structureCache = StateField.define<null>({
   create: () => null,
   update(value, tr) {
-    const tree = tr.annotation(sameStructure);
-    if (tree) trees.set(tr.newDoc, tree);
+    const same = tr.annotation(sameStructure);
+    if (same) trees.set(tr.newDoc, same);
     return value;
   },
 });
@@ -185,7 +191,11 @@ export function carryNovelFacts({ active, structure = novelStructure }: CarryOpt
     const stays = change.from === findMarkdownMeta(after)?.from;
     return [
       tr,
-      { changes: change, sequential: true, annotations: stays ? sameStructure.of(tree) : [] },
+      {
+        changes: change,
+        sequential: true,
+        annotations: stays ? sameStructure.of({ structure, tree }) : [],
+      },
     ];
   });
   return [filter, structureCache];

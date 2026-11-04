@@ -16,7 +16,7 @@ import { type Loaded, load, titleField } from '../load';
 import { answerBudget, clipText, fitting, itemCost, pageOf, partsOf } from '../paging';
 import { Refusal } from '../paths';
 import { oneScene } from '../scenes';
-import { visible, visibleMarkdown } from '../visible';
+import { visible, visibleMarkdown, visibleMarkdownIn } from '../visible';
 import type { ToolContext, ToolDef } from './index';
 import { characterName, cursor, include, leftOut, path, restarted, sceneRef } from './schemas';
 
@@ -244,7 +244,19 @@ const overviewOutput = z.object({
   // A Markdown document.
   title: z.string().nullable().optional(),
   sections: z
-    .array(z.object({ n: z.number().int(), title: z.string(), words: z.number().int() }))
+    .array(
+      z.object({
+        n: z.number().int(),
+        title: z.string(),
+        words: z.number().int(),
+        // A novel's: what each of its parts, chapters, and sections is, and what the writer keeps.
+        kind: z.enum(['part', 'chapter', 'section']).optional(),
+        status: z.enum(['todo', 'draft', 'revised', 'done']).optional(),
+        synopsis: z.string().optional(),
+        synopsis_cut: z.literal(true).optional(),
+        target: z.number().int().optional(),
+      }),
+    )
     .optional(),
   words: z.number().int().optional(),
   left_out: leftOut,
@@ -317,12 +329,27 @@ function markdownOverview(
   include: Include,
 ): OverviewOutput {
   const { text, sections } = loaded;
-  const items = sections.map((section, i) => ({
-    n: i + 1,
-    title: clipText(section.title, TEXT_LIMITS.heading).text,
-    words: sectionWords(visibleMarkdown(text, section.from, section.to)),
-  }));
-  const before = visibleMarkdown(text, 0, sections[0]?.from ?? text.length);
+  const shown = visibleMarkdownIn(text);
+  const items = sections.map((section, i) => {
+    const unit = loaded.novel?.[i];
+    const synopsis =
+      unit?.synopsis === undefined ? undefined : clipText(unit.synopsis, TEXT_LIMITS.synopsis);
+    return {
+      n: i + 1,
+      title: clipText(section.title, TEXT_LIMITS.heading).text,
+      words: sectionWords(shown(section.from, section.to)),
+      ...(unit
+        ? {
+            kind: unit.kind,
+            ...(unit.status === undefined ? {} : { status: unit.status }),
+            ...(synopsis ? { synopsis: synopsis.text } : {}),
+            ...(synopsis?.cut ? { synopsis_cut: true as const } : {}),
+            ...(unit.target === undefined ? {} : { target: unit.target }),
+          }
+        : {}),
+    };
+  });
+  const before = shown(0, sections[0]?.from ?? text.length);
   const words = wordsIn(before) + items.reduce((sum, s) => sum + s.words, 0);
   const now = cursorBase('script_overview', loaded, { script: args.script, include });
   const start = startOf(ctx, args.cursor, now, items.length);
@@ -493,7 +520,7 @@ export const scriptOverview: ToolDef<OverviewInput, OverviewOutput> = {
   name: 'script_overview',
   title: 'Script overview',
   description:
-    'The shape of one script: its title page (never the contact), template, pages, and running time; its acts with their synopses; every scene with its heading, place, time of day, act, page, length, synopsis, and who is in it; every character’s speeches, words, share of the talking, scenes, long absences, and who they are most often with; its places; what is still to be written; and a count of problems. For a Markdown document, its title and sections. Notes and the boneyard are left out unless include asks for them. Pass `next` back as `cursor` for more scenes. A field ending `_cut` means its text was too long and only its start is shown; one ending `_more` counts what didn’t fit.',
+    'The shape of one script: its title page (never the contact), template, pages, and running time; its acts with their synopses; every scene with its heading, place, time of day, act, page, length, synopsis, and who is in it; every character’s speeches, words, share of the talking, scenes, long absences, and who they are most often with; its places; what is still to be written; and a count of problems. For a Markdown document, its title and sections; for a novel, its parts, chapters, and sections, each with its words and the status, synopsis, and word target the writer keeps for it. Notes and the boneyard are left out unless include asks for them. Pass `next` back as `cursor` for more scenes. A field ending `_cut` means its text was too long and only its start is shown; one ending `_more` counts what didn’t fit.',
   input: overviewInput,
   output: overviewOutput,
   run: overview,

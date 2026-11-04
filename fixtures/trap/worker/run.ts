@@ -22,6 +22,14 @@ import { parse } from '@drafter/fountain';
 import { mergeCuts, readCutsBytes, readDraftBytes, skippedLine } from '@drafter/history';
 import { paginate } from '@drafter/layout';
 import { MarkedTooDensely, NestedTooDeeply, parseMarkdown } from '@drafter/markdown';
+import {
+  downTarget,
+  moveNode,
+  novelStructure,
+  orphanedFacts,
+  readFacts,
+  upTarget,
+} from '@drafter/novel';
 import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
 import {
   buildStoryMap,
@@ -47,6 +55,7 @@ export type Job =
   | { kind: 'cli'; cwd: string; args: string[] }
   | { kind: 'modules'; dir: string }
   | { kind: 'beside'; format: string; bytes: Uint8Array }
+  | { kind: 'novel'; bytes: Uint8Array }
   | McpJob;
 
 /**
@@ -499,8 +508,46 @@ async function runMcp(job: McpJob): Promise<Omit<Answer, 'ms' | 'kept'>> {
   }
 }
 
+/**
+ * A Markdown file read as a novel: its structure, its kept facts, and one move of the first node
+ * (down, else up). The move must keep every non-blank line, in the file's own line break, and the
+ * facts must never throw. Tried on the text Open makes and, if it has other line breaks, on the raw.
+ */
+function readNovel(bytes: Uint8Array): Happened {
+  const text = decoded(bytes);
+  if (typeof text !== 'string') return text;
+  const raw = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+  for (const each of text === raw ? [text] : [text, raw]) {
+    const tree = novelStructure(each);
+    const facts = readFacts(each);
+    orphanedFacts(facts, tree);
+    const first = tree.nodes[0];
+    if (!first) continue;
+    const target = downTarget(tree, first.id) ?? upTarget(tree, first.id);
+    if (!target) continue;
+    const move = moveNode(each, tree, first.id, target);
+    if (!move) continue;
+    let moved = each;
+    for (const change of [...move.changes].reverse())
+      moved = moved.slice(0, change.from) + change.insert + moved.slice(change.to);
+    const lines = (t: string) =>
+      t
+        .split(/\r\n|\n|\r/)
+        .filter((line) => line.trim() !== '')
+        .sort();
+    const before = lines(each);
+    const after = lines(moved);
+    if (before.length !== after.length || before.some((line, i) => line !== after[i]))
+      throw new Error('a move changed the lines of the book');
+    if (moved.trimEnd().endsWith('-->') !== each.trimEnd().endsWith('-->'))
+      throw new Error('a move changed the end of the book');
+  }
+  return { kind: 'opened', text, message: '' };
+}
+
 async function work(job: Job): Promise<Omit<Answer, 'ms' | 'kept'>> {
   if (job.kind === 'mcp') return runMcp(job);
+  if (job.kind === 'novel') return { happened: readNovel(job.bytes) };
   if (job.kind === 'beside') return { happened: await readBeside(job.format, job.bytes) };
   if (job.kind === 'package') {
     const happened = await readPackage(job.format, job.bytes);

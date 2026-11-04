@@ -214,8 +214,9 @@ describe('directUses', () => {
     // since the story map (the app and the CLI both make one), and three more since Drafter for
     // Claude (drafter-mcp reads archives, drafts and cuts, problems, and the story map), and one more
     // since the novel (it reads Markdown's metadata comment), and one more since the app's Outline
-    // for a novel.
-    expect(edges).toBeLessThanOrEqual(40);
+    // for a novel, and one more since Drafter for Claude reads a novel's parts, chapters, and
+    // sections.
+    expect(edges).toBeLessThanOrEqual(41);
   });
 });
 

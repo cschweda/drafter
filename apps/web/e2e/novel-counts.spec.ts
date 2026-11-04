@@ -270,11 +270,42 @@ test.describe('Stats for a novel', () => {
   });
 });
 
+// Notes kept for a passage whose heading is gone (Novel plan, Task 9): one line of advice in
+// Problems, not counted as a problem.
+test.describe('A novel’s orphaned notes', () => {
+  const book = (nodes: object) =>
+    `# One\n\nWords.\n\n# Two\n\nMore.\n\n<!-- drafter ${JSON.stringify({ template: 'novel', novel: { nodes } })} -->\n`;
+
+  test('one line of advice in Problems, and none when every note has its heading', async ({
+    page,
+  }) => {
+    await openSample(page);
+    await pasteText(
+      page,
+      book({
+        'chapter:one:0': { status: 'draft' },
+        'chapter:gone:0': { status: 'done' },
+        'section:also-gone:0': { synopsis: 'Lost.' },
+      }),
+    );
+    await runCommand(page, 'Show Problems');
+    const panel = page.getByRole('tabpanel', { name: /^Problems/ });
+    await expect(panel).toContainText("2 passages' notes no longer match a chapter or section.");
+    await expect(panel.locator('.problem')).toHaveCount(1);
+    await pasteText(page, book({ 'chapter:one:0': { status: 'draft' } }));
+    // On a phone, pasting showed the Source in the Problems' place.
+    await runCommand(page, 'Show Problems');
+    await expect(panel).not.toContainText('no longer match');
+  });
+});
+
 // The long-task budget (Novel plan, Global Constraints): a Chromium API.
 test.describe('Typing in a long novel', () => {
   test.skip(({ browserName }) => browserName !== 'chromium', 'long tasks are a Chromium API');
 
-  // Run on its own (`-g "long task"`): a busy machine stretches its tasks. Its bursts are sized so
+  // Run on its own (`-g "long task"`): a busy machine stretches its tasks. CI skips this test by
+  // name, deliberately (checks.yml's `--grep-invert` has "long task"): a shared runner's timing is
+  // not a budget, so the release gate runs it. Its bursts are sized so
   // that a refresh for every change, not one a frame, fails it (about 80 ms against under 50).
   test('typing in a 120,000-word novel makes no long task', async ({ page, isMobile }) => {
     test.setTimeout(180_000);

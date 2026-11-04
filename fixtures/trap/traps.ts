@@ -1013,6 +1013,80 @@ const MARKDOWN_TRAPS: Trap[] = [
   },
 ];
 
+// ---- A novel ------------------------------------------------------------------------------------
+
+/** The trailing comment that makes a Markdown file a novel, with `more` beside the template. */
+const novelMeta = (more: Record<string, unknown> = {}) =>
+  `<!-- drafter ${JSON.stringify({ template: 'novel', ...more })} -->\n`;
+const NOVEL_META = novelMeta();
+
+/** 100,000 bare `#` lines: the heading scan must stay linear, and ids must not collide into a stall. */
+const HEADING_FLOOD = `${'#\n'.repeat(100_000)}\n${NOVEL_META}`;
+const FENCE_UNCLOSED = `# The First Chapter\n\nThe tide came in.\n\n\`\`\`\n# Not a chapter\n## Nor a section\n***\n\nThe fence never closes, and the comment below is inside it.\n\n${NOVEL_META}`;
+/** 20,000 parts, each with a chapter of two sections: the deepest tree the scan can make wide. */
+const DEEP_PARTS = `${Array.from(
+  { length: 20_000 },
+  (_, i) => `# Part ${i}\n\n# Chapter ${i}\n\n## Section ${i}\n\nWords.\n\n***\n\nMore words.\n`,
+).join('\n')}\n${NOVEL_META}`;
+const CRLF_NOVEL = `# Part One\r\n\r\n# The Salt Road\r\n\r\n## Low Tide\r\n\r\nShe walked out.\r\n\r\n***\r\n\r\nThe gulls wheeled.\r\n\r\n# The Light\r\n\r\nAn ending.\r\n\r\n${NOVEL_META.replace('\n', '\r\n')}`;
+const HOSTILE_NOVEL_META = `# One\n\nWords.\n\n# Two\n\nMore.\n\n<!-- drafter ${
+  // A hand-built string: JSON.stringify would make the `__proto__` key an own property too, but
+  // writing it out shows the file as a person would find it.
+  `{"template":"novel","novel":{"bookTarget":"many","nodes":{"__proto__":{"status":"done","target":5,"synopsis":"x"},"constructor":{"status":"nope"},"chapter:one:0":{"status":7,"target":-4,"synopsis":["a"]},"chapter:two:0":{"status":"draft","synopsis":"${'long '.repeat(200_000)}"},"toString":null,"chapter:gone:0":"text"}}}`
+} -->\n`;
+
+const NOVEL_TRAPS: Trap[] = [
+  {
+    id: 'novel-heading-flood',
+    format: 'markdown',
+    name: 'heading-flood.md',
+    tests:
+      '100,000 `#` lines open as a novel and are read as chapters in linear time, and one move keeps every line.',
+    bytes: () => enc(HEADING_FLOOD),
+    expect: { 'web-open': opens(HEADING_FLOOD) },
+    limitMs: 5000,
+    memoryMB: 1536,
+  },
+  {
+    id: 'novel-fence-unclosed',
+    format: 'markdown',
+    name: 'fence-unclosed.md',
+    tests:
+      'A code fence that never closes hides the headings after it: they are text, not chapters, and nothing is lost.',
+    bytes: () => enc(FENCE_UNCLOSED),
+    expect: { 'web-open': opens(FENCE_UNCLOSED) },
+  },
+  {
+    id: 'novel-meta-hostile',
+    format: 'markdown',
+    name: 'meta-hostile.md',
+    tests:
+      'A novel’s comment holding `__proto__` and `constructor` keys, wrong types, an unknown status, and a 1 MB synopsis opens; the facts are ignored or capped, never thrown.',
+    bytes: () => enc(HOSTILE_NOVEL_META),
+    expect: { 'web-open': opens(HOSTILE_NOVEL_META) },
+  },
+  {
+    id: 'novel-deep-parts',
+    format: 'markdown',
+    name: 'deep-parts.md',
+    tests:
+      '20,000 parts, each holding a chapter and two sections, are read in linear time and one move keeps every line.',
+    bytes: () => enc(DEEP_PARTS),
+    expect: { 'web-open': opens(DEEP_PARTS) },
+    limitMs: 5000,
+    memoryMB: 1536,
+  },
+  {
+    id: 'novel-crlf',
+    format: 'markdown',
+    name: 'crlf.md',
+    tests:
+      'A novel written with CRLF line breaks opens with line feeds; read raw, its structure is the same and a move keeps its CRLF.',
+    bytes: () => enc(CRLF_NOVEL),
+    expect: { 'web-open': opens(CRLF_NOVEL.replace(/\r\n/g, '\n')) },
+  },
+];
+
 const FDX_TRAPS: Trap[] = [
   {
     id: 'fdx-valid',
@@ -2775,6 +2849,7 @@ export const TRAPS: readonly Trap[] = [
   ...FOUNTAIN_TRAPS,
   ...CLASSIC_TRAPS,
   ...MARKDOWN_TRAPS,
+  ...NOVEL_TRAPS,
   ...FDX_TRAPS,
   ...HIGHLAND_TRAPS,
   ...FADE_IN_TRAPS,
@@ -2804,6 +2879,8 @@ function withDefaults(trap: Trap): Trap {
     }
     if (MCP_FORMATS.has(trap.format)) expect.mcp ??= mcpOutcome(web);
     if (web.kind !== 'refused' && opensAs(trap) === 'fountain') expect.classic ??= opens();
+    // A Markdown file that opens is read as a novel too: it may be one, and its headings are the input.
+    if (web.kind !== 'refused' && trap.format === 'markdown') expect.novel ??= opens();
   }
   for (const entry of Object.keys(trap.keptOut ?? {}) as Entry[]) delete expect[entry];
   return { ...trap, expect };

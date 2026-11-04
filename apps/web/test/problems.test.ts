@@ -1,5 +1,7 @@
+import { Text } from '@codemirror/state';
 import { describe, expect, test, vi } from 'vitest';
 import { mergeFixes, occurrenceKeys, oncePerFrame } from '../app/editor/problems';
+import { mayHaveOrphans, orphanCount, orphanMessage } from '../app/novel/orphans';
 
 const change = (from: number, to: number, insert = '') => ({ from, to, insert });
 
@@ -76,5 +78,39 @@ describe('oncePerFrame', () => {
     expect(schedule).toHaveBeenCalledTimes(2);
     frame?.();
     expect(seen).toEqual([3, 4]);
+  });
+});
+
+describe('a novel’s orphaned notes', () => {
+  const comment = (nodes: object) =>
+    `<!-- drafter ${JSON.stringify({ template: 'novel', novel: { nodes } })} -->\n`;
+  const doc = (text: string) => Text.of(text.split('\n'));
+
+  test('says it plainly, in the singular and the plural, and not at all for none', () => {
+    expect(orphanMessage(0)).toBeNull();
+    expect(orphanMessage(1)).toBe("1 passage's notes no longer match a chapter or section.");
+    expect(orphanMessage(3)).toBe("3 passages' notes no longer match a chapter or section.");
+  });
+
+  test('counts the notes whose heading is gone', () => {
+    const text = `# One\n\nWords.\n\n${comment({
+      'chapter:one:0': { status: 'draft' },
+      'chapter:gone:0': { status: 'done' },
+    })}`;
+    expect(orphanCount(doc(text))).toBe(1);
+  });
+
+  test('reads nothing in a book without notes, or a document that is not a novel', () => {
+    const none = `# One\n\n<!-- drafter {"template":"novel"} -->\n`;
+    expect(mayHaveOrphans(doc(none))).toBe(false);
+    const plain = `# One\n\n<!-- drafter ${JSON.stringify({ novel: { nodes: { a: { status: 'done' } } } })} -->\n`;
+    expect(mayHaveOrphans(doc(plain))).toBe(false);
+    expect(orphanCount(doc(plain))).toBe(0);
+    expect(orphanCount(doc('A screenplay line.\n'))).toBe(0);
+  });
+
+  test('hostile notes are never an error', () => {
+    const text = `# One\n\n<!-- drafter {"template":"novel","novel":{"nodes":{"__proto__":{"status":"done"},"x":7}}} -->\n`;
+    expect(() => orphanCount(doc(text))).not.toThrow();
   });
 });

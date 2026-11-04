@@ -304,6 +304,14 @@ describe('package: each format’s reader on its own', () => {
   });
 });
 
+describe('novel: a Markdown file read as a novel', () => {
+  test.each(trapsFor('novel').map((t) => [t.id, t] as const))('%s', async (_id, trap) => {
+    const bytes = trap.bytes?.() as Uint8Array;
+    const answer = checkRan(trap, bytes.length, await ran(trap, { kind: 'novel', bytes }), 'novel');
+    checkOutcome(trap, trap.expect.novel as Outcome, answer.happened, 'novel');
+  });
+});
+
 // ---- The command line ----------------------------------------------------------------------------
 
 interface CliRun {

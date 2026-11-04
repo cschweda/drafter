@@ -297,6 +297,19 @@ describe('with real CodeMirror changes', () => {
     expect(Object.keys(out.nodes)).toEqual([]);
   });
 
+  it('a carried fact wins over a kept orphan that shares its id', () => {
+    const before = novelStructure('# A\n\n# B\n');
+    const after = novelStructure('# A\n\n# C\n');
+    const facts = emptyFacts();
+    facts.nodes['chapter:b:0'] = { status: 'done' };
+    // An orphan: an id that is not in `before`'s tree, and is the id B's fact takes on the rename.
+    facts.nodes['chapter:c:0'] = { status: 'todo' };
+    expect(orphanedFacts(facts, before)).toEqual(['chapter:c:0']);
+    const out = carryFacts(facts, before, after, (p) => p);
+    expect(out.nodes['chapter:c:0']).toEqual({ status: 'done' });
+    expect(Object.keys(out.nodes)).toEqual(['chapter:c:0']);
+  });
+
   it('a carried fact wins over an orphan with the same id, and results do not share objects', () => {
     const before = novelStructure('# A\n\n# B\n');
     const after = novelStructure('# B\n\n# A\n');
