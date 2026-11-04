@@ -60,7 +60,7 @@ const mine = async (page: Page) =>
   (await rows<Project>(page, 'projects')).find((p) => !p.sample) as Project;
 
 async function newScreenplay(page: Page) {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await menu(page).getByRole('button', { name: 'New screenplay' }).click();
   await expect(menu(page)).toBeHidden();
   await showSource(page);
@@ -179,7 +179,7 @@ test.describe('snapshots and saving (Chromium)', () => {
     const text = 'Title: The Open Door\n\nINT. HALL - DAY\n\nA door opens.\n';
     await putFile(page, 'Door.fountain', text);
     await nextFileName(page, 'Door.fountain');
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await menu(page).getByRole('button', { name: 'Open a file…' }).click();
     await expect(editor(page)).toContainText('A door opens.');
     const script = await mine(page);

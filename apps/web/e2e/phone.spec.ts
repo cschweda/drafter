@@ -76,13 +76,13 @@ test.describe('the toolbar at 320px', () => {
     });
     expect(layout.page).toBeLessThanOrEqual(320);
     expect(layout.bar[0]).toBeLessThanOrEqual(layout.bar[1] as number);
-    // The mark (the app menu), Open, the writing mode, the palette, Help, and More actions (the top
+    // The mark (the app menu), File, the writing mode, the palette, Help, and More actions (the top
     // bar's order; Structure has no strip to show here). The title keeps a few letters and the
     // switch never folds, so the theme, Focus, Export, and Save fold into More actions first.
     expect(layout.buttons.map((b) => b.name)).toEqual([
       'Drafter menu',
       'Writing mode: Fountain. Switch to Classic.',
-      'Open',
+      'File',
       'Go to scene or command',
       'Help',
       'More actions',
@@ -114,7 +114,7 @@ test.describe('the toolbar at 320px', () => {
     page,
   }) => {
     // Open: the Scripts menu.
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await expect(page.getByRole('group', { name: 'Scripts', exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('group', { name: 'Scripts', exact: true })).toBeHidden();
@@ -214,9 +214,10 @@ test.describe('the template choice in the app menu', () => {
     page,
   }) => {
     // A script of the writer's own: New screenplay.
-    await mark(page).click();
-    await appMenu(page)
-      .getByRole('menuitem', { name: /^New screenplay/ })
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'New screenplay' })
       .click();
     await expect(editor(page)).not.toContainText('The Call');
 

@@ -7,7 +7,7 @@ const chip = (page: Page) => page.locator('.chip.template');
 const chipMenu = (page: Page) => page.getByRole('menu');
 const chipItem = (page: Page, name: string) =>
   chipMenu(page).getByRole('menuitemcheckbox', { name });
-const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const openButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 
 const STAGE_BLOCK = /\/\* drafter\s*\{"v":1,"template":"stage-play-standard"\}\s*\*\//;

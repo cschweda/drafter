@@ -56,7 +56,7 @@ async function classic(page: Page, text?: string) {
 
 /** A new script from Open's menu, as a writer starts one. */
 async function newScript(page: Page, name: 'New screenplay' | 'New stage play') {
-  await pressToolbarButton(page, 'Open');
+  await pressToolbarButton(page, 'File');
   const menu = page.getByRole('group', { name: 'Scripts', exact: true });
   await menu.getByRole('button', { name }).click();
   await expect(menu).toBeHidden();

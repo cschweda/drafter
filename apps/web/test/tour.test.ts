@@ -165,7 +165,7 @@ describe('the tour’s steps', () => {
     ]);
     const exported = buildSteps(true).find((s) => s.id === 'export');
     expect(exported?.title).toBe('Export, and open almost anything');
-    const [exports, opens] = (exported?.content ?? '').split('. Open, ');
+    const [exports, opens] = (exported?.content ?? '').split('. File → Open a file… ');
     // Exported: PDF, Final Draft, Markdown, plain text. Highland and Fade In are only opened.
     expect(exports).toMatch(/PDF.*Final Draft.*Markdown.*plain text/);
     expect(exports).not.toMatch(/Highland|Fade In/);

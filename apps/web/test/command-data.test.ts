@@ -145,7 +145,7 @@ describe('the command data', () => {
       expect(exportApplies('md', kind), kind).toBe(true);
     }
     // A script's list: PDF, HTML, plain text, Final Draft, then Markdown, beside the treatment.
-    expect(EXPORTS.fountain).toEqual(['pdf', 'html', 'epub', 'txt', 'fdx', 'md']);
+    expect(EXPORTS.fountain).toEqual(['pdf', 'html', 'epub', 'fountain', 'txt', 'fdx', 'md']);
     expect(EXPORTS.markdown).toEqual(['pdf', 'html', 'epub', 'md', 'txt']);
   });
 

@@ -139,7 +139,7 @@ test.describe('on a wide screen', () => {
 
   test('a Markdown document has words, and no pages or problems', async ({ page }) => {
     await start(page);
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New Markdown document' })
@@ -259,7 +259,7 @@ test.describe('below 640px', () => {
       (window as unknown as { __region: Element }).__region = el;
     });
     // A refused file: its line goes into that same region.
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     const chooser = page.waitForEvent('filechooser');
     await page
       .getByRole('group', { name: 'Scripts', exact: true })

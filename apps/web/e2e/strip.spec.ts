@@ -586,7 +586,7 @@ const inStrip = (page: Page) =>
   page.evaluate(() => Boolean(document.activeElement?.closest('[aria-label="Structure strip"]')));
 
 async function newMarkdown(page: Page) {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await page
     .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New Markdown document' })

@@ -865,10 +865,10 @@ test.describe('from the app', () => {
     const tab = await fromMenu(page, 'Keyboard shortcuts', 'keyboard');
     await expect(heading(tab)).toHaveText('Keyboard shortcuts');
     // Another help page in the same tab: its Back still goes to the editor it came from.
-    await tab
-      .getByRole('navigation', { name: 'Help pages' })
-      .getByRole('link', { name: 'Privacy' })
-      .click();
+    // The help pages' bar holds them in dropdowns: Privacy is under About.
+    const nav = tab.getByRole('navigation', { name: 'Help pages' });
+    await nav.getByText('About', { exact: true }).click();
+    await nav.getByRole('link', { name: 'Privacy' }).click();
     await expect(heading(tab)).toHaveText('Privacy');
     const closed = tab.waitForEvent('close');
     await tab.getByRole('link', { name: /Back to Drafter/ }).focus();

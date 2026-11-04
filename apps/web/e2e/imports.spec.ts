@@ -35,7 +35,7 @@ const FADE_IN = Array.from(
 );
 
 const editor = (page: Page) => page.locator('.cm-content');
-const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const openButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
 const scripts = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const status = (page: Page) => page.locator('[data-tour="status"]');
 const alert = (page: Page) => status(page).getByRole('alert');

@@ -38,8 +38,6 @@ const startBlank = (page: Page) =>
 const sampleBar = (page: Page) => page.getByRole('button', { name: 'Sample: start your own' });
 const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const preview = (page: Page) => page.getByRole('article', { name: 'Preview' });
-const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
-const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
 
 /** The text in the editor, even while a phone shows another tab (only the lines drawn). */
 const text = (page: Page) => editor(page).evaluate((el) => el.textContent ?? '');
@@ -237,7 +235,7 @@ test.describe('the first New of a kind', () => {
     await expect(bar(page)).toHaveCount(0);
   });
 
-  test('opens the Markdown sample from the palette and the app menu', async ({ page }) => {
+  test('opens the Markdown sample from the palette and the File menu', async ({ page }) => {
     await start(page);
     await command(page, 'Open sample: Markdown');
     await expect(sampleBar(page)).toBeVisible();
@@ -245,8 +243,11 @@ test.describe('the first New of a kind', () => {
 
     await command(page, 'Open sample: Screenplay');
     await expect.poll(() => text(page)).toContain('Title: The Call');
-    await mark(page).click();
-    await menu(page).getByRole('menuitem', { name: 'Open sample: Markdown' }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'Markdown', exact: true })
+      .click();
     await expect.poll(() => text(page)).toContain('# Writing in Markdown');
   });
 });

@@ -155,6 +155,48 @@ describe('exporting', () => {
     expect(t.written[0]?.data).toBe('text');
   });
 
+  test('exports a copy of the script as a .fountain, its own text, never rendered', async () => {
+    const t = await load({ inPlace: true });
+    expect(await t.exportScript('fountain')).toBe('saved');
+    expect(t.log).toEqual(['pick The Call Part 1.fountain fountain', 'write']);
+    expect(t.written[0]?.data).toBe(TEXT);
+    expect(render).not.toHaveBeenCalled();
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.fountain.');
+  });
+
+  test('a .fountain export keeps the file’s line breaks and byte order mark, and names no options', async () => {
+    const t = await load({ inPlace: true });
+    shown.project = {
+      id: 'p1',
+      fileName: 'The Call.fountain',
+      lineBreak: '\r\n',
+      bom: true,
+      exportOptions: { sceneNumbers: 'as-written', titlePage: 'none' },
+    };
+    expect(await t.exportScript('fountain')).toBe('saved');
+    expect(t.written[0]?.data).toBe(`\uFEFF${TEXT.replace(/\n/g, '\r\n')}`);
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.fountain.');
+  });
+
+  test('a .fountain export downloads where the browser can’t save in place', async () => {
+    const t = await load({ inPlace: false });
+    expect(await t.exportScript('fountain')).toBe('saved');
+    expect(t.log).toEqual(['download The Call Part 1.fountain text/plain']);
+  });
+
+  test('a Markdown document doesn’t export as a .fountain', async () => {
+    const t = await load({ inPlace: true });
+    shown.kind = 'markdown';
+    shown.text = '# Notes\n\nSome words.\n';
+    expect(await t.exportScript('fountain')).toBe('cancelled');
+    expect(t.log).toEqual([]);
+    expect(t.exportError.value).toBe(
+      'Only a screenplay or a stage play exports as a Fountain file.',
+    );
+    expect(t.exportApplies('fountain', 'markdown')).toBe(false);
+    expect(t.exportApplies('fountain', 'fountain')).toBe(true);
+  });
+
   test('exports a Final Draft file under an .fdx name, rendered in the worker', async () => {
     const t = await load({ inPlace: true });
     render.mockResolvedValue('<FinalDraft/>');
@@ -184,7 +226,7 @@ describe('exporting', () => {
     expect(t.exportApplies('html', 'fountain')).toBe(true);
     expect(t.exportApplies('html', 'markdown')).toBe(true);
     // Second in each list, after the PDF: the other finished-looking file.
-    expect(t.EXPORTS.fountain).toEqual(['pdf', 'html', 'epub', 'txt', 'fdx', 'md']);
+    expect(t.EXPORTS.fountain).toEqual(['pdf', 'html', 'epub', 'fountain', 'txt', 'fdx', 'md']);
     expect(t.EXPORTS.markdown).toEqual(['pdf', 'html', 'epub', 'md', 'txt']);
   });
 
@@ -279,7 +321,7 @@ describe('exporting', () => {
     const t = await load({ inPlace: true });
     expect(t.exportApplies('epub', 'fountain')).toBe(true);
     expect(t.exportApplies('epub', 'markdown')).toBe(true);
-    expect(t.EXPORTS.fountain).toEqual(['pdf', 'html', 'epub', 'txt', 'fdx', 'md']);
+    expect(t.EXPORTS.fountain).toEqual(['pdf', 'html', 'epub', 'fountain', 'txt', 'fdx', 'md']);
     expect(t.EXPORTS.markdown).toEqual(['pdf', 'html', 'epub', 'md', 'txt']);
   });
 

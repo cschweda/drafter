@@ -150,7 +150,7 @@ test.describe('spellcheck', () => {
   });
 
   test('marks a Markdown document’s text and not its code', async ({ page }) => {
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New Markdown document' })

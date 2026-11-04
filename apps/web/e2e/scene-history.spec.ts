@@ -37,7 +37,7 @@ const ROOF = 'EXT. ROOF - NIGHT\n\nWind drags the washing lines across the wet s
 const script = (...scenes: string[]) => `Title: The Weir\n\n${scenes.join('\n')}`;
 
 async function newScript(page: Page) {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await scriptsMenu(page).getByRole('button', { name: 'New screenplay' }).click();
   await expect(scriptsMenu(page)).toBeHidden();
   await showSource(page);

@@ -72,7 +72,7 @@ const headings = async (page: Page) =>
 /** Opens the sample novel (the Scripts menu's Samples) and shows its Outline. */
 async function openSample(page: Page) {
   await start(page);
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await page
     .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'Novel', exact: true })

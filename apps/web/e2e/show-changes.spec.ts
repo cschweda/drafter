@@ -57,7 +57,7 @@ const CHANGED = BASE.replace('She waits by the door.', 'She paces by the door.')
 );
 
 async function newScript(page: Page) {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await scriptsMenu(page).getByRole('button', { name: 'New screenplay' }).click();
   await expect(scriptsMenu(page)).toBeHidden();
   await showSource(page);
@@ -345,7 +345,7 @@ test.describe('Show changes on the Script pane', () => {
     await expect(toggle(page)).toHaveAccessibleDescription(
       'Nothing to compare with yet: save, or take a snapshot.',
     );
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await scriptsMenu(page).getByRole('button', { name: 'New Markdown document' }).click();
     await expect(scriptsMenu(page)).toBeHidden();
     // The Preview's bar has no toggle, and the palette doesn't offer it.

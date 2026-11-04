@@ -73,7 +73,7 @@ const status = (page: Page) => page.locator('[data-tour="status"]');
 const countsPanel = (page: Page) => page.getByRole('dialog', { name: 'Counts' });
 const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
 const appMenu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
-const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const openButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
 const elementBar = (page: Page) => page.getByRole('toolbar', { name: 'Element bar' });
 const problemsList = (page: Page) => page.getByRole('tabpanel', { name: /^Problems/ });
@@ -851,8 +851,9 @@ test.describe('the accessibility tree', () => {
         - button "Drafter menu"
         - text: The Call
         - 'button "Sample: start your own"'
-        - button "Open"
+        - button "File"
         - button "Save"
+        - button "Save options"
         - button "Export"
         - button /^Go to scene or command/
         - button "Structure" [pressed=false]

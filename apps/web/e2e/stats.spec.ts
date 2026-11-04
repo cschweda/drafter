@@ -42,7 +42,7 @@ async function newScript(
   name: 'New screenplay' | 'New stage play' | 'New Markdown document',
 ) {
   await start(page);
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await page
     .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name })
@@ -469,7 +469,7 @@ test.describe('writing stats', () => {
     );
 
     // Another script has rates of its own.
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New screenplay' })

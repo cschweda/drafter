@@ -73,7 +73,7 @@ const SAMPLE_ORDER = [
 
 async function openSample(page: Page) {
   await start(page);
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await page
     .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'Novel', exact: true })

@@ -37,7 +37,7 @@ const TWO =
   'Title: Boca\n\nINT. FERRY - DAWN\n\nThe gulls follow the wake, crying.\n\nEXT. PIER - DAY\n\nRopes.\n';
 
 async function newScreenplay(page: Page) {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await scriptsMenu(page).getByRole('button', { name: 'New screenplay' }).click();
   await expect(scriptsMenu(page)).toBeHidden();
   await showSource(page);
@@ -137,7 +137,7 @@ test.describe('drafts', () => {
   test('a work in progress opened from a file starts at Draft 01', async ({ page, isMobile }) => {
     await removePickers(page);
     await start(page);
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     const chooser = page.waitForEvent('filechooser');
     await scriptsMenu(page).getByRole('button', { name: 'Open a file…' }).click();
     await (await chooser).setFiles({

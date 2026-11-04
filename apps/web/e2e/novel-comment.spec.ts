@@ -37,7 +37,7 @@ const snapshots = (page: Page) =>
 
 async function openBook(page: Page) {
   await start(page);
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await scriptsMenu(page).getByRole('button', { name: 'New novel' }).click();
   await expect(scriptsMenu(page)).toBeHidden();
   await pasteText(page, BOOK);

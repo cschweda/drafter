@@ -3,6 +3,7 @@ import type { ButtonProps } from '@nuxt/ui';
 import { useGuard } from '~/storage/guard';
 import { save } from '~/storage/save';
 import { rememberStorageToast, storageToastSeen, useStorageNotice } from '~/storage/storage-notice';
+import { tourShowing, welcomeSettled } from '~/tour/state';
 
 // The recovery copy's warnings (fresh-look design §3.5). "May be cleared" is a toast with the advice
 // and Save to a file, shown in a browser until it is dismissed once; the status bar's chip keeps
@@ -73,13 +74,15 @@ function show() {
 }
 
 watch(
-  mayBeCleared,
-  (now) => {
+  // A first visit's welcome (and the tour, if taken) comes first: the toast waits for it to close,
+  // so the two never show at once. The status bar's chip says so meanwhile.
+  () => [mayBeCleared.value, welcomeSettled.value && !tourShowing.value] as const,
+  ([now, clear]) => {
     if (!import.meta.client) return;
     // Shown while the warning stands, until the writer dismisses it (then it stays dismissed for the
     // visit: the status bar's chip still says so).
     const there = toast.toasts.value.some((t) => t.id === TOAST);
-    if (now && !there && !storageToastSeen()) show();
+    if (now && clear && !there && !storageToastSeen()) show();
     else if (!now && there) toast.remove(TOAST);
   },
   { immediate: true },

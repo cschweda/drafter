@@ -194,8 +194,8 @@ test.describe('on a desktop', () => {
 
   test('leaves room between the logo and the toolbar buttons', async ({ page }) => {
     const logo = await page.getByRole('img', { name: 'Drafter' }).boundingBox();
-    const open = await page.getByRole('button', { name: 'Open', exact: true }).boundingBox();
-    if (!logo || !open) throw new Error('the logo or the Open button is missing');
+    const open = await page.getByRole('button', { name: 'File', exact: true }).boundingBox();
+    if (!logo || !open) throw new Error('the logo or the File button is missing');
     expect(open.x - (logo.x + logo.width)).toBeGreaterThanOrEqual(24);
   });
 
@@ -204,10 +204,10 @@ test.describe('on a desktop', () => {
   }) => {
     const banner = page.getByRole('banner');
     await expect(banner.locator('.round')).toHaveCount(0);
-    const open = banner.getByRole('button', { name: 'Open', exact: true });
+    const open = banner.getByRole('button', { name: 'File', exact: true });
     const icon = await open.locator('.icon').boundingBox();
     const box = await open.boundingBox();
-    if (!icon || !box) throw new Error('the Open button or its icon is missing');
+    if (!icon || !box) throw new Error('the File button or its icon is missing');
     expect(Math.round(icon.width)).toBe(16);
     expect(Math.round(box.height)).toBe(30);
     await expect(open).toHaveCSS('border-top-width', '0px');
@@ -236,7 +236,7 @@ test.describe('on a desktop', () => {
       banner.getByRole('button', { name: 'Drafter menu' }),
       banner.locator('.title'),
       banner.getByRole('button', { name: 'Sample: start your own' }),
-      banner.getByRole('button', { name: 'Open', exact: true }),
+      banner.getByRole('button', { name: 'File', exact: true }),
       banner.getByRole('button', { name: 'Save', exact: true }),
       banner.getByRole('button', { name: 'Export', exact: true }),
       banner.getByRole('button', { name: /^Go to scene or command/ }),
@@ -779,7 +779,7 @@ test.describe('on a phone', () => {
       if (!box) throw new Error('a toolbar button is missing');
       return `${Math.round(box.width)}x${Math.round(box.height)}`;
     };
-    const open = await size(banner.getByRole('button', { name: 'Open', exact: true }));
+    const open = await size(banner.getByRole('button', { name: 'File', exact: true }));
     expect(await size(banner.getByRole('button', { name: /^Go to scene or command/ }))).toBe(open);
     // The theme, or More actions where a full phone bar folded it (Task 9).
     const theme = banner

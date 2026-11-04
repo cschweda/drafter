@@ -11,11 +11,13 @@ import {
 import { expectSaved, expectUnsaved, saveState } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
-const mark = (page: Page) => page.getByRole('button', { name: 'Drafter menu' });
-const menu = (page: Page) => page.getByRole('menu', { name: 'Drafter menu' });
+// Revert to Saved is on Save's arrow (Save options), and in More actions where Save is folded.
+const saveOptions = (page: Page) => page.getByRole('button', { name: 'Save options' });
+const moreActions = (page: Page) => page.getByRole('button', { name: 'More actions' });
+const menu = (page: Page) => page.getByRole('menu', { name: /^(Save options|More actions)$/ });
 const revert = (page: Page) => menu(page).getByRole('menuitem', { name: /^Revert to Saved/ });
 const notice = (page: Page) => page.locator('.notice [role="status"]');
-const openButton = (page: Page) => page.getByRole('button', { name: 'Open', exact: true });
+const openButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
 const dialog = (page: Page) => page.getByRole('dialog');
 const bar = (page: Page) => page.locator('[data-file-bar]');
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
@@ -35,7 +37,8 @@ async function chooseNew(page: Page, name: string) {
 }
 
 async function openMenu(page: Page) {
-  await mark(page).click();
+  const caret = saveOptions(page);
+  await ((await caret.isVisible()) ? caret : moreActions(page)).click();
   await expect(menu(page)).toBeVisible();
 }
 
@@ -300,10 +303,10 @@ test.describe('Revert to Saved (Chromium)', () => {
     await expect(editor(other)).toContainText('CHANGED');
     await openMenu(other);
     await expect(revert(other)).toHaveAttribute('aria-disabled', 'true');
-    await expect(menu(other).getByRole('menuitem', { name: /^New screenplay/ })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
+    // Nor can it start a script: the File menu's New items are off.
+    await other.keyboard.press('Escape');
+    await openButton(other).click();
+    await expect(scriptsMenu(other).getByRole('button', { name: 'New screenplay' })).toBeDisabled();
   });
 });
 

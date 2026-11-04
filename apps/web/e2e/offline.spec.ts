@@ -164,7 +164,7 @@ test.describe('offline', () => {
     await start(page);
     // The first visit has not used Markdown at all: its code arrives now, with no network.
     await context.setOffline(true);
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New Markdown document' })
@@ -200,7 +200,7 @@ test.describe('offline', () => {
     await page.reload();
     await expect(editor(page)).toContainText('The Call');
     // A first Markdown PDF, with no network: the parser and the five document fonts come from the cache.
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New Markdown document' })
@@ -443,7 +443,7 @@ test.describe('a new version', () => {
       void dialog.dismiss();
     });
     await start(page);
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New screenplay' })
@@ -473,7 +473,7 @@ test.describe('a new version', () => {
         void dialog.dismiss();
       });
       await start(page);
-      await page.getByRole('button', { name: 'Open', exact: true }).click();
+      await page.getByRole('button', { name: 'File', exact: true }).click();
       await page
         .getByRole('group', { name: 'Scripts', exact: true })
         .getByRole('button', { name: 'New screenplay' })
@@ -510,7 +510,7 @@ test.describe('a new version', () => {
       void dialog.dismiss();
     });
     await start(page);
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New screenplay' })

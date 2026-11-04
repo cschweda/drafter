@@ -396,7 +396,7 @@ test.describe('Scaffold', () => {
 
   test('a Markdown document has no Scaffold', async ({ page, isMobile }) => {
     await start(page);
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New Markdown document' })

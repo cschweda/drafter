@@ -38,41 +38,24 @@ test.describe('the app menu', () => {
     await start(page);
     await openMenu(page);
 
-    // The New items are the document types, in the Scripts menu's order, then the guided starters;
-    // then the rest.
+    // The script's own things (the fresh-eyes review, 2026-11-04): its template, its history and
+    // drafts, its exports, Stats, and Settings. Starting, opening, and saving a script are the
+    // toolbar's File menu and Save's arrow, which this menu no longer repeats.
     const names = await menu(page).getByRole('menuitem').allTextContents();
     const shown = names.map((n) => n.trim());
     const at = (label: string) => shown.findIndex((n) => n.startsWith(label));
-    expect(at('New screenplay')).toBe(0);
-    expect(at('New stage play')).toBe(1);
-    expect(at('New novel')).toBe(2);
-    expect(at('New Markdown document')).toBe(3);
-    expect(at('New guided screenplay')).toBe(4);
-    expect(at('New guided stage play')).toBe(5);
-    expect(at('Open…')).toBe(6);
-    for (const label of [
-      'Save',
-      'Save As…',
-      'Revert to Saved',
-      'Export as PDF',
-      'Export as plain text',
-      'Settings…',
-    ]) {
-      expect(at(label), label).toBeGreaterThan(6);
+    for (const label of ['History…', 'Start new draft…', 'Export as PDF', 'Settings…']) {
+      expect(at(label), label).toBeGreaterThanOrEqual(0);
     }
+    expect(at('History…')).toBeLessThan(at('Export as PDF'));
     // A Fountain script exports as Markdown too (the whole script), with the same command a
     // Markdown document's own text uses.
     expect(at('Export as Markdown file')).toBeGreaterThan(at('Export as PDF'));
-    expect(at('Save')).toBeLessThan(at('Save As…'));
-    expect(at('Save')).toBe(shown.findIndex((n) => /^Save(?! As)/.test(n)));
-    expect(at('Save As…')).toBeLessThan(at('Revert to Saved'));
-    expect(at('Revert to Saved')).toBeLessThan(at('Export as PDF'));
     expect(at('Export as plain text')).toBeLessThan(at('Settings…'));
-
-    // The samples are in it, and so are the keys.
-    await expect(item(page, /^Open sample: Screenplay/)).toBeVisible();
-    await expect(item(page, /^Open sample: Stage play/)).toBeVisible();
-    await expect(item(page, /^Save As…/)).toContainText(/Shift\+S|⇧S/);
+    for (const gone of ['New screenplay', 'Open…', 'Open sample:', 'Save', 'Revert to Saved']) {
+      expect(at(gone), gone).toBe(-1);
+    }
+    await expect(menu(page).getByText('Recent scripts')).toHaveCount(0);
 
     // Escape closes it and returns focus to the mark.
     await page.keyboard.press('Escape');
@@ -86,12 +69,15 @@ test.describe('the app menu', () => {
     await mark(page).focus();
     await page.keyboard.press('Enter');
     await expect(menu(page)).toBeVisible();
-    // The first item has focus; the arrows move through the items.
-    await expect(item(page, /^New screenplay/)).toBeFocused();
+    // The first item has focus (the template section's, Screenplay, the one checked); the arrows
+    // move through the items.
+    const first = menu(page).locator('[role^="menuitem"]').first();
+    const second = menu(page).locator('[role^="menuitem"]').nth(1);
+    await expect(first).toBeFocused();
     await page.keyboard.press('ArrowDown');
-    await expect(item(page, /^New stage play/)).toBeFocused();
+    await expect(second).toBeFocused();
     await page.keyboard.press('ArrowUp');
-    await expect(item(page, /^New screenplay/)).toBeFocused();
+    await expect(first).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(menu(page)).toBeHidden();
     await expect(mark(page)).toBeFocused();
@@ -111,7 +97,7 @@ test.describe('the app menu', () => {
     await expect(menu(page)).toBeHidden();
   });
 
-  test('runs each item’s command', async ({ page, browserName }) => {
+  test('runs each item’s command', async ({ page }) => {
     await start(page);
 
     // Settings… opens the settings dialog.
@@ -122,52 +108,125 @@ test.describe('the app menu', () => {
     await page.keyboard.press('Escape');
     await expect(settings).toBeHidden();
 
-    // A sample.
+    // History… opens History.
     await openMenu(page);
-    await item(page, /^Open sample: Stage play/).click();
+    await item(page, /^History…/).click();
+    await expect(page.getByRole('dialog', { name: /History/ })).toBeVisible();
+  });
+});
+
+test.describe('the File menu', () => {
+  const fileButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
+  const scripts = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
+  async function choose(page: Page, name: string | RegExp) {
+    await fileButton(page).click();
+    await scripts(page)
+      .getByRole('button', { name, exact: typeof name === 'string' })
+      .click();
+  }
+
+  test('starts, opens, and saves scripts: New, the guided starters, Open, Save As, and the samples', async ({
+    page,
+  }) => {
+    await start(page);
+    await fileButton(page).click();
+    const names = (await scripts(page).locator(':scope > button').allTextContents()).map((n) =>
+      n.trim(),
+    );
+    expect(names).toEqual([
+      'New screenplay',
+      'New stage play',
+      'New novel',
+      'New Markdown document',
+      'New guided screenplay',
+      'New guided stage play',
+      'Open a file…',
+      'Open as screenplay…',
+      'Save As…',
+      'Revert to Saved',
+    ]);
+    // A sample has no saved file to go back to.
+    await expect(scripts(page).getByRole('button', { name: 'Revert to Saved' })).toBeDisabled();
+    await page.keyboard.press('Escape');
+
+    // A sample, and the New items, each make what they say.
+    await choose(page, 'Stage play');
     await expect.poll(() => text(page)).toContain('# Act One');
     await expect(status(page)).toContainText('Stage play');
-
-    // New stage play and New Markdown document make a script of their kind.
-    await openMenu(page);
-    await item(page, /^New Markdown document/).click();
+    await choose(page, 'New Markdown document');
     await expect.poll(() => text(page)).toContain('# Untitled');
-    await openMenu(page);
-    await item(page, /^New screenplay/).click();
+    await choose(page, 'New screenplay');
     await expect.poll(() => text(page)).toContain('Title: Untitled Screenplay');
-    await openMenu(page);
-    await item(page, /^New stage play/).click();
+    await choose(page, 'New stage play');
     await expect.poll(() => text(page)).toContain('Title: Untitled Play');
     // A command that shows a script leaves the cursor in the editor, ready to type.
     await expect(editor(page)).toBeFocused();
 
-    // The recent scripts are in it, newest first; choosing one opens it.
-    await openMenu(page);
-    await expect(menu(page).getByText('Recent scripts')).toBeVisible();
-    await expect(item(page, /^Untitled Play \(open now\)/)).toBeVisible();
-    await item(page, /^Untitled Screenplay/).click();
+    // This browser's scripts are in it; choosing one opens it.
+    await fileButton(page).click();
+    await scripts(page)
+      .getByRole('button', { name: /^Untitled Screenplay/ })
+      .click();
     await expect.poll(() => text(page)).toContain('Title: Untitled Screenplay');
+  });
+});
 
-    // Save and Save As… ask where, through the same commands the keys run.
-    if (browserName === 'chromium') {
-      await stubPickers(page);
-      await page.reload();
-      await expect(editor(page)).toContainText('Title: Untitled');
-      await nextFileName(page, 'from-menu.fountain');
-      await openMenu(page);
-      await item(page, /^Save(?! As)/).click();
-      await expect.poll(async () => await files(page)).toContain('from-menu.fountain');
-      // Save leaves nothing else to do: focus is back on the mark.
-      await expect(mark(page)).toBeFocused();
-      await nextFileName(page, 'again.fountain');
-      await openMenu(page);
-      await item(page, /^Save As…/).click();
-      await expect
-        .poll(async () => await picks(page))
-        .toEqual(['from-menu.fountain', 'again.fountain']);
-    }
+test.describe("Save's arrow", () => {
+  const saveOptions = (page: Page) => page.getByRole('button', { name: 'Save options' });
+  const saveMenu = (page: Page) => page.getByRole('menu', { name: 'Save options' });
+
+  test('holds Save, Save As…, Revert to Saved, and History…, with their keys', async ({ page }) => {
+    test.skip(!wide(page), 'a phone folds Save, and its arrow, into More actions');
+    await start(page);
+    await saveOptions(page).click();
+    await expect(saveMenu(page).getByRole('menuitem')).toHaveText([
+      /^Save(?! As)/,
+      /^Save As…/,
+      /^Revert to Saved/,
+      /^History…/,
+    ]);
+    await expect(saveMenu(page).getByRole('menuitem', { name: /^Save As…/ })).toContainText(
+      /Shift\+S|⇧S/,
+    );
+    // A sample has no saved file to go back to: Revert to Saved is off, and Save As isn't.
+    await expect(
+      saveMenu(page).getByRole('menuitem', { name: /^Revert to Saved/ }),
+    ).toHaveAttribute('aria-disabled', 'true');
+    await expect(saveMenu(page).getByRole('menuitem', { name: /^Save As…/ })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await page.keyboard.press('Escape');
+    await expect(saveMenu(page)).toBeHidden();
+    await expect(saveOptions(page)).toBeFocused();
   });
 
+  test('Save and Save As… ask where, through the same commands the keys run', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'only Chromium saves in place');
+    test.skip(!wide(page), 'a phone folds Save, and its arrow, into More actions');
+    await stubPickers(page);
+    await start(page);
+    await nextFileName(page, 'from-menu.fountain');
+    await saveOptions(page).click();
+    await saveMenu(page)
+      .getByRole('menuitem', { name: /^Save(?! As)/ })
+      .click();
+    await expect.poll(async () => await files(page)).toContain('from-menu.fountain');
+    await nextFileName(page, 'again.fountain');
+    await saveOptions(page).click();
+    await saveMenu(page)
+      .getByRole('menuitem', { name: /^Save As…/ })
+      .click();
+    await expect
+      .poll(async () => await picks(page))
+      .toEqual(['from-menu.fountain', 'again.fountain']);
+  });
+});
+
+test.describe('the app menu: exports, and the rest', () => {
   test('exports with the same commands the toolbar’s Export menu runs', async ({ page }) => {
     await removePickers(page);
     await start(page);
@@ -212,8 +271,11 @@ test.describe('the app menu', () => {
     page,
   }) => {
     await start(page);
-    await openMenu(page);
-    await item(page, /^New Markdown document/).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'New Markdown document' })
+      .click();
     await expect.poll(() => text(page)).toContain('# Untitled');
     await openMenu(page);
     // The PDF first, as for a script.
@@ -236,12 +298,13 @@ test.describe('the app menu', () => {
     await expect(palette.getByRole('option', { name: /^Export as Final Draft/ })).toHaveCount(0);
   });
 
-  test('shows an item disabled when its command is off', async ({ page }) => {
+  test('keeps a sample’s exports on (Revert to Saved, off for a sample, is on Save’s arrow)', async ({
+    page,
+  }) => {
     await start(page);
-    // A sample has no saved file to go back to.
     await openMenu(page);
-    await expect(item(page, /^Revert to Saved/)).toHaveAttribute('aria-disabled', 'true');
-    await expect(item(page, /^New screenplay/)).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(item(page, /^Export as PDF/)).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(item(page, /^Export options…/)).not.toHaveAttribute('aria-disabled', 'true');
   });
 
   test('has no Help section: Help is its own menu', async ({ page }) => {

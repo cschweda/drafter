@@ -26,7 +26,11 @@ useDocsHead({
     <p>
       <strong>In Chrome and Edge on a computer,</strong> Save writes straight back to the file you opened or saved
       before. The first Save of a new script asks where to put it and what to call it, like any
-      desktop program. Save As saves a copy somewhere else.
+      desktop program. <strong>Save As</strong> (the arrow beside Save, or
+      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>; <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> on a
+      Mac) saves the script to a new file, and from then on Save writes to that one. To keep working
+      on the file you have and save a copy beside it, choose Export, then
+      <strong>Fountain (.fountain)</strong>.
     </p>
     <p>
       <strong>In Firefox, Safari, and Brave,</strong> and in every browser on a phone or tablet, a
@@ -99,7 +103,7 @@ useDocsHead({
           </tr>
           <tr>
             <th scope="row">
-              Export as PDF, HTML, EPUB, plain text, Final Draft, or Markdown (a Markdown document:
+              Export as PDF, HTML, EPUB, Fountain, plain text, Final Draft, or Markdown (a Markdown document:
               PDF, HTML, EPUB, its Markdown file, or plain text)
             </th>
             <td>Yes, as a download</td>
@@ -266,7 +270,7 @@ useDocsHead({
     </p>
     <p>
       If the Markdown file holds a screenplay you typed in Fountain, choose
-      <strong>Open as screenplay…</strong> instead (in the palette, the app menu, or the desktop
+      <strong>Open as screenplay…</strong> instead (in the palette, the toolbar’s File menu, or the desktop
       app’s File menu). It opens the file as a new screenplay with its text exactly as written. It
       isn’t saved yet, so Save asks where to put a <code>.fountain</code>, and the Markdown file is
       never changed.
@@ -335,6 +339,15 @@ useDocsHead({
       choose, and always keeps the scene numbers written in the script, since Final Draft decides
       whether to print them. A Markdown document has no scene numbers, title page, or notes to
       choose, so its Export options offers only Let Drafter reopen this file.
+    </p>
+
+    <h3 id="export-fountain">Export as Fountain</h3>
+    <p>
+      Export, then <strong>Fountain (.fountain)</strong>, saves a copy of a screenplay or stage play
+      exactly as Save would write it: the same text, line endings, and all. Unlike Save As, the
+      script stays on its own file, so the copy is a snapshot to send or keep, and the next Save
+      goes where it always did. Export options don’t change it: a Fountain file is the script itself,
+      not a drawing of it.
     </p>
 
     <h3 id="export-markdown">Export as Markdown</h3>

@@ -289,7 +289,7 @@ test('is hidden in focus mode', async ({ page }) => {
 });
 
 test('shows the Markdown set in a Markdown document', async ({ page }) => {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await page
     .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New Markdown document' })
@@ -455,7 +455,7 @@ test.describe('in the editor’s header', () => {
     await editor(page).focus();
   }
   async function newMarkdown(page: Page) {
-    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
       .getByRole('group', { name: 'Scripts', exact: true })
       .getByRole('button', { name: 'New Markdown document' })

@@ -20,7 +20,7 @@ const tabKey = (browserName: string) => (browserName === 'webkit' ? 'Alt+Tab' : 
 /** A script of the writer's own (the sample can't have a goal). */
 async function ownScript(page: Page) {
   await start(page);
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('button', { name: 'File', exact: true }).click();
   await page
     .getByRole('group', { name: 'Scripts', exact: true })
     .getByRole('button', { name: 'New screenplay' })
