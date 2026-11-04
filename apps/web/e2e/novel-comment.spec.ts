@@ -80,10 +80,13 @@ test.describe('a novel’s comment', () => {
 });
 
 test.describe('a novel’s facts through Revert and Restore', () => {
-  test.skip(({ browserName }) => browserName !== 'chromium', 'the File System Access API');
   test.skip(({ isMobile }) => !!isMobile, 'the editor is the same on a phone');
 
-  test('Revert to Saved after a move is the saved file byte for byte', async ({ page }) => {
+  test('Revert to Saved after a move is the saved file byte for byte', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'the File System Access API');
     await stubPickers(page);
     await openBook(page);
     await showSource(page);
@@ -105,6 +108,9 @@ test.describe('a novel’s facts through Revert and Restore', () => {
     await openBook(page);
     await runCommand(page, 'Take snapshot…');
     await expect(history(page)).toBeVisible();
+    // Enter takes the snapshot only once the label field has focus, a moment after History shows
+    // (as history.spec's takeSnapshot waits); before that it goes to the editor.
+    await expect(history(page).getByRole('textbox', { name: 'Label' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(snapshots(page)).toHaveCount(1);
     await history(page).getByRole('button', { name: 'Close' }).click();
