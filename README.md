@@ -5,6 +5,7 @@
 **Drafter™ is a free, open-source writing app for screenplays and stage plays in plain-text [Fountain](https://fountain.io), and for novels and treatments in Markdown: you write on the left, and the formatted pages build on the right as you type.** Rather not learn Fountain's marks? **Classic Mode** types a script with Enter and Tab, the way many screenwriters expect, over a file that stays Fountain.
 
 [![Latest release](https://img.shields.io/github/v/release/cschweda/drafter?label=release)](https://github.com/cschweda/drafter/releases/latest)
+[![CI](https://github.com/cschweda/drafter/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/cschweda/drafter/actions/workflows/checks.yml?query=branch%3Amain)
 [![Desktop build](https://github.com/cschweda/drafter/actions/workflows/desktop.yml/badge.svg?branch=main)](https://github.com/cschweda/drafter/actions/workflows/desktop.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Write at drafter.dev](https://img.shields.io/badge/web-drafter.dev-0a7d5a)](https://drafter.dev)
