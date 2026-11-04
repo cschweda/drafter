@@ -5,8 +5,8 @@ one outcome every way in must give it. A trap either **opens** with specific tex
 warning** (a note count, a notice), or is **refused** with a specific plain message. It never
 crashes or hangs, never runs anything, never fetches anything, and never uses unbounded memory.
 
-[MANIFEST.md](MANIFEST.md) lists every trap, generated from [`traps.ts`](traps.ts): 278 of them,
-across Fountain, Markdown, plain text, Final Draft (`.fdx`), Highland, Fade In, HTML and EPUB
+[MANIFEST.md](MANIFEST.md) lists every trap, generated from [`traps.ts`](traps.ts): 283 of them,
+across Fountain, Markdown (a novel among them), plain text, Final Draft (`.fdx`), Highland, Fade In, HTML and EPUB
 reopening, special files (pipes, links, folders), the desktop app's modules folder, and the
 drafts and cuts files read back from beside a work.
 
@@ -64,6 +64,7 @@ Every way a file comes into Drafter, and the harness that runs each one
 | `beside-read` | Drafts and cuts read back from beside the work when it opens: the cuts file (`Boca.fountain.cuts.md`), each entry checked by its ID and merged, and draft files (`Boca drafts/Boca – Draft 03.fountain`), each ID checked against its text. Untrusted: they may have been edited anywhere. | `apps/web/app/beside/read.ts` → `@drafter/history` | `harness.test.ts` |
 | `mcp` | Drafter for Claude: each tool’s read of a file in a configured folder, and every path a tool is given. | `packages/mcp/src` (`paths.ts`, `load.ts`, `inside.ts`, `tools/`) → `@drafter/archive` (`notAScript`, `reopenFormatOf`, `embeddedSource`), `@drafter/archive/node` (`readCapped`, `strictText`), and each format’s reader | `harness.test.ts`, in the trap worker, through the SDK’s in-memory transport |
 | `classic` | A hostile script open in Classic Mode: the left pane drawn, the cursor walked through every line, and a mode switched. Every trap that opens as Fountain text (not Markdown) goes through it, after the web app's Open has made it text. | `apps/web/app/storage/open.ts` (`openFile`) → `packages/cm-fountain/src/classic` (`classic()`) | `apps/web/test/trap-classic.test.ts` (jsdom, a real `EditorView`) |
+| `novel` | A Markdown file read as a novel: its parts, chapters, and sections found, the facts in its metadata comment read, and one move. Every Markdown trap that opens goes through it, as Open's text and as the raw text where the line breaks differ. The move must keep every non-blank line. | `packages/novel/src` (`novelStructure`, `readFacts`, `downTarget`/`upTarget`, `moveNode`) | `harness.test.ts` (trap worker) |
 
 ### Drafter for Claude (`mcp`)
 

@@ -45,10 +45,11 @@ test.describe('the app menu', () => {
     const at = (label: string) => shown.findIndex((n) => n.startsWith(label));
     expect(at('New screenplay')).toBe(0);
     expect(at('New stage play')).toBe(1);
-    expect(at('New Markdown document')).toBe(2);
-    expect(at('New guided screenplay')).toBe(3);
-    expect(at('New guided stage play')).toBe(4);
-    expect(at('Open…')).toBe(5);
+    expect(at('New novel')).toBe(2);
+    expect(at('New Markdown document')).toBe(3);
+    expect(at('New guided screenplay')).toBe(4);
+    expect(at('New guided stage play')).toBe(5);
+    expect(at('Open…')).toBe(6);
     for (const label of [
       'Save',
       'Save As…',
@@ -57,7 +58,7 @@ test.describe('the app menu', () => {
       'Export as plain text',
       'Settings…',
     ]) {
-      expect(at(label), label).toBeGreaterThan(5);
+      expect(at(label), label).toBeGreaterThan(6);
     }
     // A Fountain script exports as Markdown too (the whole script), with the same command a
     // Markdown document's own text uses.
@@ -334,6 +335,7 @@ test.describe('the Help menu', () => {
       /^Why Drafter/,
       /^Fountain cheat sheet/,
       /^Classic Mode/,
+      /^Novel/,
       /^Saving and your browser/,
       /^Drafts and cuts/,
       /^Story map/,

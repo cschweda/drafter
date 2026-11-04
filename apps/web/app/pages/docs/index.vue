@@ -7,7 +7,7 @@ definePageMeta({ layout: 'docs' });
 useDocsHead({
   title: 'Help',
   description:
-    'Help for Drafter: what it is, why Drafter, a Fountain cheat sheet, Classic Mode, saving and your browser, drafts and cuts, the story map, Drafter for Claude, self-hosting, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
+    'Help for Drafter: what it is, why Drafter, a Fountain cheat sheet, Classic Mode, writing a novel, saving and your browser, drafts and cuts, the story map, Drafter for Claude, self-hosting, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
   path: '/docs',
 });
 
@@ -20,6 +20,8 @@ const about: Record<string, string> = {
     'Every Fountain element with its mark, its rule, and an example: what the element bar writes for you.',
   'help-classic-mode':
     'Typing a script with Enter and Tab, the way many screenwriters expect, with names and places filled in, over a file that stays Fountain.',
+  'help-novel':
+    'Writing a novel in plain Markdown: chapters, sections, and parts, the Outline and Cards, focus on one chapter, and word targets.',
   'help-saving':
     'What Save does in each browser, keeping scripts in a synced folder, the recovery copy, and installing Drafter as an app.',
   'help-drafts-and-cuts':
@@ -46,7 +48,7 @@ const about: Record<string, string> = {
   <article>
     <h1>Help</h1>
     <p class="docs-lead">
-      Fifteen short pages: what Drafter is, writing in Fountain or in Classic Mode, how Drafter works, running it yourself, and what’s new.
+      Sixteen short pages: what Drafter is, writing in Fountain, in Classic Mode, or a novel, how Drafter works, running it yourself, and what’s new.
     </p>
     <ul>
       <li v-for="page in HELP_PAGES" :key="page.id">
@@ -59,7 +61,7 @@ const about: Record<string, string> = {
     </ul>
     <p>
       In Drafter, the <strong>Help</strong> menu at the top right (Help in the desktop app’s menu bar too) has these pages,
-      <strong>Take the tour</strong>, <strong>Sample scripts</strong> (a tiny screenplay, stage play,
+      <strong>Take the tour</strong>, <strong>Sample scripts</strong> (a tiny screenplay, stage play, novel,
       and Markdown document, and a guided first screenplay and stage play whose notes teach each
       element, each opened as a new script of your own),
       <strong>Report a problem…</strong> and <strong>Suggest an idea…</strong>,

@@ -35,6 +35,8 @@ const { index, idOf, readOnly } = outline;
 const { settings } = useSettings();
 const wide = useWideScreen();
 const markdown = computed(() => editor.kind.value === 'markdown');
+/** A novel is Markdown with Cards of its own: a card for each chapter and section (`NovelCards`). */
+const novel = computed(() => markdown.value && editor.novel.value);
 const isPlay = computed(() => editor.template.value.id === 'stage-play-standard');
 
 interface Card {
@@ -375,7 +377,8 @@ watch(cards, async () => {
 
 <template>
   <div class="cards-pane">
-    <DEmpty v-if="markdown" icon="i-lucide-layout-grid">Not available for Markdown documents.</DEmpty>
+    <NovelCards v-if="novel" />
+    <DEmpty v-else-if="markdown" icon="i-lucide-layout-grid">Not available for Markdown documents.</DEmpty>
     <DEmpty v-else-if="cards.length === 0" icon="i-lucide-layout-grid">
       No scenes yet.
       <template v-if="isPlay">A scene starts with <code>##</code> and its title.</template>

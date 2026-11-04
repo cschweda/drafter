@@ -16,6 +16,7 @@ import {
   scenePrints,
   similarity,
 } from '@drafter/history';
+import { markdownProse } from '@drafter/markdown';
 import type { DocumentKind } from '../markdown/kind';
 import type { CompareView } from '../settings/settings';
 import { type LineStop, stopLabel } from './labels';
@@ -57,7 +58,11 @@ function anchorsOf(text: string, kind: DocumentKind): Anchor[] {
  * The diff of `older` and `newer` as the Changes view draws it. The same anchors go to `diffRows`
  * and `groupRows`, so a change that crosses a heading is cut there.
  */
-export function diffModel(older: string, newer: string, kind: DocumentKind): DiffModel {
+export function diffModel(olderText: string, newerText: string, kind: DocumentKind): DiffModel {
+  // A Markdown document's trailing drafter comment is not prose: a synopsis or a status changed is
+  // no changed line. Every line before it keeps its number.
+  const older = kind === 'markdown' ? markdownProse(olderText) : olderText;
+  const newer = kind === 'markdown' ? markdownProse(newerText) : newerText;
   const anchors = { old: anchorsOf(older, kind), new: anchorsOf(newer, kind) };
   const { rows, changes } = diffRows(older, newer, anchors);
   const groups = groupRows(rows, anchors.old, anchors.new);

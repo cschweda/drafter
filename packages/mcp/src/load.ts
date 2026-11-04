@@ -8,7 +8,14 @@ import { type Cast, castOf } from '@drafter/cast';
 import { markdownAnchors, splitLines } from '@drafter/compare';
 import { type Doc, parse } from '@drafter/fountain';
 import { type Layout, paginate } from '@drafter/layout';
-import { findMarkdownMeta, markdownTitle } from '@drafter/markdown';
+import { findMarkdownMeta, markdownTitle, readMarkdownMeta } from '@drafter/markdown';
+import {
+  type NovelKind,
+  type NovelNode,
+  novelStructure,
+  readFacts,
+  type Status,
+} from '@drafter/novel';
 import { linesPerPage, type SceneIndex, sceneIndex } from '@drafter/outline';
 import { buildStoryMap, type StoryMap, storyMapMeta } from '@drafter/story-map';
 import { builtins, type Template } from '@drafter/templates';
@@ -44,7 +51,67 @@ export type Loaded =
       title: string | null;
       /** Its headings of levels 1 to 3, each to the next (or to the metadata comment, or the end). */
       sections: Array<{ title: string; from: number; to: number }>;
+      /**
+       * A novel (a Markdown file whose comment names the novel template): what is known of each
+       * entry of `sections`, which for a novel are its parts, chapters, and sections in order.
+       */
+      novel: NovelUnit[] | null;
     };
+
+/** What a novel keeps of one of its parts, chapters, or sections. */
+export interface NovelUnit {
+  kind: NovelKind;
+  /** The whole passage's words, everything under it included, as the app's Outline counts them. */
+  words: number;
+  /** The words before its first child. */
+  ownWords: number;
+  status?: Status;
+  synopsis?: string;
+  target?: number;
+}
+
+/** Whether the text's metadata comment names the novel template (Drafter's own file kind). */
+export function isNovelText(text: string): boolean {
+  try {
+    return readMarkdownMeta(text).meta?.template === 'novel';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The title of a unit with none of its own. An untitled section is the one a scene break starts,
+ * which the app calls "Scene break"; a part or chapter with an empty heading is named by its kind.
+ */
+export const untitled = (kind: NovelKind): string =>
+  kind === 'section' ? 'Scene break' : `(untitled ${kind})`;
+
+function flatten(nodes: NovelNode[], into: NovelNode[]): NovelNode[] {
+  for (const node of nodes) {
+    into.push(node);
+    flatten(node.children, into);
+  }
+  return into;
+}
+
+/**
+ * A novel's units as comparison anchors (their heading lines from 0, as `markdownAnchors` gives
+ * for plain Markdown), so drafts and compares number them as `read_scene` does.
+ */
+export function novelAnchors(text: string): Array<{ line: number; title: string }> {
+  const { starts } = splitLines(text);
+  let line = 0;
+  return novelNodes(text).map((node) => {
+    // Nodes come in document order, so the line only moves forward.
+    while (line + 1 < starts.length && (starts[line + 1] as number) <= node.heading.from) line++;
+    return { line, title: node.title === '' ? untitled(node.kind) : node.title };
+  });
+}
+
+/** A novel's parts, chapters, and sections in document order: the units every tool numbers. */
+export function novelNodes(text: string): NovelNode[] {
+  return flatten(novelStructure(text).nodes, []);
+}
 
 export const NOT_READ =
   'Drafter for Claude doesn’t read that kind of file. It reads Fountain, plain text, Markdown, Final Draft, Highland, and Fade In files, and Drafter’s HTML and EPUB exports.';
@@ -180,9 +247,40 @@ function loadScript(
   };
 }
 
+function loadNovel(
+  file: Checked,
+  format: Format,
+  content: Content,
+  text: string,
+  end: number,
+): Loaded {
+  const nodes = novelNodes(text);
+  const facts = readFacts(text).nodes;
+  return {
+    kind: 'markdown',
+    file,
+    format,
+    content,
+    text,
+    title: markdownTitle(text) ?? null,
+    sections: nodes.map((node, i) => ({
+      title: node.title === '' ? untitled(node.kind) : node.title,
+      from: node.heading.from,
+      to: Math.min(end, nodes[i + 1]?.heading.from ?? end),
+    })),
+    novel: nodes.map((node) => ({
+      kind: node.kind,
+      words: node.words,
+      ownWords: node.ownWords,
+      ...facts[node.id],
+    })),
+  };
+}
+
 function loadMarkdown(file: Checked, format: Format, content: Content, text: string): Loaded {
   const meta = findMarkdownMeta(text);
   const end = meta ? meta.from : text.length;
+  if (isNovelText(text)) return loadNovel(file, format, content, text, end);
   const { starts } = splitLines(text);
   const anchors = markdownAnchors(text).filter((anchor) => (starts[anchor.line] ?? 0) < end);
   const sections = anchors.map((anchor, i) => {
@@ -201,6 +299,7 @@ function loadMarkdown(file: Checked, format: Format, content: Content, text: str
     text,
     title: markdownTitle(text) ?? null,
     sections,
+    novel: null,
   };
 }
 

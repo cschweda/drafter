@@ -114,6 +114,9 @@ importers:
       '@drafter/notes':
         specifier: workspace:*
         version: link:../../packages/notes
+      '@drafter/novel':
+        specifier: workspace:*
+        version: link:../../packages/novel
       '@drafter/outline':
         specifier: workspace:*
         version: link:../../packages/outline
@@ -394,6 +397,9 @@ importers:
       '@drafter/notes':
         specifier: workspace:*
         version: link:../notes
+      '@drafter/novel':
+        specifier: workspace:*
+        version: link:../novel
       '@drafter/outline':
         specifier: workspace:*
         version: link:../outline
@@ -422,6 +428,16 @@ importers:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+
+  packages/novel:
+    dependencies:
+      '@drafter/markdown':
+        specifier: workspace:*
+        version: link:../markdown
+    devDependencies:
+      '@codemirror/state':
+        specifier: ^6.7.6
+        version: 6.7.6
 
   packages/outline:
     dependencies:

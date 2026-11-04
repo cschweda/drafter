@@ -34,6 +34,7 @@
     "@drafter/lint": "workspace:*",
     "@drafter/markdown": "workspace:*",
     "@drafter/notes": "workspace:*",
+    "@drafter/novel": "workspace:*",
     "@drafter/outline": "workspace:*",
     "@drafter/render-html": "workspace:*",
     "@drafter/render-html-file": "workspace:*",

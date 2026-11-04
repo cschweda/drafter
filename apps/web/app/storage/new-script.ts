@@ -1,5 +1,6 @@
 import { scriptFromMarkdown } from '@drafter/outline';
 import { NEW_MARKDOWN } from '../markdown/kind';
+import { NEW_NOVEL, NEW_NOVEL_CURSOR } from '../novel/kind';
 
 const MONTHS = [
   'January',
@@ -22,13 +23,14 @@ const STAGE_PLAY_META = '/* drafter\n{"v":1,"template":"stage-play-standard"}\n*
 /**
  * A new script's text: a title page to fill in, then a blank line, and for a stage play the
  * metadata block naming its template. The date is the local calendar's, written out so it reads
- * the same in every locale. A Markdown document is a title heading and a blank line. `cursor` is where typing starts: the end of a screenplay, and the
+ * the same in every locale. A Markdown document is a title heading and a blank line; a novel a chapter heading, a line to start on, and its metadata comment. `cursor` is where typing starts: the end of a screenplay, and the
  * blank line before a stage play's metadata block.
  */
 export function newScriptText(
-  kind: 'screenplay' | 'stage-play' | 'markdown',
+  kind: 'screenplay' | 'stage-play' | 'novel' | 'markdown',
   today: Date,
 ): { text: string; cursor: number } {
+  if (kind === 'novel') return { text: NEW_NOVEL, cursor: NEW_NOVEL_CURSOR };
   if (kind === 'markdown') return { text: NEW_MARKDOWN, cursor: NEW_MARKDOWN.length };
   const title = kind === 'screenplay' ? 'Untitled Screenplay' : 'Untitled Play';
   const date = `${MONTHS[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;

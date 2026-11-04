@@ -2,9 +2,12 @@
 import { history, undo } from '@codemirror/commands';
 import { EditorState, type Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
+import { setMarkdownMeta } from '@drafter/markdown';
+import { readFacts } from '@drafter/novel';
 import { describe, expect, test } from 'vitest';
 import { replaceText } from '../app/editor/replace-text';
 import { appChange } from '../app/editor/typewriter';
+import { carryNovelFacts, novelFacts } from '../app/novel/carry';
 
 function viewOf(doc: string, readOnly = false) {
   const seen: Transaction[] = [];
@@ -66,6 +69,61 @@ describe('replaceText', () => {
     expect(replaceText(view, 'Two.')).toBe(false);
     expect(view.state.doc.toString()).toBe('One.');
     expect(seen).toHaveLength(0);
+    view.destroy();
+  });
+});
+
+// Revert to Saved, a snapshot's Restore, and a draft's Restore all go through `replaceText`: the
+// text they bring has its own comment, and so its own facts, which the facts filter must not move.
+describe('replaceText on a novel', () => {
+  const book = (body: string, nodes: Record<string, { status: string }>) =>
+    setMarkdownMeta(body, { template: 'novel', novel: { nodes } });
+  const FACTS = { 'chapter:alpha:0': { status: 'done' }, 'chapter:beta:0': { status: 'draft' } };
+  const SAVED = book('# Alpha\n\nThe first.\n\n# Beta\n\nThe second.\n', FACTS);
+  // The Outline's move: Alpha after Beta. The ids don't change, so the comment doesn't either.
+  const MOVED = book('# Beta\n\nThe second.\n\n# Alpha\n\nThe first.\n', FACTS);
+
+  function novelView(doc: string) {
+    return new EditorView({
+      state: EditorState.create({
+        doc,
+        extensions: [history(), carryNovelFacts({ active: () => true })],
+      }),
+    });
+  }
+
+  test('a move, then Revert to Saved, is the saved text byte for byte, facts and all', () => {
+    const view = novelView(SAVED);
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: MOVED },
+      annotations: novelFacts.of(true),
+      userEvent: 'input',
+    });
+    expect(view.state.doc.toString()).toBe(MOVED);
+    expect(replaceText(view, SAVED)).toBe(true);
+    expect(view.state.doc.toString()).toBe(SAVED);
+    expect(readFacts(view.state.doc.toString())).toEqual(readFacts(SAVED));
+    // Undo brings the move back, its facts with it.
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(MOVED);
+    view.destroy();
+  });
+
+  test('a snapshot or a draft restored over typed headings is exactly its text', () => {
+    // Older text with other facts, over a book whose headings were renamed since.
+    const older = book('# Alpha\n\nOld.\n\n# Beta\n\nOlder.\n', {
+      'chapter:alpha:0': { status: 'todo' },
+    });
+    const view = novelView(SAVED);
+    view.dispatch({ changes: { from: 2, to: 7, insert: 'Gamma' }, userEvent: 'input.type' });
+    expect(readFacts(view.state.doc.toString()).nodes['chapter:gamma:0']).toEqual({
+      status: 'done',
+    });
+    expect(replaceText(view, older)).toBe(true);
+    expect(view.state.doc.toString()).toBe(older);
+    expect(replaceText(view, MOVED)).toBe(true);
+    expect(view.state.doc.toString()).toBe(MOVED);
+    expect(readFacts(view.state.doc.toString())).toEqual(readFacts(MOVED));
     view.destroy();
   });
 });

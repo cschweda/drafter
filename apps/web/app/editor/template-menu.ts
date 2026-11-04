@@ -16,13 +16,18 @@ import { useTemplate } from './use-template';
  */
 export function useTemplateMenu(onPick: () => void) {
   const template = useTemplate();
-  const { doc } = useEditor();
+  const { doc, novel } = useEditor();
   /** The template the script asks for that Drafter doesn't have. */
   const unknown = computed(() =>
     template.kind.value === 'fountain' ? unknownTemplateOf(doc.value) : undefined,
   );
   /** The current type's name, "(fallback)" included: the chip's text and the status bar's. */
-  const name = computed(() => typeNameOf(template.kind.value, template.id.value, !!unknown.value));
+  const name = computed(() =>
+    typeNameOf(template.kind.value, template.id.value, {
+      fallback: !!unknown.value,
+      novel: novel.value,
+    }),
+  );
   const note = computed(() =>
     unknown.value === undefined ? '' : unknownTemplateNote(unknown.value),
   );

@@ -1,4 +1,5 @@
 import markdown from '#samples/markdown.md?raw';
+import novel from '#samples/novel.md?raw';
 import screenplay from '#samples/screenplay.fountain?raw';
 import stagePlay from '#samples/stage-play.fountain?raw';
 import type { SampleKind } from './sample-kinds';
@@ -11,11 +12,15 @@ export const SAMPLE_SCREENPLAY: string = screenplay;
 /** The text of the stage-play sample, under Open → Samples. */
 export const SAMPLE_STAGE_PLAY: string = stagePlay;
 
+/** The text of the novel sample, under Open → Samples. */
+export const SAMPLE_NOVEL: string = novel;
+
 /** The text of the Markdown sample, under Open → Samples: what Markdown is for in Drafter, shown in Markdown. */
 export const SAMPLE_MARKDOWN: string = markdown;
 
 export const SAMPLE_TEXT: Record<SampleKind, string> = {
   screenplay: SAMPLE_SCREENPLAY,
   'stage-play': SAMPLE_STAGE_PLAY,
+  novel: SAMPLE_NOVEL,
   markdown: SAMPLE_MARKDOWN,
 };

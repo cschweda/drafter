@@ -51,6 +51,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
   { id: 'help-why', path: '/docs/why', title: 'Why Drafter' },
   { id: 'help-fountain', path: '/docs/fountain', title: 'Fountain cheat sheet' },
   { id: 'help-classic-mode', path: '/docs/classic-mode', title: 'Classic Mode' },
+  { id: 'help-novel', path: '/docs/novel', title: 'Novel' },
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser' },
   { id: 'help-drafts-and-cuts', path: '/docs/drafts-and-cuts', title: 'Drafts and cuts' },
   { id: 'help-story-map', path: '/docs/story-map', title: 'Story map' },
@@ -137,7 +138,7 @@ export const COMMAND_DATA: readonly CommandData[] = [
   ),
   ...DOCUMENT_TYPES.filter((type) => type.kind === 'markdown').map(
     (type): CommandData => ({
-      id: 'document-markdown',
+      id: `document-${type.id}`,
       title: `Document: ${type.name}`,
       group: 'File',
     }),
@@ -321,6 +322,37 @@ export const COMMAND_DATA: readonly CommandData[] = [
     icon: 'i-lucide-scan',
     keys: 'Mod-Shift-Enter',
     global: true,
+  },
+  // A novel's focus (Novel plan, Task 7): one chapter or one section shows, the rest of the book is
+  // hidden (never removed). Mod+Alt+F for the passage at the cursor, Mod+Alt+Shift+F for all of it.
+  // Focus on this passage: the section at the cursor, or its chapter; again, the section's chapter.
+  {
+    id: 'focus-passage',
+    title: 'Focus on this passage',
+    group: 'View',
+    keys: 'Mod-Alt-f',
+    global: true,
+    keywords: ['novel', 'chapter', 'section', 'hide the rest'],
+  },
+  {
+    id: 'focus-chapter',
+    title: 'Focus on this chapter',
+    group: 'View',
+    keywords: ['novel', 'passage', 'one chapter', 'hide the rest'],
+  },
+  {
+    id: 'focus-section',
+    title: 'Focus on this section',
+    group: 'View',
+    keywords: ['novel', 'passage', 'one section', 'hide the rest'],
+  },
+  {
+    id: 'show-whole-book',
+    title: 'Show the whole book',
+    group: 'View',
+    keys: 'Mod-Alt-Shift-f',
+    global: true,
+    keywords: ['novel', 'unfocus', 'everything'],
   },
   ...SPRINT_MINUTES.map(
     (minutes): CommandData => ({

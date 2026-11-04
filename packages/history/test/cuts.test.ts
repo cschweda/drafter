@@ -1,3 +1,4 @@
+import { setMarkdownMeta } from '@drafter/markdown';
 import { describe, expect, test } from 'vitest';
 import { CUT_MIN_WORDS, findCuts } from '../src';
 import {
@@ -599,5 +600,39 @@ describe('findCuts in a Markdown document', () => {
     expect(findCuts(YEAR, YEAR, 'markdown')).toEqual([]);
     expect(findCuts('', YEAR, 'markdown')).toEqual([]);
     expect(findCuts(YEAR, `${YEAR}\n## Spring again\n\nMore.\n`, 'markdown')).toEqual([]);
+  });
+});
+
+describe('findCuts and the drafter comment', () => {
+  const facts = (synopsis: string) => ({
+    template: 'novel',
+    novel: {
+      nodes: {
+        'section:winter:0': { status: 'draft', synopsis },
+        'section:summer:0': { status: 'done' },
+      },
+    },
+  });
+  const long = `${prose(30, 7)} ${prose(20, 8)}`;
+
+  test('editing or clearing a synopsis is never a cut', () => {
+    const before = setMarkdownMeta(YEAR, facts(long));
+    expect(findCuts(before, setMarkdownMeta(YEAR, facts('Snow.')), 'markdown')).toEqual([]);
+    // Clear them: the comment loses its facts.
+    expect(findCuts(before, setMarkdownMeta(YEAR, { template: 'novel' }), 'markdown')).toEqual([]);
+    // The comment gone altogether.
+    expect(findCuts(before, YEAR, 'markdown')).toEqual([]);
+  });
+
+  test('a section with facts deleted is cut without its JSON', () => {
+    const before = setMarkdownMeta(YEAR, facts(long));
+    const after = setMarkdownMeta(
+      keeper(['# The Keeper’s Year', KEEPER.intro, KEEPER.spring, KEEPER.summer, KEEPER.autumn]),
+      { template: 'novel', novel: { nodes: { 'section:summer:0': { status: 'done' } } } },
+    );
+    const cuts = findCuts(before, after, 'markdown');
+    expect(cuts.map((c) => c.title)).toEqual(['Winter']);
+    expect(cuts[0]?.text).toBe(KEEPER.winter);
+    for (const cut of cuts) expect(cut.text).not.toContain('drafter');
   });
 });

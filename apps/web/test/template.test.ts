@@ -36,6 +36,24 @@ describe('templateIdOf', () => {
 });
 
 describe('DOCUMENT_TYPES', () => {
+  test('lists Screenplay, Stage play, Novel, then plain Markdown, in that order', () => {
+    expect(DOCUMENT_TYPES.map((t) => t.name)).toEqual([
+      'Screenplay',
+      'Stage play',
+      'Novel',
+      'Markdown (plain text)',
+    ]);
+    const novel = DOCUMENT_TYPES.find((t) => t.id === 'novel');
+    expect(novel).toMatchObject({
+      kind: 'markdown',
+      newKind: 'novel',
+      newTitle: 'New novel',
+      newIcon: 'i-lucide-book-open-text',
+    });
+    expect(typeNameOf('markdown', 'us-screenplay', { novel: true })).toBe('Novel');
+    expect(typeNameOf('markdown', 'us-screenplay')).toBe('Markdown (plain text)');
+  });
+
   test('lists Screenplay first, Stage play second, and Markdown last', () => {
     // The chip, the New menu, and the palette read this one list.
     expect(DOCUMENT_TYPES.slice(0, 2).map((t) => t.name)).toEqual(['Screenplay', 'Stage play']);
@@ -47,8 +65,11 @@ describe('DOCUMENT_TYPES', () => {
     expect(last?.kind).toBe('markdown');
     expect(last?.name).toBe('Markdown (plain text)');
     expect(last?.newTitle).toBe('New Markdown document');
-    // Markdown is the only member that isn't a Fountain template.
-    expect(DOCUMENT_TYPES.filter((t) => t.kind === 'markdown')).toHaveLength(1);
+    // Markdown and Novel are the members that aren't Fountain templates.
+    expect(DOCUMENT_TYPES.filter((t) => t.kind === 'markdown').map((t) => t.id)).toEqual([
+      'novel',
+      'markdown',
+    ]);
   });
 
   test('has an entry for every built-in template, once', () => {
@@ -98,10 +119,14 @@ describe('an unknown template', () => {
   });
 
   test('is said in the chip’s name and the menu’s note', () => {
-    expect(typeNameOf('fountain', 'us-screenplay', true)).toBe('Screenplay (fallback)');
+    expect(typeNameOf('fountain', 'us-screenplay', { fallback: true })).toBe(
+      'Screenplay (fallback)',
+    );
     expect(typeNameOf('fountain', 'us-screenplay')).toBe('Screenplay');
     // A Markdown document has no template to fall back from.
-    expect(typeNameOf('markdown', 'us-screenplay', true)).toBe('Markdown (plain text)');
+    expect(typeNameOf('markdown', 'us-screenplay', { fallback: true })).toBe(
+      'Markdown (plain text)',
+    );
     expect(unknownTemplateNote('my-own')).toBe(
       "This script asks for “my-own”, which Drafter doesn't have, so it's shown as a screenplay.",
     );

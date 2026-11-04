@@ -2,6 +2,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 import { commandById } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
+import { isNovel } from '~/novel/kind';
 import { useGuard } from '~/storage/guard';
 import { kindOf } from '~/storage/projects';
 import { useScript } from '~/storage/script';
@@ -36,7 +37,8 @@ function onCloseAutoFocus(event: Event) {
 const what = computed(() => {
   const current = project.value;
   if (!current) return 'document';
-  if (kindOf(current) === 'markdown') return 'Markdown document';
+  if (kindOf(current) === 'markdown')
+    return isNovel(current.source) ? 'novel' : 'Markdown document';
   return current.templateId === 'stage-play-standard' ? 'stage play' : 'screenplay';
 });
 const startBlankWhy = computed(

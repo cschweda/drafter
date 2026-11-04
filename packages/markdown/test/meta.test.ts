@@ -1,6 +1,13 @@
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { commentJson, findMarkdownMeta, readMarkdownMeta, setMarkdownMeta } from '../src';
+import {
+  commentJson,
+  findMarkdownMeta,
+  markdownProse,
+  parseMarkdown,
+  readMarkdownMeta,
+  setMarkdownMeta,
+} from '../src';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 /** Bodies built from the pieces most likely to confuse the block. */
@@ -138,4 +145,31 @@ describe('Markdown metadata comment', () => {
     },
     SCALING_TIMEOUT,
   );
+});
+
+describe('markdownProse', () => {
+  test('is the text without its metadata block, every offset before it the same', () => {
+    const body = '# One\n\nWords here.\n';
+    const file = setMarkdownMeta(body, { template: 'novel', note: 'not prose' });
+    const prose = markdownProse(file);
+    expect(prose).not.toContain('drafter {');
+    expect(file.startsWith(prose)).toBe(true);
+    expect(prose.trimEnd()).toBe(body.trimEnd());
+    // No block, or a comment that isn't one: the whole text.
+    expect(markdownProse(body)).toBe(body);
+    const own = 'Text.\n\n<!-- drafter {"a":1} --> and more\n';
+    expect(markdownProse(own)).toBe(own);
+  });
+
+  test('the parse never holds the block, so nothing drawn from it shows it', () => {
+    const body = '# One\n\nWords here.\n';
+    const file = setMarkdownMeta(body, { synopsis: 'The bottle, *the* sand.' });
+    const tree = parseMarkdown(file);
+    expect(JSON.stringify(tree)).not.toContain('drafter');
+    expect(JSON.stringify(tree.children)).toBe(JSON.stringify(parseMarkdown(body).children));
+    // Every Markdown document, with a byte-order mark or line breaks of its own.
+    expect(JSON.stringify(parseMarkdown(`\ufeff${file.replaceAll('\n', '\r\n')}`))).not.toContain(
+      'drafter',
+    );
+  });
 });

@@ -158,9 +158,9 @@ test.describe('the template chip', () => {
 });
 
 test.describe('the list of document types', () => {
-  // The chip, the New menu, and the palette all read `DOCUMENT_TYPES`: Screenplay, Stage play, then
-  // Markdown (plain text) last.
-  test('lists Screenplay, Stage play, then Markdown last, in the chip, the New menu, and the palette', async ({
+  // The chip, the New menu, and the palette all read `DOCUMENT_TYPES`: Screenplay, Stage play, Novel,
+  // then Markdown (plain text) last.
+  test('lists Screenplay, Stage play, Novel, then Markdown last, in the chip, the New menu, and the palette', async ({
     page,
     isMobile,
   }) => {
@@ -171,7 +171,7 @@ test.describe('the list of document types', () => {
       const names = await chipMenu(page)
         .getByRole('menuitemcheckbox')
         .evaluateAll((els) => els.map((el) => el.textContent?.trim()));
-      expect(names).toEqual(['Screenplay', 'Stage play', 'Markdown (plain text)']);
+      expect(names).toEqual(['Screenplay', 'Stage play', 'Novel', 'Markdown (plain text)']);
       await page.keyboard.press('Escape');
     }
 
@@ -179,9 +179,10 @@ test.describe('the list of document types', () => {
     const items = await scriptsMenu(page)
       .getByRole('button')
       .evaluateAll((els) => els.map((el) => el.textContent?.trim()));
-    expect(items.slice(0, 3)).toEqual([
+    expect(items.slice(0, 4)).toEqual([
       'New screenplay',
       'New stage play',
+      'New novel',
       'New Markdown document',
     ]);
     await page.keyboard.press('Escape');
@@ -205,6 +206,8 @@ test.describe('the list of document types', () => {
       .evaluateAll((els) => els.map((el) => el.textContent?.trim() ?? ''));
     const at = (prefix: string) => news.findIndex((t) => t.startsWith(prefix));
     expect(at('New Markdown document')).toBeGreaterThan(at('New stage play'));
+    // Novel is listed between them (the palette ranks the matches by how well they fit, so only that it is there).
+    expect(at('New novel')).toBeGreaterThanOrEqual(0);
     expect(at('New stage play')).toBeGreaterThan(at('New screenplay'));
   });
 });

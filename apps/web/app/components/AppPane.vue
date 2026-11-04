@@ -47,8 +47,10 @@ const editorPane = computed(() => props.pane === 'left');
 const inspector = computed(() => props.pane === 'right');
 
 const { project } = useScript();
-const { kind, view: editorView } = useEditor();
+const { kind, novel, view: editorView } = useEditor();
 const markdown = computed(() => kind.value === 'markdown');
+/** The tabs follow the kind, and a novel has an Outline. */
+const tabsKind = computed(() => (markdown.value && novel.value ? 'novel' : kind.value));
 /** The Script tab is the Preview in a Markdown document. */
 const labelOf = (tab: { id: string; label: string }) =>
   tab.id === 'script' && markdown.value ? 'Preview' : tab.label;
@@ -118,7 +120,7 @@ function tabOf(id: TabId): Tab {
 // is too narrow for them (`fit`, measured below).
 const inspectorSet = computed(() => {
   const { row, more } = inspectorTabs(
-    kind.value,
+    tabsKind.value,
     moduleTabs.value.map((tab) => tab.id),
   );
   const open = (id: TabId) => {

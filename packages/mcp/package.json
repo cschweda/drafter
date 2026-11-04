@@ -43,6 +43,7 @@
     "@drafter/lint": "workspace:*",
     "@drafter/markdown": "workspace:*",
     "@drafter/notes": "workspace:*",
+    "@drafter/novel": "workspace:*",
     "@drafter/outline": "workspace:*",
     "@drafter/story-map": "workspace:*",
     "@drafter/templates": "workspace:*",

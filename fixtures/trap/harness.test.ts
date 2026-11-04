@@ -304,6 +304,24 @@ describe('package: each format’s reader on its own', () => {
   });
 });
 
+describe('novel: a Markdown file read as a novel', () => {
+  test.each(trapsFor('novel').map((t) => [t.id, t] as const))('%s', async (_id, trap) => {
+    const bytes = trap.bytes?.() as Uint8Array;
+    const answer = checkRan(trap, bytes.length, await ran(trap, { kind: 'novel', bytes }), 'novel');
+    checkOutcome(trap, trap.expect.novel as Outcome, answer.happened, 'novel');
+    // The traps built for a novel say what they hold, and that a move was made.
+    if (trap.novel) {
+      const { parts, chapters, sections } = answer.novel ?? {};
+      expect({ parts, chapters, sections }, `${trap.id}: its structure`).toEqual({
+        parts: trap.novel.parts,
+        chapters: trap.novel.chapters,
+        sections: trap.novel.sections,
+      });
+      expect(answer.novel?.moved, `${trap.id}: made a move`).toBe(trap.novel.moves);
+    }
+  });
+});
+
 // ---- The command line ----------------------------------------------------------------------------
 
 interface CliRun {

@@ -111,6 +111,13 @@ const groups = shortcutGroups(COMMAND_DATA);
           completion, or search) needs it.
         </li>
         <li>
+          In the Outline tab, <kbd>Enter</kbd> on a row goes to its scene, or a novel’s chapter or
+          section, and <kbd>Alt+↑</kbd> and <kbd>Alt+↓</kbd> move it, with all its text, up or down
+          (<kbd>⌥</kbd> on a Mac). The context-menu key or <kbd>Shift+F10</kbd> opens the row’s
+          menu. A novel’s focus keys, Focus on this passage and Show the whole book, are under View
+          above.
+        </li>
+        <li>
           In the Cards tab, the arrow keys move between the cards as they are drawn, and
           <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last. <kbd>Enter</kbd> edits a
           card’s synopsis (<kbd>Enter</kbd> saves, <kbd>Esc</kbd> cancels), and the context-menu

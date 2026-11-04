@@ -15,6 +15,9 @@ import { usePanes } from '~/composables/usePanes';
 import { useSettings } from '~/settings/settings';
 import { WIDE_QUERY } from '~/utils/panes';
 import type { DocumentKind } from '../markdown/kind';
+import { carryNovelFacts } from '../novel/carry';
+import { passageFocusExtension } from '../novel/focus';
+import { isNovel } from '../novel/kind';
 import { applyEditorSettings, writingModeSwitch } from './apply-settings';
 import type { ElementMove } from './element-announcer';
 import { sayElement } from './element-notice';
@@ -50,6 +53,8 @@ export interface EditorSession {
   readonly template: Readonly<ShallowRef<Template>>;
   /** What the document is: Fountain, or plain Markdown (no pages, elements, or checks). */
   readonly kind: Readonly<ShallowRef<DocumentKind>>;
+  /** Whether the open document is a novel: Markdown whose metadata comment names the novel template. */
+  readonly novel: Readonly<ShallowRef<boolean>>;
   /** Counts the scripts loaded into the editor (`load`), so a reader of the text can tell a switch of script from an edit. */
   readonly loaded: Readonly<ShallowRef<number>>;
   /**
@@ -136,6 +141,7 @@ function create(): EditorSession {
   /** Read-only for a frozen draft's text (`setFrozen`), apart from the tab lock. */
   let frozen = false;
   const kind = shallowRef<DocumentKind>('fountain');
+  const novel = shallowRef(false);
   const loaded = shallowRef(0);
   /** Changes with every load and change of kind: a Markdown mode that arrives late checks it is still wanted. */
   let languageEpoch = 0;
@@ -144,9 +150,35 @@ function create(): EditorSession {
   const changeListeners = new Set<(changes: ChangeSet | null) => void>();
   const editListeners = new Set<(transactions: readonly Transaction[]) => void>();
 
+  /** The metadata line last read, and whether it named the novel template: typing elsewhere re-reads nothing. */
+  let metaLine: string | null = null;
+  let metaIsNovel = false;
+
+  /**
+   * Keeps `novel`. The metadata comment is the last non-blank line, so only that line is read,
+   * however long the book, and its JSON is parsed only when the line's text has changed.
+   */
+  function followNovel(state: EditorState) {
+    let found = false;
+    if (kind.value === 'markdown') {
+      let n = state.doc.lines;
+      while (n > 1 && state.doc.line(n).text.trim() === '') n--;
+      const line = state.doc.line(n).text;
+      if (line !== metaLine) {
+        metaLine = line;
+        metaIsNovel = isNovel(line);
+      }
+      found = metaIsNovel;
+    } else {
+      metaLine = null;
+    }
+    if (found !== novel.value) novel.value = found;
+  }
+
   /** Brings what the session shows up to date with `state`. */
   function follow(state: EditorState) {
     doc.value = state.field(parsedDoc);
+    followNovel(state);
     const next = builtins[templateIdOf(doc.value)] as Template;
     if (next !== template.value) {
       template.value = next;
@@ -203,6 +235,18 @@ function create(): EditorSession {
   // Everything but the text, so `load` can make a new state from the same pieces.
   const extensionsFor = (of: DocumentKind) => [
     editorExtensions(hooks, of),
+    // A novel's facts follow their headings through every edit (Novel plan, Task 5).
+    //
+    // The order of these two is load-bearing. CodeMirror runs transaction filters from the last
+    // registered to the first, so focus's guard (below) runs before the facts filter: the guard
+    // first takes out every change outside the passage (Replace All's matches in the hidden text,
+    // the comment's ids among them), and the facts filter then carries the facts through what is
+    // left. The other way round, the facts filter would see a change to the comment, let it go, and
+    // the guard would then drop it, losing the facts of a renamed heading (novel-focus.test.ts).
+    carryNovelFacts({ active: () => kind.value === 'markdown' }),
+    // Focus on one chapter or one section (Novel plan, Task 7): nothing while the whole book shows.
+    // An edit at the passage's edge that would reach the hidden text says why it did nothing.
+    passageFocusExtension({ onBlocked: (hint) => void sayElement(hint) }),
     EditorView.updateListener.of((update) => {
       if (update.transactions.length > 0) followElement(update.state);
       if (classicIsOn(update.state)) followMove(update.transactions);
@@ -276,6 +320,7 @@ function create(): EditorSession {
       effects: [language.reconfigure(languageExtension(hooks, next)), ...(switched?.effects ?? [])],
     });
     cursor.value = next === 'fountain' ? cursorElement(view.state) : null;
+    followNovel(view.state);
     // Fountain's lint starts again for the text it now lints (the reconfigure starts it, too, but
     // after its delay). Not in this update: a listener may not dispatch.
     if (next === 'fountain') queueMicrotask(relint);
@@ -352,6 +397,7 @@ function create(): EditorSession {
     template,
     locked,
     kind,
+    novel,
     loaded,
     load,
     setKind,

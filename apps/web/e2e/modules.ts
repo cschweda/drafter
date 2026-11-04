@@ -233,9 +233,13 @@ export async function runCommand(page: Page, title: string) {
   await page.keyboard.insertText(title);
   const row = palette(page).getByRole('option', { name: title, exact: true });
   await expect(row).toBeVisible();
-  await expect(row).toHaveAttribute('data-highlighted', '');
-  await page.keyboard.press('Enter');
-  await expect(palette(page)).toBeHidden();
+  // A list redrawn under the keys loses its highlight for a frame; an Enter then does nothing.
+  // choose() closes the palette before it runs the command, so an open palette means it didn't run.
+  await expect(async () => {
+    await expect(row).toHaveAttribute('data-highlighted', '', { timeout: 1_000 });
+    await page.keyboard.press('Enter');
+    await expect(palette(page)).toBeHidden({ timeout: 1_000 });
+  }).toPass({ timeout: 10_000 });
 }
 
 /**
@@ -487,4 +491,34 @@ export async function openCountsPanel(page: Page) {
     await expect(palette(page)).toBeHidden();
   }
   await expect(page.getByRole('dialog', { name: 'Counts' })).toBeVisible();
+}
+
+/**
+ * Submits the open target dialog with `words` and, in the same task, before a frame passes, opens
+ * the menu of the row or card called `name` with Shift+F10: as quick as a test is, and quicker than
+ * any writer. The dialog hands focus back a frame after it closes, which must not close that menu.
+ */
+export async function submitThenOpenMenu(page: Page, words: string, name: string) {
+  await page
+    .getByRole('dialog', { name: /^Target for / })
+    .getByRole('textbox', { name: 'Words' })
+    .evaluate(
+      (field, [words, name]) => {
+        (field as HTMLInputElement).value = words as string;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.closest('form')?.requestSubmit();
+        const target = [
+          ...document.querySelectorAll<HTMLElement>('[role="treeitem"], [role="option"]'),
+        ].find(
+          (each) =>
+            each.getAttribute('aria-label')?.startsWith(name as string) ||
+            each.textContent?.trim().startsWith(name as string),
+        );
+        target?.focus();
+        target?.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'F10', shiftKey: true, bubbles: true }),
+        );
+      },
+      [words, name],
+    );
 }

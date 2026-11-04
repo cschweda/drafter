@@ -245,6 +245,7 @@ export async function syncBeside(
         note: facts.note,
         ...(facts.from ? { from: { n: facts.from.draft, id: facts.from.id } } : {}),
         changed: !matches,
+        kind,
         file: found.name,
         where,
       });

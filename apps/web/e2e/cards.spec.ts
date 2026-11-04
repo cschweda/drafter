@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
+  clickViewTool,
   editor,
   palette,
   paletteInput,
@@ -186,7 +187,9 @@ test.describe('the Cards tab', () => {
     const large = sizes.getByRole('button', { name: 'Large' });
     await expect(medium).toHaveAttribute('aria-pressed', 'true');
     const before = (await hall(page).boundingBox())?.height ?? 0;
-    await large.click();
+    // The header can fit itself again after the tool is found, folding it back behind "⋯" (seen on
+    // macOS runners, on main too): found and clicked again until the click lands.
+    await clickViewTool(page, large);
     await expect(large).toHaveAttribute('aria-pressed', 'true');
     await expect(medium).toHaveAttribute('aria-pressed', 'false');
     await expect

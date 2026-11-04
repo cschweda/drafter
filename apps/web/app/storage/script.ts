@@ -22,6 +22,7 @@ import type { StarterKind } from '../editor/starter-kinds';
 import type { NewKind } from '../editor/template';
 import { appChange } from '../editor/typewriter';
 import type { DocumentKind } from '../markdown/kind';
+import { novelFacts } from '../novel/carry';
 import { useSnapshots } from '../snapshots/use-snapshots';
 import { db } from './db';
 import type { FileRef } from './files';
@@ -644,7 +645,7 @@ function create(): ScriptSession {
     // A tab that only shows a script may show old text; it starts nothing (Phase 1 design §9.3).
     if (guard.readOnly.value) throw new Error('This tab is read-only.');
     const blank = newScriptText(kind, new Date());
-    const made: DocumentKind = kind === 'markdown' ? 'markdown' : 'fountain';
+    const made: DocumentKind = kind === 'markdown' || kind === 'novel' ? 'markdown' : 'fountain';
     let cursor = blank.cursor;
     await switchTo(
       async () => {
@@ -694,7 +695,8 @@ function create(): ScriptSession {
       scrollIntoView: true,
       userEvent: 'input.replace',
       // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
-      annotations: [isolateHistory.of('full'), appChange.of(true)],
+      // The text brings its own facts (a novel's comment): the facts filter leaves it alone.
+      annotations: [isolateHistory.of('full'), appChange.of(true), novelFacts.of(true)],
     });
     // A new blank document is unchanged, as one made by New is; the offer goes with it.
     // The copy held here changes at once (the bar goes now); the stored one when its turn comes.
@@ -770,7 +772,7 @@ function create(): ScriptSession {
       createProject({
         source: SAMPLE_TEXT[kind],
         sample: kind,
-        kind: kind === 'markdown' ? 'markdown' : 'fountain',
+        kind: kind === 'markdown' || kind === 'novel' ? 'markdown' : 'fountain',
       })
     );
   }
@@ -791,14 +793,15 @@ function create(): ScriptSession {
     // One transaction for the whole text, so one undo brings the edits back; an undo step of its
     // own, so typing just after it isn't joined to it (as `replaceWith` does).
     // A Markdown document has no scenes: its cursor goes to the top.
-    const at = kind === 'markdown' ? 0 : firstSceneStart(original);
+    const at = kind === 'markdown' || kind === 'novel' ? 0 : firstSceneStart(original);
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: original },
       selection: { anchor: at },
       effects: EditorView.scrollIntoView(at, { y: 'start', yMargin: 24 }),
       userEvent: 'input.replace',
       // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
-      annotations: [isolateHistory.of('full'), appChange.of(true)],
+      // The text brings its own facts (a novel's comment): the facts filter leaves it alone.
+      annotations: [isolateHistory.of('full'), appChange.of(true), novelFacts.of(true)],
     });
     return true;
   }
@@ -1049,7 +1052,8 @@ function create(): ScriptSession {
       scrollIntoView: true,
       userEvent: 'input.replace',
       // Drafter's change, not the writer's: no writing time for it (stats/writing.ts).
-      annotations: [isolateHistory.of('full'), appChange.of(true)],
+      // The text brings its own facts (a novel's comment): the facts filter leaves it alone.
+      annotations: [isolateHistory.of('full'), appChange.of(true), novelFacts.of(true)],
     });
     // A whole-text replacement makes no cuts (drafts-and-cuts design §3.1).
     void useCutRecorder().replaced(id, file.text);

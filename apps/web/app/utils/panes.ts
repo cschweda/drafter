@@ -3,6 +3,12 @@
 // §3.2, §3.3, Calls 4, 5, 13, 14): there is no swap rule and no choice of tab on the left. Below
 // 1024px one pane shows, switched by the bottom tab bar (`phoneTabs`, design §6, Task 9).
 
+/**
+ * What a document's tabs follow: a script, plain Markdown, or a novel (Markdown with an Outline of
+ * its parts, chapters, and sections).
+ */
+export type TabsKind = 'fountain' | 'markdown' | 'novel';
+
 /** A tab's id: one of the core four, a view tab (Cards, Notes, Stats), or a script module's (`moduleTabId`). */
 export type TabId = string;
 export type CoreTabId = 'source' | 'script' | 'problems' | 'outline';
@@ -46,17 +52,20 @@ const DRAFT_TABS: InspectorTabId[] = ['cuts', 'drafts', 'draft-steps', 'draft'];
  * order. A script: Script, Outline, Cards, Stats, Scaffold in the row; Notes, Problems, Compare,
  * Cuts, Drafts, the draft being read, then the modules' tabs (`modules`) under More. A Markdown
  * document: Preview and Stats; Problems, Compare, Cuts, Drafts, the draft being read, and the
- * modules' tabs under More. Compare, Cuts, and the drafts' two are listed only while open
+ * modules' tabs under More. A novel: Preview, Outline, Cards, and Stats, and the same More. Compare, Cuts, and the drafts' two are listed only while open
  * (AppPane leaves them out otherwise); when the Inspector is too narrow for its row, AppPane moves
  * tabs from the row's right end into More, measured.
  */
 export function inspectorTabs(
-  kind: 'fountain' | 'markdown',
+  kind: TabsKind,
   modules: ReadonlyArray<string> = [],
 ): { row: InspectorTabId[]; more: InspectorTabId[] } {
   const own = modules as InspectorTabId[];
-  if (kind === 'markdown')
-    return { row: ['script', 'stats'], more: ['problems', 'compare', ...DRAFT_TABS, ...own] };
+  if (kind !== 'fountain') {
+    const row: InspectorTabId[] =
+      kind === 'novel' ? ['script', 'outline', 'cards', 'stats'] : ['script', 'stats'];
+    return { row, more: ['problems', 'compare', ...DRAFT_TABS, ...own] };
+  }
   return {
     row: ['script', 'outline', 'cards', 'stats', 'scaffold'],
     more: ['notes', 'problems', 'compare', ...DRAFT_TABS, ...own],
@@ -166,12 +175,12 @@ export const HISTORY_ITEM = 'history';
 
 /**
  * The bottom tab bar (fresh-look design §6): Write, Script (a Markdown document's Preview), and
- * Outline (not in a Markdown document), then More with Cards, Stats, Scaffold, Notes, Problems,
+ * Outline (not in a plain Markdown document; a novel has its own), then More with Cards, Stats, Scaffold, Notes, Problems,
  * the modules' tabs, and History, which opens its dialog. Compare, Cuts, Drafts, and the draft
  * being read lead More while they are open. A tab from More shows on the bar while it is the one showing (BottomTabBar).
  */
 export function phoneTabs(
-  kind: 'fountain' | 'markdown',
+  kind: TabsKind,
   modules: ReadonlyArray<string> = [],
   open: {
     compare?: boolean;
@@ -188,10 +197,17 @@ export function phoneTabs(
     ...(open.steps ? ['draft-steps'] : []),
     ...(open.draft ? ['draft'] : []),
   ];
-  if (kind === 'markdown') {
+  if (kind !== 'fountain') {
     return {
-      row: ['source', 'script'],
-      more: [...lead, 'stats', 'problems', ...modules, HISTORY_ITEM],
+      row: kind === 'novel' ? ['source', 'script', 'outline'] : ['source', 'script'],
+      more: [
+        ...lead,
+        ...(kind === 'novel' ? ['cards'] : []),
+        'stats',
+        'problems',
+        ...modules,
+        HISTORY_ITEM,
+      ],
     };
   }
   return {

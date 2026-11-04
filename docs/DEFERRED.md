@@ -320,12 +320,15 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 
 ## Flaky tests seen in CI
 
+- **Web, macOS runner: `history-scan.spec.ts:140` ("a warm scan is fast")** failed once on `novel` (run 41773142081, f12e33bf): matching again after an edit took 1,524 ms against the 500 ms guard (its warm scan 394 ms). Other CI runs of the same job: 219 and 85 ms on `contrast` before Novel (41697843297), and 79 and 248 ms on `novel` (41766541674). Locally, 5 runs each: `origin/main` 20–28 ms, `novel` 24–32 ms. The screenplay's history path is unchanged on the branch (its Markdown changes are Markdown-only), so it reads as a stalled runner. If it misses again, look at the worker's matching after an edit on macOS.
+- **Web, macOS runner: `cards.spec.ts:181` ("changes the card size from the slim bar")** timed out on its click on Large on the `contrast` branch twice (runs 41693166483 and 41697843297, 2026-11-03) and on `novel` once (41766541674): the trace shows "⋯" opened, the control found, then detached and never visible again, as the Inspector's header fitted itself again. 30 of 30 passed locally on `origin/main` and on `novel`. Both card size tests now click through `clickViewTool`, which finds and clicks again until the click lands (2026-11-04); if it misses again, look at what refits the header a moment after Cards shows.
 - **app-menu.spec.ts, "runs each item's command", on the phone project** (the v0.25.1 release gates, 2026-11-03): New stage play in the Drafter menu didn't settle within 30 s while 5,416 tests ran; 4 of 4 alone passed.
 - **Web, Linux runner: `cuts.spec.ts:83` ("cutting a scene shows it in Cuts after a snapshot, and not before")** timed out once (2026-11-02, the required browser tests' fourth full run): its first click, on Open, right after the page loaded, didn't return for 29 seconds, which looks like the runner stalling rather than the test. Passed in every other run. If it misses again, look at what the page does in its first second.
 - **Linux packaged AppImage update** (`apps/desktop/e2e/packaged.spec.ts:641`, "an AppImage replaces itself in place on Restart"): failed once on the v0.24.1 tag ("no new Drafter running from the AppImage"; the download fell back from a differential to a full one), and passed on the rerun of the same commit. Watch it on the next tags.
 
 - **Desktop, Linux: `a11y.spec.ts:78` (the modules folder's settings, light)** failed twice in one run on the v0.22.2 tag (Done didn't close Settings within 10 s, just after the "Broken code couldn't start" alert), while the same commit passed on main and on a re-run. Look at whether the alert or a module's start steals the click before Done.
 - **Web: `markdown.spec.ts:197` ("says calmly when a document is nested too deeply to preview")** failed now and then under the whole suite's load (fresh look, from Task 10 on). Looked into 2026-11-02: the second edit, typed over the line of five thousand `>` with `insertText`, sometimes never reached the script (the browser writes typed text into the page first, and CodeMirror, busy with that line, didn't take it); both edits are pasted now (`pasteText`). The line is still slow for the editor itself (a minute on a throttled machine): if the test misses again, that is where to look. **Found 2026-11-02 (Classic Mode Task 14):** five thousand nested quote marks ran CodeMirror's tile walk out of stack, and the update that drew the next text was lost; the Source pane's marks now stop nesting at `MAX_NESTING`, and the test passes 30 of 30.
+- **The Novel gates (2026-11-04), under the whole suite's load:** `character-grid.spec.ts:298` (Firefox, "paints within budget"), `export.spec.ts:938` (WebKit, "the script is unchanged by choosing options"), and `notes.spec.ts:251` (phone, "adds a note at the cursor with a category") each failed once in 5,680 and passed 3 of 3 alone.
 - Firefox palette: Enter sometimes doesn't run the highlighted command (also with Take snapshot…, older than drafts); drafts.spec retries.
 - **Under heavy load on one machine** (the Story map plan, 2026-11-01, load average near 50): `@drafter/history`'s scaling test, `@drafter/outline`'s `markdown.properties`, and `@drafter/render-html-file`'s `document.properties` each timed out once in a whole-repo run and passed alone.
 
@@ -373,3 +376,17 @@ From the [red/blue team audit](redblue-audit-2026-11-03.md); everything else it 
 - **Smaller notes (S8, D4):** a hardlink in a named folder (refuse `nlink > 1`, or a trap for it), npm provenance (`actions/attest-build-provenance`), a `+sha512` hash on `packageManager`, `windows-latest` pinned, and the module consent fingerprint kept whole (256 bits).
 - **Reopen trusts its marker (W7):** a page can show one script in a browser and reopen as another in Drafter; a sentence in Open formats would say so.
 
+
+## Novel
+
+- **`useNovel`'s per-frame refresh keeps reparsing while a novel is open**, even with no Outline or Cards showing. It should pause when nothing is observing it.
+- **The Status radios use an observer** that relabels Nuxt UI checkbox items. A sturdier popover radio list would be better.
+- **The surrogate-safe synopsis cap lives in the web app**, while the package's `readFacts` cuts with `slice`. It should be one shared helper.
+- **A novel's title in the scripts list is its first heading** ("Chapter One" or "Part One"). Consider the book's own title.
+- **The script Cards' `SceneCard.vue` probably has the nested-interactive axe issue** the novel cards avoided, and it has no axe test.
+- **The synopsis field's position is measured once** and can go stale on a resize.
+- **The long-task test runs alone.** It is skipped on CI by name, and parallel workers stretch it.
+- **`synopsis_cut` never shows in Drafter for Claude**, because `readFacts` already caps at the same length.
+- **Undoing a move while a passage is focused ends the focus**: the undo deletes the heading where the move put it, and focus ends when its heading is gone. Defensible, but untested; focus could follow the undo back instead.
+- **A draft's and a snapshot's word counts** use `wordsIn` on the raw prose, so a heading's `#` or a link's address counts as a word, and they can differ from the status bar (`countWords(tree)`) by a few. Older than Novel.
+- **The long-task gate step rebuilds the site**: `pnpm --filter @drafter/web e2e` rebuilds before Playwright; calling `playwright test` directly would skip the second build.

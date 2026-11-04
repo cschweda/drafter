@@ -63,7 +63,7 @@ export interface FountainType {
   /** The chip's and the status bar's name for it (`TEMPLATE_NAMES`). */
   name: string;
   /** What New makes: the sample kind `newScript` takes. */
-  newKind: Exclude<SampleKind, 'markdown'>;
+  newKind: Exclude<SampleKind, 'markdown' | 'novel'>;
   /** The Scripts menu's and the palette's wording. */
   newTitle: string;
   newIcon: string;
@@ -82,7 +82,22 @@ export interface MarkdownType {
   newKeys?: undefined;
 }
 
-export type DocumentType = FountainType | MarkdownType;
+/**
+ * A novel: a Markdown document whose metadata comment names `"template":"novel"`. It is of the
+ * Markdown `kind` (no new document kind), so it is chosen through the document, not the Fountain
+ * metadata block.
+ */
+export interface NovelType {
+  kind: 'markdown';
+  id: 'novel';
+  name: string;
+  newKind: 'novel';
+  newTitle: string;
+  newIcon: string;
+  newKeys?: undefined;
+}
+
+export type DocumentType = FountainType | MarkdownType | NovelType;
 
 /** What New makes: a sample's kind for a Fountain template, else `markdown`. */
 export type NewKind = DocumentType['newKind'];
@@ -90,19 +105,26 @@ export type NewKind = DocumentType['newKind'];
 /** The chip's name for a Markdown document. */
 export const MARKDOWN_NAME = 'Markdown (plain text)';
 
+/** The chip's name for a novel. */
+export const NOVEL_NAME = 'Novel';
+
 /**
- * The name of the document type a script is: Markdown, else its template's. `fallback` is for a
- * script whose template Drafter doesn't have (`unknownTemplateOf`): "Screenplay (fallback)".
+ * The name of the document type a script is: a novel, or Markdown, else its template's. `fallback`
+ * is for a script whose template Drafter doesn't have (`unknownTemplateOf`): "Screenplay (fallback)".
  */
-export function typeNameOf(kind: DocumentKind, template: TemplateId, fallback = false): string {
-  if (kind === 'markdown') return MARKDOWN_NAME;
+export function typeNameOf(
+  kind: DocumentKind,
+  template: TemplateId,
+  { fallback = false, novel = false }: { fallback?: boolean; novel?: boolean } = {},
+): string {
+  if (kind === 'markdown') return novel ? NOVEL_NAME : MARKDOWN_NAME;
   return fallback ? `${TEMPLATE_NAMES[template]} (fallback)` : TEMPLATE_NAMES[template];
 }
 
 /**
  * The one list, in the order the maintainer decided (2026-10-26): Screenplay (the default), Stage
- * play, then any other Fountain template (Phase 3 adds TV, radio, and UK ones here), then Markdown
- * (plain text), the one entry of the other `kind`, which stays last. The toolbar chip, the
+ * play, then Novel and any other template (Phase 3 adds TV, radio, and UK ones here), then Markdown
+ * (plain text), which stays last. The toolbar chip, the
  * Scripts menu's New items, and the palette's New commands all read this array, so they agree.
  */
 export const DOCUMENT_TYPES: readonly DocumentType[] = [
@@ -122,6 +144,14 @@ export const DOCUMENT_TYPES: readonly DocumentType[] = [
     newKind: 'stage-play',
     newTitle: 'New stage play',
     newIcon: 'i-lucide-drama',
+  },
+  {
+    kind: 'markdown',
+    id: 'novel',
+    name: NOVEL_NAME,
+    newKind: 'novel',
+    newTitle: 'New novel',
+    newIcon: 'i-lucide-book-open-text',
   },
   {
     kind: 'markdown',

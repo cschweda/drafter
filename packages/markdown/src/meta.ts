@@ -87,6 +87,17 @@ export function readMarkdownMeta(text: string): {
 }
 
 /**
+ * The document as prose: its body (`readMarkdownMeta`), the text without its trailing metadata
+ * block, the line breaks after it, and the blank line `setMarkdownMeta` wrote before it. The block
+ * is Drafter's, not the writer's: the Preview, Print, and every export draw the prose, the word
+ * counts count it, and the cut finder and Compare compare it. The prose is the text's start, so an
+ * offset into it is the same offset into the text. No block: the whole text.
+ */
+export function markdownProse(text: string): string {
+  return readMarkdownMeta(text).body;
+}
+
+/**
  * The text with `meta` as its metadata block. An existing block is replaced where it is, and
  * everything around it kept; otherwise the block goes at the end: the text, one blank line (two
  * line breaks, always, so the body can be told apart exactly), the block, and a line break, all

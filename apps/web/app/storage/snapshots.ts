@@ -1,7 +1,8 @@
 // A script's history (Phase 2 design §11.1, technical design §8.4): copies of the whole text in the
 // `snapshots` table, beside the saved row (`saved:<projectId>`, `projects.ts`), which stays Phase 1's
 // and is neither listed nor thinned here (Call 2). Nothing here throws into the editor or a save.
-import { wordsIn } from '../markdown/words';
+import type { DocumentKind } from '../markdown/kind';
+import { documentWords } from '../markdown/words';
 import { thin } from '../snapshots/retention';
 import { db, type Snapshot } from './db';
 import { canCompress, canDecompress, gunzip, gzip } from './gzip';
@@ -79,7 +80,7 @@ async function take(
   projectId: string,
   text: string,
   reason: SnapshotReason,
-  extra: { label?: string; detail?: string },
+  extra: { label?: string; detail?: string; kind?: DocumentKind },
 ): Promise<TakeResult> {
   const hash = await hashText(text);
   if (newestOf(await historyOf(projectId))?.hash === hash) return 'same';
@@ -106,7 +107,8 @@ async function take(
         ...(label ? { label } : {}),
         ...(extra.detail ? { detail: extra.detail } : {}),
         hash,
-        words: wordsIn(text),
+        // A Markdown document's prose only: its drafter comment is no words of it.
+        words: documentWords(text, extra.kind),
       });
       return 'taken';
     });
@@ -132,7 +134,7 @@ export async function keepSnapshot(
   projectId: string,
   text: string,
   reason: SnapshotReason,
-  extra: { label?: string; detail?: string } = {},
+  extra: { label?: string; detail?: string; kind?: DocumentKind } = {},
 ): Promise<TakeOutcome> {
   try {
     const result = await queued(projectId, async () => {
@@ -151,7 +153,7 @@ export async function takeSnapshot(
   projectId: string,
   text: string,
   reason: SnapshotReason,
-  extra: { label?: string; detail?: string } = {},
+  extra: { label?: string; detail?: string; kind?: DocumentKind } = {},
 ): Promise<TakeResult> {
   return (await keepSnapshot(projectId, text, reason, extra)).result;
 }
@@ -171,7 +173,7 @@ export async function listSnapshots(projectId: string): Promise<SnapshotInfo[]> 
     reason: row.reason ?? 'manual',
     ...(row.label ? { label: row.label } : {}),
     ...(row.detail ? { detail: row.detail } : {}),
-    words: row.words ?? (typeof row.source === 'string' ? wordsIn(row.source) : 0),
+    words: row.words ?? (typeof row.source === 'string' ? documentWords(row.source) : 0),
     readable: readable(row),
   }));
 }

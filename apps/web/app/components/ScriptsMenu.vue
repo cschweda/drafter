@@ -2,6 +2,7 @@
 import DDialog from '~/components/ui/DDialog.vue';
 import { SAMPLES, type SampleKind } from '~/editor/sample-kinds';
 import { DOCUMENT_TYPES, typeNameOf } from '~/editor/template';
+import { isNovel } from '~/novel/kind';
 import { useGuard } from '~/storage/guard';
 import { pickAndOpen } from '~/storage/open';
 import { kindOf, type Project } from '~/storage/projects';
@@ -223,7 +224,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
               @click="run(() => script.open(p.id))"
             >
               <span :id="`script-${p.id}`" class="title">{{ p.title }}</span>
-              <span class="meta">{{ typeNameOf(kindOf(p), p.templateId) }}</span>
+              <span class="meta">{{ typeNameOf(kindOf(p), p.templateId, {
+                novel: kindOf(p) === 'markdown' && isNovel(p.source),
+              }) }}</span>
             </button>
             <button
               type="button"

@@ -1,4 +1,5 @@
 import type { SampleKind } from '../editor/sample-kinds';
+import { isNovel } from '../novel/kind';
 import { db } from './db';
 import { kindOf, type Project } from './projects';
 
@@ -9,9 +10,9 @@ import { kindOf, type Project } from './projects';
 /** The settings row that says the writer has met `kind`'s sample. */
 export const sampleSeenKey = (kind: SampleKind): string => `sample-seen:${kind}`;
 
-/** What a project is, as New counts it: a Markdown document, a stage play, or a screenplay. */
+/** What a project is, as New counts it: a novel, a Markdown document, a stage play, or a screenplay. */
 function newKindOf(p: Project): SampleKind {
-  if (kindOf(p) === 'markdown') return 'markdown';
+  if (kindOf(p) === 'markdown') return isNovel(p.source) ? 'novel' : 'markdown';
   return p.templateId === 'stage-play-standard' ? 'stage-play' : 'screenplay';
 }
 

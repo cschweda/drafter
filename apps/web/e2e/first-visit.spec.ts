@@ -168,6 +168,7 @@ test.describe('a first visit', () => {
       await expect(chipItems(page)).toHaveText([
         'New screenplay',
         'New stage play',
+        'New novel',
         'New Markdown document',
         'Open a file…',
       ]);
@@ -180,6 +181,7 @@ test.describe('a first visit', () => {
       await expect(chipItems(page)).toHaveText([
         'New screenplay',
         'New stage play',
+        'New novel',
         'New Markdown document',
         'Open a file…',
       ]);
@@ -317,17 +319,19 @@ test.describe('a first visit', () => {
     // Enter opens the menu on its first item; the arrows move through it, in order.
     await page.keyboard.press('Enter');
     const reached: string[] = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       if (i > 0) await page.keyboard.press('ArrowDown');
       reached.push(await page.evaluate(() => document.activeElement?.textContent?.trim() ?? ''));
     }
     expect(reached).toEqual([
       'New screenplay',
       'New stage play',
+      'New novel',
       'New Markdown document',
       'Open a file…',
     ]);
     // Enter chooses the focused one.
+    await page.keyboard.press('ArrowUp');
     await page.keyboard.press('ArrowUp');
     await page.keyboard.press('ArrowUp');
     await page.keyboard.press('Enter');

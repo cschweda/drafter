@@ -17,7 +17,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.25.1.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Classic Mode is out, for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks, and v0.25.1 brings a privacy and a red/blue team audit, a contrast slider for each pane, and typewriter sounds; next up is Novel (v0.26.0). See the [roadmap](#roadmap).
+> **Status: v0.25.1.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Classic Mode is out, for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks, and v0.25.1 brings a privacy and a red/blue team audit, a contrast slider for each pane, and typewriter sounds; Novel, a place to draft a book in Markdown, is on `main` and comes in v0.26.0. See the [roadmap](#roadmap).
 
 ## Free, no login, private
 
@@ -70,9 +70,10 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 
 ## Features
 
-- **Write.** The editor and its live, industry-standard pages, with page counts you can trust. An element bar writes Fountain for you, with a cheat sheet. Screenplay and Stage play templates, and Markdown documents with footnotes. A command palette, a Problems pane, offline spellcheck in US or British English, focus mode, typewriter scrolling, a daily goal, sprints, and writing stats.
+- **Write.** The editor and its live, industry-standard pages, with page counts you can trust. An element bar writes Fountain for you, with a cheat sheet. Screenplay and Stage play templates, a **Novel** for drafting a book, and Markdown documents with footnotes. A command palette, a Problems pane, offline spellcheck in US or British English, focus mode, typewriter scrolling, a daily goal, sprints, and writing stats.
 - **Contrast you choose.** The top bar's Contrast button has a slider for the Source and one for the Script, each on its own, in the light and the dark theme. Both start near the highest, for crisp text, and either can go softer if bright text tires your eyes.
 - **Fountain or Classic.** Type Fountain's marks, or switch to **Classic Mode**: Enter and Tab move from element to element, names and places fill themselves in, headings and names capitalise themselves, and the left side looks like a script with the marks hidden. The file is plain Fountain either way, and one click in the top bar switches. [How it works](https://drafter.dev/docs/classic-mode/).
+- **Novel.** Draft a book in plain Markdown: `#` for a chapter, `##` or `***` for a section, `# Part One` for a part. The Outline and Cards show every chapter and section with its words, a status (To do, Draft, Revised, Done), a synopsis, and a word target; Alt+arrow keys or a drag reorders them. **Focus** shows one chapter or section at a time, and the file stays Markdown any app opens. The manuscript PDF and Word file come in v0.26.1. [How it works](https://drafter.dev/docs/novel/).
 - **Shape the story.** **Outline** (scenes and sections as a tree, with synopses, colors, running times, and a treatment export) and **Cards**, both rearranged by drag or keys. **Notes**, with categories, readers' names, and open or resolved status. Scene goals, setups and payoffs, and the **Structure strip**, a band of blocks above the panes to click and go.
 - **Look back.** **History**, with every version restorable in one undo. **Compare**, with a GitHub-style view of what changed. **Show changes**, marked on the pages, and the history of one scene.
 - **Drafts and Cuts.** Start a new draft when you choose: Draft 01, Draft 02, each kept for good with an ID of its own, to read, compare, or restore, and **Draft by draft** to see how the work changed. **Cuts** keeps everything you cut, a scene, a speech, or a paragraph, to browse for ideas, copy, or put back. Both sit as plain files beside your script.
@@ -136,7 +137,7 @@ Drafter is built to open files from anyone without putting you at risk.
 - **The desktop app** never loads an opened file into a window. It reads the bytes of only the files you chose, and hands them to the editor.
 - **Reopening an HTML or EPUB file** reads only the script Drafter embedded in it, as text. A browser opening an HTML file outside Drafter is outside Drafter's control, so treat one someone sent you like any downloaded page (see [Open formats](https://drafter.dev/docs/open-formats/)).
 - **Drafter for Claude only reads, and only the folders you name.** It has no code that writes, moves, or deletes a file, starts a program, or opens a connection. A path leading outside your folders, through `..` or a link, is refused, hidden files are never read, and every file is judged by what is inside it, exactly as Open judges it, with the app's size limits. Each request runs in a worker stopped at 10 seconds, answers are capped at 40,000 characters with signed cursors for the rest, and your notes are left out unless you ask. The trap documents have an entry point for it, with path, size, no-write, no-fetch, and no-run traps.
-- **The trap documents.** Drafter is tested against [278 deliberately broken and hostile files](fixtures/trap/README.md) for every format it opens: Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB, and the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs, or fetches anything, and that each finishes within its time limit. The readers and the command line run in a worker that is stopped at the limit, so a hang fails the test. The app's own Open runs in the test's thread, so it is timed but can't be stopped mid-hang ([what is enforced](fixtures/trap/README.md#running-it)). The suite runs with `pnpm test` once the packages are built (`pnpm -r build`), and in the desktop app's CI on every push to `main`.
+- **The trap documents.** Drafter is tested against [283 deliberately broken and hostile files](fixtures/trap/README.md) for every format it opens: Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB, and the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs, or fetches anything, and that each finishes within its time limit. The readers and the command line run in a worker that is stopped at the limit, so a hang fails the test. The app's own Open runs in the test's thread, so it is timed but can't be stopped mid-hang ([what is enforced](fixtures/trap/README.md#running-it)). The suite runs with `pnpm test` once the packages are built (`pnpm -r build`), and in the desktop app's CI on every push to `main`.
 - **Found a security problem?** Please report it privately: choose **Report a vulnerability** on the repository's [Security tab](https://github.com/cschweda/drafter/security) ([SECURITY.md](SECURITY.md) says what to include), or email cschweda@gmail.com with the details. Never in a public issue.
 
 The [Technical details](docs/technical-details.md#security) give the specifics.
@@ -167,7 +168,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 - **[Privacy audit, 3 November 2026](docs/privacy-audit-2026-11-03.md):** nothing about a script is stored in the cloud, and there's no AI. A writing session in three browsers on live drafter.dev sent the script in no request. One leak was fixed the same day: on drafter.dev, a report's text could reach the analytics.
 - **[Security audit, 1 November 2026](docs/security-audit-2026-11-01.md):** the first formal audit. No exploitable hole and nothing leaves the device. Fixed: private vulnerability reporting, the desktop's drop grant, Nuxt 4.6.3, and Dependabot.
 - **[Clean-room audit, 1 November 2026](docs/clean-room-audit-2026-11-01.md):** no copied code, no screenwriting package, no GPL code shipped. A film catchphrase and an unrecorded source were fixed.
-- **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 278, each with the one outcome it must have, run on every pull request.
+- **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 283, each with the one outcome it must have, run on every pull request.
 - **Reopenable exports review, 1 November 2026 (v0.23.1):** only the embedded source is read, as text, with caps before unpacking.
 - **Accessibility pass, 28 October 2026 (v0.9.0):** automated axe checks in every browser and both themes. Screen-reader passes are still to come.
 - **[Clean-room audit, 27 October 2026](docs/clean-room-audit-2026-10-27.md):** passed, with two fixes.
@@ -177,7 +178,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.25.1, there are **7,960 unit and property tests** (in 21 packages, the web app, and the desktop app), **1,361 browser tests**, each run in five browser setups (6,805 runs), 138 end-to-end tests of the desktop app, and **278 trap documents** with 1,258 checks:
+**What runs.** As of v0.25.1, there are **7,997 unit and property tests** (in 21 packages, the web app, and the desktop app), **1,361 browser tests**, each run in five browser setups (6,805 runs), 138 end-to-end tests of the desktop app, and **283 trap documents** with 1,305 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
@@ -292,7 +293,7 @@ The first run builds the app, which takes a few minutes. Then open `http://local
 
 Fountain is where you write. Everything else is a door in or a door out.
 
-- **In:** Fountain (`.fountain`, `.txt`) opens as it is. Final Draft (`.fdx`), Highland (`.highland`), and Fade In (`.fadein`) open as a new script. Markdown (`.md`) opens as a document, or as a screenplay. Drafter's own HTML and EPUB exports open again when saved with **Let Drafter reopen this file**. Anything else (Word, RTF, PDF, other web pages and e-books, an image) is refused, with a sentence saying what to do instead.
+- **In:** Fountain (`.fountain`, `.txt`) opens as it is. Final Draft (`.fdx`), Highland (`.highland`), and Fade In (`.fadein`) open as a new script. Markdown (`.md`) opens as a document, or as a screenplay; a **Novel** is a Markdown file that names its template in a trailing comment, so it opens in any Markdown app too. Drafter's own HTML and EPUB exports open again when saved with **Let Drafter reopen this file**. Anything else (Word, RTF, PDF, other web pages and e-books, an image) is refused, with a sentence saying what to do instead.
 - **Out:** PDF, Final Draft (`.fdx`), Markdown, plain text, Fountain, a typeset PDF of a Markdown document, a self-contained web page (HTML), an e-book (EPUB), and a **story map**, one picture-first HTML page of the script or play for someone who doesn't read scripts, with no code and no notes in it. Export options per script set the scene numbers, the title page, and whether your notes go along.
 - **Beside your script:** a drafts folder (`Boca drafts/Boca – Draft 01.fountain`, each draft a complete Fountain or Markdown file) and a cuts file (`Boca.fountain.cuts.md`, plain Markdown), written by the desktop app and by Chrome and Edge once you allow the folder; elsewhere, a zip to download.
 
@@ -314,7 +315,8 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 
 **Next:**
 
-- **v0.26.0: Novel**, a comfortable place to draft a novel in Markdown.
+- **v0.26.0: Novel**, a comfortable place to draft a novel in Markdown: built and on `main`, awaiting its release. Chapters, sections, and parts, an Outline and Cards with status and synopsis, focus on one passage, and word targets.
+- **v0.26.1: the manuscript exports**, a PDF and a Word file in manuscript layout.
 
 **Later:**
 

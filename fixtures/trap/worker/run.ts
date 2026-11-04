@@ -21,7 +21,20 @@ import { FdxError, fromFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
 import { mergeCuts, readCutsBytes, readDraftBytes, skippedLine } from '@drafter/history';
 import { paginate } from '@drafter/layout';
-import { MarkedTooDensely, NestedTooDeeply, parseMarkdown } from '@drafter/markdown';
+import {
+  findMarkdownMeta,
+  MarkedTooDensely,
+  NestedTooDeeply,
+  parseMarkdown,
+} from '@drafter/markdown';
+import {
+  downTarget,
+  moveNode,
+  novelStructure,
+  orphanedFacts,
+  readFacts,
+  upTarget,
+} from '@drafter/novel';
 import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
 import {
   buildStoryMap,
@@ -47,6 +60,7 @@ export type Job =
   | { kind: 'cli'; cwd: string; args: string[] }
   | { kind: 'modules'; dir: string }
   | { kind: 'beside'; format: string; bytes: Uint8Array }
+  | { kind: 'novel'; bytes: Uint8Array }
   | McpJob;
 
 /**
@@ -115,8 +129,17 @@ export interface Answer {
   storyMap?: string;
   /** For `mcp`: every call's result, and every network or process call that was tried (none). */
   mcp?: { results: McpResult[]; calls: string[]; guard: string[] };
+  /** For `novel`: what was found in Open's text, and whether a move was made. */
+  novel?: NovelReport;
   ms: number;
   kept: number;
+}
+
+export interface NovelReport {
+  parts: number;
+  chapters: number;
+  sections: number;
+  moved: boolean;
 }
 
 /**
@@ -499,8 +522,85 @@ async function runMcp(job: McpJob): Promise<Omit<Answer, 'ms' | 'kept'>> {
   }
 }
 
+/** Parts, chapters, and sections in a tree, counted. */
+function shapeOf(nodes: ReturnType<typeof novelStructure>['nodes']) {
+  const shape = { parts: 0, chapters: 0, sections: 0 };
+  const stack = [...nodes];
+  for (let node = stack.pop(); node; node = stack.pop()) {
+    shape[node.kind === 'part' ? 'parts' : node.kind === 'chapter' ? 'chapters' : 'sections']++;
+    for (const child of node.children) stack.push(child);
+  }
+  return shape;
+}
+
+/** A text's non-blank lines, split on `\n` only (a `\r` stays on its line), sorted: a multiset. */
+const linesOf = (t: string) =>
+  t
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .sort();
+
+/**
+ * A Markdown file read as a novel: its structure, its kept facts, and one move of the first node
+ * that has a legal target (down, else up; a chapter inside a part counts). The move must keep every
+ * non-blank line (compared on `\n` only, so a CRLF file keeps its `\r`), keep a CRLF file's line
+ * breaks all CRLF, and leave the metadata comment as it was, last. Tried on the text Open makes and,
+ * if it has other line breaks, on the raw text. Reports the structure it found in Open's text.
+ */
+function readNovel(bytes: Uint8Array): { happened: Happened; novel?: NovelReport } {
+  const text = decoded(bytes);
+  if (typeof text !== 'string') return { happened: text };
+  const raw = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+  const report: NovelReport = { parts: 0, chapters: 0, sections: 0, moved: false };
+  for (const each of text === raw ? [text] : [text, raw]) {
+    const tree = novelStructure(each);
+    orphanedFacts(readFacts(each), tree);
+    if (each === text) Object.assign(report, shapeOf(tree.nodes));
+    const order: ReturnType<typeof novelStructure>['nodes'] = [];
+    const stack = [...tree.nodes].reverse();
+    for (let node = stack.pop(); node; node = stack.pop()) {
+      order.push(node);
+      for (let k = node.children.length - 1; k >= 0; k--) stack.push(node.children[k] as never);
+    }
+    let moved: string | null = null;
+    for (const node of order) {
+      const target = downTarget(tree, node.id) ?? upTarget(tree, node.id);
+      const move = target ? moveNode(each, tree, node.id, target) : null;
+      if (!move) continue;
+      moved = each;
+      for (const change of [...move.changes].reverse())
+        moved = moved.slice(0, change.from) + change.insert + moved.slice(change.to);
+      break;
+    }
+    if (moved === null) {
+      if (report.moved) throw new Error('the raw text could not be moved as Open\u2019s text was');
+      continue;
+    }
+    if (each === text) report.moved = true;
+    const before = linesOf(each);
+    const after = linesOf(moved);
+    if (before.length !== after.length || before.some((line, i) => line !== after[i]))
+      throw new Error('a move changed the lines of the book');
+    if (each.includes('\r\n') && /(^|[^\r])\n/.test(moved))
+      throw new Error('a move broke a CRLF line break');
+    const wasMeta = findMarkdownMeta(each);
+    const nowMeta = findMarkdownMeta(moved);
+    if (wasMeta) {
+      if (
+        !nowMeta ||
+        each.slice(wasMeta.from, wasMeta.to) !== moved.slice(nowMeta.from, nowMeta.to)
+      )
+        throw new Error('a move changed the metadata comment');
+      if (moved.slice(nowMeta.to).trim() !== '')
+        throw new Error('the metadata comment is not last');
+    }
+  }
+  return { happened: { kind: 'opened', text, message: '' }, novel: report };
+}
+
 async function work(job: Job): Promise<Omit<Answer, 'ms' | 'kept'>> {
   if (job.kind === 'mcp') return runMcp(job);
+  if (job.kind === 'novel') return readNovel(job.bytes);
   if (job.kind === 'beside') return { happened: await readBeside(job.format, job.bytes) };
   if (job.kind === 'package') {
     const happened = await readPackage(job.format, job.bytes);

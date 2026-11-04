@@ -76,6 +76,12 @@ describe('panes', () => {
         more: ['stats', 'problems', 'history'],
       });
     });
+    test("a novel's bar is Write, Preview, and its Outline; More leads with its Cards", () => {
+      expect(phoneTabs('novel')).toEqual({
+        row: ['source', 'script', 'outline'],
+        more: ['cards', 'stats', 'problems', 'history'],
+      });
+    });
     test('Drafts and the draft being read lead More after Compare while open', () => {
       expect(phoneTabs('markdown', [], { compare: true, drafts: true, draft: true }).more).toEqual([
         'compare',
@@ -124,6 +130,13 @@ describe('panes', () => {
         'module-a--x',
         'module-b--y',
       ]);
+    });
+
+    test("a novel's row is Preview, Outline, Cards, and Stats; More as a Markdown document's", () => {
+      expect(inspectorTabs('novel')).toEqual({
+        row: ['script', 'outline', 'cards', 'stats'],
+        more: ['problems', 'compare', 'cuts', 'drafts', 'draft-steps', 'draft'],
+      });
     });
 
     test("a Markdown document's row is Preview and Stats; More holds Problems, Compare, and Cuts", () => {

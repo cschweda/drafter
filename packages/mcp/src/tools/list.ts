@@ -25,6 +25,7 @@ import {
   NotRead,
   readInside,
 } from '../inside';
+import { isNovelText, novelNodes } from '../load';
 import { answerBudget, clipMessage, clipText, itemCost } from '../paging';
 import { resolvePath } from '../paths';
 import { type Found, WALK_LIMITS, walk } from '../walk';
@@ -66,7 +67,7 @@ type Input = z.infer<typeof input>;
 const listed = z.object({
   path: z.string(),
   format,
-  kind: z.enum(['screenplay', 'stage play', 'markdown']).nullable(),
+  kind: z.enum(['screenplay', 'stage play', 'markdown', 'novel']).nullable(),
   title: z.string().nullable(),
   /** The title was longer than TEXT_LIMITS.heading, and is its start. */
   title_cut: z.literal(true).optional(),
@@ -107,7 +108,7 @@ type Output = z.infer<typeof output>;
 type Summary =
   | {
       content: Content;
-      kind: 'screenplay' | 'stage play' | 'markdown';
+      kind: 'screenplay' | 'stage play' | 'markdown' | 'novel';
       title: string | null;
       scenes: number;
     }
@@ -156,11 +157,14 @@ function scriptSummary(content: Content, text: string): Summary {
 }
 
 function markdownSummary(content: Content, text: string): Summary {
+  // A novel is Markdown whose comment names the novel template; its units are its parts, chapters,
+  // and sections, as the other tools number them.
+  const novel = isNovelText(text);
   return {
     content,
-    kind: 'markdown',
+    kind: novel ? 'novel' : 'markdown',
     title: markdownTitle(text) ?? null,
-    scenes: markdownAnchors(text).length,
+    scenes: novel ? novelNodes(text).length : markdownAnchors(text).length,
   };
 }
 
@@ -398,7 +402,7 @@ export const listScripts: ToolDef<Input, Output> = {
   name: 'list_scripts',
   title: 'List scripts',
   description:
-    'Lists the scripts, plays, and documents in the writer’s folders (or one folder, given as a path that starts with a folder’s name): each file’s path, kind, title, scene count, date, size, and how many drafts and cuts Drafter keeps beside it, with a manifest: what Drafter found inside each file (`content`), whether that matches its name (`matches_name`), and why Drafter won’t read it (`refused`). Pass `next` back as `cursor` for the rest.',
+    'Lists the scripts, plays, and documents in the writer’s folders (or one folder, given as a path that starts with a folder’s name): each file’s path, kind (screenplay, stage play, novel, or markdown), title, scene count, date, size, and how many drafts and cuts Drafter keeps beside it, with a manifest: what Drafter found inside each file (`content`), whether that matches its name (`matches_name`), and why Drafter won’t read it (`refused`). Pass `next` back as `cursor` for the rest.',
   input,
   output,
   run,

@@ -26,6 +26,7 @@ import {
   wrapInNote,
   wrapInUnderline,
 } from '@drafter/cm-fountain';
+import { novelStructure } from '@drafter/novel';
 import { downTarget, expandOutline, upTarget } from '@drafter/outline';
 import { nextTick } from 'vue';
 import { aboutOpen } from '~/about/dialog';
@@ -52,6 +53,9 @@ import { setWritingMode } from '~/editor/writing-mode';
 import { openSceneHistory } from '~/history/scene-history';
 import { MARKDOWN_COMMANDS } from '~/markdown/commands';
 import { openNewNote } from '~/notes/use-notes';
+import { focusedPassage, focusPassage, passageAt, passageToFocus } from '~/novel/focus';
+import { usePassageFocus } from '~/novel/use-focus';
+import { useNovel } from '~/novel/use-novel';
 import { runMove } from '~/outline/move';
 import { sayOutline } from '~/outline/notice';
 import { openSceneDetails } from '~/outline/scene-details';
@@ -135,6 +139,8 @@ export function registerBuiltinCommands(): void {
   const drafts = useDrafts();
   const steps = useDraftSteps();
   const technicalDetails = useTechnicalDetails();
+  // Made now, so the focus's start and end are announced from the first one on.
+  usePassageFocus();
   /**
    * Next or Previous change: the Compare tab shows (where it isn't), and the change gets focus; with
    * no comparison open, Show changes' marks on the Script pane, which shows.
@@ -182,6 +188,32 @@ export function registerBuiltinCommands(): void {
       if (tab === 'source') view.focus();
       else document.getElementById(`panel-${tab}`)?.focus();
     });
+  }
+
+  /** The chapter or section at the cursor of a novel, from the Outline's tree (a frame behind at most). */
+  function passageHere(kind: 'chapter' | 'section') {
+    if (!isMarkdown() || !editor.novel.value) return null;
+    const tree = useNovel().tree.value;
+    return tree ? passageAt(tree, view.state.selection.main.head, kind) : null;
+  }
+
+  /** Focus on this chapter, or this section: the passage at the cursor shows, and the Source with it. */
+  function focusOn(kind: 'chapter' | 'section'): Behavior {
+    return {
+      enabled: () => !!passageHere(kind),
+      why: () =>
+        !isMarkdown() || !editor.novel.value
+          ? 'Focus is for a novel.'
+          : `The cursor isn’t in a ${kind}.`,
+      run: () => {
+        if (!isMarkdown() || !editor.novel.value) return;
+        const tree = novelStructure(view.state.doc.toString());
+        const node = passageAt(tree, view.state.selection.main.head, kind);
+        if (!node) return;
+        focusPassage(view, node.id);
+        editor.goto(view.state.selection.main.head);
+      },
+    };
   }
 
   /**
@@ -359,13 +391,15 @@ export function registerBuiltinCommands(): void {
         },
       ]),
     ),
-    // Markdown is a kind of document, not a template: it is listed in a Fountain script (after asking, because
-    // Fountain's formatting stops applying and undo doesn't bring it back), and not in a Markdown document.
+    // Markdown and Novel are kinds of document, not templates. Markdown is listed in a Fountain script (after
+    // asking, because Fountain's formatting stops applying and undo doesn't bring it back) and in a novel (which
+    // only drops its template from the comment); Novel in a Fountain script (same question) and in plain Markdown.
+    // Neither is listed where it already is.
     ...Object.fromEntries(
       DOCUMENT_TYPES.filter((type) => type.kind === 'markdown').map((type): [string, Behavior] => [
-        'document-markdown',
+        `document-${type.id}`,
         {
-          enabled: () => isFountain() && template.canChooseType(type),
+          enabled: () => template.canChooseType(type) && !template.isCurrent(type),
           run: onEditor(() => void template.chooseType(type)),
         },
       ]),
@@ -485,7 +519,7 @@ export function registerBuiltinCommands(): void {
           enabled: canStart,
           run: quietly(async () => {
             const made = await script.addScript(sample.text, {
-              kind: sample.kind === 'markdown' ? 'markdown' : 'fountain',
+              kind: sample.kind === 'markdown' || sample.kind === 'novel' ? 'markdown' : 'fountain',
               baseline: sample.text,
               sampleScript: sample.kind,
             });
@@ -660,9 +694,16 @@ export function registerBuiltinCommands(): void {
     // The Script tab is the Preview in a Markdown document.
     'show-preview': { enabled: isMarkdown, run: () => showTab('script') },
     'show-problems': { run: () => showTab('problems') },
-    'show-outline': { enabled: isFountain, run: () => showTab('outline') },
-    // Not core tabs (design §5.8): showing one puts it in its pane's slot. None for Markdown.
-    'show-cards': { enabled: isFountain, run: () => showTab('cards') },
+    // A novel has an Outline of its own: its parts, chapters, and sections.
+    'show-outline': {
+      enabled: () => isFountain() || editor.novel.value,
+      run: () => showTab('outline'),
+    },
+    // Not core tabs (design §5.8): showing one puts it in its pane's slot. Cards and the Outline are a script's or a novel's.
+    'show-cards': {
+      enabled: () => isFountain() || editor.novel.value,
+      run: () => showTab('cards'),
+    },
     'show-notes': { enabled: isFountain, run: () => showTab('notes') },
     // Show changes (version-history design §4.1): the Script pane shows, marked or clean.
     'show-changes': {
@@ -696,6 +737,35 @@ export function registerBuiltinCommands(): void {
       // Not under a native dialog (the page is the dialog's while it is open), nor while an input method is composing.
       enabled: () => !document.querySelector('dialog[open]') && !view.composing,
       run: focus.toggle,
+    },
+    // A novel's focus (Novel plan, Task 7), on the passage at the cursor.
+    'focus-passage': {
+      enabled: () => !!passageHere('chapter'),
+      why: () =>
+        !isMarkdown() || !editor.novel.value
+          ? 'Focus is for a novel.'
+          : 'The cursor isn’t in a chapter or a section.',
+      run: () => {
+        if (!isMarkdown() || !editor.novel.value) return;
+        const tree = novelStructure(view.state.doc.toString());
+        const node = passageToFocus(
+          tree,
+          view.state.selection.main.head,
+          focusedPassage(view.state),
+        );
+        if (!node) return;
+        focusPassage(view, node.id);
+        editor.goto(view.state.selection.main.head);
+      },
+    },
+    'focus-chapter': focusOn('chapter'),
+    'focus-section': focusOn('section'),
+    'show-whole-book': {
+      enabled: () => usePassageFocus().passage.value !== null,
+      run: () => {
+        usePassageFocus().focus(null);
+        editor.goto(view.state.selection.main.head);
+      },
     },
     // Sprints (Phase 1 design §7.3): the three lengths here; any length from the Counts panel.
     ...Object.fromEntries(

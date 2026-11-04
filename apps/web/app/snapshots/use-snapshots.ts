@@ -90,7 +90,7 @@ function create(): SnapshotSession {
     // What left the text since the last snapshot is a cut (drafts-and-cuts design §3.1). Asked now,
     // in order, so a replacement that follows (Restore) moves the comparison point after it.
     void useCutRecorder().kept(id, captured, reason);
-    return keepSnapshot(id, captured, reason, extra)
+    return keepSnapshot(id, captured, reason, { ...extra, kind: editor.kind.value })
       .catch(() => ({ result: 'failed' as const, full: false }))
       .then(({ result, full }) => {
         if (result === 'failed') {

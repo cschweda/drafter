@@ -123,7 +123,7 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: prefix('open-sample-'), submenu: 'Open Sample', strip: /^Open sample: / },
     { pick: ['reset-sample'] },
     {
-      pick: (id) => id.startsWith('template-') || id === 'document-markdown',
+      pick: (id) => id.startsWith('template-') || id.startsWith('document-'),
       submenu: 'Template',
       strip: /^(Template|Document): /,
     },
@@ -158,6 +158,8 @@ const LAYOUT: Record<Group, Section[]> = {
   View: [
     { pick: ['show-source', 'show-script', 'show-preview', 'show-problems'] },
     { pick: ['focus-mode'], fixed: [{ role: 'togglefullscreen' }] },
+    // A novel's focus on one passage (Novel plan, Task 7), beside focus mode.
+    { pick: ['focus-passage', 'focus-chapter', 'focus-section', 'show-whole-book'] },
     { pick: prefix('sprint-'), submenu: 'Sprint' },
     { pick: ['show-stats'] },
     { pick: ['switch-theme'] },
@@ -189,6 +191,7 @@ const LAYOUT: Record<Group, Section[]> = {
         'help-what-is',
         'help-fountain',
         'help-classic-mode',
+        'help-novel',
         'help-shortcuts',
         'help-saving',
         'help-drafts-and-cuts',
@@ -223,6 +226,7 @@ const LABELS: Record<string, string> = {
   'help-what-is': 'What Is Drafter?',
   'help-fountain': 'Fountain Cheat Sheet',
   'help-classic-mode': 'Classic Mode',
+  'help-novel': 'Novel',
   'help-shortcuts': 'Keyboard Shortcuts',
   'help-saving': 'Saving',
   'help-drafts-and-cuts': 'Drafts and Cuts',

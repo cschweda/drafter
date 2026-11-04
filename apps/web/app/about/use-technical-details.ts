@@ -20,7 +20,11 @@ export function useTechnicalDetails(): () => string {
       theme: colorMode.value === 'light' ? 'light' : 'dark',
       textSize: settings.value.textSize,
       ...(!markdown && { writingMode: settings.value.writingMode }),
-      document: markdown ? 'Markdown document' : editor.template.value.name,
+      document: markdown
+        ? editor.novel.value
+          ? 'Novel'
+          : 'Markdown document'
+        : editor.template.value.name,
       spellcheck: settings.value.spellcheck,
     });
     return technicalDetails(currentAbout(), setup);

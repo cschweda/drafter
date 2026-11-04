@@ -733,12 +733,17 @@ test.describe('with JavaScript', () => {
     }
   });
 
-  test('goes back to the app from each page', async ({ page }) => {
+  test('goes back to the app from each page', async ({ context }) => {
+    // A tab of its own for each page: Firefox refuses a tab's navigations past a rate ("Too many
+    // attempts to navigate or modify history within a short timeframe"), and sixteen help pages and
+    // the app, each loaded and left in one tab within seconds, went past it on the sixteenth Back.
     for (const { path } of HELP_PAGES) {
+      const page = await context.newPage();
       await page.goto(path);
       await page.getByRole('link', { name: /Back to Drafter/ }).click();
-      await expect(page).toHaveURL(/\/$/);
+      await expect(page, path).toHaveURL(/\/$/);
       await expect(editor(page)).toContainText('The Call');
+      await page.close();
     }
   });
 });
