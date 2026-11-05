@@ -1,7 +1,7 @@
 {
   "name": "drafter-mcp",
   "private": true,
-  "version": "0.25.1",
+  "version": "0.26.0",
   "description": "Drafter for Claude: a local, read-only MCP server that lets an AI app read the scripts in the folders the writer names.",
   "license": "MIT",
   "type": "module",

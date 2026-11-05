@@ -46,13 +46,22 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
     id: 'v0.26.0-novel',
-    date: '2026-11-03',
+    date: '2026-11-05',
     version: '0.26.0',
     kind: 'New',
     title: 'Novel: a place to draft a book',
     text: 'Chapters and sections in plain Markdown, an Outline and Cards with a status and synopsis for each, focus on one chapter at a time, and word targets. Your file stays Markdown any app opens.',
     link: { href: '/docs/novel/', label: 'Novel' },
     banner: true,
+  },
+  {
+    id: 'v0.26.0-file-menu',
+    date: '2026-11-05',
+    version: '0.26.0',
+    kind: 'Improved',
+    title: 'A File menu, Save As beside Save, and Export as Fountain',
+    text: 'The top bar’s File menu starts, opens, and saves scripts, and the arrow beside Save has Save As, Revert to Saved, and History. Export → Fountain saves a copy and leaves you working on your file.',
+    link: { href: '/docs/saving/', label: 'Saving and your browser' },
   },
   {
     id: 'v0.25.1-typewriter-sounds',

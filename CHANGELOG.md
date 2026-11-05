@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-05
+
+**A place to draft a novel, and a File menu.** **Novel** joins Screenplay and Stage play: chapters and sections in plain Markdown, an Outline and Cards with a status, synopsis, and word target for each, focus on one chapter or section at a time, and counts for the book. The top bar's **File** menu (Open's new name) starts, opens, and saves scripts; Save has an arrow with **Save As…**, Revert to Saved, and History; **Export → Fountain** saves a copy and leaves you on your file; the first visit's recovery warning waits for the welcome; and the help pages' links are four dropdowns. The manuscript PDF and Word file follow in v0.26.1.
+
 ### Added
 
 - **Export as Fountain (.fountain)**, in the Export menu (after Story map), the Drafter menu, the palette, and the desktop app's File → Export: a copy of a screenplay or stage play exactly as Save writes it (its line endings and byte order mark too), never redrawn, with Export options left out. Unlike Save As, the script stays on its own file, so the copy is a snapshot to send or keep. A Markdown document doesn't offer it. Saving and your browser explains the difference.
@@ -1346,7 +1350,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.25.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.26.0...HEAD
+[0.26.0]: https://github.com/cschweda/drafter/compare/v0.25.1...v0.26.0
 [0.25.1]: https://github.com/cschweda/drafter/compare/v0.25.0...v0.25.1
 [0.25.0]: https://github.com/cschweda/drafter/compare/v0.24.3...v0.25.0
 [0.24.3]: https://github.com/cschweda/drafter/compare/v0.24.2...v0.24.3

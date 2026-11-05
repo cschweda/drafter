@@ -18,7 +18,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.25.1.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. Classic Mode is out, for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks, and v0.25.1 brings a privacy and a red/blue team audit, a contrast slider for each pane, and typewriter sounds; Novel, a place to draft a book in Markdown, is on `main` and comes in v0.26.0. See the [roadmap](#roadmap).
+> **Status: v0.26.0.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. v0.26.0 brings **Novel**, a place to draft a book in Markdown, a **File** menu with Save As beside Save, and Export as Fountain; Classic Mode is there for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks. See the [roadmap](#roadmap).
 
 ## Free, no login, private
 
@@ -179,7 +179,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.25.1, there are **7,997 unit and property tests** (in 21 packages, the web app, and the desktop app), **1,361 browser tests**, each run in five browser setups (6,805 runs), 138 end-to-end tests of the desktop app, and **283 trap documents** with 1,305 checks:
+**What runs.** As of v0.26.0, there are **8,189 unit and property tests** (in 22 packages, the web app, and the desktop app), **1,423 browser tests**, each run in five browser setups (7,115 runs), 138 end-to-end tests of the desktop app, and **283 trap documents** with 1,305 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
@@ -312,11 +312,10 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 
 ## Roadmap
 
-**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, HTML and EPUB export, Drafts and Cuts (v0.24.0): numbered drafts, and a permanent file of everything you cut, Story map (v0.24.1): a visual page of your script to send to anyone, and Drafter for Claude (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose. You can also host the web app yourself with Docker (v0.24.3), and type a script with Enter and Tab the way many screenwriters expect, over a file that stays Fountain, in Classic Mode (v0.25.0).
+**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, HTML and EPUB export, Drafts and Cuts (v0.24.0): numbered drafts, and a permanent file of everything you cut, Story map (v0.24.1): a visual page of your script to send to anyone, and Drafter for Claude (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose. You can also host the web app yourself with Docker (v0.24.3), and type a script with Enter and Tab the way many screenwriters expect, over a file that stays Fountain, in Classic Mode (v0.25.0), and draft a novel in Markdown, with its chapters and sections in the Outline and on Cards, in Novel (v0.26.0).
 
 **Next:**
 
-- **v0.26.0: Novel**, a comfortable place to draft a novel in Markdown: built and on `main`, awaiting its release. Chapters, sections, and parts, an Outline and Cards with status and synopsis, focus on one passage, and word targets.
 - **v0.26.1: the manuscript exports**, a PDF and a Word file in manuscript layout.
 
 **Later:**
