@@ -52,6 +52,10 @@ useDocsHead({
         or a tablet.
       </li>
     </ul>
+    <p class="docs-note">
+      Final Draft is a trademark of its owner. Drafter reads and writes its file format so a script
+      can move between the two apps, and isn’t connected with or endorsed by Final Draft.
+    </p>
 
     <h2 id="reopening-exports">Opening an HTML or EPUB file again</h2>
     <p>
