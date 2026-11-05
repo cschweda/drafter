@@ -61,7 +61,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/fountain` | Fountain text ⇄ syntax tree: lossless printing, fast full reparse | 0 |
 | `@drafter/templates` | Template schema, validation, inheritance (`extends`), built-in formats | 0 |
 | `@drafter/layout` | Pagination: syntax tree + template → pages | 0 |
-| `@drafter/render-pdf` | Pages → PDF, with Courier Prime embedded; Markdown documents in Inter Tight | 0 (Markdown documents in 2) |
+| `@drafter/render-pdf` | Pages → PDF, with Courier Prime embedded; Markdown documents in Inter Tight; a novel's manuscript in Liberation Serif or Courier Prime | 0 (Markdown documents in 2, manuscripts in v0.26.1) |
 | `@drafter/cli` | `drafter build` (PDF, HTML, text, JSON), `drafter check`, and `drafter convert` (Final Draft, Highland, and Fade In to Fountain) | 0 (published in 5; `convert` in v0.20.0) |
 | `@drafter/cm-fountain` | CodeMirror 6 integration: highlighting, keymap, autocomplete, folding | 1 |
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |

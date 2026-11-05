@@ -1,6 +1,6 @@
 # @drafter/render-pdf
 
-PDF output for [Drafter](https://github.com/cschweda/drafter): draws the pages `@drafter/layout` produces, with [Courier Prime](fonts/README.md) embedded, and lays out and draws Markdown documents in [Inter Tight](fonts/inter-tight/README.md) ([Documents](#documents)). Runs in Node and in a browser worker; it reads no files, and the caller passes the fonts in.
+PDF output for [Drafter](https://github.com/cschweda/drafter): draws the pages `@drafter/layout` produces, with [Courier Prime](fonts/README.md) embedded, lays out and draws Markdown documents in [Inter Tight](fonts/inter-tight/README.md) ([Documents](#documents)), and a novel's standard manuscript in [Liberation Serif](fonts/liberation-serif/README.md) or Courier Prime ([Manuscripts](#manuscripts)). Runs in Node and in a browser worker; it reads no files, and the caller passes the fonts in.
 
 ```ts
 import { readFile } from 'node:fs/promises';
@@ -85,6 +85,30 @@ What a document's PDF draws:
 - Pages break with no space at a page's top, at least two lines of a split block on each page, and headings kept with what follows them. Pages are numbered at the foot from 1 when there are two or more.
 - A character a face lacks prints as `?` and is listed in `missing`. Creator "Drafter", producer "Drafter, with pdf-lib", fixed font names, and no dates or IDs, so the same document always gives the same bytes. An empty tree gives one blank page.
 
+## Manuscripts
+
+A novel's standard manuscript, from the format-free `Manuscript` that `@drafter/novel`'s `manuscriptOf` describes (manuscript design, "Layout" and "The PDF"), on US Letter or A4, in Liberation Serif (`times`, metrically Times New Roman) or Courier Prime (`courier`).
+
+```ts
+const files = MANUSCRIPT_FONT_FILES[ms.font]; // the four faces' paths under fonts/
+const fonts = {
+  regular: await read(files.regular),
+  italic: await read(files.italic),
+  bold: await read(files.bold),
+  boldItalic: await read(files.boldItalic),
+};
+const { bytes, missing } = await renderManuscriptPdf(ms, { fonts, paper: 'letter', lang: 'en-US' });
+```
+
+| Export | What it does |
+|---|---|
+| `renderManuscriptPdf(ms, { fonts, paper, lang?, onProgress? })` | Lays the manuscript out and draws it: `{ bytes, missing }`. `fonts` must hold all four faces (a `TypeError` names any missing). The title and the byline (as author) are the PDF's metadata. |
+| `layoutManuscript(ms, { paper, measure })` | The layout alone: pages with their number, running header, and lines (`x`, and `y` the baseline from the page's top, in points). |
+| `MANUSCRIPT_FONT_FILES` | The faces' paths under `fonts/`, by font (`times`, `courier`) and face (`regular`, `italic`, `bold`, `boldItalic`). |
+| `ManuscriptFace`, `ManuscriptFontSet`, `ManuscriptPage`, `ManuscriptLine`, `ManuscriptRun`, `ManuscriptPdf` | The types these take and give. |
+
+What a manuscript's PDF draws: a title page (the legal name and contact lines top left, the word count top right, the title halfway down and `by` the byline under it); then 12 pt, double-spaced (24 pt), one-inch margins, every paragraph's first line indented half an inch; `Surname / SHORT TITLE / N` right-aligned half an inch from the top of every page after the title page; a part on a page of its own, its title halfway down; each chapter on a new page, its title a third of the way down and its text two lines below; `#` between scenes; `END` after the text; and the footnotes as endnotes on a page headed "Notes". At least two lines of a paragraph stay on each side of a page break. A character the font lacks prints as `?` and is listed in `missing`.
+
 ## License
 
-MIT. Courier Prime is under the SIL Open Font License 1.1, in [`fonts/OFL.txt`](fonts/OFL.txt), and so is Inter Tight, in [`fonts/inter-tight/OFL.txt`](fonts/inter-tight/OFL.txt).
+MIT. Courier Prime is under the SIL Open Font License 1.1, in [`fonts/OFL.txt`](fonts/OFL.txt), and so are Inter Tight, in [`fonts/inter-tight/OFL.txt`](fonts/inter-tight/OFL.txt), and Liberation Serif, in [`fonts/liberation-serif/OFL.txt`](fonts/liberation-serif/OFL.txt).

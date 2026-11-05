@@ -166,8 +166,8 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/render-pdf',
-    does: 'PDFs: a script’s pages in Courier Prime, and a Markdown document in Inter Tight.',
-    uses: ['@drafter/layout', '@drafter/markdown', '@drafter/templates'],
+    does: 'PDFs: a script’s pages in Courier Prime, a Markdown document in Inter Tight, and a novel’s standard manuscript in Liberation Serif or Courier Prime.',
+    uses: ['@drafter/layout', '@drafter/markdown', '@drafter/novel', '@drafter/templates'],
   },
   {
     name: '@drafter/render-html',

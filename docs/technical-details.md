@@ -62,7 +62,6 @@ flowchart BT
   fountain["@drafter/fountain"]
   cm_fountain --> web
   history --> web
-  novel --> web
   render_html --> web
   render_pdf --> web
   render_text --> web
@@ -86,7 +85,7 @@ flowchart BT
   cast --> story_map
   render_html_file --> story_map
   layout --> render_pdf
-  markdown --> render_pdf
+  novel --> render_pdf
   layout --> render_html
   archive --> render_html_file
   markdown --> render_html_file
