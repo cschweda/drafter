@@ -1170,6 +1170,27 @@ describe('exporting a novel’s manuscript', () => {
     }
   }
 
+  test('a manuscript asked for one book exports it while that book is open', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = NOVEL;
+    shown.kind = 'markdown';
+    shown.project = { id: 'book-a' };
+    render.mockResolvedValue(new Uint8Array([1]));
+    expect(await t.exportManuscript('pdf', DETAILS, 'book-a')).toBe('saved');
+    expect(t.log).toEqual(['pick The Salt Road – manuscript.pdf pdf', 'write']);
+  });
+
+  test('a manuscript asked for one book is refused once another is open, before any picker', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = NOVEL;
+    shown.kind = 'markdown';
+    shown.project = { id: 'book-b' };
+    expect(await t.exportManuscript('docx', DETAILS, 'book-a')).toBe('cancelled');
+    expect(t.exportError.value).toBe('The book changed; nothing was exported.');
+    expect(t.log).toEqual([]);
+    expect(render).not.toHaveBeenCalled();
+  });
+
   test('a manuscript with other details is its own export, not joined to the first', async () => {
     const t = await load({ inPlace: true });
     shown.text = NOVEL;

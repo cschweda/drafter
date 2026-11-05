@@ -312,11 +312,13 @@ export interface StoryMapJob {
 interface FromDialog {
   job?: StoryMapJob;
   details?: ManuscriptDetails;
+  /** The project the dialog was opened for: the export is refused if another is open by then. */
+  forProject?: string;
 }
 
 async function run(
   asked: Asked,
-  { job, details }: FromDialog = {},
+  { job, details, forProject }: FromDialog = {},
 ): Promise<'saved' | 'cancelled'> {
   const { kind } = asked;
   const files = useFiles();
@@ -373,7 +375,10 @@ async function run(
   };
   try {
     // The menu offers only what applies; a command or a stale menu can still ask for the other.
-    const refusal = notFor(kind, markdown, novel);
+    const refusal =
+      forProject !== undefined && script.project.value?.id !== forProject
+        ? 'The book changed; nothing was exported.'
+        : notFor(kind, markdown, novel);
     if (refusal) {
       await announceError(refusal);
       return 'cancelled';
@@ -563,14 +568,17 @@ export function exportStoryMap(job: StoryMapJob): Promise<'saved' | 'cancelled'>
  * Exports the open novel's standard manuscript as a PDF or a Word file, with the details its
  * dialog keeps (`details`; what is missing comes from the book, `resolveDetails`): the picker
  * ("The Salt Road – manuscript.pdf"), then the file, in the same turn as the other exports, with
- * the same progress bar and toast. Anything but a novel is refused, before any picker. Never throws.
+ * the same progress bar and toast. Anything but a novel is refused, before any picker, and so is
+ * any book but `forProject` (the project the dialog was opened for), so one book's details never
+ * land on another's title page. Never throws.
  */
 export function exportManuscript(
   format: 'pdf' | 'docx',
   details: ManuscriptDetails,
+  forProject?: string,
 ): Promise<'saved' | 'cancelled'> {
   const kind = format === 'pdf' ? 'manuscript-pdf' : 'manuscript-docx';
-  return queued(askedFor(kind, undefined, details), { details });
+  return queued(askedFor(kind, undefined, details), { details, forProject });
 }
 
 function queued(asked: Asked, dialog: FromDialog = {}): Promise<'saved' | 'cancelled'> {
