@@ -46,9 +46,10 @@ import {
   updateProject,
   writeSource,
 } from './projects';
+import { createRecoveryCopy } from './recovery-copy';
 import { say } from './say';
 import { type LineBreak, titleFileOf } from './text';
-import { allStashes, clearStash, readStash, stash } from './unwritten';
+import { allStashes, clearStash, readStash } from './unwritten';
 import { createWriter, type Writer } from './writer';
 
 export type { RecoveryState } from './health';
@@ -269,8 +270,8 @@ export interface OpenedFile {
   kind?: DocumentKind;
 }
 
-/** How long a failing recovery copy waits before it tries again on its own. */
-export const RETRY_MS = 30_000;
+/** How long a failing recovery copy waits before it tries again on its own (`recovery-copy.ts`). */
+export { RETRY_MS } from './recovery-copy';
 
 const text = (source: string) => Text.of(source.split('\n'));
 
@@ -308,8 +309,6 @@ function create(): ScriptSession {
   let writer: Writer | undefined;
   let lastDoc = view.state.doc;
   let loading = false;
-  let failing = false;
-  let retry: ReturnType<typeof setTimeout> | undefined;
 
   const guard = useGuard();
 
@@ -328,93 +327,16 @@ function create(): ScriptSession {
   });
 
   // ---- The recovery copy -------------------------------------------------------------------
-
-  function fail() {
-    failing = true;
-    recovery.value = 'unavailable';
-    armRetry();
-  }
-
-  function armRetry() {
-    if (retry !== undefined) return;
-    retry = setTimeout(() => {
-      retry = undefined;
-      void tryAgain();
-    }, RETRY_MS);
-  }
-
-  async function tryAgain() {
-    if (!failing) return;
-    if (!project.value) {
-      // A database that failed to open stays failed until it is closed.
-      db.close({ disableAutoOpen: false });
-      await begin();
-      return;
-    }
-    await writer?.flush().catch(() => {});
-    if (failing && !writer?.pending) {
-      // Nothing was waiting to be written, so only the storage itself can say.
-      const state = await checkRecovery();
-      if (state !== 'unavailable') {
-        failing = false;
-        recovery.value = state;
-      }
-    }
-    if (failing) armRetry();
-  }
-
-  /**
-   * Changes to the stored project go one at a time, each starting from the copy the session holds
-   * when it runs: a recovery write and a save's bookkeeping can't overwrite each other.
-   */
-  let exclusiveTail: Promise<unknown> = Promise.resolve();
-  function exclusive<T>(run: () => Promise<T>): Promise<T> {
-    const result = exclusiveTail.then(run);
-    exclusiveTail = result.catch(() => {});
-    return result;
-  }
-
-  /** Writes `source` as the recovery copy of project `id`; a failure is the "unavailable" state. */
-  async function persist(id: string, source: string) {
-    let gone = false;
-    try {
-      await exclusive(async () => {
-        const current = project.value;
-        if (!current || current.id !== id) {
-          gone = true;
-          return;
-        }
-        // The title is a cache of the text. The first edit to a first document's sample text
-        // ends Start blank's offer for good: from here the text is the writer's work.
-        const edited = current.blank !== undefined && source !== current.baseline;
-        project.value = await writeSource(current, source, edited ? { blank: undefined } : {});
-      });
-    } catch (error) {
-      fail();
-      throw error;
-    }
-    // The script was switched away from: `open` flushed it first, so nothing is lost here.
-    // Not a success: the text was not written, and the writer must keep it.
-    if (gone) throw new Error(`There is no script ${id} to write to.`);
-    // What a closing page left behind is written, unless newer text has been typed since.
-    if (savedText(view.state).toString() === source) clearStash(id);
-    if (failing) {
-      failing = false;
-      clearTimeout(retry);
-      retry = undefined;
-      recovery.value = await checkRecovery();
-    }
-  }
-
-  /** For a page being hidden or closed: keep the pending text where a closing page can, and write it. */
-  const flushQuietly = () => {
-    // No writer: another tab keeps this script, and nothing here is its to write. A tab that is
-    // handing the script over is read-only but still has its writer, and the text it hasn't
-    // written yet is still its to leave.
-    if (!writer) return;
-    if (writer.pending && project.value) stash(project.value.id, savedText(view.state).toString());
-    void writer.flush().catch(() => {});
-  };
+  // Writing it, saying when it fails, and trying again: `recovery-copy.ts`. `begin` reopens the
+  // database when it failed to open (it is a function declaration, so it is there by now).
+  const copy = createRecoveryCopy({
+    project,
+    recovery,
+    view,
+    writer: () => writer,
+    reopen: () => begin(),
+  });
+  const { fail, exclusive, persist, flushQuietly } = copy;
 
   // ---- Opening scripts ---------------------------------------------------------------------
 
@@ -527,9 +449,7 @@ function create(): ScriptSession {
         // A first visit starts where the story does, not on the title page's metadata.
         cursorAtFirstScene(SAMPLE_SCREENPLAY);
       }
-      failing = false;
-      clearTimeout(retry);
-      retry = undefined;
+      copy.recovered();
     } catch {
       // IndexedDB won't open, or can't be written: the editor goes on with the text it has.
       fail();
