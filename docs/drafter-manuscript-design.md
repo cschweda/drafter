@@ -31,7 +31,7 @@ A novelist drafting in Drafter has to send the book out: to an agent, an editor,
    - **A scene break is a centered `#`,** on its own double-spaced line.
    - **`END`,** centered, after the last line (**my call**: an old convention that many guides still give, and harmless).
 3. **The details come from the writer once and stay with the book.** A **Manuscript details** dialog opens before either export, the way the Story map's does: title, byline (the name on the cover), legal name, contact lines, short title, surname for the header, and the font. They're kept in the book's metadata comment, so the next export asks nothing new and opens on the same answers.
-4. **The same book, two files, the same layout.** The PDF and the Word file come from one layout description, so a page break in one is a page break in the other wherever Word's own line breaking allows.
+4. **The same book, two files, the same manuscript.** The PDF and the Word file come from one description, so they hold the same blocks in the same order, with the same chapter openings, scene breaks, and `END`. Their page breaks fall where each format's spacing puts them: the Word file uses Word's own Double spacing (about 26.6 pt a line in Times New Roman, against the PDF's 24 pt), so it runs to about a tenth more pages.
 5. **Private, like everything else.** Nothing is fetched; the fonts are in the app, and both files are made in the export worker, in the browser or the desktop app.
 
 ## Non-goals
