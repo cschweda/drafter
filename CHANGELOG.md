@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - **Final Draft is for scripts, and the app says so**: for a Markdown document or a novel, the Export menu shows **Final Draft (.fdx)** greyed out with "Screenplays and stage plays only" under it, and the top bar has a small note, "Final Draft (.fdx): scripts only" (an ⓘ with the same words as a tooltip on a narrower screen), so nobody takes its absence for a missing feature. A screenplay or a stage play shows neither: it exports Final Draft files as before.
+- **The Final Draft trademark line where `.fdx` is described**: the README's trademark section, the Open formats help page, and the formats list now say that Final Draft is a trademark of its owner, and that Drafter reads and writes its file format so a script can move between the two apps, without any connection with or endorsement by Final Draft (it was on the Classic Mode page only).
 
 ## [0.26.1] - 2026-11-05
 
