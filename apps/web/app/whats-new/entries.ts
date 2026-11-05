@@ -45,6 +45,15 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.26.1-manuscript',
+    date: '2026-11-05',
+    version: '0.26.1',
+    kind: 'New',
+    title: 'Send your novel out as a standard manuscript',
+    text: 'Export a novel as the manuscript agents and editors expect, as a PDF or a Word file, with a title page, a running header, and a chapter on each new page. A short box asks for the title page’s details once and keeps them in the book.',
+    link: { href: '/docs/novel/#sending-it-out', label: 'Sending it out' },
+  },
+  {
     id: 'v0.26.0-novel',
     date: '2026-11-05',
     version: '0.26.0',

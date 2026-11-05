@@ -18,7 +18,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.26.0.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. v0.26.0 brings **Novel**, a place to draft a book in Markdown, a **File** menu with Save As beside Save, and Export as Fountain; Classic Mode is there for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks. See the [roadmap](#roadmap).
+> **Status: v0.26.1.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. **Novel**, a place to draft a book in Markdown, now sends the book out too: v0.26.1 exports a novel as a standard manuscript, as a PDF or a Word file. Classic Mode is there for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks. See the [roadmap](#roadmap).
 
 ## Free, no login, private
 
@@ -74,7 +74,7 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 - **Write.** The editor and its live, industry-standard pages, with page counts you can trust. An element bar writes Fountain for you, with a cheat sheet. Screenplay and Stage play templates, a **Novel** for drafting a book, and Markdown documents with footnotes. A command palette, a Problems pane, offline spellcheck in US or British English, focus mode, typewriter scrolling, a daily goal, sprints, and writing stats.
 - **Contrast you choose.** The top bar's Contrast button has a slider for the Source and one for the Script, each on its own, in the light and the dark theme. Both start near the highest, for crisp text, and either can go softer if bright text tires your eyes.
 - **Fountain or Classic.** Type Fountain's marks, or switch to **Classic Mode**: Enter and Tab move from element to element, names and places fill themselves in, headings and names capitalise themselves, and the left side looks like a script with the marks hidden. The file is plain Fountain either way, and one click in the top bar switches. [How it works](https://drafter.dev/docs/classic-mode/).
-- **Novel.** Draft a book in plain Markdown: `#` for a chapter, `##` or `***` for a section, `# Part One` for a part. The Outline and Cards show every chapter and section with its words, a status (To do, Draft, Revised, Done), a synopsis, and a word target; Alt+arrow keys or a drag reorders them. **Focus** shows one chapter or section at a time, and the file stays Markdown any app opens. **Export → Manuscript (PDF)…** or **(Word)…** makes the standard manuscript an agent or editor expects, after a short box for the title page's details (built for v0.26.1). [How it works](https://drafter.dev/docs/novel/).
+- **Novel.** Draft a book in plain Markdown: `#` for a chapter, `##` or `***` for a section, `# Part One` for a part. The Outline and Cards show every chapter and section with its words, a status (To do, Draft, Revised, Done), a synopsis, and a word target; Alt+arrow keys or a drag reorders them. **Focus** shows one chapter or section at a time, and the file stays Markdown any app opens. **Export → Manuscript (PDF)…** or **(Word)…** makes the standard manuscript an agent or editor expects, after a short box for the title page's details. [How it works](https://drafter.dev/docs/novel/).
 - **Shape the story.** **Outline** (scenes and sections as a tree, with synopses, colors, running times, and a treatment export) and **Cards**, both rearranged by drag or keys. **Notes**, with categories, readers' names, and open or resolved status. Scene goals, setups and payoffs, and the **Structure strip**, a band of blocks above the panes to click and go.
 - **Look back.** **History**, with every version restorable in one undo. **Compare**, with a GitHub-style view of what changed. **Show changes**, marked on the pages, and the history of one scene.
 - **Drafts and Cuts.** Start a new draft when you choose: Draft 01, Draft 02, each kept for good with an ID of its own, to read, compare, or restore, and **Draft by draft** to see how the work changed. **Cuts** keeps everything you cut, a scene, a speech, or a paragraph, to browse for ideas, copy, or put back. Both sit as plain files beside your script.
@@ -169,7 +169,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 - **[Privacy audit, 3 November 2026](docs/privacy-audit-2026-11-03.md):** nothing about a script is stored in the cloud, and there's no AI. A writing session in three browsers on live drafter.dev sent the script in no request. One leak was fixed the same day: on drafter.dev, a report's text could reach the analytics.
 - **[Security audit, 1 November 2026](docs/security-audit-2026-11-01.md):** the first formal audit. No exploitable hole and nothing leaves the device. Fixed: private vulnerability reporting, the desktop's drop grant, Nuxt 4.6.3, and Dependabot.
 - **[Clean-room audit, 1 November 2026](docs/clean-room-audit-2026-11-01.md):** no copied code, no screenwriting package, no GPL code shipped. A film catchphrase and an unrecorded source were fixed.
-- **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 283, each with the one outcome it must have, run on every pull request.
+- **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 287, each with the one outcome it must have, run on every pull request.
 - **Reopenable exports review, 1 November 2026 (v0.23.1):** only the embedded source is read, as text, with caps before unpacking.
 - **Accessibility pass, 28 October 2026 (v0.9.0):** automated axe checks in every browser and both themes. Screen-reader passes are still to come.
 - **[Clean-room audit, 27 October 2026](docs/clean-room-audit-2026-10-27.md):** passed, with two fixes.
@@ -179,7 +179,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.26.0, there are **8,189 unit and property tests** (in 22 packages, the web app, and the desktop app), **1,423 browser tests**, each run in five browser setups (7,115 runs), 138 end-to-end tests of the desktop app, and **283 trap documents** with 1,305 checks:
+**What runs.** As of v0.26.1, there are **8,360 unit and property tests** (in 23 packages, the web app, and the desktop app), **1,433 browser tests**, each run in five browser setups (7,165 runs), 139 end-to-end tests of the desktop app, and **287 trap documents** with 1,329 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
@@ -312,15 +312,14 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 
 ## Roadmap
 
-**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, HTML and EPUB export, Drafts and Cuts (v0.24.0): numbered drafts, and a permanent file of everything you cut, Story map (v0.24.1): a visual page of your script to send to anyone, and Drafter for Claude (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose. You can also host the web app yourself with Docker (v0.24.3), and type a script with Enter and Tab the way many screenwriters expect, over a file that stays Fountain, in Classic Mode (v0.25.0), and draft a novel in Markdown, with its chapters and sections in the Outline and on Cards, in Novel (v0.26.0).
+**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, HTML and EPUB export, Drafts and Cuts (v0.24.0): numbered drafts, and a permanent file of everything you cut, Story map (v0.24.1): a visual page of your script to send to anyone, and Drafter for Claude (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose. You can also host the web app yourself with Docker (v0.24.3), and type a script with Enter and Tab the way many screenwriters expect, over a file that stays Fountain, in Classic Mode (v0.25.0), and draft a novel in Markdown, with its chapters and sections in the Outline and on Cards, in Novel (v0.26.0), and send it out as a standard manuscript, as a PDF or a Word file (v0.26.1).
 
 **Next:**
 
-- **v0.26.1: the manuscript exports**, a PDF and a Word file in manuscript layout: built and on its branch, awaiting its release.
+- **Production, free (v0.27.0):** revision colors and marks, locked pages and scene numbers, OMITTED scenes, revised pages, a breakdown report, and sides.
 
 **Later:**
 
-- **Production, free (v0.27.0):** revision colors and marks, locked pages and scene numbers, OMITTED scenes, revised pages, a breakdown report, and sides.
 - Storylines, the strip's Color by, and pacing (v0.28.0).
 - The **Workbook** (v0.29.0): a story bible and scene cards, with your pasted, synced, and spoken notes.
 - An optional one-file `.drafter` project (v0.30.0, open spec).

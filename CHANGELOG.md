@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-11-05
+
+**Send your novel out.** A novel now exports as a **standard manuscript**, the format agents, editors, and contests ask for: Export → **Manuscript (PDF)…** or **Manuscript (Word)…**. A short **Manuscript details** box asks once for the title page's details (byline, legal name, contact lines) and keeps them in the book. Both files are 12 pt Times-style or Courier, double-spaced, with a title page and "about N words", the running header `Surname / SHORT TITLE / page`, each chapter a third of the way down a new page, and `#` between scenes. The Word file opens in Word and Pages with no question, its page numbers in the header.
+
 ### Added
 
 - **Export a novel as a manuscript**: Export → **Manuscript (PDF)…** or **Manuscript (Word)…** (also in the Drafter menu, the palette, and the desktop app's File → Export, for a novel only) makes the standard manuscript an agent or editor expects: a title page, a header of surname, short title, and page number from page 2, 12 pt double-spaced with one-inch margins, chapters a third of the way down a new page, a centered `#` between sections (section titles don't print), `END`, and footnotes as endnotes. A **Manuscript details** box comes first: title, byline, legal name, contact, the header's surname and short title, and the font (Times-style serif or Courier), with the word count. Every field is optional, and a blank one is left off the page. What you change is saved in the book's file, in one undo step, so the box opens with it next time (and anyone you give the Markdown file, or an HTML or EPUB export made with **Let Drafter reopen this file**, can read it); a tab that only shows the book still exports and says the details weren't saved. The Word file uses Word's own Double spacing, which is about 26.6 pt a line in Times New Roman against the PDF's 24 pt, so it runs to about a tenth more pages than the PDF; its header holds one page-number field that Word and Pages fill in on open with no question. The Novel and Saving help pages, `docs/FORMATS.md`, and the README describe it.
@@ -1364,7 +1368,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.26.0...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.26.1...HEAD
+[0.26.1]: https://github.com/cschweda/drafter/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/cschweda/drafter/compare/v0.25.1...v0.26.0
 [0.25.1]: https://github.com/cschweda/drafter/compare/v0.25.0...v0.25.1
 [0.25.0]: https://github.com/cschweda/drafter/compare/v0.24.3...v0.25.0
