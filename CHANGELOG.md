@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
-- For contributors: the design for the manuscript exports (`docs/drafter-manuscript-design.md`), a novel's standard manuscript as a PDF and a Word file, for v0.26.1; a draft for the maintainer to tweak, with one decision first (page numbers in the Word file).
+- For contributors: the design for the manuscript exports (`docs/drafter-manuscript-design.md`), a novel's standard manuscript as a PDF and a Word file, for v0.26.1; approved 2026-11-05 with one `PAGE` field in the Word file's header; and its plan (`docs/plans/2026-11-05-manuscript.md`), eight tasks.
 
 ## [0.26.0] - 2026-11-05
 
