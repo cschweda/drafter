@@ -28,8 +28,9 @@ useDocsHead({
       It sits beside Screenplay and Stage play when you start something new. Choose
       <strong>New novel</strong> in the File menu or the command palette
       (<kbd>⌘K</kbd>, <kbd>Ctrl+K</kbd> elsewhere), or open <strong>Help → Sample scripts → Novel</strong>
-      to see a tiny book first. The manuscript layout, as a PDF or a Word file, comes later, in
-      v0.26.1; for now you can print, or export to HTML or EPUB, like any Markdown document.
+      to see a tiny book first. When the book is ready to send out, it exports as a standard
+      manuscript, as a PDF or a Word file (see <a href="#sending-it-out">Sending it out</a>), and
+      like any Markdown document it also prints and exports to HTML or EPUB.
     </p>
 
     <h2 id="marks">The marks: chapters, sections, and parts</h2>
@@ -167,6 +168,106 @@ Morning came in grey.</code></pre>
       <a href="/docs/drafter-for-claude/">Drafter for Claude</a>, if you set it up, sees a novel
       with its parts, chapters, and sections, and each one’s notes (its status, synopsis, and
       target) and words, and only reads it.
+    </p>
+
+    <h2 id="sending-it-out">Sending it out</h2>
+    <p>
+      Agents, editors, and contests ask for a <strong>standard manuscript</strong>: a plain,
+      double-spaced book that is easy to read and easy to mark up. It is not how the book will look
+      in print. Drafter makes one from your Markdown, so you never format it by hand or redo it
+      after a revision. Open <strong>Export</strong> and choose <strong>Manuscript (PDF)…</strong>
+      or <strong>Manuscript (Word)…</strong> (they are also in the Drafter menu and the command
+      palette, and in the desktop app’s File → Export). They appear for a novel only.
+    </p>
+    <h3 id="manuscript-format">What the format is</h3>
+    <ul>
+      <li>One-inch margins, 12 point type, double-spaced, left-aligned (never justified).</li>
+      <li>Every paragraph’s first line is indented half an inch, with no extra space between paragraphs.</li>
+      <li>
+        A title page with your name and contact lines at the top left, the word count at the top
+        right, and the title centered halfway down with “by” and your byline under it. It has no
+        header.
+      </li>
+      <li>
+        On every other page a header at the top right: your surname, a short title, and the page
+        number, such as “Vale / SALT ROAD / 12”. The title page counts as page 1, so the first
+        chapter begins on page 2.
+      </li>
+      <li>
+        Each chapter starts on a new page, a third of the way down, with its title centered. A part
+        (<code># Part One</code>) gets a page of its own.
+      </li>
+      <li>
+        A break between sections is a centered <code>#</code> on its own line. A section’s title is
+        not printed: manuscripts don’t title scenes, so the section titles stay your own way around
+        the book.
+      </li>
+      <li>The word <strong>END</strong>, centered, after the last line.</li>
+    </ul>
+    <p>
+      Italic and bold stay italic and bold, and a link prints as its text. A block quote is indented
+      half an inch on both sides. A list prints each item as its own paragraph, and code, in the
+      book’s own font. A footnote becomes an endnote on a page headed “Notes” after END. An image
+      is never fetched: its description prints in brackets, such as “[Image: the lighthouse at
+      dusk]”. Your statuses, synopses, targets, and the comment at the end of the file never print.
+    </p>
+
+    <h3 id="manuscript-details">The Manuscript details</h3>
+    <p>
+      Before either file is made, a <strong>Manuscript details</strong> box asks for the words on
+      the title page and in the header. Every field is optional, and a blank one is simply left off
+      the page.
+    </p>
+    <div class="docs-scroll" role="region" aria-label="The manuscript details (scrolls sideways)" tabindex="0">
+      <table>
+        <caption>
+          The fields, and what each one is for
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Field</th>
+            <th scope="col">What it is</th>
+            <th scope="col">It starts as</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Title</th><td>Centered on the title page</td><td>Your first chapter’s title that isn’t only a number, else the file’s name</td></tr>
+          <tr><th scope="row">Byline</th><td>The name the book is published under, printed as “by …” under the title</td><td>Empty</td></tr>
+          <tr><th scope="row">Legal name</th><td>The first line of your contact, top left: the name an agent pays</td><td>The byline</td></tr>
+          <tr><th scope="row">Contact</th><td>Your address, phone, and email, one line each, under the legal name</td><td>Empty</td></tr>
+          <tr><th scope="row">Surname for the header</th><td>The header’s first part</td><td>The last word of the byline</td></tr>
+          <tr><th scope="row">Short title</th><td>The header’s second part, in capitals</td><td>The title’s first three words</td></tr>
+          <tr><th scope="row">Font</th><td>The whole manuscript: Times-style serif or Courier</td><td>Times-style serif</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The word count at the top right is counted for you, as “about 87,000 words”: rounded to the
+      nearest thousand from 1,000 up, and to the nearest hundred below that. It counts your prose,
+      the same words the Outline totals.
+    </p>
+    <p>
+      <strong>The details are saved in your book’s file</strong>, in the same comment at the end
+      that holds the statuses, so the box opens with them next time and a later export asks nothing
+      new. That also means anyone you give the Markdown file to can read them, your contact lines
+      included. They stay on your device otherwise: the fonts are in the app, and both files are
+      made on your computer.
+    </p>
+
+    <h3 id="manuscript-files">The two files</h3>
+    <p>
+      The <strong>PDF</strong> is the manuscript exactly as it will print, in Liberation Serif (a
+      free font with the same letter widths as Times New Roman) or Courier Prime. The
+      <strong>Word file</strong> (<code>.docx</code>) is the same manuscript in Times New Roman or
+      Courier New, built with Word’s own styles, so an editor who changes a style changes the whole
+      book. It uses Word’s own Double spacing, so its pages may break a line or two differently
+      from the PDF’s. Both are named for the book, such as “The Salt Road – manuscript.pdf”.
+    </p>
+    <p>
+      <strong>Page numbers in Word.</strong> The header holds one page-number field, which is the
+      only way Word numbers pages by itself. Word, Pages, LibreOffice, and Google Docs show the right
+      number as soon as the file opens, with no question about updating links. Drafter puts no other
+      field in the file.
     </p>
 
     <h2 id="shortcuts">Keys at a glance</h2>

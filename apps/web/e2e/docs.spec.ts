@@ -397,6 +397,29 @@ test.describe('without JavaScript', () => {
     }
   });
 
+  test('the Novel help page has "Sending it out" and names both manuscript exports', async ({
+    page,
+  }) => {
+    await page.goto('/docs/novel');
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Sending it out', exact: true }),
+    ).toHaveAttribute('id', 'sending-it-out');
+    const text = await mainText(page);
+    for (const phrase of [
+      'Manuscript (PDF)…',
+      'Manuscript (Word)…',
+      'Manuscript details',
+      'saved in your book’s file',
+    ]) {
+      expect(text, phrase).toContain(phrase);
+    }
+    await page.goto('/docs/saving');
+    await expect(page.getByRole('heading', { name: 'Export a manuscript' })).toHaveAttribute(
+      'id',
+      'export-manuscript',
+    );
+  });
+
   test('the Why Drafter page has its parts and the comparison as a real table', async ({
     page,
   }) => {
