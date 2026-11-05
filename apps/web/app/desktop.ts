@@ -21,7 +21,8 @@ export type DesktopSaveExtension =
   | '.pdf'
   | '.html'
   | '.epub'
-  | '.fdx';
+  | '.fdx'
+  | '.docx';
 
 /**
  * The file system, through the main process (apps/desktop/src/files.ts), which is the only part of

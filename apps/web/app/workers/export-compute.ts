@@ -1,7 +1,14 @@
 import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
 import { paginate, type SceneNumbering, type TitlePageMode, titlePageFor } from '@drafter/layout';
+import {
+  type ManuscriptDetails,
+  type ManuscriptFont,
+  manuscriptOf,
+  resolveDetails,
+} from '@drafter/novel';
 import { sceneIndex, scriptMarkdown } from '@drafter/outline';
+import { renderManuscriptDocx } from '@drafter/render-docx';
 import {
   epubIdentifier,
   epubStylesUsed,
@@ -20,8 +27,12 @@ import {
   type Face,
   FONT_FILES,
   type FontSet,
+  MANUSCRIPT_FONT_FILES,
+  type ManuscriptFace,
+  type ManuscriptFontSet,
   type RenderProgress,
   renderDocumentPdf,
+  renderManuscriptPdf,
   renderPdf,
 } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
@@ -83,7 +94,9 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptions = Object.freeze({
  * file is, without the page rate and with the time it was asked for (milliseconds since 1970),
  * its package's modified date. With "Let Drafter reopen this file", each of those four carries
  * `embed`, the text as Save would write it (its line breaks and byte order mark), which goes
- * inside the file whole.
+ * inside the file whole. A novel's standard manuscript, as a PDF or a Word file, is its text, the
+ * name its file goes by (the title when nothing else gives one), the details its dialog keeps, and
+ * the paper and language a Markdown PDF takes.
  */
 export type ExportRequest =
   | {
@@ -118,6 +131,8 @@ export type ExportRequest =
       embed?: string;
     }
   | { kind: 'markdown-pdf'; source: string; paper: Paper; title: string; lang: string }
+  | ManuscriptRequest<'manuscript-pdf'>
+  | ManuscriptRequest<'manuscript-docx'>
   | {
       kind: 'markdown-html';
       source: string;
@@ -154,6 +169,20 @@ export type ExportRequest =
   | { kind: 'story-map-picks'; source: string; template: Template; options: MapOptions };
 
 /**
+ * A novel's manuscript, as a PDF or a Word file (one member each, so a check of the kind narrows
+ * the request): its text, the name its file goes by, the details its dialog keeps, the paper, and
+ * the language.
+ */
+interface ManuscriptRequest<K extends 'manuscript-pdf' | 'manuscript-docx'> {
+  kind: K;
+  source: string;
+  fileTitle: string;
+  details: ManuscriptDetails;
+  paper: Paper;
+  lang: string;
+}
+
+/**
  * The Make a story map dialog's quick look (design §7): the lines of dialogue the page would use,
  * each with its speaker, the next line in its scene for Pick another (`next`, null with none),
  * and every line its scene offers (`choices`, in order, the pick among them; never a `[[No quote]]`
@@ -187,6 +216,11 @@ const FONT_FOLDER = '/fonts/courier-prime/';
 const DOCUMENT_FONT_FOLDER = '/fonts/inter-tight/';
 /** Where the app serves the story map's four WOFF2 faces (`@drafter/story-map`'s `fonts/`). */
 const STORY_MAP_FONT_FOLDER = '/fonts/story-map/';
+/** Where the app serves each manuscript font's four styles: Liberation Serif for Times, else Courier Prime. */
+const MANUSCRIPT_FONT_FOLDER: Record<ManuscriptFont, string> = {
+  times: '/fonts/liberation-serif/',
+  courier: FONT_FOLDER,
+};
 
 /** A font file from the app's own origin, which `connect-src 'self'` allows. */
 async function fontFile(
@@ -229,6 +263,27 @@ export async function fetchDocumentFonts(
     }),
   );
   return Object.fromEntries(loaded) as unknown as DocumentFontSet;
+}
+
+/**
+ * The four styles of the one font a manuscript asked for, from the app's own origin: Liberation
+ * Serif from /fonts/liberation-serif/ for `times`, Courier Prime from /fonts/courier-prime/ for
+ * `courier`. Never the other font's.
+ */
+export async function fetchManuscriptFonts(
+  font: ManuscriptFont,
+  fetcher: (url: string) => Promise<Response> = (url) => fetch(url),
+): Promise<ManuscriptFontSet> {
+  const files = MANUSCRIPT_FONT_FILES[font];
+  const faces = Object.keys(files) as ManuscriptFace[];
+  const loaded = await Promise.all(
+    faces.map(async (face) => {
+      // The package's paths are under its `fonts/`; the app serves each font in its own folder.
+      const file = files[face].split('/').at(-1) as string;
+      return [face, await fontFile(fetcher, MANUSCRIPT_FONT_FOLDER[font], file)] as const;
+    }),
+  );
+  return Object.fromEntries(loaded) as ManuscriptFontSet;
 }
 
 /** Fetches Anton, Archivo (two weights), and Courier Prime for a story map, from the app's own origin. */
@@ -319,16 +374,23 @@ function once<T>(load: () => Promise<T>): () => Promise<T> {
  * draws a PDF; unknown again while pdf-lib saves; and 1 at the end. Plain text, Final Draft,
  * Markdown, HTML, and EPUB files are quick: unknown, then 1. A story map is the model of the script
  * (`@drafter/story-map`) drawn as one page with its own fonts, loaded once; its dialog's picks are
- * the same model, as JSON.
+ * the same model, as JSON. A novel's manuscript is its text parsed as a document's PDF is, read as
+ * a book (`@drafter/novel`), and drawn as a PDF in the one font it asked for (each font loaded once,
+ * by the first manuscript in it), or written as a Word file, which embeds no fonts.
  */
 export function createExporter(
   loadFonts: () => Promise<FontSet> = fetchFonts,
   loadDocumentFonts: () => Promise<DocumentFontSet> = fetchDocumentFonts,
   loadStoryMapFonts: () => Promise<StoryMapFonts> = fetchStoryMapFonts,
+  loadManuscriptFonts: (font: ManuscriptFont) => Promise<ManuscriptFontSet> = fetchManuscriptFonts,
 ) {
   const fontsOnce = once(loadFonts);
   const documentFontsOnce = once(loadDocumentFonts);
   const storyMapFontsOnce = once(loadStoryMapFonts);
+  const manuscriptFontsOnce: Record<ManuscriptFont, () => Promise<ManuscriptFontSet>> = {
+    times: once(() => loadManuscriptFonts('times')),
+    courier: once(() => loadManuscriptFonts('courier')),
+  };
   const parserOnce = once(() => import('../markdown/parse'));
 
   async function exportOne(request: ExportRequest, report: ProgressReporter): Promise<ExportReply> {
@@ -388,6 +450,24 @@ export function createExporter(
         paper: request.paper,
         title: request.title,
         lang: request.lang,
+        onProgress: rendering(report),
+      });
+      return { data: bytes, missing };
+    }
+    if (request.kind === 'manuscript-pdf' || request.kind === 'manuscript-docx') {
+      const { source, paper, lang } = request;
+      const { parseMarkdown } = await parserOnce();
+      const details = resolveDetails(source, request.fileTitle, request.details);
+      const ms = manuscriptOf(source, parseMarkdown(source), details);
+      if (request.kind === 'manuscript-docx') {
+        return { data: renderManuscriptDocx(ms, { paper, lang }) };
+      }
+      // A font it doesn't know is Times, as the renderer draws it.
+      const fonts = await (manuscriptFontsOnce[ms.font] ?? manuscriptFontsOnce.times)();
+      const { bytes, missing } = await renderManuscriptPdf(ms, {
+        fonts,
+        paper,
+        lang,
         onProgress: rendering(report),
       });
       return { data: bytes, missing };
@@ -465,7 +545,9 @@ export function createExporter(
     const weights: StageWeights =
       request.kind === 'markdown-pdf' ||
       request.kind === 'markdown-html' ||
-      request.kind === 'markdown-epub'
+      request.kind === 'markdown-epub' ||
+      request.kind === 'manuscript-pdf' ||
+      request.kind === 'manuscript-docx'
         ? WEIGHTS.markdown
         : WEIGHTS.script;
     const report = progressReporter(weights, onProgress);

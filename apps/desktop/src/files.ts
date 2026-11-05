@@ -170,13 +170,14 @@ export const OPEN_EXTENSIONS: readonly string[] = [
   ...IMPORT_EXTENSIONS,
   ...REOPEN_EXTENSIONS,
 ];
-/** The extensions of the files the app writes: scripts, and the exports. */
+/** The extensions of the files the app writes: scripts, and the exports (a novel's manuscript as a Word file too). */
 export const WRITE_EXTENSIONS: readonly string[] = [
   ...SCRIPT_EXTENSIONS,
   '.pdf',
   '.html',
   '.epub',
   '.fdx',
+  '.docx',
 ];
 
 /** Whether `path`'s extension is one of `extensions` (in any case). */

@@ -316,6 +316,20 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'export-txt', title: 'Export as plain text', group: 'File' },
   { id: 'export-fdx', title: 'Export as Final Draft (.fdx)', group: 'File' },
   { id: 'export-treatment', title: 'Export as treatment…', group: 'File' },
+  // A novel's standard manuscript, to send to an agent or a publisher, after its dialog (manuscript
+  // design, "Where it sits in the app"): as a PDF, and as a Word file, which most ask for.
+  {
+    id: 'export-manuscript-pdf',
+    title: 'Export as Manuscript (PDF)…',
+    group: 'File',
+    keywords: ['submission', 'agent', 'standard manuscript format', 'docx', 'Word'],
+  },
+  {
+    id: 'export-manuscript-docx',
+    title: 'Export as Manuscript (Word)…',
+    group: 'File',
+    keywords: ['submission', 'agent', 'standard manuscript format', 'docx', 'Word'],
+  },
   { id: 'export-options', title: 'Export options…', group: 'File' },
   { id: 'screenplay-from-outline', title: 'New screenplay from this outline', group: 'File' },
   { id: 'remove', title: 'Remove from this browser', group: 'File' },

@@ -124,6 +124,9 @@ importers:
       '@drafter/outline':
         specifier: workspace:*
         version: link:../../packages/outline
+      '@drafter/render-docx':
+        specifier: workspace:*
+        version: link:../../packages/render-docx
       '@drafter/render-html':
         specifier: workspace:*
         version: link:../../packages/render-html

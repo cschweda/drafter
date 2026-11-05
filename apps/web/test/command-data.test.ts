@@ -174,6 +174,33 @@ describe('the command data', () => {
     expect(EXPORTS.markdown).not.toContain('story-map');
   });
 
+  test('the manuscript’s two exports follow export-treatment, in File, found by what they are for', () => {
+    const ids = COMMAND_DATA.map((c) => c.id);
+    expect(ids.indexOf('export-manuscript-pdf')).toBe(ids.indexOf('export-treatment') + 1);
+    expect(ids.indexOf('export-manuscript-docx')).toBe(ids.indexOf('export-treatment') + 2);
+    for (const [id, title] of [
+      ['export-manuscript-pdf', 'Export as Manuscript (PDF)…'],
+      ['export-manuscript-docx', 'Export as Manuscript (Word)…'],
+    ]) {
+      const command = COMMAND_DATA.find((c) => c.id === id);
+      expect(command, id).toMatchObject({ title, group: 'File' });
+      expect(command?.keywords, id).toEqual(
+        expect.arrayContaining([
+          'submission',
+          'agent',
+          'standard manuscript format',
+          'docx',
+          'Word',
+        ]),
+      );
+    }
+    // Made after their dialog, for a novel alone, so not among the files the menus list by kind.
+    for (const kind of ['manuscript-pdf', 'manuscript-docx'] as const) {
+      expect(EXPORTS.fountain).not.toContain(kind);
+      expect(EXPORTS.markdown).not.toContain(kind);
+    }
+  });
+
   test('Use in story map and Never use in story map are Edit commands with no key', () => {
     for (const [id, title] of [
       ['story-map-use-line', 'Use in story map'],

@@ -29,6 +29,7 @@ const EXTENSION: Record<FileKind, DesktopSaveExtension> = {
   html: '.html',
   epub: '.epub',
   fdx: '.fdx',
+  docx: '.docx',
 };
 
 /**

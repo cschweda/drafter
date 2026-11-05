@@ -21,6 +21,7 @@ import {
   type DocumentFontSet,
   FONT_FILES,
   type FontSet,
+  MANUSCRIPT_FONT_FILES,
   renderPdf,
 } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
@@ -1065,5 +1066,92 @@ describe('the drafter comment in a Markdown export', () => {
     const withComment = bytesOf(await exporter(markdownPdf(SOURCE_WITH)));
     const without = bytesOf(await exporter(markdownPdf(BODY)));
     expect(Buffer.from(withComment).equals(Buffer.from(without))).toBe(true);
+  });
+});
+
+describe('a novel’s manuscript', () => {
+  const { createExporter, fetchManuscriptFonts } = compute;
+  const BOOK =
+    '# Chapter One\n\nThe salt road ran *east* from the harbour.\n\n<!-- drafter {"template":"novel"} -->\n';
+  const details = { byline: 'R. Vale', legalName: 'Rosa Vale', contact: ['1 Quay Lane'] };
+  const request = (kind: 'manuscript-pdf' | 'manuscript-docx', font?: 'times' | 'courier') =>
+    ({
+      kind,
+      source: BOOK,
+      fileTitle: 'salt-road',
+      details: font ? { ...details, font } : details,
+      paper: 'letter',
+      lang: 'en-GB',
+    }) as const;
+
+  /** A fetcher that answers from render-pdf's own font files, by the app's served paths. */
+  function diskFetcher() {
+    const urls: string[] = [];
+    const fetcher = async (url: string) => {
+      urls.push(url);
+      const file = url.startsWith('/fonts/liberation-serif/')
+        ? `liberation-serif/${url.split('/').at(-1)}`
+        : (url.split('/').at(-1) as string);
+      return new Response(new Uint8Array(await readFile(new URL(file, FOLDER))));
+    };
+    return { urls, fetcher };
+  }
+
+  test('a Word manuscript is a zip whose running header holds the surname', async () => {
+    const fonts = vi.fn();
+    const exporter = createExporter(realFonts, realDocumentFonts, undefined, fonts);
+    const bytes = bytesOf(await exporter(request('manuscript-docx')));
+    const entry = listZip(bytes).find((e) => e.name === 'word/header1.xml');
+    if (!entry) throw new Error('no header');
+    const header = new TextDecoder().decode(await readEntry(bytes, entry));
+    expect(header).toContain('Vale');
+    // The book's chapters name nothing, so the short title is the file's.
+    expect(header).toContain('SALT-ROAD');
+    // A Word file embeds no fonts.
+    expect(fonts).not.toHaveBeenCalled();
+  });
+
+  test('a PDF manuscript fetches only its own font’s four files, each once', async () => {
+    for (const [font, folder] of [
+      ['times', '/fonts/liberation-serif/'],
+      ['courier', '/fonts/courier-prime/'],
+    ] as const) {
+      const { urls, fetcher } = diskFetcher();
+      const exporter = createExporter(realFonts, realDocumentFonts, undefined, (asked) =>
+        fetchManuscriptFonts(asked, fetcher),
+      );
+      for (let i = 0; i < 2; i++) {
+        const reply = await exporter(request('manuscript-pdf', font));
+        expect(reply).toMatchObject({ missing: [] });
+        const pdf = await PDFDocument.load(bytesOf(reply));
+        expect(pdf.getPageCount()).toBeGreaterThanOrEqual(2);
+      }
+      expect(urls.sort()).toEqual(
+        Object.values(MANUSCRIPT_FONT_FILES[font])
+          .map((file) => `${folder}${file.split('/').at(-1)}`)
+          .sort(),
+      );
+    }
+  });
+
+  test('a PDF manuscript of the other font loads that font as well', async () => {
+    const load = vi.fn(async (font: 'times' | 'courier') =>
+      fetchManuscriptFonts(font, diskFetcher().fetcher),
+    );
+    const exporter = createExporter(realFonts, realDocumentFonts, undefined, load);
+    await exporter(request('manuscript-pdf', 'times'));
+    await exporter(request('manuscript-pdf', 'courier'));
+    await exporter(request('manuscript-pdf'));
+    expect(load.mock.calls).toEqual([['times'], ['courier']]);
+  });
+
+  test('fails with the file’s name when a manuscript font is missing', async () => {
+    const fetcher = async (url: string) =>
+      url.endsWith('/LiberationSerif-Bold.ttf')
+        ? new Response('no', { status: 404 })
+        : new Response(new Uint8Array([1]));
+    await expect(fetchManuscriptFonts('times', fetcher)).rejects.toThrow(
+      'Couldn’t load the font LiberationSerif-Bold.ttf.',
+    );
   });
 });

@@ -1,3 +1,4 @@
+import { manuscriptOpen } from '~/novel/manuscript';
 import { treatmentOpen } from '~/outline/treatment';
 import { exportScript } from '~/storage/export';
 import { exportOptionsOpen } from '~/storage/export-options';
@@ -5,12 +6,13 @@ import { storyMapOpen } from '~/story-map/options';
 import type { Behavior, When } from './behavior';
 
 /**
- * The Export group's commands (out of `builtin.ts`, 2026-11-04): each export, the story map and
- * the treatment (after their dialogs), and Export options.
+ * The Export group's commands (out of `builtin.ts`, 2026-11-04): each export, the story map, the
+ * treatment, and a novel's manuscript (after their dialogs), and Export options.
  */
 export function exportBehaviors({
   hasScript,
   isFountain,
+  isNovel,
   exportsHere,
 }: When): Record<string, Behavior> {
   return {
@@ -41,6 +43,20 @@ export function exportBehaviors({
       enabled: isFountain,
       run: () => {
         treatmentOpen.value = true;
+      },
+    },
+    // A novel's standard manuscript, as a PDF or a Word file: its dialog first, for the title page's
+    // details, which `exportManuscript` then exports with.
+    'export-manuscript-pdf': {
+      enabled: isNovel,
+      run: () => {
+        manuscriptOpen.value = 'pdf';
+      },
+    },
+    'export-manuscript-docx': {
+      enabled: isNovel,
+      run: () => {
+        manuscriptOpen.value = 'docx';
       },
     },
     // How the open script's exports come out (out-the-door design §2.4): scene numbers and the title

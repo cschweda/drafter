@@ -23,6 +23,8 @@ export interface When {
   /** Fountain's own commands, checks, and scenes mean nothing in a Markdown document. */
   isFountain(): boolean;
   isMarkdown(): boolean;
+  /** A Markdown document that is a novel (`novel/kind.ts`): its manuscript exports apply. */
+  isNovel(): boolean;
   /** Whether the open document exports as `kind` (`EXPORTS`). */
   exportsHere(kind: ExportKind): boolean;
 }

@@ -396,8 +396,25 @@ describe('Export options in the desktop menus', () => {
       'export-txt',
       'export-fdx',
       'export-treatment',
+      'export-manuscript-pdf',
+      'export-manuscript-docx',
       'export-options',
     ]);
     expect(sent.at(-1)).toMatchObject({ title: 'Export options…', group: 'File' });
+  });
+
+  test('lists the manuscript’s two exports after Treatment, as Manuscript (PDF)… and Manuscript (Word)…', () => {
+    const ids = COMMAND_DATA.filter((c) => c.id.startsWith('export-')).map((c) => c.id);
+    registerCommands(ids.map((id) => command(id)));
+    const sent = menuCommands(useCommands().value).filter((c) => c.id.startsWith('export-'));
+    const at = sent.findIndex((c) => c.id === 'export-treatment');
+    // The desktop app's File → Export cuts "Export as " from each title (apps/desktop/src/menu.ts).
+    expect(
+      sent.slice(at + 1, at + 3).map((c) => [c.id, c.title.replace(/^Export as /, '')]),
+    ).toEqual([
+      ['export-manuscript-pdf', 'Manuscript (PDF)…'],
+      ['export-manuscript-docx', 'Manuscript (Word)…'],
+    ]);
+    expect(sent.slice(at + 1, at + 3).every((c) => c.group === 'File')).toBe(true);
   });
 });

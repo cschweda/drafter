@@ -216,8 +216,8 @@ describe('directUses', () => {
     // since the novel (it reads Markdown's metadata comment), and one more since the app's Outline
     // for a novel, and one more since Drafter for Claude reads a novel's parts, chapters, and
     // sections, and one more since the manuscript's Word file (render-docx zips with the archive's
-    // writer and reads the novel's manuscript).
-    expect(edges).toBeLessThanOrEqual(42);
+    // writer and reads the novel's manuscript), and one more since the app exports that Word file.
+    expect(edges).toBeLessThanOrEqual(43);
   });
 });
 
