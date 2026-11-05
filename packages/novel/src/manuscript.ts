@@ -5,7 +5,11 @@ import { type NovelNode, novelStructure } from './structure';
 // One description of a novel's standard manuscript, with no format in it: the PDF and the Word file
 // both render these blocks, so they cannot disagree about what is in the book.
 
-/** A stretch of text with one set of marks. */
+/**
+ * A stretch of text with one set of marks. In a `body`, `quote`, `list`, or `heading` paragraph the
+ * text never holds a line break: a soft or hard break in the source is one space. (A `code`
+ * paragraph is one line of a code block.)
+ */
 export interface Run {
   text: string;
   italic?: boolean;
@@ -18,6 +22,10 @@ export type ManuscriptBlock =
   | { kind: 'chapter'; title: string }
   | { kind: 'break' }
   | {
+      /**
+       * A paragraph, a list item, a quoted paragraph, one line of a code block, or one row of a
+       * table (a `body` paragraph whose cells are joined by ' | ').
+       */
       kind: 'paragraph';
       style: 'body' | 'quote' | 'list' | 'code' | 'heading';
       runs: Run[];
@@ -116,25 +124,31 @@ function push(runs: Run[], run: Run): void {
 }
 
 /** Inline nodes as runs. Marks nest, so a bold word inside italics has both flags. */
+/** A soft line break and the spaces around it, as one space. */
+function flat(text: string): string {
+  return text.replace(/[ \t]*\r?\n[ \t]*/g, ' ');
+}
+
 function inline(
   nodes: MdNode[],
   marks: Omit<Run, 'text'>,
   numbers: Map<string, number>,
   out: Run[],
+  keep = false,
 ): void {
   for (const node of nodes) {
     switch (node.type) {
       case 'text':
-        push(out, { text: node.value ?? '', ...marks });
+        push(out, { text: keep ? (node.value ?? '') : flat(node.value ?? ''), ...marks });
         break;
       case 'emphasis':
-        inline(node.children ?? [], { ...marks, italic: true }, numbers, out);
+        inline(node.children ?? [], { ...marks, italic: true }, numbers, out, keep);
         break;
       case 'strong':
-        inline(node.children ?? [], { ...marks, bold: true }, numbers, out);
+        inline(node.children ?? [], { ...marks, bold: true }, numbers, out, keep);
         break;
       case 'inlineCode':
-        push(out, { text: node.value ?? '', ...marks, code: true });
+        push(out, { text: flat(node.value ?? ''), ...marks, code: true });
         break;
       case 'break':
         push(out, { text: ' ', ...marks });
@@ -151,8 +165,8 @@ function inline(
         break;
       default:
         // A link prints its text; anything else with children prints what is in it.
-        if (node.children) inline(node.children, marks, numbers, out);
-        else if (node.value) push(out, { text: node.value, ...marks });
+        if (node.children) inline(node.children, marks, numbers, out, keep);
+        else if (node.value) push(out, { text: flat(node.value), ...marks });
     }
   }
 }
@@ -172,12 +186,49 @@ function startOf(node: MdNode): number | undefined {
   return node.position?.start?.offset ?? node.from;
 }
 
+const DELIMITER_ROW = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
+
+/** A row of a table as one run list: outer pipes dropped, cells joined by ' | '. */
+function rowRuns(runs: Run[]): Run[] {
+  const out: Run[] = [];
+  for (const run of runs) push(out, { ...run, text: run.text.replace(/\s*\|\s*/g, ' | ') });
+  if (out.length > 0 && out[0].text.startsWith(' | ')) out[0].text = out[0].text.slice(3);
+  const last = out[out.length - 1];
+  if (last) last.text = last.text.replace(/ \| $/, '').replace(/\s+$/, '');
+  return out.filter((r) => r.text !== '');
+}
+
+/** The runs split at their line breaks, one run list per line. */
+function linesOf(runs: Run[]): Run[][] {
+  const lines: Run[][] = [[]];
+  for (const run of runs) {
+    run.text.split(/\r?\n/).forEach((part, i) => {
+      if (i > 0) lines.push([]);
+      if (part !== '') lines[lines.length - 1].push({ ...run, text: part });
+    });
+  }
+  return lines;
+}
+
+/** The rows of a pipe table written as a paragraph (the parser has no table syntax), else null. */
+function tableRows(raw: Run[]): Run[][] | null {
+  const lines = linesOf(raw);
+  if (lines.length < 2) return null;
+  const texts = lines.map((l) => l.map((r) => r.text).join(''));
+  if (!texts.every((t) => t.includes('|'))) return null;
+  if (!DELIMITER_ROW.test(texts[1]) || !texts[1].includes('-')) return null;
+  return lines.filter((_, i) => i !== 1).map(rowRuns);
+}
+
 /**
  * The book, block by block. A top-level heading is a part, a chapter, or a section by the same
  * reading `novelStructure` makes, so the outline and the manuscript never disagree.
  */
 export function manuscriptOf(source: string, tree: MdNode, details: ResolvedDetails): Manuscript {
   const structure = novelStructure(source);
+  // The structure keys its nodes by the start of the heading's line in the source; the parser's
+  // offsets skip indentation and a leading byte-order mark, so a heading is found by its line.
+  const bom = source.charCodeAt(0) === 0xfeff ? 1 : 0;
   const byOffset = new Map<number, NovelNode>();
   const index = (nodes: NovelNode[]): void => {
     for (const node of nodes) {
@@ -220,8 +271,25 @@ export function manuscriptOf(source: string, tree: MdNode, details: ResolvedDeta
 
   const block = (node: MdNode, style: Style, marker?: string): void => {
     switch (node.type) {
-      case 'paragraph':
-        paragraph(style, runsOf(node.children ?? [], numbers), marker);
+      case 'paragraph': {
+        const rows = tableRows(raw(node));
+        if (rows) {
+          for (const row of rows) paragraph(style, row);
+        } else {
+          paragraph(style, runsOf(node.children ?? [], numbers), marker);
+        }
+        break;
+      }
+      case 'table':
+        for (const row of node.children ?? []) {
+          const cells = (row.children ?? []).map((cell) => runsOf(cell.children ?? [], numbers));
+          const runs: Run[] = [];
+          cells.forEach((cell, i) => {
+            if (i > 0) push(runs, { text: ' | ' });
+            for (const run of cell) push(runs, run);
+          });
+          paragraph(style, runs);
+        }
         break;
       case 'blockquote':
         container(node.children ?? [], 'quote');
@@ -239,42 +307,62 @@ export function manuscriptOf(source: string, tree: MdNode, details: ResolvedDeta
           blocks.push({ kind: 'paragraph', style: 'code', runs: [{ text: line, code: true }] });
         }
         break;
-      case 'thematicBreak':
-        sectioned = true;
-        addBreak();
+      case 'heading':
+        // Only a top-level heading is structure (`structural` below); inside a quote or a list it is
+        // a heading-styled paragraph. A thematic break there prints nothing.
+        paragraph('heading', runsOf(node.children ?? [], numbers));
         break;
-      case 'heading': {
-        const depth = node.depth ?? 1;
-        const found = depth <= 2 ? byOffset.get(startOf(node) ?? -1) : undefined;
-        const title = plain(runsOf(node.children ?? [], numbers)).trim();
-        if (depth > 2) {
-          paragraph('heading', runsOf(node.children ?? [], numbers));
-        } else if (found?.kind === 'part') {
-          sectioned = false;
-          blocks.push({ kind: 'part', title });
-        } else if (found?.kind === 'chapter' || (!found && depth === 1)) {
-          sectioned = false;
-          blocks.push({ kind: 'chapter', title });
-        } else {
-          if (sectioned) addBreak();
-          sectioned = true;
-        }
-        break;
-      }
       default:
         // HTML, footnote definitions, and anything else print nothing here.
         break;
     }
   };
 
-  for (const node of tree.children ?? []) block(node, 'body');
+  const raw = (node: MdNode): Run[] => {
+    const out: Run[] = [];
+    inline(node.children ?? [], {}, numbers, out, true);
+    return out;
+  };
+
+  // A top-level heading or thematic break is structure only where `novelStructure` says so.
+  const structural = (node: MdNode): void => {
+    if (node.type === 'thematicBreak') {
+      sectioned = true;
+      addBreak();
+      return;
+    }
+    const at = startOf(node);
+    const lineStart = at === undefined ? -1 : source.lastIndexOf('\n', at + bom - 1) + 1;
+    const found = (node.depth ?? 1) <= 2 ? byOffset.get(lineStart) : undefined;
+    const title = plain(runsOf(node.children ?? [], numbers)).trim();
+    if (found?.kind === 'part') {
+      sectioned = false;
+      blocks.push({ kind: 'part', title });
+    } else if (found?.kind === 'chapter') {
+      sectioned = false;
+      blocks.push({ kind: 'chapter', title });
+    } else if (found) {
+      if (sectioned) addBreak();
+      sectioned = true;
+    } else {
+      paragraph('heading', runsOf(node.children ?? [], numbers));
+    }
+  };
+
+  for (const node of tree.children ?? []) {
+    if (node.type === 'heading' || node.type === 'thematicBreak') structural(node);
+    else block(node, 'body');
+  }
   blocks.push({ kind: 'end' });
+  // A break sits between two runs of text: one before a chapter, a part, the end, or another break
+  // (a `***` closing a chapter) is dropped.
+  const kept = blocks.filter((b, i) => b.kind !== 'break' || blocks[i + 1]?.kind === 'paragraph');
 
   return {
     ...details,
     words: structure.words,
     wordsLabel: wordsLabel(structure.words),
-    blocks,
+    blocks: kept,
     notes: definitions.map((def) => {
       const out: Run[] = [];
       for (const child of def.children ?? []) {

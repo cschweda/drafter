@@ -91,9 +91,28 @@ describe('manuscriptOf', () => {
     expect(chapters).toEqual(['The Salt Road', 'Chapter 2', 'The Night Watch']);
     expect(m.blocks[m.blocks.length - 1]).toEqual({ kind: 'end' });
     expect(kinds.filter((k) => k === 'end')).toHaveLength(1);
-    // No break before the first section; one before the second; one for the `***`.
-    expect(kinds[3]).not.toBe('break');
-    expect(kinds.filter((k) => k === 'break')).toHaveLength(2);
+    // The Crossing opens with no break; The Lamp and the `***` each get one.
+    const para = (style: string) => `paragraph:${style}`;
+    const seq = m.blocks.map((blk) => (blk.kind === 'paragraph' ? para(blk.style) : blk.kind));
+    expect(seq.slice(0, seq.indexOf('chapter', 2))).toEqual([
+      'part',
+      'chapter',
+      'paragraph:body', // the chapter's two opening paragraphs
+      'paragraph:body',
+      'paragraph:body', // The Crossing, no break before it
+      'paragraph:quote',
+      'break', // The Lamp
+      'paragraph:body',
+      'paragraph:body', // the image
+      'break', // the `***`
+      'paragraph:body',
+      'paragraph:list',
+      'paragraph:list',
+      'paragraph:list',
+      'paragraph:body',
+      'paragraph:list',
+      'paragraph:list',
+    ]);
   });
 
   test('section headings print nowhere', () => {
@@ -156,5 +175,86 @@ describe('manuscriptOf', () => {
   test('a ## before any chapter is a chapter, as the outline reads it', () => {
     const b = make('## Prologue\n\nBody.\n').blocks;
     expect(b[0]).toEqual({ kind: 'chapter', title: 'Prologue' });
+  });
+
+  // The part/chapter/break sequence the manuscript prints, and the one the outline reads.
+  const shape = (source: string) =>
+    make(source)
+      .blocks.filter((b) => b.kind === 'part' || b.kind === 'chapter' || b.kind === 'break')
+      .map((b) => b.kind);
+  const outline = (source: string) => {
+    const out: string[] = [];
+    const walk = (nodes: ReturnType<typeof novelStructure>['nodes']) => {
+      for (const n of nodes) {
+        if (n.kind !== 'section') out.push(n.kind);
+        walk(n.children);
+      }
+    };
+    walk(novelStructure(source).nodes);
+    return out;
+  };
+
+  test.each([
+    ['an indented part', '  # Part One\n\nA.\n\n# Two\n\nB.\n'],
+    ['a leading byte-order mark', '\uFEFF# One\n\nA.\n\n# Two\n\nB.\n'],
+    ['a heading in a block quote', '# One\n\n> # Not a chapter\n\nA.\n\n# Two\n'],
+    ['a heading in a list', '# One\n\n- # Not a chapter\n\n# Two\n\nB.\n'],
+    ['a setext chapter', 'One\n===\n\nA.\n\nTwo\n===\n\nB.\n'],
+  ])('the headings agree with the outline: %s', (_, source) => {
+    expect(shape(source)).toEqual(outline(source));
+  });
+
+  test('a nested heading is a heading-styled paragraph, not a chapter', () => {
+    const b = make('# One\n\n> # Inner\n\nA.\n').blocks;
+    expect(b.map((x) => x.kind)).toEqual(['chapter', 'paragraph', 'paragraph', 'end']);
+    expect(b[1]).toMatchObject({ style: 'heading' });
+  });
+
+  test('an indented part is a part', () => {
+    expect(make('  # Part One\n\nA.\n').blocks[0]).toEqual({ kind: 'part', title: 'Part One' });
+  });
+
+  test('a table is one body paragraph per row', () => {
+    const b = make(
+      '# One\n\n| Name | Age |\n| --- | --- |\n| Ann | 30 |\n| Bo | 41 |\n\nAfter.\n',
+    ).blocks;
+    const rows = b.filter((x) => x.kind === 'paragraph').map(text);
+    expect(rows).toEqual(['Name | Age', 'Ann | 30', 'Bo | 41', 'After.']);
+    expect(
+      b
+        .filter((x) => x.kind === 'paragraph')
+        .every((x) => x.kind === 'paragraph' && x.style === 'body'),
+    ).toBe(true);
+  });
+
+  test('no run holds a line break', () => {
+    const b = make(
+      '# One\n\nline one\nline two  \nthree\\\nfour\n\n> quoted\n> more\n\n- item\n  wraps\n',
+    ).blocks;
+    for (const blk of b) {
+      if (blk.kind === 'paragraph') for (const r of blk.runs) expect(r.text).not.toMatch(/[\r\n]/);
+    }
+    expect(text(b[1])).toBe('line one line two three four');
+  });
+
+  test('a break never sits next to a chapter, a part, the end, or another break', () => {
+    for (const source of [
+      '# One\n\nA.\n\n***\n\n# Two\n\nB.\n',
+      '# One\n\nA.\n\n***\n',
+      '# One\n\nA.\n\n***\n\n***\n\nB.\n',
+      '# One\n\nA.\n\n***\n\n# Part Two\n',
+    ]) {
+      const b = make(source).blocks;
+      b.forEach((x, i) => {
+        if (x.kind === 'break') expect(b[i + 1]?.kind).toBe('paragraph');
+      });
+    }
+    expect(make('# One\n\nA.\n\n***\n\n***\n\nB.\n').blocks.map((x) => x.kind)).toEqual([
+      'chapter',
+      'paragraph',
+      'break',
+      'paragraph',
+      'end',
+    ]);
   });
 });
