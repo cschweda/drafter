@@ -154,10 +154,10 @@ export const SCRIPT_EXTENSIONS: readonly string[] = ['.fountain', '.md', '.markd
 export const IMPORT_EXTENSIONS: readonly string[] = ['.fdx', '.highland', '.fadein'];
 /**
  * The extensions the app writes only as an export, where the writer chose the file in a Save
- * dialog for one: a Final Draft file, an HTML page, and an EPUB. One that was opened (an import, or
- * a page or a book picked with All files) is never written.
+ * dialog for one: a Final Draft file, an HTML page, an EPUB, and a manuscript's Word file. One that
+ * was opened (an import, or a page, a book, or a Word file picked with All files) is never written.
  */
-export const EXPORT_ONLY_EXTENSIONS: readonly string[] = ['.fdx', '.html', '.epub'];
+export const EXPORT_ONLY_EXTENSIONS: readonly string[] = ['.fdx', '.html', '.epub', '.docx'];
 /**
  * The extensions of Drafter's own exports that Open can read back (reopenable exports): an HTML
  * page or an EPUB made with "Let Drafter reopen this file". The page reads the script inside as

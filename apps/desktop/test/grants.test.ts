@@ -457,6 +457,22 @@ describe('what a page may read and write', () => {
     expect(await readFile(join(dir, 'Export.epub'), 'utf8')).toBe('PK\u0003\u0004');
   });
 
+  test('writes a .docx only where a manuscript was saved, never one the writer opened', async () => {
+    const word = join(dir, 'The Salt Road.docx');
+    await writeFile(word, 'PK');
+    // Opened (the Open dialog's All files): it may be read, never written.
+    const opened = setUp([word]);
+    expect(await opened.handlers.showOpen(opened.event)).toBe(word);
+    expect(await codeOf(opened.handlers.write(opened.event, word, bytes('X')))).toBe('not-allowed');
+    expect(await readFile(word, 'utf8')).toBe('PK');
+    // Chosen in a Save dialog for a Word manuscript: written; a name typed without .docx gets it.
+    const exported = setUp([join(dir, 'Manuscript')]);
+    const path = await exported.handlers.showSave(exported.event, 'Manuscript.docx', '.docx');
+    expect(path).toBe(join(dir, 'Manuscript.docx'));
+    await exported.handlers.write(exported.event, path, bytes('PK\u0003\u0004'));
+    expect(await readFile(join(dir, 'Manuscript.docx'), 'utf8')).toBe('PK\u0003\u0004');
+  });
+
   test('never writes a .highland or .fadein, even one the writer opened', async () => {
     for (const name of ['Ferry.highland', 'Cabin.fadein', 'LOUD.FADEIN']) {
       const { handlers, event } = setUp();

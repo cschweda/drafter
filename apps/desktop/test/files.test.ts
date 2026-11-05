@@ -481,6 +481,11 @@ describe('saveTarget', () => {
     expect(saveTarget(join(dir, 'Notes'), '.html')).toBe(join(dir, 'Notes.html'));
     expect(saveTarget(join(dir, 'Notes.md'), '.html')).toBe(join(dir, 'Notes.md.html'));
     expect(saveTarget(join(dir, 'Notes.html'), '.fountain')).toBe(join(dir, 'Notes.html.fountain'));
+    // A manuscript's Word file is a .docx, and a script typed as one gets its own extension.
+    expect(saveTarget(join(dir, 'Notes'), '.docx')).toBe(join(dir, 'Notes.docx'));
+    expect(saveTarget(join(dir, 'Notes.md'), '.docx')).toBe(join(dir, 'Notes.md.docx'));
+    expect(saveTarget(join(dir, 'Notes.DOCX'), '.docx')).toBe(join(dir, 'Notes.DOCX'));
+    expect(saveTarget(join(dir, 'Notes.docx'), '.fountain')).toBe(join(dir, 'Notes.docx.fountain'));
     // An EPUB export is a .epub, and a script typed as one gets its own extension.
     expect(saveTarget(join(dir, 'Notes'), '.epub')).toBe(join(dir, 'Notes.epub'));
     expect(saveTarget(join(dir, 'Notes.md'), '.epub')).toBe(join(dir, 'Notes.md.epub'));
