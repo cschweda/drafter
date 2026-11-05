@@ -2,7 +2,7 @@ import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DOCUMENT_FONT_FILES } from '@drafter/render-pdf';
+import { DOCUMENT_FONT_FILES, MANUSCRIPT_FONT_FILES } from '@drafter/render-pdf';
 import { DICTIONARIES } from '@drafter/spell';
 import { STORY_MAP_FONT_FILES } from '@drafter/story-map';
 import { describe, expect, test, vi } from 'vitest';
@@ -17,7 +17,7 @@ const ALL = ASSETS.length + PACKAGE_ASSETS.length;
 vi.setConfig({ testTimeout: 30_000 });
 
 describe('syncAssets', () => {
-  test('lists the four Courier Prime styles, Inter Tight’s four for a Markdown PDF, the story map’s four, every font’s license, and the brand files', () => {
+  test('lists the four Courier Prime styles, Inter Tight’s four for a Markdown PDF, Liberation Serif’s four for a manuscript, the story map’s four, every font’s license, and the brand files', () => {
     expect(ASSETS.map(({ to }) => to)).toEqual([
       'fonts/courier-prime/CourierPrime-Regular.ttf',
       'fonts/courier-prime/CourierPrime-Bold.ttf',
@@ -29,6 +29,11 @@ describe('syncAssets', () => {
       'fonts/inter-tight/InterTight-SemiBold.ttf',
       'fonts/inter-tight/InterTight-SemiBoldItalic.ttf',
       'fonts/inter-tight/OFL.txt',
+      'fonts/liberation-serif/LiberationSerif-Regular.ttf',
+      'fonts/liberation-serif/LiberationSerif-Italic.ttf',
+      'fonts/liberation-serif/LiberationSerif-Bold.ttf',
+      'fonts/liberation-serif/LiberationSerif-BoldItalic.ttf',
+      'fonts/liberation-serif/OFL.txt',
       'fonts/anton/OFL.txt',
       'fonts/archivo/OFL.txt',
       'fonts/story-map/Anton-Regular.woff2',
@@ -48,11 +53,12 @@ describe('syncAssets', () => {
       'logo-light.svg',
       'mark.svg',
     ]);
-    // The PDF's Inter Tight is render-pdf's own files, the ones its layout measured.
+    // The PDF's Inter Tight and Liberation Serif are render-pdf's own files, the ones its layout measured.
     expect(ASSETS.filter(({ to }) => to.endsWith('.ttf')).map(({ from }) => from)).toEqual(
       [
         ...['Regular', 'Bold', 'Italic', 'BoldItalic'].map((s) => `CourierPrime-${s}.ttf`),
         ...Object.values(DOCUMENT_FONT_FILES).filter((file) => file.startsWith('inter-tight/')),
+        ...Object.values(MANUSCRIPT_FONT_FILES.times),
       ].map((file) => `packages/render-pdf/fonts/${file}`),
     );
     // The story map's faces are its package's own, the ones the worker embeds.

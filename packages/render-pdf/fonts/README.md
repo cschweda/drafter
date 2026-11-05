@@ -15,3 +15,5 @@ Downloaded on 2026-10-25 from Google Fonts' repository, [`google/fonts/ofl/couri
 `@drafter/render-pdf` never reads these files itself. Callers pass the bytes in, so the package runs in a browser worker as well as in Node: the CLI reads them from here, and the web app will fetch them.
 
 Inter Tight's four static styles, the text faces of a Markdown document's PDF, are in [`inter-tight/`](inter-tight/), with their own license, source, and checksums.
+
+Liberation Serif's four styles, the Times-style face of a novel's manuscript PDF, are in [`liberation-serif/`](liberation-serif/), with their own license, source, and checksums. A manuscript in Courier uses the four Courier Prime styles here.

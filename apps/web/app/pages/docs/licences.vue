@@ -115,6 +115,23 @@ const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);
     </section>
 
     <section>
+      <h3>Liberation Serif</h3>
+      <p>
+        The Times-style typeface of a novel’s manuscript PDF. Under the SIL Open Font License,
+        Version 1.1, the same licence as Courier Prime’s.
+      </p>
+      <p>
+        Digitized data copyright (c) 2010 Google Corporation, with Reserved Font Arimo, Tinos and
+        Cousine. Copyright (c) 2012 Red Hat, Inc., with Reserved Font Name Liberation.
+      </p>
+      <p>
+        Terms: the same as Courier Prime’s: use, embed, and share it freely; it may not be sold by
+        itself, and a changed version must take another name.
+        <a href="/fonts/liberation-serif/OFL.txt">Liberation Serif’s licence (full text)</a>
+      </p>
+    </section>
+
+    <section>
       <h3>Anton</h3>
       <p>
         The big type of a story map: its title, headings, and numbers. Under the SIL Open Font

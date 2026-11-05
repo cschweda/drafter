@@ -1,7 +1,8 @@
 // Copies the files drafter.dev serves as-is into `public/`: Courier Prime, the
 // same TTF files the PDF embeds, so the screen and the printed page share
 // their metrics; Inter Tight's four static styles, which a Markdown document's
-// PDF embeds (the export worker fetches them); the story map's four WOFF2 faces (the same); the brand's icons, logos, and share image; and the
+// PDF embeds (the export worker fetches them); Liberation Serif's four styles, the Times-style face
+// of a novel's manuscript PDF (the same); the story map's four WOFF2 faces (the same); the brand's icons, logos, and share image; and the
 // spellchecker's dictionaries with the licence of each package it uses, served
 // verbatim (the dictionaries' UKACD notice asks for its text "verbatim"), and the licences of the
 // two packages inside Drafter for Claude. The
@@ -16,6 +17,8 @@ import { fileURLToPath } from 'node:url';
 const STYLES = ['Regular', 'Bold', 'Italic', 'BoldItalic'];
 /** Inter Tight's styles in `packages/render-pdf/fonts/inter-tight/` (render-pdf's DOCUMENT_FONT_FILES). */
 const DOCUMENT_STYLES = ['Regular', 'Italic', 'SemiBold', 'SemiBoldItalic'];
+/** Liberation Serif's styles in `packages/render-pdf/fonts/liberation-serif/` (render-pdf's MANUSCRIPT_FONT_FILES.times). */
+const MANUSCRIPT_STYLES = ['Regular', 'Italic', 'Bold', 'BoldItalic'];
 /** The story map's faces in `packages/story-map/fonts/` (story-map's STORY_MAP_FONT_FILES). */
 const STORY_MAP_FONTS = [
   'Anton-Regular.woff2',
@@ -51,6 +54,14 @@ export const ASSETS = [
   })),
   // Inter Tight's own licence, served verbatim (the interface's font is a Vite asset, hashed).
   { from: 'apps/web/app/assets/fonts/inter-tight/OFL.txt', to: 'fonts/inter-tight/OFL.txt' },
+  ...MANUSCRIPT_STYLES.map((style) => ({
+    from: `packages/render-pdf/fonts/liberation-serif/LiberationSerif-${style}.ttf`,
+    to: `fonts/liberation-serif/LiberationSerif-${style}.ttf`,
+  })),
+  {
+    from: 'packages/render-pdf/fonts/liberation-serif/OFL.txt',
+    to: 'fonts/liberation-serif/OFL.txt',
+  },
   // The story map's two other typefaces' licences (its fonts are inside each story map it makes).
   { from: 'packages/story-map/fonts/OFL-Anton.txt', to: 'fonts/anton/OFL.txt' },
   { from: 'packages/story-map/fonts/OFL-Archivo.txt', to: 'fonts/archivo/OFL.txt' },

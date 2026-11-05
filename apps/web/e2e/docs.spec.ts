@@ -222,6 +222,8 @@ test.describe('without JavaScript', () => {
       'Copyright (c) Feross Aboukhadijeh',
       'Courier Prime',
       'Inter Tight',
+      'Liberation Serif',
+      'Copyright (c) 2012 Red Hat, Inc.',
       'Anton',
       'Archivo',
       'Copyright 2020 The Anton Project Authors',
@@ -238,6 +240,19 @@ test.describe('without JavaScript', () => {
     await expect(page.getByRole('link', { name: /Inter Tight.*licence/i })).toHaveAttribute(
       'href',
       '/fonts/inter-tight/OFL.txt',
+    );
+    // Liberation Serif's own licence, the manuscript PDF's Times-style face, served verbatim.
+    await expect(page.getByRole('link', { name: /Liberation Serif.*licence/i })).toHaveAttribute(
+      'href',
+      '/fonts/liberation-serif/OFL.txt',
+    );
+    const liberation = await page.request.get('/fonts/liberation-serif/OFL.txt');
+    expect(liberation.ok()).toBe(true);
+    expect(await liberation.text()).toBe(
+      readFileSync(
+        new URL('../../../packages/render-pdf/fonts/liberation-serif/OFL.txt', import.meta.url),
+        'utf8',
+      ),
     );
     // The story map's Anton and Archivo, whose licences travel with every story map's fonts.
     for (const [name, file, from] of [
