@@ -100,11 +100,13 @@ const about: Record<string, string> = {
 
     <h2 id="finding-your-way">Finding your way around</h2>
     <p>
-      The <strong>Drafter</strong> mark at the top left is the app’s menu: New, Open, Save,
-      Export, the template, History, Settings, and the rest. <strong>Help</strong> is its own menu at
-      the top right. Between them are the script’s title (with a red dot and
+      The <strong>Drafter</strong> mark at the top left is the menu for the script you have open:
+      its template, History, drafts and cuts, its exports, Stats, and Settings. <strong>Help</strong>
+      is its own menu at the top right. Between them are the script’s title (with a red dot and
       <strong>Unsaved</strong> while there are changes to save), the
-      <strong>Fountain | Classic</strong> switch for how you type, Open, Save, and Export, the search
+      <strong>Fountain | Classic</strong> switch for how you type, <strong>File</strong> (New, Open,
+      Save As, your scripts in this browser, and the samples), <strong>Save</strong> (its arrow has
+      Save As, Revert to Saved, and History), and <strong>Export</strong>, the search
       (<kbd>Ctrl+K</kbd>, <kbd>⌘K</kbd> on a Mac), and buttons for the Structure strip, focus mode,
       and the theme.
     </p>

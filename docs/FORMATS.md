@@ -24,7 +24,7 @@ The file you open is never changed. Text that Fountain has no element for (hidde
 | **Final Draft** (`.fdx`) | A file that Final Draft, Fade In, WriterDuet, and most other screenwriting apps open. |
 | **Markdown** | The whole script as readable Markdown, with your notes if you ask, or the Outline's treatment. Good for sharing, for a wiki, and for AI tools. |
 | **Plain text** | The laid-out pages as text, to paste anywhere. |
-| **Fountain** | Save. Highland, Beat, Slugline, and any text editor read it. |
+| **Fountain** (`.fountain`) | Save, or Save As… for a new file you keep working in. **Export → Fountain** saves a copy and leaves you on the file you have. Highland, Beat, Slugline, and any text editor read it. |
 | **A Markdown document's PDF** | A typeset document: headings, lists, links you can click, and footnotes at the foot of the page. |
 | **HTML** (`.html`) | One web page that opens in any browser with no connection: a script's printed pages and a reading view, or a Markdown document as the Preview draws it. |
 | **EPUB** (`.epub`) | An e-book for an e-reader or a tablet, reflowed to its screen: a script's reading view, one chapter per act, or a Markdown document, one chapter per `#` heading, with its footnotes. |
