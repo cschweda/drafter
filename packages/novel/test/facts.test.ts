@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   carryFacts,
   findNode,
+  MAX_CONTACT_LINES,
+  MAX_DETAIL,
   MAX_SYNOPSIS,
   moveNode,
   type NovelFacts,
@@ -320,5 +322,61 @@ describe('with real CodeMirror changes', () => {
     const out = carryFacts(facts, before, after, (p) => p);
     expect(out.nodes['chapter:b:0']).toEqual({ status: 'done' });
     expect(out.nodes['chapter:b:0']).not.toBe(facts.nodes['chapter:a:0']);
+  });
+});
+
+describe('manuscript details', () => {
+  const details = {
+    title: 'The Salt Road',
+    byline: 'R. Vale',
+    contact: ['1 Quay Lane', 'r@vale.example'],
+    font: 'courier' as const,
+  };
+
+  it('reads and writes the manuscript details', () => {
+    const out = writeFacts('# One\n', { nodes: emptyFacts().nodes, manuscript: details });
+    expect(out).toContain('"novel":{"nodes":{},"manuscript":{');
+    expect(readFacts(out).manuscript).toEqual(details);
+  });
+
+  it("drops what isn't a detail", () => {
+    for (const bad of ['x', [], 7, null]) {
+      expect(readFacts(withMeta({ novel: { manuscript: bad } })).manuscript).toBeUndefined();
+    }
+    const text = `# One\n\n<!-- drafter {"novel":{"manuscript":{"font":"comic","contact":"one line","__proto__":{"x":1},"title":7,"surname":"Vale"}}} -->\n`;
+    const read = readFacts(text).manuscript;
+    expect(read).toEqual({ surname: 'Vale' });
+    expect(({} as Record<string, unknown>).x).toBeUndefined();
+  });
+
+  it('caps the details', () => {
+    const long = readFacts(withMeta({ novel: { manuscript: { title: 'a'.repeat(10_000) } } }));
+    expect(long.manuscript?.title).toBe('a'.repeat(MAX_DETAIL));
+    // An emoji straddling the cut is dropped whole.
+    const emoji = `${'a'.repeat(MAX_DETAIL - 1)}\u{1F600}more`;
+    const cut = readFacts(withMeta({ novel: { manuscript: { byline: emoji } } }));
+    expect(cut.manuscript?.byline).toBe('a'.repeat(MAX_DETAIL - 1));
+    const lines = Array.from({ length: 50 }, (_, i) => `line ${i}`);
+    const many = readFacts(withMeta({ novel: { manuscript: { contact: lines } } }));
+    expect(many.manuscript?.contact).toEqual(lines.slice(0, MAX_CONTACT_LINES));
+    const split = readFacts(withMeta({ novel: { manuscript: { contact: ['a\nb', 'c'] } } }));
+    expect(split.manuscript?.contact).toEqual(['a', 'b', 'c']);
+  });
+
+  it('keeps the details through a carry', () => {
+    const before = novelStructure('# One\n\nText.\n');
+    const after = novelStructure('# Uno\n\nText.\n');
+    const facts = { nodes: emptyFacts().nodes, manuscript: details };
+    const out = carryFacts(facts, before, after, (p) => p);
+    expect(out.manuscript).toEqual(details);
+  });
+
+  it('drops empty strings and an empty contact list', () => {
+    const read = readFacts(
+      withMeta({ novel: { manuscript: { title: '', contact: ['', '  '], font: 'times' } } }),
+    );
+    expect(read.manuscript).toEqual({ font: 'times' });
+    const out = writeFacts('# One\n', { nodes: emptyFacts().nodes, manuscript: {} });
+    expect(out).not.toContain('manuscript');
   });
 });

@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - For contributors: the design for the manuscript exports (`docs/drafter-manuscript-design.md`), a novel's standard manuscript as a PDF and a Word file, for v0.26.1; approved 2026-11-05 with one `PAGE` field in the Word file's header; and its plan (`docs/plans/2026-11-05-manuscript.md`), eight tasks.
+- For contributors: `@drafter/novel` keeps a novel's manuscript details (title, byline, legal name, contact lines, surname, short title, font) as `novel.manuscript` in the trailing comment, read defensively and capped (`MAX_DETAIL`, `MAX_CONTACT_LINES`), for the manuscript exports.
 
 ## [0.26.0] - 2026-11-05
 

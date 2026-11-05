@@ -1,7 +1,11 @@
 export {
   carryFacts,
   type Facts,
+  MAX_CONTACT_LINES,
+  MAX_DETAIL,
   MAX_SYNOPSIS,
+  type ManuscriptDetails,
+  type ManuscriptFont,
   type NovelFacts,
   orphanedFacts,
   readFacts,
