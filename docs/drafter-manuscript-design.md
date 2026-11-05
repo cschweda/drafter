@@ -1,6 +1,6 @@
 # Drafter: the manuscript exports (v0.26.1)
 
-**Status:** draft for the maintainer, 2026-11-05. Written straight from the approved Novel design (`drafter-novel-design.md`, goal 8) at the maintainer's request ("just begin with the design doc… see something first, and then tweak"), so every choice not already in that design is marked **my call** and is open to change.
+**Status:** approved by the maintainer 2026-11-05 ("yes sounds good"), with choice 1 below: one `PAGE` field in the Word file's header. Written straight from the approved Novel design (`drafter-novel-design.md`, goal 8) at the maintainer's request ("just begin with the design doc… see something first, and then tweak"), so every choice not already in that design is marked **my call** and is open to change.
 
 ## One decision for you first: page numbers in the Word file
 
@@ -12,7 +12,7 @@ The choices:
 2. **No page numbers in the Word file.** The header has the surname and short title only, and the Help says to add numbers with Insert → Page Number. This keeps the rule to the letter, but it sends out a manuscript that agents' guidelines would call incomplete.
 3. **Word file without a header at all.** The same, plainer.
 
-Until you choose, the plan assumes choice 1, and that task comes last, so changing it costs nothing.
+**Chosen: 1** (the maintainer, 2026-11-05). The test allows exactly one `PAGE` field, in the header, and no other field anywhere.
 
 ## Why
 
