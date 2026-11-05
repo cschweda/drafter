@@ -273,11 +273,14 @@ test.describe('Show changes on the Script pane', () => {
     await page.keyboard.press('End');
     await page.keyboard.type(' AGAIN', { delay: 40 });
     await expect(marked(page)).toHaveCount(3);
-    expect(await markedTexts(page)).toEqual([
-      'changed, INT. HALL - DAY AGAIN',
-      'changed, She paces by the door.',
-      'added, A dog barks.',
-    ]);
+    // The Script pane draws a moment after the last key: on a slow runner it can still show "AGAI".
+    await expect
+      .poll(() => markedTexts(page))
+      .toEqual([
+        'changed, INT. HALL - DAY AGAIN',
+        'changed, She paces by the door.',
+        'added, A dog barks.',
+      ]);
   });
 
   test('N steps through marks in the Script pane', async ({ page }) => {
