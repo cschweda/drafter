@@ -91,7 +91,7 @@ describe('manuscriptOf', () => {
     expect(chapters).toEqual(['The Salt Road', 'Chapter 2', 'The Night Watch']);
     expect(m.blocks[m.blocks.length - 1]).toEqual({ kind: 'end' });
     expect(kinds.filter((k) => k === 'end')).toHaveLength(1);
-    // The Crossing opens with no break; The Lamp and the `***` each get one.
+    // The Crossing, The Lamp, and the `***` each get a break: each follows the chapter's text.
     const para = (style: string) => `paragraph:${style}`;
     const seq = m.blocks.map((blk) => (blk.kind === 'paragraph' ? para(blk.style) : blk.kind));
     expect(seq.slice(0, seq.indexOf('chapter', 2))).toEqual([
@@ -99,7 +99,8 @@ describe('manuscriptOf', () => {
       'chapter',
       'paragraph:body', // the chapter's two opening paragraphs
       'paragraph:body',
-      'paragraph:body', // The Crossing, no break before it
+      'break', // The Crossing, after the chapter's opening prose
+      'paragraph:body',
       'paragraph:quote',
       'break', // The Lamp
       'paragraph:body',
@@ -256,5 +257,17 @@ describe('manuscriptOf', () => {
       'paragraph',
       'end',
     ]);
+  });
+
+  test("a section after a chapter's opening prose is set off by a break", () => {
+    const seq = make('# Chapter 1\n\nOpening prose.\n\n## Later\n\nSecond scene.').blocks.map(
+      (b) => b.kind,
+    );
+    expect(seq).toEqual(['chapter', 'paragraph', 'break', 'paragraph', 'end']);
+  });
+
+  test("a chapter's first section, straight after its heading, has no break", () => {
+    const seq = make('# C\n\n## First\n\nText.').blocks.map((b) => b.kind);
+    expect(seq).toEqual(['chapter', 'paragraph', 'end']);
   });
 });

@@ -123,12 +123,12 @@ function push(runs: Run[], run: Run): void {
   }
 }
 
-/** Inline nodes as runs. Marks nest, so a bold word inside italics has both flags. */
 /** A soft line break and the spaces around it, as one space. */
 function flat(text: string): string {
   return text.replace(/[ \t]*\r?\n[ \t]*/g, ' ');
 }
 
+/** Inline nodes as runs. Marks nest, so a bold word inside italics has both flags. */
 function inline(
   nodes: MdNode[],
   marks: Omit<Run, 'text'>,
@@ -241,9 +241,8 @@ export function manuscriptOf(source: string, tree: MdNode, details: ResolvedDeta
   const { numbers, notes: definitions } = footnotes(tree);
   const blocks: ManuscriptBlock[] = [];
 
-  // Whether the open chapter has had a section already: only a later one is set off by a break.
-  let sectioned = false;
-
+  // A break sets off a section from the text before it; none goes straight after a chapter, a part,
+  // or another break, so a chapter's first section, right under its heading, has none.
   const addBreak = (): void => {
     const last = blocks[blocks.length - 1];
     if (last && last.kind !== 'part' && last.kind !== 'chapter' && last.kind !== 'break') {
@@ -327,7 +326,6 @@ export function manuscriptOf(source: string, tree: MdNode, details: ResolvedDeta
   // A top-level heading or thematic break is structure only where `novelStructure` says so.
   const structural = (node: MdNode): void => {
     if (node.type === 'thematicBreak') {
-      sectioned = true;
       addBreak();
       return;
     }
@@ -336,14 +334,11 @@ export function manuscriptOf(source: string, tree: MdNode, details: ResolvedDeta
     const found = (node.depth ?? 1) <= 2 ? byOffset.get(lineStart) : undefined;
     const title = plain(runsOf(node.children ?? [], numbers)).trim();
     if (found?.kind === 'part') {
-      sectioned = false;
       blocks.push({ kind: 'part', title });
     } else if (found?.kind === 'chapter') {
-      sectioned = false;
       blocks.push({ kind: 'chapter', title });
     } else if (found) {
-      if (sectioned) addBreak();
-      sectioned = true;
+      addBreak();
     } else {
       paragraph('heading', runsOf(node.children ?? [], numbers));
     }
