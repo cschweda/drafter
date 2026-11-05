@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- For contributors: the design for the manuscript exports (`docs/drafter-manuscript-design.md`), a novel's standard manuscript as a PDF and a Word file, for v0.26.1; a draft for the maintainer to tweak, with one decision first (page numbers in the Word file).
+
 ## [0.26.0] - 2026-11-05
 
 **A place to draft a novel, and a File menu.** **Novel** joins Screenplay and Stage play: chapters and sections in plain Markdown, an Outline and Cards with a status, synopsis, and word target for each, focus on one chapter or section at a time, and counts for the book. The top bar's **File** menu (Open's new name) starts, opens, and saves scripts; Save has an arrow with **Save As…**, Revert to Saved, and History; **Export → Fountain** saves a copy and leaves you on your file; the first visit's recovery warning waits for the welcome; and the help pages' links are four dropdowns. The manuscript PDF and Word file follow in v0.26.1.
