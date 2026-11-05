@@ -4,6 +4,7 @@
 // one entry point; the answer is what happened, how long it took, and what it kept once garbage
 // is collected.
 
+import { readFileSync } from 'node:fs';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import { setFlagsFromString } from 'node:v8';
 import { runInNewContext } from 'node:vm';
@@ -14,6 +15,8 @@ import {
   fromFadeIn,
   fromHighland,
   isUtf16,
+  listZip,
+  readEntry,
   SNIFF_BYTES,
 } from '@drafter/archive';
 import { run } from '@drafter/cli';
@@ -29,13 +32,18 @@ import {
 } from '@drafter/markdown';
 import {
   downTarget,
+  type ManuscriptDetails,
+  manuscriptOf,
   moveNode,
   novelStructure,
   orphanedFacts,
   readFacts,
+  resolveDetails,
   upTarget,
 } from '@drafter/novel';
+import { renderManuscriptDocx } from '@drafter/render-docx';
 import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
+import { MANUSCRIPT_FONT_FILES, renderManuscriptPdf } from '@drafter/render-pdf';
 import {
   buildStoryMap,
   renderStoryMap,
@@ -43,6 +51,7 @@ import {
   storyMapMeta,
 } from '@drafter/story-map';
 import { builtins, type Template } from '@drafter/templates';
+import { JSDOM } from 'jsdom';
 import { currentWriter, readModulesFolder } from '../../../apps/desktop/src/module-folder';
 import type { ToolName } from '../../../packages/mcp/src/tools/index';
 import type { Happened } from '../check';
@@ -61,6 +70,7 @@ export type Job =
   | { kind: 'modules'; dir: string }
   | { kind: 'beside'; format: string; bytes: Uint8Array }
   | { kind: 'novel'; bytes: Uint8Array }
+  | { kind: 'manuscript'; bytes: Uint8Array; details?: Record<string, unknown> }
   | McpJob;
 
 /**
@@ -131,8 +141,22 @@ export interface Answer {
   mcp?: { results: McpResult[]; calls: string[]; guard: string[] };
   /** For `novel`: what was found in Open's text, and whether a move was made. */
   novel?: NovelReport;
+  /** For `manuscript`: what the two files came to. */
+  manuscript?: ManuscriptReport;
   ms: number;
   kept: number;
+}
+
+export interface ManuscriptReport {
+  /** The PDF's pages, as a PDF reader counts them. */
+  pdfPages: number;
+  /** Every part of the Word file that is not well-formed XML. */
+  badParts: string[];
+  /** The parts of the Word file, and the ones holding a `w:fldSimple`, with how many. */
+  parts: string[];
+  fldSimple: Record<string, number>;
+  /** `w:instrText` and `w:fldChar` in the whole Word file. */
+  complexFields: number;
 }
 
 export interface NovelReport {
@@ -598,9 +622,65 @@ function readNovel(bytes: Uint8Array): { happened: Happened; novel?: NovelReport
   return { happened: { kind: 'opened', text, message: '' }, novel: report };
 }
 
+const FONT_DIR = new URL('../../../packages/render-pdf/fonts/', import.meta.url);
+
+/**
+ * A novel's manuscript made as a PDF and as a Word file, as the app makes them: the Markdown read
+ * with `parseMarkdown`, the details the trap gives resolved, the PDF in the real fonts. The PDF is
+ * opened by a PDF reader (pdf.js); the Word file is unzipped and every part parsed as XML.
+ */
+async function makeManuscript(
+  bytes: Uint8Array,
+  given: Record<string, unknown> | undefined,
+): Promise<{ happened: Happened; manuscript?: ManuscriptReport }> {
+  // Not Open's check: a NUL can come into the editor by pasting, and the book must still be made.
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  const details = resolveDetails(text, 'Trap', (given ?? {}) as ManuscriptDetails);
+  const ms = manuscriptOf(text, parseMarkdown(text), details);
+  const files = MANUSCRIPT_FONT_FILES[ms.font];
+  const fonts = Object.fromEntries(
+    (['regular', 'italic', 'bold', 'boldItalic'] as const).map((face) => [
+      face,
+      new Uint8Array(readFileSync(new URL(files[face], FONT_DIR))),
+    ]),
+  ) as Parameters<typeof renderManuscriptPdf>[1]['fonts'];
+  const pdf = await renderManuscriptPdf(ms, { fonts, paper: 'letter', lang: 'en-US' });
+  if (new TextDecoder().decode(pdf.bytes.subarray(0, 5)) !== '%PDF-')
+    throw new Error('the PDF does not start with %PDF-');
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const task = pdfjs.getDocument({
+    data: pdf.bytes.slice(),
+    useSystemFonts: false,
+    verbosity: 0,
+  });
+  const pdfPages = (await task.promise).numPages;
+  await task.destroy();
+
+  const docx = renderManuscriptDocx(ms, { paper: 'letter', lang: 'en-US' });
+  const parser = new new JSDOM('').window.DOMParser();
+  const report: ManuscriptReport = {
+    pdfPages,
+    badParts: [],
+    parts: [],
+    fldSimple: {},
+    complexFields: 0,
+  };
+  for (const entry of listZip(docx)) {
+    report.parts.push(entry.name);
+    const xml = new TextDecoder('utf-8', { fatal: true }).decode(await readEntry(docx, entry));
+    if (parser.parseFromString(xml, 'application/xml').getElementsByTagName('parsererror').length)
+      report.badParts.push(entry.name);
+    const simple = xml.split('<w:fldSimple').length - 1;
+    if (simple) report.fldSimple[entry.name] = simple;
+    report.complexFields += xml.split('<w:instrText').length + xml.split('<w:fldChar').length - 2;
+  }
+  return { happened: { kind: 'opened', text, message: '' }, manuscript: report };
+}
+
 async function work(job: Job): Promise<Omit<Answer, 'ms' | 'kept'>> {
   if (job.kind === 'mcp') return runMcp(job);
   if (job.kind === 'novel') return readNovel(job.bytes);
+  if (job.kind === 'manuscript') return makeManuscript(job.bytes, job.details);
   if (job.kind === 'beside') return { happened: await readBeside(job.format, job.bytes) };
   if (job.kind === 'package') {
     const happened = await readPackage(job.format, job.bytes);

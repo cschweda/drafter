@@ -322,6 +322,27 @@ describe('novel: a Markdown file read as a novel', () => {
   });
 });
 
+describe('manuscript: a novel written out as a PDF and a Word file', () => {
+  test.each(trapsFor('manuscript').map((t) => [t.id, t] as const))('%s', async (_id, trap) => {
+    const bytes = trap.bytes?.() as Uint8Array;
+    const job = { kind: 'manuscript', bytes, details: trap.manuscript?.details } as const;
+    const answer = checkRan(trap, bytes.length, await ran(trap, job), 'manuscript');
+    checkOutcome(trap, trap.expect.manuscript as Outcome, answer.happened, 'manuscript');
+    const made = answer.manuscript;
+    expect(made, `${trap.id}: made both files`).toBeDefined();
+    if (!made) return;
+    // The PDF opens, with at least a page for each chapter.
+    expect(made.pdfPages, `${trap.id}: the PDF's pages`).toBeGreaterThanOrEqual(
+      trap.manuscript?.chapters ?? 1,
+    );
+    // The Word file: every part well-formed, the page-number field once and only in the header, and
+    // no other field code, which would make Word ask to update links on every open.
+    expect(made.badParts, `${trap.id}: parts that are not XML`).toEqual([]);
+    expect(made.fldSimple, `${trap.id}: its one field`).toEqual({ 'word/header1.xml': 1 });
+    expect(made.complexFields, `${trap.id}: field codes`).toBe(0);
+  });
+});
+
 // ---- The command line ----------------------------------------------------------------------------
 
 interface CliRun {

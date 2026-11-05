@@ -11,7 +11,8 @@ export type Entry =
   | 'beside-read'
   | 'mcp'
   | 'classic'
-  | 'novel';
+  | 'novel'
+  | 'manuscript';
 
 export interface EntryPoint {
   id: Entry;
@@ -79,6 +80,12 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
     id: 'novel',
     what: 'A Markdown file read as a novel: its parts, chapters, and sections found (`novelStructure`), the facts kept in its metadata comment read (`readFacts`), and one chapter or section moved. Every Markdown trap that opens goes through it, as the text Open makes and, where it has other line breaks, as the raw text too. The move must keep every non-blank line.',
     code: 'packages/novel/src (`novelStructure`, `readFacts`, `downTarget`/`upTarget`, `moveNode`)',
+    harness: 'fixtures/trap/harness.test.ts (in the trap worker)',
+  },
+  {
+    id: 'manuscript',
+    what: 'A novel written out as a standard manuscript: the Markdown read as a book (`manuscriptOf`, with the details the writer gave), then both files made from it, the PDF with the real fonts and the Word file. The Word file must be a zip whose every part is well-formed XML, with the page-number field once, in the header, and no other field code; the PDF must open.',
+    code: 'packages/novel/src (`manuscriptOf`, `resolveDetails`) → packages/render-pdf/src (`renderManuscriptPdf`) and packages/render-docx/src (`renderManuscriptDocx`)',
     harness: 'fixtures/trap/harness.test.ts (in the trap worker)',
   },
   {
