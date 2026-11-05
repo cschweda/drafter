@@ -193,6 +193,11 @@ export const PACKAGES: readonly PackageNote[] = [
     uses: ['@drafter/layout', '@drafter/templates'],
   },
   {
+    name: '@drafter/render-docx',
+    does: 'Word files: a novel’s standard manuscript as a .docx, written by hand in named styles, with the page number the only field.',
+    uses: ['@drafter/archive', '@drafter/novel', '@drafter/templates'],
+  },
+  {
     name: '@drafter/layout',
     does: 'Pagination: puts a parsed script on pages, as its template describes.',
     uses: ['@drafter/fountain', '@drafter/templates'],

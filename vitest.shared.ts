@@ -7,6 +7,7 @@ const packages = [
   'layout',
   'render-pdf',
   'render-text',
+  'render-docx',
   'render-html',
   'render-html-file',
   'lint',

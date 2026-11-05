@@ -50,6 +50,7 @@ flowchart BT
   render_html["@drafter/render-html"]
   render_html_file["@drafter/render-html-file"]
   render_text["@drafter/render-text"]
+  render_docx["@drafter/render-docx"]
   layout["@drafter/layout"]
   lint["@drafter/lint"]
   fdx["@drafter/fdx"]
@@ -91,6 +92,8 @@ flowchart BT
   markdown --> render_html_file
   outline --> render_html_file
   layout --> render_text
+  archive --> render_docx
+  novel --> render_docx
   templates --> layout
   notes --> lint
   templates --> lint

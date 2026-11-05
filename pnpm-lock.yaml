@@ -468,6 +468,22 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0
 
+  packages/render-docx:
+    dependencies:
+      '@drafter/archive':
+        specifier: workspace:*
+        version: link:../archive
+      '@drafter/novel':
+        specifier: workspace:*
+        version: link:../novel
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
+    devDependencies:
+      '@drafter/markdown':
+        specifier: workspace:*
+        version: link:../markdown
+
   packages/render-html:
     dependencies:
       '@drafter/layout':

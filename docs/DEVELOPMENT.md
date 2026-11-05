@@ -67,6 +67,7 @@ The engine is a set of framework-free TypeScript packages, published as `@drafte
 | `@drafter/render-html` | Pages → DOM for the Script tab | 1 |
 | `@drafter/render-html-file` | Export as HTML and EPUB: a script or a Markdown document as one self-contained, offline `.html` file, dark by default, with a light switch, or as an e-book | 2 (built in v0.22.0) |
 | `@drafter/render-text` | Pages → fixed-width text, as `drafter build --txt` writes it | 1 |
+| `@drafter/render-docx` | A novel's standard manuscript → a Word (`.docx`) file, written by hand in named styles, with one `PAGE` field in the header and no other field | 2 (built in v0.26.1) |
 | `@drafter/lint` | Problems-pane rules | 1 (starter set), 2 (setups and payoffs, and duplicate scene fields), 4 (the rest) |
 | `@drafter/notes` | Keyed notes (`[[Head: body]]`): reading and writing them, scene headers' field order, categories, and the text helpers structural edits share | 2 (built in Plan B) |
 | `@drafter/compare` | The line diff behind Compare: what changed between two versions of a script, and where it sits in the newer one; the rows, word marks, folds, and scene groups of the Changes view | 2 (built in Plan C; the Changes view in version history) |
