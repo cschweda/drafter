@@ -14,9 +14,6 @@ import {
   insertPageBreak,
   isBlankScript,
   MARK_REFUSED,
-  type SpellMark,
-  spellMarkAt,
-  spellMarksOf,
   structureOf,
   toggleDual,
   withCompletion,
@@ -60,14 +57,7 @@ import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { historyOpen } from '~/snapshots/history';
 import { useSnapshots } from '~/snapshots/use-snapshots';
-import { addToMine, ignoreWordHere, stepMisspelling, tryAddToScript } from '~/spell/actions';
-import { makeCheckSpelling } from '~/spell/check';
-import { openSpellMenu } from '~/spell/menu';
-import { NO_MARK_HERE, NO_MARKS, SPELLCHECK_OFF, saySpell } from '~/spell/notice';
-import { SPELLING_HEADING_ID } from '~/spell/rows';
-import { useSpell } from '~/spell/use-spell';
 import { openCounts } from '~/stats/counts-panel';
-import { SPRINT_MINUTES, useSprint } from '~/stats/sprint';
 import { showStats } from '~/stats/tab';
 import { type ExportKind, exportApplies } from '~/storage/export';
 import { useGuard } from '~/storage/guard';
@@ -85,6 +75,8 @@ import { helpBehaviors } from './help-commands';
 import { openPalette, togglePalette } from './palette';
 import { type Command, registerCommands } from './registry';
 import { removing } from './remove';
+import { spellBehaviors } from './spell-commands';
+import { sprintBehaviors } from './sprint-commands';
 
 let registered = false;
 
@@ -105,8 +97,6 @@ export function registerBuiltinCommands(): void {
   const colorMode = useColorMode();
   const { settings, set } = useSettings();
   const template = useTemplate();
-  const sprint = useSprint();
-  const sprintOn = () => sprint.state.value.status !== 'idle';
   const compare = useCompare();
   const comparing = () => compare.current.value !== null;
   const showChanges = useShowChanges();
@@ -289,53 +279,6 @@ export function registerBuiltinCommands(): void {
       runMove(scene.block, target, { keepCursor: true, direction });
       editor.goto(view.state.selection.main.head);
     },
-  });
-
-  // ---- The spellcheck's commands (Plan D) ---------------------------------------------------
-
-  const spellOn = () => settings.value.spellcheck;
-  const spellWhy = () => (spellOn() ? undefined : SPELLCHECK_OFF);
-  /**
-   * On the misspelled word at the cursor, with the Source showing and the editor focused first;
-   * said, when there is none.
-   */
-  const onMisspelling = (act: (mark: SpellMark) => unknown): Behavior => ({
-    enabled: spellOn,
-    why: spellWhy,
-    run: onEditor((v) => {
-      const mark = spellMarkAt(v.state, v.state.selection.main.head);
-      if (mark) act(mark);
-      else void saySpell(NO_MARK_HERE);
-    }),
-  });
-  /**
-   * Check spelling (Call 13): once the check under way has come back, Problems shows with focus
-   * on its Spelling heading, and the count is said. With spellcheck off it says so and changes
-   * nothing.
-   */
-  const checkSpelling = makeCheckSpelling({
-    on: spellOn,
-    settled: () => useSpell().settled(),
-    state: () => useSpell().state.value,
-    count: () => spellMarksOf(view.state).length,
-    show: async () => {
-      showTab('problems');
-      // After showTab's own focus (the panel), once the pane has drawn the group.
-      await nextTick();
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      document.getElementById(SPELLING_HEADING_ID)?.focus();
-    },
-    say: (message) => void saySpell(message),
-  });
-  /** Next or Previous misspelling: selects the word, and says it with its first suggestion. */
-  const stepSpelling = (direction: 1 | -1): Behavior => ({
-    enabled: spellOn,
-    why: spellWhy,
-    run: onEditor((v) => {
-      void stepMisspelling(v, direction).then((moved) => {
-        if (!moved) void saySpell(NO_MARKS);
-      });
-    }),
   });
 
   // ---- What the commands do ---------------------------------------------------------------
@@ -539,8 +482,6 @@ export function registerBuiltinCommands(): void {
     },
     'next-problem': { enabled: isFountain, run: onEditor((v) => nextDiagnostic(v)) },
     'previous-problem': { enabled: isFountain, run: onEditor((v) => previousDiagnostic(v)) },
-    'next-misspelling': stepSpelling(1),
-    'previous-misspelling': stepSpelling(-1),
     'next-change': { enabled: stepsChanges, run: stepChange(1) },
     'previous-change': { enabled: stepsChanges, run: stepChange(-1) },
 
@@ -623,34 +564,8 @@ export function registerBuiltinCommands(): void {
         editor.goto(view.state.selection.main.head);
       },
     },
-    // Sprints (Phase 1 design §7.3): the three lengths here; any length from the Counts panel.
-    ...Object.fromEntries(
-      SPRINT_MINUTES.map((minutes): [string, Behavior] => [
-        `sprint-${minutes}`,
-        { enabled: () => !sprintOn(), run: () => sprint.start(minutes) },
-      ]),
-    ),
-    'sprint-pause': {
-      enabled: () => sprint.state.value.status === 'running',
-      run: sprint.pause,
-    },
-    'sprint-resume': {
-      enabled: () => sprint.state.value.status === 'paused',
-      run: sprint.resume,
-    },
-    'sprint-stop': { enabled: sprintOn, run: sprint.stop },
-    'sprint-hide': {
-      enabled: () => sprintOn() && !sprint.hidden.value,
-      run: () => {
-        sprint.hidden.value = true;
-      },
-    },
-    'sprint-show': {
-      enabled: () => sprintOn() && sprint.hidden.value,
-      run: () => {
-        sprint.hidden.value = false;
-      },
-    },
+    // Sprints (Phase 1 design §7.3): in sprint-commands.ts.
+    ...sprintBehaviors(),
     // The Stats tab (seeing-the-script design §4.1), beside the Source: the Counts panel's Stats…
     // and the Drafter menu open it too.
     'show-stats': {
@@ -786,25 +701,8 @@ export function registerBuiltinCommands(): void {
     undo: { enabled: canEdit, run: onEditor((v) => undo(v)) },
     redo: { enabled: canEdit, run: onEditor((v) => redo(v)) },
     find: { run: onEditor((v) => openSearchPanel(v)) },
-    // On with spellcheck off too, so that it can say so.
-    'check-spelling': { run: checkSpelling },
-    'spelling-suggestions': {
-      enabled: spellOn,
-      why: spellWhy,
-      run: onEditor((v) => {
-        if (!openSpellMenu(v)) void saySpell(NO_MARK_HERE);
-      }),
-    },
-    // A suggestion and the script's dictionary edit the file; My dictionary and Ignore here don't,
-    // so a read-only tab can use them (Call 19).
-    'add-to-script-dictionary': onMisspelling((mark) =>
-      tryAddToScript(view, mark.word, editor.kind.value, useOutline().locked.value),
-    ),
-    'add-to-my-dictionary': onMisspelling((mark) => void addToMine(view, mark.word)),
-    'ignore-misspelling': onMisspelling((mark) => {
-      ignoreWordHere(view, mark);
-      void saySpell(`Ignored “${mark.word}” here.`);
-    }),
+    // The spellcheck's (Plan D): in spell-commands.ts.
+    ...spellBehaviors({ onEditor, showTab }),
     // Expand outline (design §6.5): the selection's outline lines as scene stubs.
     'expand-outline': {
       enabled: () => canEdit() && isFountain(),
