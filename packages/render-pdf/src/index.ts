@@ -9,5 +9,6 @@ export {
   type ManuscriptFace,
   type ManuscriptFontSet,
 } from './manuscript/fonts';
+export { layoutManuscript, type ManuscriptPage } from './manuscript/layout';
 export type { RenderProgress } from './progress';
 export { FONT_FILES, type FontSet, renderPdf } from './render';
