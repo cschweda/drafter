@@ -57,6 +57,17 @@ async function expectTypingAfterLeavesScript(page: Page, move: () => Promise<voi
   await showSource(page);
   await editor(page).click();
   await page.keyboard.press('ControlOrMeta+End');
+  // The cursor is at the end before focus goes: on a slow runner the key can still be on its way.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const sel = document.getSelection();
+        const lines = document.querySelectorAll('.cm-content .cm-line');
+        const last = lines[lines.length - 1];
+        return !!sel?.focusNode && !!last && last.contains(sel.focusNode);
+      }),
+    )
+    .toBe(true);
   const before = await wholeText(page);
   await move();
   await page.keyboard.type('xyz');
