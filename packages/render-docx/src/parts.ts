@@ -68,34 +68,30 @@ function textWidth(paper: Paper): number {
 
 /**
  * Text for a `w:t`: escaped, a line break as a space (a run never holds one, but an image's alt
- * text might).
+ * text might), and a tab as a space, as the PDF prints it.
  */
 function plain(text: string): string {
-  return xmlText(text.replace(/\r\n?|\n/g, ' '));
+  return xmlText(text.replace(/\r\n?|\n|\t/g, ' '));
 }
 
-/** One run: its marks, then its text, each tab its own `w:tab` (inside `w:t` a tab is a space). */
+/** One run: its marks, then its text. */
 function run(r: Run): string {
   const marks = `${r.bold ? '<w:b/><w:bCs/>' : ''}${r.italic ? '<w:i/><w:iCs/>' : ''}`;
   const rPr = marks === '' ? '' : `<w:rPr>${marks}</w:rPr>`;
-  const pieces = r.text
-    .split('\t')
-    .map((piece) => (piece === '' ? '' : `<w:t xml:space="preserve">${plain(piece)}</w:t>`));
-  const body = pieces.join('<w:tab/>');
-  return body === '' ? '' : `<w:r>${rPr}${body}</w:r>`;
+  return r.text === '' ? '' : `<w:r>${rPr}<w:t xml:space="preserve">${plain(r.text)}</w:t></w:r>`;
 }
 
 function paragraph(
   style: string | null,
   runs: readonly Run[],
-  more: { pageBreak?: boolean; extra?: string } = {},
+  more: { pageBreak?: boolean; extra?: string; tail?: string } = {},
 ): string {
   const props =
     (style === null ? '' : `<w:pStyle w:val="${style}"/>`) +
     (more.pageBreak ? '<w:pageBreakBefore/>' : '') +
     (more.extra ?? '');
   const pPr = props === '' ? '' : `<w:pPr>${props}</w:pPr>`;
-  return `<w:p>${pPr}${runs.map(run).join('')}</w:p>`;
+  return `<w:p>${pPr}${runs.map(run).join('')}${more.tail ?? ''}</w:p>`;
 }
 
 const text = (s: string): Run[] => (s === '' ? [] : [{ text: s }]);
@@ -343,8 +339,11 @@ function titlePage(ms: Manuscript, paper: Paper): string[] {
   const count = ms.wordsLabel.trim();
   const tabs = `<w:tabs><w:tab w:val="right" w:pos="${textWidth(paper)}"/></w:tabs>`;
   out.push(
-    paragraph('Contact', [...text(details[0] ?? ''), ...text(count === '' ? '' : `\t${count}`)], {
+    // The word count's tab is the only tab in the file: a tab in the writer's text is a space.
+    paragraph('Contact', text(details[0] ?? ''), {
       extra: tabs,
+      tail:
+        count === '' ? '' : `<w:r><w:tab/><w:t xml:space="preserve">${plain(count)}</w:t></w:r>`,
     }),
   );
   for (const detail of details.slice(1)) out.push(paragraph('Contact', text(detail)));

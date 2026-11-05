@@ -281,6 +281,33 @@ describe('layoutManuscript: breaks and the end', () => {
     expect(centre(lines[3] as Line)).toBeCloseTo(306, 6);
   });
 
+  it('a break never ends a page alone when a short paragraph follows it', () => {
+    // 24 one-line paragraphs leave room for the # and two lines, not the three-line paragraph,
+    // which moves whole: the # has to go with it.
+    const three = para(words(30));
+    const blocks = [...Array.from({ length: 24 }, () => para('Line.')), { kind: 'break' as const }];
+    const pages = layout(of([...blocks, three, { kind: 'end' }]));
+    const threeLines = pages.flatMap((p) => p.lines).filter((l) => textOf(l).startsWith('tide'));
+    expect(threeLines).toHaveLength(3);
+    for (const page of pages) expect(textOf(page.lines.at(-1))).not.toBe('#');
+    const hash = find(pages, '#');
+    expect(hash?.page).toBe(find(pages, textOf(threeLines[0]))?.page);
+  });
+
+  it.each([20, 21, 22, 23, 24, 25, 26, 27])(
+    'a break is never the last line of a page (%i paragraphs before it)',
+    (n) => {
+      for (const after of [para('One.'), para(words(18)), para(words(30)), para(words(60))]) {
+        const blocks = [
+          ...Array.from({ length: n }, () => para('Line.')),
+          { kind: 'break' as const },
+        ];
+        const pages = layout(of([...blocks, after, { kind: 'end' }]));
+        for (const page of pages) expect(textOf(page.lines.at(-1))).not.toBe('#');
+      }
+    },
+  );
+
   it('the fixture ends with END, then a page of Notes', () => {
     const ms = fixture();
     const pages = layout(ms);

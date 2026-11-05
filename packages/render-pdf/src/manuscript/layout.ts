@@ -283,11 +283,16 @@ export function layoutManuscript(
     }));
   };
 
-  /** The first `MIN_LINES` lines' count of the block after `i`, if it is a paragraph. */
+  /**
+   * How many of the next paragraph's lines must fit beside a break: `MIN_LINES`, or the whole
+   * paragraph when it is too short to split (`placeLines` moves it whole), else the break would be
+   * left alone at the foot of the page.
+   */
   const nextLines = (i: number) => {
     const next = ms.blocks[i + 1];
     if (next?.kind !== 'paragraph') return 0;
-    return Math.min(MIN_LINES, paragraphLines(next.runs, next.style, next.marker).length);
+    const len = paragraphLines(next.runs, next.style, next.marker).length;
+    return len < 2 * MIN_LINES ? len : MIN_LINES;
   };
 
   const titleLines = (title: string, top: number) => {

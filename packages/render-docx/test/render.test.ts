@@ -326,7 +326,9 @@ describe('renderManuscriptDocx: the document', () => {
       'Chapter 2',
       'The Night Watch',
     ]);
+    // The Crossing, The Lamp, and the `***`.
     expect(seen.filter(([s]) => s === 'SceneBreak')).toEqual([
+      ['SceneBreak', '#'],
       ['SceneBreak', '#'],
       ['SceneBreak', '#'],
     ]);
@@ -399,20 +401,24 @@ describe('renderManuscriptDocx: the document', () => {
     expect(child(run(' a mile.'), 'rPr')).toBeUndefined();
   });
 
-  it('keeps spaces and turns a tab into a tab and a line break into a space', async () => {
+  it('keeps spaces and turns a tab and a line break into a space, as the PDF does', async () => {
     const ms: Manuscript = {
       ...fixture(),
+      contact: ['1 Quay\tLane'],
       blocks: [
         { kind: 'paragraph', style: 'code', runs: [{ text: '  a\tb  ', code: true }] },
-        { kind: 'paragraph', style: 'body', runs: [{ text: 'one\ntwo' }] },
+        { kind: 'paragraph', style: 'body', runs: [{ text: 'one\ntwo\tthree', italic: true }] },
         { kind: 'end' },
       ],
     };
     const xml = (await render(ms)).get('word/document.xml') ?? '';
     const ps = bodyParagraphs(parse(xml));
-    expect(ps.map(textOf)).toContain('  a\tb  ');
-    expect(ps.map(textOf)).toContain('one two');
+    expect(ps.map(textOf)).toContain('  a b  ');
+    expect(ps.map(textOf)).toContain('one two three');
+    expect(ps.map(textOf)).toContain('1 Quay Lane');
     expect(xml).toContain('xml:space="preserve"');
+    // The word count's right tab is the only tab left.
+    expect(xml.match(/<w:tab\/>/g)).toHaveLength(1);
   });
 });
 
