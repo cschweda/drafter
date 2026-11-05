@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- For contributors: the browser tests run on macOS 15 in CI, not macOS 14, whose runner image GitHub is retiring (its jobs were being refused with "The configuration 'macos-14-arm64-us-default' is not supported"). The desktop workflow was on macOS 15 already.
+
+### Added
+
+- **Final Draft is for scripts, and the app says so**: for a Markdown document or a novel, the Export menu shows **Final Draft (.fdx)** greyed out with "Screenplays and stage plays only" under it, and the top bar has a small note, "Final Draft (.fdx): scripts only" (an ⓘ with the same words as a tooltip on a narrower screen), so nobody takes its absence for a missing feature. A screenplay or a stage play shows neither: it exports Final Draft files as before.
+
 ## [0.26.1] - 2026-11-05
 
 **Send your novel out.** A novel now exports as a **standard manuscript**, the format agents, editors, and contests ask for: Export → **Manuscript (PDF)…** or **Manuscript (Word)…**. A short **Manuscript details** box asks once for the title page's details (byline, legal name, contact lines) and keeps them in the book. Both files are 12 pt Times-style or Courier, double-spaced, with a title page and "about N words", the running header `Surname / SHORT TITLE / page`, each chapter a third of the way down a new page, and `#` between scenes. The Word file opens in Word and Pages with no question, its page numbers in the header.

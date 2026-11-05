@@ -158,6 +158,23 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <button v-if="kind !== 'markdown'" type="button" class="item" @click="choose('fdx')">
         <UIcon name="i-lucide-file-code" class="icon" />Final Draft (.fdx)
       </button>
+      <!-- A Markdown document (a novel too) can't be a Final Draft file, but it's shown, off, with
+           why, so a writer looking for it learns where it is (the maintainer, 2026-11-05). It stays
+           focusable, so a screen reader hears the reason. -->
+      <button
+        v-else
+        type="button"
+        class="item"
+        aria-disabled="true"
+        aria-describedby="export-fdx-why"
+      >
+        <UIcon name="i-lucide-file-code" class="icon" />
+        <span class="stack">
+          <span>Final Draft (.fdx)</span>
+          <!-- Hidden from the name, so the name is what shows first; read as the description. -->
+          <span id="export-fdx-why" class="why" aria-hidden="true">Screenplays and stage plays only</span>
+        </span>
+      </button>
       <!-- A script's whole text as Markdown, beside its treatment: the two .md files (Call 24). -->
       <button v-if="kind !== 'markdown'" type="button" class="item" @click="choose('md')">
         <UIcon name="i-lucide-file-text" class="icon" />Markdown (.md)
@@ -259,6 +276,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
 }
 .item:is(:hover, :focus-visible) .icon {
   color: var(--text);
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+/* Why an item is off, under its name: in the muted colour, not bold. */
+.why {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
 }
 .item[aria-disabled='true'] {
   color: var(--muted);

@@ -289,6 +289,8 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
     <SampleChip v-if="wide" />
     <!-- Never in TOOLBAR_FOLD_ORDER: it's there all the while the script is written (§3.2). -->
     <ModeSwitch />
+    <!-- A document's note that Final Draft export is for scripts (no switch is drawn for one). -->
+    <FdxNote />
     <span class="sep before-actions" aria-hidden="true" />
     <div class="actions">
       <ScriptsMenu v-slot="{ toggle, expanded, controls }">
