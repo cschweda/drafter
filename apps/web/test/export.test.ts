@@ -1153,6 +1153,18 @@ describe('exporting a novel’s manuscript', () => {
     expect(t.log[0]).toBe('pick salt-road – manuscript.pdf pdf');
   });
 
+  test('a blank Title names the file after the book’s file, never “Untitled”', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = '# The Salt Road\n\nWords.\n\n<!-- drafter {"template":"novel"} -->\n';
+    shown.kind = 'markdown';
+    shown.project = { fileName: 'salt-road.md' };
+    render.mockResolvedValue(new Uint8Array([1]));
+    expect(await t.exportManuscript('docx', { title: '' })).toBe('saved');
+    expect(t.log[0]).toBe('pick salt-road – manuscript.docx docx');
+    expect(await t.exportManuscript('pdf', { title: '   ' })).toBe('saved');
+    expect(t.log[2]).toBe('pick salt-road – manuscript.pdf pdf');
+  });
+
   for (const [what, kind, text] of [
     ['a plain Markdown document', 'markdown', '# The Salt Road\n\nWords.\n'],
     ['a screenplay', 'fountain', TEXT],

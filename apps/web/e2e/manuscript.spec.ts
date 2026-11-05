@@ -174,12 +174,16 @@ test.describe('manuscript export', () => {
     await chooseExport(page, 'Manuscript (PDF)…');
     await expect(dialog(page)).toBeVisible();
     await expect(field(page, 'Title')).toBeFocused();
+    await expect(dialog(page)).toHaveAttribute('aria-describedby', 'manuscript-what');
     await expect(field(page, 'Title')).toHaveValue('The Salt Road');
     await expect(field(page, 'Short title')).toHaveValue('THE SALT ROAD');
     await expect(dialog(page).getByRole('radio', { name: 'Times-style serif' })).toBeChecked();
     await expect(dialog(page)).toContainText(/Word count: about [\d,]+ words/);
     await expect(dialog(page)).toContainText(
       'Saved in this book’s file, so anyone you send the Markdown file to can read it.',
+    );
+    await expect(dialog(page)).toContainText(
+      'So can anyone you send an HTML or EPUB export made with “Let Drafter reopen this file”',
     );
 
     // The byline fills the legal name and the surname, until the writer edits them.
@@ -295,6 +299,14 @@ test.describe('manuscript export', () => {
     const before = await bookText(second);
     await runCommand(second, 'Export as Manuscript (PDF)…');
     await expect(dialog(second)).toBeVisible();
+    // The why is announced with the dialog, after what it is for.
+    await expect(dialog(second)).toHaveAttribute(
+      'aria-describedby',
+      'manuscript-what manuscript-why',
+    );
+    await expect(dialog(second)).toHaveAccessibleDescription(
+      /^The title page and the header on every page.*These details won’t be kept, but you can still export\.$/,
+    );
     await field(second, 'Byline').fill('Rosa Vale');
     const pdf = await downloaded(second, async () => {
       await dialog(second).getByRole('button', { name: 'Export PDF' }).click();

@@ -410,6 +410,8 @@ test.describe('without JavaScript', () => {
       'Manuscript (Word)…',
       'Manuscript details',
       'saved in your book’s file',
+      'an HTML or EPUB export made with “Let Drafter reopen this file”',
+      'about a tenth more pages',
     ]) {
       expect(text, phrase).toContain(phrase);
     }

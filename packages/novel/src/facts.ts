@@ -67,6 +67,11 @@ function cut(value: string, max: number): string {
   return s;
 }
 
+/** A manuscript field or contact line cut to `MAX_DETAIL`, as the book keeps it. */
+export function cutDetail(value: string): string {
+  return cut(value, MAX_DETAIL);
+}
+
 const DETAIL_KEYS = ['title', 'byline', 'legalName', 'surname', 'shortTitle'] as const;
 
 function manuscript(value: unknown): ManuscriptDetails | undefined {
@@ -74,14 +79,14 @@ function manuscript(value: unknown): ManuscriptDetails | undefined {
   const out: ManuscriptDetails = {};
   for (const key of DETAIL_KEYS) {
     const v = value[key];
-    if (typeof v === 'string' && v.trim() !== '') out[key] = cut(v, MAX_DETAIL);
+    if (typeof v === 'string' && v.trim() !== '') out[key] = cutDetail(v);
   }
   if (Array.isArray(value.contact)) {
     const lines: string[] = [];
     for (const item of value.contact) {
       if (typeof item !== 'string') continue;
       for (const line of item.split(/\r\n|\r|\n/)) {
-        const t = cut(line.trim(), MAX_DETAIL);
+        const t = cutDetail(line.trim());
         if (t !== '') lines.push(t);
       }
     }

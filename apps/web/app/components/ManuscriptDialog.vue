@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  MAX_CONTACT_LINES,
   MAX_DETAIL,
   type ManuscriptFont,
   novelStructure,
@@ -11,6 +10,7 @@ import {
 import DDialog from '~/components/ui/DDialog.vue';
 import { useEditor } from '~/editor/session';
 import {
+  answersOf,
   closeWhenBookChanges,
   contactLines,
   detailsFor,
@@ -112,17 +112,9 @@ function onClose() {
   manuscriptOpen.value = null;
 }
 
-/** The form's answers, trimmed: what the export prints, blanks left off. */
+/** The form's answers as the export prints them and the book keeps them, blanks left off. */
 function answers() {
-  return {
-    title: form.title.trim(),
-    byline: form.byline.trim(),
-    legalName: form.legalName.trim(),
-    contact: contactLines(form.contact).slice(0, MAX_CONTACT_LINES),
-    surname: form.surname.trim(),
-    shortTitle: form.shortTitle.trim(),
-    font: form.font,
-  };
+  return answersOf(form);
 }
 
 function exportNow() {
@@ -149,7 +141,7 @@ function exportNow() {
     size="md"
     class="manuscript-dialog"
     aria-labelledby="manuscript-title"
-    aria-describedby="manuscript-what"
+    :aria-describedby="readOnly ? 'manuscript-what manuscript-why' : 'manuscript-what'"
     @close="onClose"
   >
     <form @submit.prevent="exportNow">
@@ -158,7 +150,7 @@ function exportNow() {
         The title page and the header on every page, in standard manuscript format. Leave a field
         blank to leave it off the page.
       </p>
-      <p v-if="readOnly" class="why">
+      <p v-if="readOnly" id="manuscript-why" class="why">
         {{ readOnly }} These details won’t be kept, but you can still export.
       </p>
 
@@ -219,7 +211,9 @@ function exportNow() {
           One line each: address, phone, email.
         </span>
         <span id="manuscript-field-contact-note" class="hint">
-          Saved in this book’s file, so anyone you send the Markdown file to can read it.
+          Saved in this book’s file, so anyone you send the Markdown file to can read it. So can
+          anyone you send an HTML or EPUB export made with “Let Drafter reopen this file”, which
+          carries the whole book.
         </span>
       </div>
       <div class="field">

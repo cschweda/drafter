@@ -1,6 +1,13 @@
 import { setMarkdownMeta } from '@drafter/markdown';
+import { MAX_CONTACT_LINES, MAX_DETAIL, readFacts, writeFacts } from '@drafter/novel';
 import { describe, expect, test } from 'vitest';
-import { closeWhenBookChanges, contactLines, detailsFor, keptFrom } from '../app/novel/manuscript';
+import {
+  answersOf,
+  closeWhenBookChanges,
+  contactLines,
+  detailsFor,
+  keptFrom,
+} from '../app/novel/manuscript';
 
 // The Manuscript details dialog's model (manuscript plan, Task 6): what the form opens with, and
 // which of its answers are kept in the book (only what isn't the book's own default, so a default
@@ -94,6 +101,59 @@ describe('contactLines', () => {
       'r@vale.example',
     ]);
     expect(contactLines('')).toEqual([]);
+  });
+});
+
+describe('answersOf', () => {
+  const form = {
+    title: '  The Salt Road ',
+    byline: 'R. Vale',
+    legalName: '',
+    contact: '',
+    surname: '',
+    shortTitle: '',
+    font: 'times' as const,
+  };
+
+  test('trims each answer and splits the contact into lines', () => {
+    expect(answersOf({ ...form, contact: ' 1 Quay Lane \n\nr@vale.example' })).toEqual({
+      ...form,
+      title: 'The Salt Road',
+      contact: ['1 Quay Lane', 'r@vale.example'],
+    });
+  });
+
+  test('cuts each field and contact line to MAX_DETAIL, so what is exported is what is kept', () => {
+    const long = 'x'.repeat(MAX_DETAIL + 50);
+    // A pair of surrogates straddling the cut is dropped whole, as the book drops it.
+    const straddle = `${'y'.repeat(MAX_DETAIL - 1)}😀z`;
+    const typed = answersOf({
+      ...form,
+      title: long,
+      byline: straddle,
+      legalName: long,
+      surname: long,
+      shortTitle: long,
+      contact: `${long}\nshort\n${straddle}`,
+    });
+    expect(typed.title).toHaveLength(MAX_DETAIL);
+    expect(typed.byline).toBe('y'.repeat(MAX_DETAIL - 1));
+    expect(typed.legalName).toHaveLength(MAX_DETAIL);
+    expect(typed.surname).toHaveLength(MAX_DETAIL);
+    expect(typed.shortTitle).toHaveLength(MAX_DETAIL);
+    expect(typed.contact).toEqual(['x'.repeat(MAX_DETAIL), 'short', 'y'.repeat(MAX_DETAIL - 1)]);
+    // Kept in a book and read back, the contact is exactly what was exported.
+    const book = writeFacts('# One\n\nText.\n', {
+      ...readFacts('# One\n\nText.\n'),
+      manuscript: keptFrom(typed, '# One\n\nText.\n', 'one'),
+    });
+    expect(readFacts(book).manuscript?.contact).toEqual(typed.contact);
+    expect(readFacts(book).manuscript?.legalName).toBe(typed.legalName);
+  });
+
+  test('keeps at most MAX_CONTACT_LINES contact lines', () => {
+    const contact = Array.from({ length: MAX_CONTACT_LINES + 3 }, (_, i) => `line ${i}`).join('\n');
+    expect(answersOf({ ...form, contact }).contact).toHaveLength(MAX_CONTACT_LINES);
   });
 });
 

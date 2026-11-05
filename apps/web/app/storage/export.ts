@@ -336,9 +336,9 @@ async function run(
   const fallback = fileBaseName(titleFileOf(script.project.value));
   const novel = markdown && isNovel(source);
   // A manuscript is named for the book as its title page has it: the title kept, else the first
-  // chapter that names one, else the file's name.
+  // chapter that names one, else the file's name. A Title left blank names it after the file too.
   const title = isManuscript(kind)
-    ? resolveDetails(source, fallback, details ?? {}).title
+    ? resolveDetails(source, fallback, details ?? {}).title.trim() || fallback
     : markdown
       ? (markdownTitle(source) ?? fallback)
       : titleOf(editor.doc.value, fallback);

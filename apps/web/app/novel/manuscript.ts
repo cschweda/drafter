@@ -1,4 +1,6 @@
 import {
+  cutDetail,
+  MAX_CONTACT_LINES,
   type ManuscriptDetails,
   type ResolvedDetails,
   readFacts,
@@ -23,6 +25,30 @@ export function contactLines(text: string): string[] {
     .split(/\r\n|\r|\n/)
     .map((line) => line.trim())
     .filter((line) => line !== '');
+}
+
+/**
+ * The dialog's answers as the export prints them: trimmed, and each field and contact line cut to
+ * `MAX_DETAIL` as the book keeps it, so what is exported is what is kept.
+ */
+export function answersOf(form: {
+  title: string;
+  byline: string;
+  legalName: string;
+  contact: string;
+  surname: string;
+  shortTitle: string;
+  font: ResolvedDetails['font'];
+}): ResolvedDetails {
+  return {
+    title: cutDetail(form.title.trim()),
+    byline: cutDetail(form.byline.trim()),
+    legalName: cutDetail(form.legalName.trim()),
+    contact: contactLines(form.contact).map(cutDetail).slice(0, MAX_CONTACT_LINES),
+    surname: cutDetail(form.surname.trim()),
+    shortTitle: cutDetail(form.shortTitle.trim()),
+    font: form.font,
+  };
 }
 
 /**

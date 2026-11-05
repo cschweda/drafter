@@ -1,5 +1,6 @@
 export {
   carryFacts,
+  cutDetail,
   type Facts,
   MAX_CONTACT_LINES,
   MAX_DETAIL,

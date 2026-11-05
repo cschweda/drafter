@@ -250,7 +250,8 @@ Morning came in grey.</code></pre>
       <strong>The details are saved in your book’s file</strong>, in the same comment at the end
       that holds the statuses, so the box opens with them next time and a later export asks nothing
       new. That also means anyone you give the Markdown file to can read them, your contact lines
-      included. They stay on your device otherwise: the fonts are in the app, and both files are
+      included, and so can anyone you give an HTML or EPUB export made with “Let Drafter reopen this
+      file”, because that carries the whole book. They stay on your device otherwise: the fonts are in the app, and both files are
       made on your computer.
     </p>
 
@@ -260,13 +261,14 @@ Morning came in grey.</code></pre>
       free font with the same letter widths as Times New Roman) or Courier Prime. The
       <strong>Word file</strong> (<code>.docx</code>) is the same manuscript in Times New Roman or
       Courier New, built with Word’s own styles, so an editor who changes a style changes the whole
-      book. It uses Word’s own Double spacing, so its pages may break a line or two differently
-      from the PDF’s. Both are named for the book, such as “The Salt Road – manuscript.pdf”.
+      book. It uses Word’s own Double spacing, which is a little taller than the PDF’s (about 26.6
+      points a line in Times New Roman, against the PDF’s 24), so the Word file runs to about a tenth
+      more pages and its page breaks fall in different places. Both are named for the book, such as “The Salt Road – manuscript.pdf”.
     </p>
     <p>
       <strong>Page numbers in Word.</strong> The header holds one page-number field, which is the
-      only way Word numbers pages by itself. Word, Pages, LibreOffice, and Google Docs show the right
-      number as soon as the file opens, with no question about updating links. Drafter puts no other
+      only way Word numbers pages by itself. Word and Pages show the right number as soon as the
+      file opens, with no question about updating links. Drafter puts no other
       field in the file.
     </p>
 
