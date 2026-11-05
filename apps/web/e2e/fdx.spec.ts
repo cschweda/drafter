@@ -251,6 +251,8 @@ test.describe('exporting as Final Draft', () => {
 
   test('is offered for a script, and not for a Markdown document', async ({ page, isMobile }) => {
     await start(page);
+    // A script exports Final Draft files, so its top bar has no note about them.
+    await expect(page.locator('[data-fdx-note]')).toHaveCount(0);
     await exportButton(page).click();
     await expect(fdxItem(page)).toBeVisible();
     await page.keyboard.press('Escape');
@@ -273,7 +275,17 @@ test.describe('exporting as Final Draft', () => {
 
     await exportButton(page).click();
     await expect(exportMenu(page)).toBeVisible();
-    await expect(fdxItem(page)).toHaveCount(0);
+    // The top bar says so too, on a wide screen; a script's never does.
+    const note = page.locator('[data-fdx-note]');
+    if ((page.viewportSize()?.width ?? 0) >= 1024) {
+      await expect(note).toHaveText('Final Draft (.fdx): scripts only');
+    } else {
+      await expect(note).toHaveCount(0);
+    }
+    // Shown, off, with why (Playwright, like a writer, can't press a disabled item).
+    await expect(fdxItem(page)).toHaveAttribute('aria-disabled', 'true');
+    await expect(fdxItem(page)).toHaveAccessibleDescription('Screenplays and stage plays only');
+    await expect(fdxItem(page)).toBeDisabled();
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Drafter menu' }).click();
     await expect(appMenu.getByRole('menuitem', { name: /^Export as plain text/ })).toBeVisible();

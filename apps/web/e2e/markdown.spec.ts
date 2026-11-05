@@ -355,8 +355,13 @@ test.describe('a Markdown document', () => {
       'EPUB (.epub)',
       'Markdown (.md)',
       'Plain text (.txt)',
+      'Final Draft (.fdx)Screenplays and stage plays only',
       'Export options…',
     ]);
+    // Final Draft is there, off, with why.
+    const fdx = menu.getByRole('button', { name: 'Final Draft (.fdx)' });
+    await expect(fdx).toHaveAttribute('aria-disabled', 'true');
+    await expect(fdx).toHaveAccessibleDescription('Screenplays and stage plays only');
     await menu.getByRole('button', { name: 'Markdown (.md)' }).click();
     await expect.poll(() => files(page)).toContain('Untitled.md');
     expect(await textOf(page, 'Untitled.md')).toBe('# Untitled\n\nBody text.');
