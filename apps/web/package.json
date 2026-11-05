@@ -36,6 +36,7 @@
     "@drafter/notes": "workspace:*",
     "@drafter/novel": "workspace:*",
     "@drafter/outline": "workspace:*",
+    "@drafter/render-docx": "workspace:*",
     "@drafter/render-html": "workspace:*",
     "@drafter/render-html-file": "workspace:*",
     "@drafter/render-pdf": "workspace:*",

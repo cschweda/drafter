@@ -200,6 +200,7 @@ describe('checking the service worker’s precache', () => {
       'fonts/inter-tight/OFL.txt',
       'fonts/anton/OFL.txt',
       'fonts/archivo/OFL.txt',
+      'fonts/liberation-serif/OFL.txt',
     ]);
   });
 
@@ -265,6 +266,11 @@ describe('checking the files the build must have', () => {
     for (const style of ['Regular', 'Italic', 'SemiBold', 'SemiBoldItalic']) {
       expect(REQUIRED_FILES).toContain(`fonts/inter-tight/InterTight-${style}.ttf`);
     }
+    // Liberation Serif's four styles and licence, which a novel's manuscript PDF fetches.
+    expect(REQUIRED_FILES).toContain('fonts/liberation-serif/OFL.txt');
+    for (const style of ['Regular', 'Italic', 'Bold', 'BoldItalic']) {
+      expect(REQUIRED_FILES).toContain(`fonts/liberation-serif/LiberationSerif-${style}.ttf`);
+    }
     // The story map's four faces, which its export fetches and embeds.
     for (const face of [
       'Anton-Regular',
@@ -277,7 +283,7 @@ describe('checking the files the build must have', () => {
     // The licences of the two packages inside Drafter for Claude, which the Licences page links.
     expect(REQUIRED_FILES).toContain('licenses/modelcontextprotocol-server.txt');
     expect(REQUIRED_FILES).toContain('licenses/zod.txt');
-    expect(REQUIRED_FILES).toHaveLength(22);
+    expect(REQUIRED_FILES).toHaveLength(27);
   });
 
   test('passes when every one is there', async () => {

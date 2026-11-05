@@ -1085,3 +1085,134 @@ describe('exporting', () => {
     expect(t.exportNotice.value).toBe('Exported The Call Part 1.txt.');
   });
 });
+
+describe('exporting a novel’s manuscript', () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+
+  const NOVEL =
+    '# Chapter One\n\nThe salt road ran east.\n\n<!-- drafter {"template":"novel"} -->\n';
+  const DETAILS = { title: 'The Salt Road', byline: 'R. Vale' };
+
+  test('a PDF manuscript is named for the book, typed as a PDF, on the paper and language in Settings', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = NOVEL;
+    shown.kind = 'markdown';
+    shown.project = { fileName: 'salt-road.md' };
+    preferences.markdownPaper = 'a4';
+    preferences.spellLanguage = 'en-GB';
+    render.mockResolvedValue(new Uint8Array([1]));
+    expect(await t.exportManuscript('pdf', DETAILS)).toBe('saved');
+    expect(t.log).toEqual(['pick The Salt Road – manuscript.pdf pdf', 'write']);
+    expect(render).toHaveBeenCalledWith(
+      {
+        kind: 'manuscript-pdf',
+        source: NOVEL,
+        fileTitle: 'salt-road',
+        details: DETAILS,
+        paper: 'a4',
+        lang: 'en-GB',
+      },
+      expect.any(Function),
+    );
+    expect(t.exportNotice.value).toBe('Exported The Salt Road – manuscript.pdf.');
+  });
+
+  test('a Word manuscript is named … – manuscript.docx and typed as Word', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = NOVEL;
+    shown.kind = 'markdown';
+    render.mockResolvedValue(new Uint8Array([2]));
+    expect(await t.exportManuscript('docx', DETAILS)).toBe('saved');
+    expect(t.log).toEqual(['pick The Salt Road – manuscript.docx docx', 'write']);
+    expect(render.mock.calls[0]?.[0]).toMatchObject({ kind: 'manuscript-docx', paper: 'letter' });
+    expect(t.written[0]?.data).toEqual(new Uint8Array([2]));
+    expect(t.exportNotice.value).toBe('Exported The Salt Road – manuscript.docx.');
+  });
+
+  test('downloads a Word manuscript with Word’s type where the browser has no picker', async () => {
+    const t = await load({ inPlace: false });
+    shown.text = NOVEL;
+    shown.kind = 'markdown';
+    render.mockResolvedValue(new Uint8Array([2]));
+    expect(await t.exportManuscript('docx', DETAILS)).toBe('saved');
+    expect(t.log).toEqual([
+      'download The Salt Road – manuscript.docx application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ]);
+  });
+
+  test('with no title kept, the name is the book’s as the manuscript resolves it', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = NOVEL;
+    shown.kind = 'markdown';
+    shown.project = { fileName: 'salt-road.md' };
+    render.mockResolvedValue(new Uint8Array([1]));
+    expect(await t.exportManuscript('pdf', {})).toBe('saved');
+    // "Chapter One" names nothing, so the file's name.
+    expect(t.log[0]).toBe('pick salt-road – manuscript.pdf pdf');
+  });
+
+  test('a blank Title names the file after the book’s file, never “Untitled”', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = '# The Salt Road\n\nWords.\n\n<!-- drafter {"template":"novel"} -->\n';
+    shown.kind = 'markdown';
+    shown.project = { fileName: 'salt-road.md' };
+    render.mockResolvedValue(new Uint8Array([1]));
+    expect(await t.exportManuscript('docx', { title: '' })).toBe('saved');
+    expect(t.log[0]).toBe('pick salt-road – manuscript.docx docx');
+    expect(await t.exportManuscript('pdf', { title: '   ' })).toBe('saved');
+    expect(t.log[2]).toBe('pick salt-road – manuscript.pdf pdf');
+  });
+
+  for (const [what, kind, text] of [
+    ['a plain Markdown document', 'markdown', '# The Salt Road\n\nWords.\n'],
+    ['a screenplay', 'fountain', TEXT],
+  ] as const) {
+    for (const format of ['pdf', 'docx'] as const) {
+      test(`refuses ${what} as a ${format} manuscript, before any picker`, async () => {
+        const t = await load({ inPlace: true });
+        shown.text = text;
+        shown.kind = kind;
+        expect(await t.exportManuscript(format, DETAILS)).toBe('cancelled');
+        expect(t.exportError.value).toBe('Only a novel exports as a manuscript.');
+        expect(t.log).toEqual([]);
+        expect(render).not.toHaveBeenCalled();
+      });
+    }
+  }
+
+  test('a manuscript asked for one book exports it while that book is open', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = NOVEL;
+    shown.kind = 'markdown';
+    shown.project = { id: 'book-a' };
+    render.mockResolvedValue(new Uint8Array([1]));
+    expect(await t.exportManuscript('pdf', DETAILS, 'book-a')).toBe('saved');
+    expect(t.log).toEqual(['pick The Salt Road – manuscript.pdf pdf', 'write']);
+  });
+
+  test('a manuscript asked for one book is refused once another is open, before any picker', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = NOVEL;
+    shown.kind = 'markdown';
+    shown.project = { id: 'book-b' };
+    expect(await t.exportManuscript('docx', DETAILS, 'book-a')).toBe('cancelled');
+    expect(t.exportError.value).toBe('The book changed; nothing was exported.');
+    expect(t.log).toEqual([]);
+    expect(render).not.toHaveBeenCalled();
+  });
+
+  test('a manuscript with other details is its own export, not joined to the first', async () => {
+    const t = await load({ inPlace: true });
+    shown.text = NOVEL;
+    shown.kind = 'markdown';
+    render.mockResolvedValue(new Uint8Array([1]));
+    const first = t.exportManuscript('pdf', DETAILS);
+    const second = t.exportManuscript('pdf', { ...DETAILS, byline: 'Rosa Vale' });
+    expect(second).not.toBe(first);
+    await first;
+    await second;
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+});

@@ -224,6 +224,7 @@ onBeforeUnmount(() => {
     <SpellMenu />
     <TreatmentDialog />
     <StoryMapDialog />
+    <ManuscriptDialog />
     <ExportOptionsDialog />
     <SceneDetailsDialog />
     <NewNoteDialog />

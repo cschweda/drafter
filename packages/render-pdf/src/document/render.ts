@@ -127,6 +127,29 @@ function unembed(doc: PDFDocument, font: PDFFont): void {
   if (at >= 0) list.splice(at, 1);
 }
 
+/**
+ * Embeds a font, with the OpenType features the layout measured with (`layoutFeatures`), under a
+ * fixed name: a subset, padded (`evenGlyphs`); or, if this pdf-lib can't be padded, the whole font,
+ * a bigger file but never blank letters. Shared by the document and manuscript renderers.
+ */
+export async function embedFace(
+  doc: PDFDocument,
+  bytes: Uint8Array,
+  customName: string,
+): Promise<PDFFont> {
+  const embed = (subset: boolean) =>
+    doc.embedFont(bytes, { subset, customName, features: layoutFeatures() });
+  const subset = await canPad(bytes);
+  let font = await embed(subset);
+  if (subset && !evenGlyphs(font)) {
+    // This document's subset isn't the shape the scratch one was: drop it before it's written,
+    // and embed the face whole.
+    unembed(doc, font);
+    font = await embed(false);
+  }
+  return font;
+}
+
 type LinkItem = Extract<DocItem, { kind: 'link' }>;
 
 /**
@@ -209,22 +232,7 @@ export async function renderDocumentPdf(
   const fontFor = async (face: Face) => {
     let font = embedded.get(face);
     if (!font) {
-      // A subset, padded; or, if this pdf-lib can't be padded, the whole font: a bigger file,
-      // never blank letters.
-      const embedFace = (subset: boolean) =>
-        doc.embedFont(fonts[face], {
-          subset,
-          customName: FONT_NAMES[face],
-          features: layoutFeatures(),
-        });
-      const subset = await canPad(fonts[face]);
-      font = await embedFace(subset);
-      if (subset && !evenGlyphs(font)) {
-        // This document's subset isn't the shape the scratch one was: drop it before it's
-        // written, and embed the face whole.
-        unembed(doc, font);
-        font = await embedFace(false);
-      }
+      font = await embedFace(doc, fonts[face], FONT_NAMES[face]);
       embedded.set(face, font);
     }
     return font;

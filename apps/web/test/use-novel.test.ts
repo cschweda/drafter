@@ -161,6 +161,35 @@ describe('useNovel', () => {
     expect(text()).toBe(BOOK);
   });
 
+  test('the manuscript details are written in one undo step; null takes them away', async () => {
+    const novel = await session();
+    const details = { byline: 'R. Vale', contact: ['1 Quay Lane'], font: 'courier' as const };
+    expect(novel.setManuscript(details)).toBe(true);
+    expect(readFacts(text()).manuscript).toEqual(details);
+    // The other facts and the text are left alone.
+    expect(readFacts(text()).nodes['chapter:the-salt-road:0']?.status).toBe('draft');
+    expect(text().startsWith(BOOK.slice(0, BOOK.indexOf('<!--')))).toBe(true);
+    cmd(undo);
+    expect(text()).toBe(BOOK);
+    cmd(redo);
+    expect(readFacts(text()).manuscript).toEqual(details);
+    // The same details again change nothing, and say they are kept.
+    const before = text();
+    expect(novel.setManuscript(details)).toBe(true);
+    expect(text()).toBe(before);
+    expect(novel.setManuscript(null)).toBe(true);
+    expect(readFacts(text()).manuscript).toBeUndefined();
+    cmd(undo);
+    expect(readFacts(text()).manuscript).toEqual(details);
+  });
+
+  test('the manuscript details are not written while the editor is locked, and say so', async () => {
+    const novel = await session();
+    env.refs.locked.value = true;
+    expect(novel.setManuscript({ byline: 'R. Vale' })).toBe(false);
+    expect(text()).toBe(BOOK);
+  });
+
   test('a synopsis is written no longer than the package keeps, never half a surrogate pair', async () => {
     const novel = await session();
     novel.setFacts('chapter:the-night-watch:0', { synopsis: 'x'.repeat(5000) });

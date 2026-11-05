@@ -21,14 +21,32 @@ export interface Facts {
   target?: number;
 }
 
+export type ManuscriptFont = 'times' | 'courier';
+
+/** What the manuscript's title page and running header need, as the writer typed them. */
+export interface ManuscriptDetails {
+  title?: string;
+  byline?: string;
+  legalName?: string;
+  contact?: string[];
+  surname?: string;
+  shortTitle?: string;
+  font?: ManuscriptFont;
+}
+
 export interface NovelFacts {
   bookTarget?: number;
+  manuscript?: ManuscriptDetails;
   /** Keyed by node id; made with `Object.create(null)`, so no key is special. */
   nodes: Record<string, Facts>;
 }
 
 /** The longest synopsis kept, in UTF-16 code units: a longer one is cut there when read or written. */
 export const MAX_SYNOPSIS = 2000;
+/** The longest manuscript field or contact line kept, in UTF-16 code units. */
+export const MAX_DETAIL = 300;
+/** The most contact lines kept. */
+export const MAX_CONTACT_LINES = 10;
 const MAX_TARGET = 10_000_000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -39,6 +57,43 @@ function target(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= MAX_TARGET
     ? value
     : undefined;
+}
+
+/** The text cut to `max` code units, never leaving half of a surrogate pair at the cut. */
+function cut(value: string, max: number): string {
+  let s = value.slice(0, max);
+  const last = s.charCodeAt(s.length - 1);
+  if (last >= 0xd800 && last <= 0xdbff) s = s.slice(0, -1);
+  return s;
+}
+
+/** A manuscript field or contact line cut to `MAX_DETAIL`, as the book keeps it. */
+export function cutDetail(value: string): string {
+  return cut(value, MAX_DETAIL);
+}
+
+const DETAIL_KEYS = ['title', 'byline', 'legalName', 'surname', 'shortTitle'] as const;
+
+function manuscript(value: unknown): ManuscriptDetails | undefined {
+  if (!isRecord(value)) return undefined;
+  const out: ManuscriptDetails = {};
+  for (const key of DETAIL_KEYS) {
+    const v = value[key];
+    if (typeof v === 'string' && v.trim() !== '') out[key] = cutDetail(v);
+  }
+  if (Array.isArray(value.contact)) {
+    const lines: string[] = [];
+    for (const item of value.contact) {
+      if (typeof item !== 'string') continue;
+      for (const line of item.split(/\r\n|\r|\n/)) {
+        const t = cutDetail(line.trim());
+        if (t !== '') lines.push(t);
+      }
+    }
+    if (lines.length > 0) out.contact = lines.slice(0, MAX_CONTACT_LINES);
+  }
+  if (value.font === 'times' || value.font === 'courier') out.font = value.font;
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 function newNodes(): Record<string, Facts> {
@@ -53,11 +108,7 @@ function readOne(raw: unknown): Facts | null {
     facts.status = status as Status;
   }
   if (typeof raw.synopsis === 'string' && raw.synopsis !== '') {
-    let s = raw.synopsis.slice(0, MAX_SYNOPSIS);
-    // Do not leave half of a surrogate pair at the cut.
-    const last = s.charCodeAt(s.length - 1);
-    if (last >= 0xd800 && last <= 0xdbff) s = s.slice(0, -1);
-    facts.synopsis = s;
+    facts.synopsis = cut(raw.synopsis, MAX_SYNOPSIS);
   }
   const t = target(raw.target);
   if (t !== undefined) facts.target = t;
@@ -76,6 +127,8 @@ export function readFacts(text: string): NovelFacts {
   if (!isRecord(novel)) return out;
   const bookTarget = target(novel.bookTarget);
   if (bookTarget !== undefined) out.bookTarget = bookTarget;
+  const details = manuscript(novel.manuscript);
+  if (details) out.manuscript = details;
   if (isRecord(novel.nodes)) {
     for (const id of Object.keys(novel.nodes)) {
       const facts = readOne(novel.nodes[id]);
@@ -107,13 +160,15 @@ export function writeFacts(text: string, facts: NovelFacts): string {
       });
   }
   const book = target(facts.bookTarget);
-  if (book === undefined && Object.keys(nodes).length === 0) {
+  const details = manuscript(facts.manuscript);
+  if (book === undefined && details === undefined && Object.keys(nodes).length === 0) {
     delete next.novel;
     if (meta === null) return text;
   } else {
     const novel: Record<string, unknown> = {};
     if (book !== undefined) novel.bookTarget = book;
     novel.nodes = nodes;
+    if (details) novel.manuscript = details;
     next.novel = novel;
   }
   return setMarkdownMeta(text, next);
@@ -141,6 +196,7 @@ export function carryFacts(
   walk(after.nodes, (n) => byPos.set(n.heading.from, n.id));
   const out: NovelFacts = { nodes: newNodes() };
   if (facts.bookTarget !== undefined) out.bookTarget = facts.bookTarget;
+  if (facts.manuscript) out.manuscript = facts.manuscript;
   const orphans: string[] = [];
   for (const id of Object.keys(facts.nodes)) {
     const node = findNode(before, id);

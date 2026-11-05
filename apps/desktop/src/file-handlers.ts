@@ -37,7 +37,15 @@ import type { Grants } from './grants';
 
 export { dialogHook };
 
-export type SaveExtension = '.fountain' | '.md' | '.txt' | '.pdf' | '.html' | '.epub' | '.fdx';
+export type SaveExtension =
+  | '.fountain'
+  | '.md'
+  | '.txt'
+  | '.pdf'
+  | '.html'
+  | '.epub'
+  | '.fdx'
+  | '.docx';
 const SAVE_EXTENSIONS: readonly string[] = [
   '.fountain',
   '.md',
@@ -46,6 +54,7 @@ const SAVE_EXTENSIONS: readonly string[] = [
   '.html',
   '.epub',
   '.fdx',
+  '.docx',
 ];
 const isExtension = (value: unknown): value is SaveExtension =>
   typeof value === 'string' && SAVE_EXTENSIONS.includes(value);

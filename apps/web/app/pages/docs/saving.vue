@@ -104,7 +104,7 @@ useDocsHead({
           <tr>
             <th scope="row">
               Export as PDF, HTML, EPUB, Fountain, plain text, Final Draft, or Markdown (a Markdown document:
-              PDF, HTML, EPUB, its Markdown file, or plain text)
+              PDF, HTML, EPUB, its Markdown file, or plain text; a novel adds a manuscript as a PDF or a Word file)
             </th>
             <td>Yes, as a download</td>
             <td>Yes, as a download</td>
@@ -414,6 +414,23 @@ useDocsHead({
     <p>
       Each script is one book to your e-reader, whatever you change in it: a new export replaces
       the old one on most e-readers, rather than sitting beside it as a second copy.
+    </p>
+
+    <h3 id="export-manuscript">Export a manuscript</h3>
+    <p>
+      For a novel, Export, then <strong>Manuscript (PDF)…</strong> or
+      <strong>Manuscript (Word)…</strong>, saves the book in standard manuscript format, to send to
+      an agent, an editor, or a contest. A <strong>Manuscript details</strong> box comes first,
+      asking for the title, byline, legal name, contact lines, the header’s surname and short title,
+      and the font; every field is optional, and what you enter is saved in the book’s file, so
+      the box opens with it next time. The PDF is named “&lt;title&gt; – manuscript.pdf” and the
+      Word file “&lt;title&gt; – manuscript.docx”. Export options don’t apply: the manuscript has
+      its own box, and your notes never go into it. The <a href="/docs/novel/#sending-it-out">Novel</a>
+      page shows the layout and every field.
+    </p>
+    <p>
+      A browser saves the file as a download, or asks where to put it where it can. The desktop app
+      opens its Save dialog, and writes a <code>.docx</code> only where that dialog chose one.
     </p>
 
     <h2 id="recovery-copy">The recovery copy</h2>

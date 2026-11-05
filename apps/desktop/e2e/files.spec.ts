@@ -342,6 +342,51 @@ test('exports a Markdown document’s PDF to a chosen path', async ({ desktop, p
   expect(dialogsAsked(profile)[0]?.defaultPath).toMatch(/Harbour Notes\.pdf$/);
 });
 
+test('exports a novel’s manuscript as a PDF and a Word file to chosen paths', async ({
+  desktop,
+  profile,
+}) => {
+  const pdf = join(folder(profile, 'Exports'), 'The Salt Road (agent).pdf');
+  const docx = join(folder(profile, 'Exports'), 'The Salt Road (agent).docx');
+  const app = await desktop();
+  const { page } = app;
+  // The File menu's Novel sample.
+  await openButton(page).click();
+  await scriptsMenu(page).getByRole('button', { name: 'Novel', exact: true }).click();
+  await expect(scriptsMenu(page)).toBeHidden();
+  await expect(editor(page)).toContainText('Low Tide');
+  const details = page.getByRole('dialog', { name: 'Manuscript details' });
+  const toast = page.locator('.toast [role="status"]').filter({ hasText: 'Exported' });
+
+  // File → Export → Manuscript (PDF)…, then the details, then the save dialog.
+  await chooseMenuItem(app.app, ['File', 'Export', 'Manuscript (PDF)…']);
+  await expect(details).toBeVisible();
+  await details.getByRole('textbox', { name: 'Byline', exact: true }).fill('Rosa Vale');
+  answerDialogs(profile, [pdf]);
+  await details.getByRole('button', { name: 'Export PDF' }).click();
+  await expect(toast).toHaveText('Exported The Salt Road (agent).pdf.');
+  expect(readFileSync(pdf).subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  expect(dialogsAsked(profile)[0]).toMatchObject({ kind: 'save', extension: '.pdf' });
+  expect(dialogsAsked(profile)[0]?.defaultPath).toMatch(/The Salt Road – manuscript\.pdf$/);
+
+  // The Export menu's Manuscript (Word)…, which opens with the byline kept.
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await page
+    .getByRole('group', { name: 'Export' })
+    .getByRole('button', { name: 'Manuscript (Word)…' })
+    .click();
+  await expect(details).toBeVisible();
+  await expect(details.getByRole('textbox', { name: 'Byline', exact: true })).toHaveValue(
+    'Rosa Vale',
+  );
+  answerDialogs(profile, [docx]);
+  await details.getByRole('button', { name: 'Export Word file' }).click();
+  await expect(toast).toHaveText('Exported The Salt Road (agent).docx.');
+  expect(readFileSync(docx).subarray(0, 2).toString('latin1')).toBe('PK');
+  expect(dialogsAsked(profile)[1]).toMatchObject({ kind: 'save', extension: '.docx' });
+  expect(dialogsAsked(profile)[1]?.defaultPath).toMatch(/The Salt Road – manuscript\.docx$/);
+});
+
 test('opens a dropped file', async ({ desktop, profile }) => {
   const path = join(folder(profile), 'Dropped Script.fountain');
   writeFileSync(path, 'Title: Dropped\n\nEXT. FIELD - DAY\n\nWind.\n');

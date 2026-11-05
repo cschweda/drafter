@@ -4,7 +4,7 @@ The [README](../README.md#roadmap) has the short list: what's next, and what com
 
 ## Where things stand
 
-Drafter is at **v0.26.0**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
+Drafter is at **v0.26.0**, with the manuscript exports built on a branch for v0.26.1. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
 
 Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. Lately it brought:
 
@@ -25,7 +25,7 @@ Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. La
 
 Next, in order:
 
-1. **The manuscript exports** (v0.26.1): a novel's PDF and Word file in manuscript layout.
+1. **The manuscript exports** (v0.26.1, built, waiting for its release): a novel's standard manuscript as a PDF and a Word file, after a Manuscript details box ([help](https://drafter.dev/docs/novel/#sending-it-out), [design](drafter-manuscript-design.md)).
 2. **Production**, free: revision colors, locked pages, OMITTED scenes, revised pages, breakdowns, and sides (v0.27.0).
 3. Storylines and pacing (v0.28.0).
 4. The **Workbook**, a story bible with your pasted, synced, and spoken notes (v0.29.0).

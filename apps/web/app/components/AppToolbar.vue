@@ -133,14 +133,18 @@ const saveItems = computed<DropdownMenuItem[][]>(() => [
     ...saveMenu.entry('history', 'i-lucide-history'),
   ],
 ]);
-const exportIds = computed(() =>
-  EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].flatMap((kind) =>
+const exportIds = computed(() => {
+  const ids = EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].flatMap((kind) =>
     // A script's story map follows its EPUB, as in the Export menu (story-map design §1.1).
     kind === 'epub' && editor.kind.value !== 'markdown'
       ? [`export-${kind}`, 'export-story-map']
       : [`export-${kind}`],
-  ),
-);
+  );
+  // A novel's manuscript, as a PDF or a Word file, ends the exports; only a novel has it.
+  return editor.kind.value === 'markdown' && editor.novel.value
+    ? [...ids, 'export-manuscript-pdf', 'export-manuscript-docx']
+    : ids;
+});
 /** The class on More actions' Export item, which opens the exports as a submenu. */
 const EXPORT_ITEM = 'more-export';
 

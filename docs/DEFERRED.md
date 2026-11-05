@@ -379,6 +379,16 @@ From the [red/blue team audit](redblue-audit-2026-11-03.md); everything else it 
 - **Reopen trusts its marker (W7):** a page can show one script in a browser and reopen as another in Drafter; a sentence in Open formats would say so.
 
 
+## Manuscript
+
+- **The command line** (`drafter build --manuscript`): the CLI already exports HTML, and the manuscript can follow when someone asks.
+- **Other conventions**: Shunn's classic Courier-only form with underlines for italics, screenplay-style headers, and a contest's anonymous format (no name in the header). The header line is built so that the last is a small change.
+- **A deliberately cleared detail's default returns on reopen.** Clearing the legal name, surname, or short title in the Manuscript details box saves nothing for it, so the next time the box opens it fills the default (the byline, its last word, the title's first three words) again. The page printed blank once; reopening shows the default.
+- **Some Markdown is dropped or flattened in the manuscript.** A reference-style image (`![alt][ref]`) and block HTML other than a comment print nothing; a task list's boxes are left off (each item prints with a bullet), and a list numbered `1)` prints as `1.`.
+- **The PDF's first line sits on the top margin.** Its baseline is at one inch, so capitals rise about 8 pt into the margin. Left as it is: moving it shifts every position the layout tests pin.
+- **A heading inside a block quote loses the quote's indent**: it prints as a heading-styled paragraph at the body's margins.
+- **The `.pdf` extension isn't export-only in the desktop app** (older than the manuscript): unlike `.docx`, which the app writes only where a Save dialog chose it, a `.pdf` could be written to a file merely opened with All files.
+
 ## Novel
 
 - **`useNovel`'s per-frame refresh keeps reparsing while a novel is open**, even with no Outline or Cards showing. It should pause when nothing is observing it.

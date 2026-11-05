@@ -42,14 +42,18 @@ const templateSection = computed<DropdownMenuItem[]>(() => [
 // (`EXPORTS`). (The
 // Final Draft and Markdown commands are off in the other kind, and the palette hides them; here
 // the other kind's items are left out.)
-const exportIds = computed(() =>
-  EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].flatMap((kind) =>
+const exportIds = computed(() => {
+  const ids = EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].flatMap((kind) =>
     // A script's story map follows its EPUB (story-map design §1.1).
     kind === 'epub' && editor.kind.value !== 'markdown'
       ? [`export-${kind}`, 'export-story-map']
       : [`export-${kind}`],
-  ),
-);
+  );
+  // A novel's manuscript, as a PDF or a Word file, ends the exports; only a novel has it.
+  return editor.kind.value === 'markdown' && editor.novel.value
+    ? [...ids, 'export-manuscript-pdf', 'export-manuscript-docx']
+    : ids;
+});
 const EXPORT_ICONS: Record<string, string> = {
   'export-pdf': 'i-lucide-file-output',
   'export-html': 'i-lucide-globe',
@@ -59,6 +63,8 @@ const EXPORT_ICONS: Record<string, string> = {
   'export-fountain': 'i-lucide-file-pen-line',
   'export-txt': 'i-lucide-file-type',
   'export-fdx': 'i-lucide-file-code',
+  'export-manuscript-pdf': 'i-lucide-book-open-text',
+  'export-manuscript-docx': 'i-lucide-file-text',
 };
 
 const items = computed<DropdownMenuItem[][]>(() => [

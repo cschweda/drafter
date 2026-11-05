@@ -222,6 +222,8 @@ test.describe('without JavaScript', () => {
       'Copyright (c) Feross Aboukhadijeh',
       'Courier Prime',
       'Inter Tight',
+      'Liberation Serif',
+      'Copyright (c) 2012 Red Hat, Inc.',
       'Anton',
       'Archivo',
       'Copyright 2020 The Anton Project Authors',
@@ -238,6 +240,19 @@ test.describe('without JavaScript', () => {
     await expect(page.getByRole('link', { name: /Inter Tight.*licence/i })).toHaveAttribute(
       'href',
       '/fonts/inter-tight/OFL.txt',
+    );
+    // Liberation Serif's own licence, the manuscript PDF's Times-style face, served verbatim.
+    await expect(page.getByRole('link', { name: /Liberation Serif.*licence/i })).toHaveAttribute(
+      'href',
+      '/fonts/liberation-serif/OFL.txt',
+    );
+    const liberation = await page.request.get('/fonts/liberation-serif/OFL.txt');
+    expect(liberation.ok()).toBe(true);
+    expect(await liberation.text()).toBe(
+      readFileSync(
+        new URL('../../../packages/render-pdf/fonts/liberation-serif/OFL.txt', import.meta.url),
+        'utf8',
+      ),
     );
     // The story map's Anton and Archivo, whose licences travel with every story map's fonts.
     for (const [name, file, from] of [
@@ -380,6 +395,31 @@ test.describe('without JavaScript', () => {
     ]) {
       expect(text, phrase).toContain(phrase);
     }
+  });
+
+  test('the Novel help page has "Sending it out" and names both manuscript exports', async ({
+    page,
+  }) => {
+    await page.goto('/docs/novel');
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Sending it out', exact: true }),
+    ).toHaveAttribute('id', 'sending-it-out');
+    const text = await mainText(page);
+    for (const phrase of [
+      'Manuscript (PDF)…',
+      'Manuscript (Word)…',
+      'Manuscript details',
+      'saved in your book’s file',
+      'an HTML or EPUB export made with “Let Drafter reopen this file”',
+      'about a tenth more pages',
+    ]) {
+      expect(text, phrase).toContain(phrase);
+    }
+    await page.goto('/docs/saving');
+    await expect(page.getByRole('heading', { name: 'Export a manuscript' })).toHaveAttribute(
+      'id',
+      'export-manuscript',
+    );
   });
 
   test('the Why Drafter page has its parts and the comparison as a real table', async ({

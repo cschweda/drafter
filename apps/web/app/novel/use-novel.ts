@@ -5,6 +5,7 @@ import {
   type Facts,
   findNode,
   MAX_SYNOPSIS,
+  type ManuscriptDetails,
   moveNode,
   type NovelFacts,
   type NovelNode,
@@ -55,6 +56,12 @@ export interface NovelSession {
   setFacts(id: string, facts: Facts): void;
   /** Writes the whole book's word target, in one undo step. Null takes it away. */
   setBookTarget(target: number | null): void;
+  /**
+   * Keeps the manuscript's details in the book (`novel.manuscript`), in one undo step; null or
+   * empty details take them away. False when they couldn't be written (`readOnly` says why); true
+   * when they were, or were already there.
+   */
+  setManuscript(details: ManuscriptDetails | null): boolean;
   /** Moves node `id` to `target` with its text and its facts, in one undo step. */
   move(id: string, target: NovelTarget): boolean;
   /** Puts the cursor at node `id`'s heading and shows it in the Source. */
@@ -227,6 +234,18 @@ function create(): NovelSession {
       dispatch(state.changes(change));
     }
 
+    function setManuscript(details: ManuscriptDetails | null): boolean {
+      if (readOnly()) return false;
+      const state = editor.view.state;
+      const text = state.doc.toString();
+      const all = readFacts(text);
+      if (details && Object.keys(details).length > 0) all.manuscript = details;
+      else delete all.manuscript;
+      const change = factsChange(text, all);
+      if (change) dispatch(state.changes(change));
+      return true;
+    }
+
     function move(id: string, target: NovelTarget): boolean {
       moved.value = null;
       const why = readOnly();
@@ -282,6 +301,7 @@ function create(): NovelSession {
       readOnly,
       setFacts,
       setBookTarget,
+      setManuscript,
       move,
       goto,
     } satisfies NovelSession;

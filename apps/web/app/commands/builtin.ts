@@ -132,7 +132,8 @@ export function registerBuiltinCommands(): void {
   const isMarkdown = () => editor.kind.value === 'markdown';
   const exportsHere = (kind: ExportKind) => exportApplies(kind, editor.kind.value);
   /** When a command applies, for the groups kept in their own modules (help, export). */
-  const when: When = { hasScript, idle, canStart, isFountain, isMarkdown, exportsHere };
+  const isNovel = () => isMarkdown() && editor.novel.value;
+  const when: When = { hasScript, idle, canStart, isFountain, isMarkdown, isNovel, exportsHere };
 
   // ---- Showing the editor, and the other tabs ---------------------------------------------
 

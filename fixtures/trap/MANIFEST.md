@@ -2,7 +2,7 @@
 
 Generated from `traps.ts` by `harness.test.ts` (run `pnpm vitest run --project trap -u` after changing a trap). Each row is one file; each entry point it goes through has the outcome it must give. See README.md for the entry points.
 
-283 traps: fountain 58, markdown 37, text 20, fdx 30, highland 42, fadein 11, html 31, epub 18, files 13, modules 9, cuts 8, draft 6.
+287 traps: fountain 58, markdown 41, text 20, fdx 30, highland 42, fadein 11, html 31, epub 18, files 13, modules 9, cuts 8, draft 6.
 
 ## fountain
 
@@ -108,6 +108,10 @@ Generated from `traps.ts` by `harness.test.ts` (run `pnpm vitest run --project t
 | `novel-meta-hostile` | `meta-hostile.md` | A novel’s comment holding `__proto__` and `constructor` keys, wrong types, an unknown status, and a 1 MB synopsis opens; the facts are ignored or capped, never thrown. | **web-open**: opens, 1000342 characters, exactly<br>**desktop-open**: opens, 1000342 characters, exactly<br>**package**: opens<br>**mcp**: opens<br>**novel**: opens |
 | `novel-deep-parts` | `deep-parts.md` | 20,000 parts, each holding a chapter and two sections, are read in linear time and one move keeps every line. | **web-open**: opens, 1466708 characters, exactly<br>**desktop-open**: opens, 1466708 characters, exactly<br>**package**: opens<br>**mcp**: opens<br>**novel**: opens |
 | `novel-crlf` | `crlf.md` | A novel written with CRLF line breaks opens with line feeds; read raw, its structure is the same and a move keeps its CRLF. | **web-open**: opens, 147 characters, exactly<br>**desktop-open**: opens, 147 characters, exactly<br>**package**: opens<br>**mcp**: opens<br>**novel**: opens |
+| `novel-manuscript-chapters` | `manuscript-chapters.md` | 20,000 chapters make a manuscript as a PDF and as a Word file within the time, the Word file whole and the PDF opening. | **web-open**: opens, 668932 characters, exactly<br>**manuscript**: opens<br>**desktop-open**: opens, 668932 characters, exactly<br>**package**: opens<br>**mcp**: opens<br>**novel**: opens |
+| `novel-manuscript-title` | `manuscript-title.md` | A 50,000-character title, as the first heading and in the details too, makes both files without a throw. | **web-open**: opens, 50061 characters, exactly<br>**manuscript**: opens<br>**desktop-open**: opens, 50061 characters, exactly<br>**package**: opens<br>**mcp**: opens<br>**novel**: opens |
+| `novel-manuscript-xml` | `manuscript-xml.md` | Field codes, `]]>`, `&`, NUL, and U+FFFE in the text and in the title and contact lines leave the Word file’s every part well-formed, with the one field. | **web-open**: opens, 10914 characters, exactly<br>**manuscript**: opens<br>**desktop-open**: opens, 10914 characters, exactly<br>**package**: opens<br>**mcp**: opens<br>**novel**: opens |
+| `novel-manuscript-rtl` | `manuscript-rtl.md` | Hebrew and Arabic paragraphs, alone and beside English, make both files: letters the font lacks print as `?`, nothing throws. | **web-open**: opens, 178 characters, exactly<br>**manuscript**: opens<br>**desktop-open**: opens, 178 characters, exactly<br>**package**: opens<br>**mcp**: opens<br>**novel**: opens |
 
 ## text
 

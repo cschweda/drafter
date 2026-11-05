@@ -52,7 +52,7 @@ export class FileProblemError extends Error {
   }
 }
 
-export type FileKind = 'fountain' | 'markdown' | 'pdf' | 'html' | 'epub' | 'txt' | 'fdx';
+export type FileKind = 'fountain' | 'markdown' | 'pdf' | 'html' | 'epub' | 'txt' | 'fdx' | 'docx';
 
 export interface FileAccess {
   /** Save writes back to the file it came from (Chromium's API; a desktop version: always). */
@@ -113,6 +113,14 @@ const TYPES: Record<FileKind, PickerOptions['types']> = {
   html: [{ description: 'Web page', accept: { 'text/html': ['.html'] } }],
   epub: [{ description: 'E-book', accept: { 'application/epub+zip': ['.epub'] } }],
   fdx: [{ description: 'Final Draft file', accept: { 'application/xml': ['.fdx'] } }],
+  docx: [
+    {
+      description: 'Word document',
+      accept: {
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      },
+    },
+  ],
 };
 
 const isAbort = (error: unknown) => error instanceof DOMException && error.name === 'AbortError';

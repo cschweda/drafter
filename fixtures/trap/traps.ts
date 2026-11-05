@@ -76,6 +76,11 @@ export interface Trap {
   memoryMB?: number;
   /** For the `novel` entry point: the structure it must find, and that it makes a move. */
   novel?: { parts: number; chapters: number; sections: number; moves: boolean };
+  /**
+   * For the `manuscript` entry point: the details the writer gave (a title, contact lines), which
+   * go into the manuscript as they are, and how many chapters the book holds.
+   */
+  manuscript?: { details?: Record<string, unknown>; chapters: number };
 }
 
 /** The time one trap may take at one entry point, by default. */
@@ -1087,6 +1092,88 @@ const NOVEL_TRAPS: Trap[] = [
     bytes: () => enc(CRLF_NOVEL),
     expect: { 'web-open': opens(CRLF_NOVEL.replace(/\r\n/g, '\n')) },
     novel: { parts: 1, chapters: 2, sections: 2, moves: true },
+  },
+];
+
+// ---- A novel's manuscript -----------------------------------------------------------------------
+
+/** 20,000 one-line chapters: a manuscript starts each on a new page, so this is 20,000 pages. */
+const MANUSCRIPT_CHAPTERS = `${Array.from({ length: 20_000 }, (_, i) => `# Chapter ${i + 1}\n\nShe walked out.\n`).join('\n')}\n${NOVEL_META}`;
+/** A 50,000-character chapter heading: the running header, the title page, and the file's name all take it. */
+const LONG_TITLE = 'T'.repeat(50_000);
+const MANUSCRIPT_TITLE = `# ${LONG_TITLE}\n\nThe tide came in.\n\n${NOVEL_META}`;
+/** What breaks XML, or a Word field, or a CDATA section, or the PDF's strings, in one line. */
+const XML_HOSTILE = '<w:fldChar w:fldCharType="begin"/> ]]> & &amp; \u0000 ￾ ￿ "\' </w:t></w:p>';
+/** The same without the NUL, for the start of the file: Open refuses a NUL in its first 8 KB. */
+const XML_EARLY = XML_HOSTILE.replace('\u0000', '');
+const MANUSCRIPT_XML = `# ${XML_EARLY}\n\n${'Padding words. '.repeat(700)}\n\n${XML_HOSTILE}\n\n*${XML_HOSTILE}* **${XML_HOSTILE}**\n\n***\n\n<w:instrText>${XML_HOSTILE}\n\n${NOVEL_META}`;
+/** Hebrew and Arabic: right to left, and letters neither font has. */
+const MANUSCRIPT_RTL = `# פרק ראשון\n\nהיא הלכה אל הים, והגלים באו אליה.\n\n# الفصل الثاني\n\nمشت إلى البحر وهي تقول *مرحبا* للموج.\n\nShe said שלום and then مرحبا aloud.\n\n${NOVEL_META}`;
+
+const MANUSCRIPT_TRAPS: Trap[] = [
+  {
+    id: 'novel-manuscript-chapters',
+    format: 'markdown',
+    name: 'manuscript-chapters.md',
+    tests:
+      '20,000 chapters make a manuscript as a PDF and as a Word file within the time, the Word file whole and the PDF opening.',
+    bytes: () => enc(MANUSCRIPT_CHAPTERS),
+    expect: { 'web-open': opens(MANUSCRIPT_CHAPTERS), manuscript: opens() },
+    manuscript: { chapters: 20_000 },
+    limitMs: 30_000,
+    memoryMB: 1024,
+  },
+  {
+    id: 'novel-manuscript-title',
+    format: 'markdown',
+    name: 'manuscript-title.md',
+    tests:
+      'A 50,000-character title, as the first heading and in the details too, makes both files without a throw.',
+    bytes: () => enc(MANUSCRIPT_TITLE),
+    expect: { 'web-open': opens(MANUSCRIPT_TITLE), manuscript: opens() },
+    manuscript: {
+      chapters: 1,
+      details: {
+        title: LONG_TITLE,
+        byline: LONG_TITLE,
+        shortTitle: LONG_TITLE,
+        surname: LONG_TITLE,
+      },
+    },
+    limitMs: 20_000,
+    memoryMB: 1024,
+  },
+  {
+    id: 'novel-manuscript-xml',
+    format: 'markdown',
+    name: 'manuscript-xml.md',
+    tests:
+      'Field codes, `]]>`, `&`, NUL, and U+FFFE in the text and in the title and contact lines leave the Word file’s every part well-formed, with the one field.',
+    bytes: () => enc(MANUSCRIPT_XML),
+    expect: { 'web-open': opens(MANUSCRIPT_XML), manuscript: opens() },
+    manuscript: {
+      chapters: 1,
+      details: {
+        title: XML_HOSTILE,
+        byline: XML_HOSTILE,
+        legalName: XML_HOSTILE,
+        contact: [XML_HOSTILE, '<w:fldSimple w:instr="PAGE"/>', ']]>', '\u0000￾&'],
+        surname: XML_HOSTILE,
+        shortTitle: XML_HOSTILE,
+      },
+    },
+    limitMs: 20_000,
+  },
+  {
+    id: 'novel-manuscript-rtl',
+    format: 'markdown',
+    name: 'manuscript-rtl.md',
+    tests:
+      'Hebrew and Arabic paragraphs, alone and beside English, make both files: letters the font lacks print as `?`, nothing throws.',
+    bytes: () => enc(MANUSCRIPT_RTL),
+    expect: { 'web-open': opens(MANUSCRIPT_RTL), manuscript: opens() },
+    manuscript: { chapters: 2 },
+    limitMs: 20_000,
   },
 ];
 
@@ -2853,6 +2940,7 @@ export const TRAPS: readonly Trap[] = [
   ...CLASSIC_TRAPS,
   ...MARKDOWN_TRAPS,
   ...NOVEL_TRAPS,
+  ...MANUSCRIPT_TRAPS,
   ...FDX_TRAPS,
   ...HIGHLAND_TRAPS,
   ...FADE_IN_TRAPS,

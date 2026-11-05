@@ -9,8 +9,9 @@ import {
   exportProgress,
 } from '~/storage/export';
 
-// A Markdown document exports as a PDF, its Markdown file, or plain text (Markdown PDF design §10).
-const { kind } = useEditor();
+// A Markdown document exports as a PDF, its Markdown file, or plain text (Markdown PDF design §10);
+// a novel as a manuscript too.
+const { kind, novel } = useEditor();
 
 // The toolbar's Export menu (Phase 1 design §9.7): PDF, Fountain, plain text, Final Draft, Markdown, and the treatment (a Markdown document's are the PDF, the Markdown file, and plain text). The trigger is the toolbar's
 // Export button, drawn by the toolbar and given through the slot. Each item runs the export's
@@ -90,6 +91,12 @@ function chooseTreatment() {
   commandById('export-treatment')?.run();
 }
 
+/** A novel's manuscript asks for its title page's details first, in its own dialog. */
+function chooseManuscript(format: 'pdf' | 'docx') {
+  close(true);
+  commandById(`export-manuscript-${format}`)?.run();
+}
+
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && open.value) {
     event.stopPropagation();
@@ -158,6 +165,15 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <button v-if="kind !== 'markdown'" type="button" class="item" @click="chooseTreatment">
         <UIcon name="i-lucide-list-tree" class="icon" />Treatment (.md)…
       </button>
+      <!-- A novel's standard manuscript, for an agent or a publisher, after its dialog. -->
+      <template v-if="kind === 'markdown' && novel">
+        <button type="button" class="item" @click="chooseManuscript('pdf')">
+          <UIcon name="i-lucide-book-open-text" class="icon" />Manuscript (PDF)…
+        </button>
+        <button type="button" class="item" @click="chooseManuscript('docx')">
+          <UIcon name="i-lucide-file-text" class="icon" />Manuscript (Word)…
+        </button>
+      </template>
       <div class="rule" role="separator" />
       <button
         type="button"

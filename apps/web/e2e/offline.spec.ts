@@ -263,6 +263,7 @@ test.describe('offline', () => {
       '/fonts/archivo/OFL.txt',
       '/fonts/courier-prime/OFL.txt',
       '/fonts/inter-tight/OFL.txt',
+      '/fonts/liberation-serif/OFL.txt',
       '/licenses/dictionary-en-gb.txt',
       '/licenses/dictionary-en.txt',
       '/licenses/is-buffer.txt',
@@ -316,6 +317,8 @@ test.describe('offline', () => {
     );
     // Courier Prime's four files and its licence.
     expect(stored.urls.filter((u) => u.startsWith('/fonts/courier-prime/'))).toHaveLength(5);
+    // Liberation Serif's four, which a novel's manuscript PDF embeds, and its licence.
+    expect(stored.urls.filter((u) => u.startsWith('/fonts/liberation-serif/'))).toHaveLength(5);
     for (const icon of ['/icon-192.png', '/icon-512.png', '/icon-maskable-512.png']) {
       expect(stored.urls).toContain(icon);
     }
