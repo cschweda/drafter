@@ -31,13 +31,20 @@ const HEADER = 720;
 /** Half an inch: the first-line indent, and a block quote's and a list's indent. */
 const INDENT = 720;
 /**
- * One double-spaced line, 24 pt, in twips. The body's line spacing is exactly this, not Word's
- * "Double" (twice the font's own line height, about 26.6 pt for Times New Roman), so a page holds
- * as many lines as the PDF's and the two files break their pages alike.
+ * Double spacing, as Word's Paragraph dialog names it: 480 in the `line` units of `w:spacing`
+ * (240 is single), twice the font's own line height. Writers and editors expect "Double", and it
+ * grows with the font if they change it. Word's double line is a little taller than the PDF's
+ * 24 pt (about 26.6 pt in Times New Roman), so the Word file can run to a few more pages; that is
+ * accepted. As a length in twips (space before or after), 480 is one 24 pt line.
  */
 const DOUBLE = 480;
-/** One single-spaced line of 12 pt type: the contact lines' leading, as the PDF sets them. */
+/** Single spacing, in the `line` units of `w:spacing`: the contact lines and the header. */
 const SINGLE = 240;
+/**
+ * A single-spaced line's height in twips, about: 12 pt type's own line in Times New Roman or
+ * Courier New is about 13.8 pt. The title page counts the contact lines with it.
+ */
+const SINGLE_ROW = 276;
 
 const FONT_NAME: Readonly<Record<ManuscriptFont, string>> = {
   times: 'Times New Roman',
@@ -218,14 +225,14 @@ const CENTRED = '<w:jc w:val="center"/>';
 
 /**
  * `word/styles.xml`. The defaults are the manuscript: 12 pt Times New Roman (or Courier New),
- * double-spaced (exactly 24 pt), a half-inch first-line indent, two lines kept on each side of a
+ * double-spaced (Word's Double), a half-inch first-line indent, two lines kept on each side of a
  * page break, in the document's language. Every other style changes only what it must. A code
  * line and inline code stay in the manuscript's own font, as the PDF prints them.
  */
 export function styles(font: ManuscriptFont, lang: string, paper: Paper): string {
   const face = FONT_NAME[font];
   const l = xmlText(lang);
-  const double = `<w:spacing w:before="0" w:after="0" w:line="${DOUBLE}" w:lineRule="exact"/>`;
+  const double = `<w:spacing w:before="0" w:after="0" w:line="${DOUBLE}" w:lineRule="auto"/>`;
   return (
     DECLARATION +
     `<w:styles xmlns:w="${W}">` +
@@ -247,7 +254,7 @@ export function styles(font: ManuscriptFont, lang: string, paper: Paper): string
     style(
       'Contact',
       'Contact',
-      `<w:spacing w:before="0" w:after="0" w:line="${SINGLE}" w:lineRule="exact"/>${FLUSH}`,
+      `<w:spacing w:before="0" w:after="0" w:line="${SINGLE}" w:lineRule="auto"/>${FLUSH}`,
     ) +
     style(
       'PartTitle',
@@ -326,7 +333,8 @@ function blockStyle(block: Extract<ManuscriptBlock, { kind: 'paragraph' }>): str
  * The title page: the legal name and contact lines single-spaced at the top left, the word count
  * on the first line's row at a right tab, then the title halfway down the page and the byline one
  * double-spaced line below it. The title's place is space above it, less the contact lines'
- * height: each line counts as one row, since the file can't measure where Word will wrap.
+ * height: each line counts as one single-spaced row (`SINGLE_ROW`), since the file can't measure
+ * the font or where Word will wrap.
  */
 function titlePage(ms: Manuscript, paper: Paper): string[] {
   const details = [ms.legalName, ...ms.contact].map((d) => d.trim()).filter((d) => d !== '');
@@ -340,7 +348,7 @@ function titlePage(ms: Manuscript, paper: Paper): string[] {
     }),
   );
   for (const detail of details.slice(1)) out.push(paragraph('Contact', text(detail)));
-  const before = Math.max(0, partBefore(paper) - rows * SINGLE);
+  const before = Math.max(0, partBefore(paper) - rows * SINGLE_ROW);
   out.push(
     paragraph('Title', text(ms.title.trim()), {
       extra: `<w:spacing w:before="${before}"/>`,

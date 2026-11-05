@@ -181,8 +181,8 @@ describe('renderManuscriptDocx: settings and styles', () => {
     expect(attr(child(rPr, 'rFonts') as Element, 'ascii')).toBe('Times New Roman');
     expect(attr(child(rPr, 'sz') as Element, 'val')).toBe('24');
     expect(attr(child(pPr, 'spacing') as Element, 'line')).toBe('480');
-    // Exactly 24 pt, the PDF's leading, so the two files break their pages alike.
-    expect(attr(child(pPr, 'spacing') as Element, 'lineRule')).toBe('exact');
+    // Word's own Double, which the Paragraph dialog names so and which grows with the font.
+    expect(attr(child(pPr, 'spacing') as Element, 'lineRule')).toBe('auto');
     expect(attr(child(pPr, 'ind') as Element, 'firstLine')).toBe('720');
     expect(attr(child(rPr, 'lang') as Element, 'val')).toBe('en-US');
   });
@@ -228,6 +228,8 @@ describe('renderManuscriptDocx: settings and styles', () => {
     expect(child(code, 'rFonts')).toBeUndefined();
     const contact = child(style(styles, 'Contact'), 'spacing') as Element;
     expect(attr(contact, 'line')).toBe('240');
+    // True single spacing, so Word never clips an accented capital or a descender.
+    expect(attr(contact, 'lineRule')).toBe('auto');
     expect(attr(child(style(styles, 'Contact'), 'ind') as Element, 'firstLine')).toBe('0');
     expect(attr(child(style(styles, 'Header'), 'jc') as Element, 'val')).toBe('right');
   });
@@ -289,6 +291,9 @@ describe('renderManuscriptDocx: the document', () => {
     expect(attr(tab, 'val')).toBe('right');
     expect(attr(tab, 'pos')).toBe('9360');
     expect(styleOf(ps[4] as Element)).toBe('Title');
+    // Halfway down: 6480 twips below the margin, less four single-spaced rows of about 276.
+    const before = child(child(ps[4] as Element, 'pPr') as Element, 'spacing') as Element;
+    expect(attr(before, 'before')).toBe(String(6480 - 4 * 276));
     expect(textOf(ps[4] as Element)).toBe('The Salt Road');
     expect(styleOf(ps[5] as Element)).toBe('Byline');
     expect(textOf(ps[5] as Element)).toBe('by R. Vale');
@@ -301,6 +306,12 @@ describe('renderManuscriptDocx: the document', () => {
     expect(styleOf(ps[0] as Element)).toBe('Contact');
     expect(textOf(ps[0] as Element)).toBe('\tabout 87,000 words');
     expect(styleOf(ps[1] as Element)).toBe('Title');
+    // One row, for the word count's, on A4 as on Letter.
+    const a4 = bodyParagraphs(
+      parse((await render(ms, { paper: 'a4' })).get('word/document.xml') ?? ''),
+    );
+    const before = child(child(a4[1] as Element, 'pPr') as Element, 'spacing') as Element;
+    expect(attr(before, 'before')).toBe(String(6979 - 276));
   });
 
   it('writes parts, chapters, breaks, quotes, lists, code, and END in their styles', async () => {
@@ -456,6 +467,38 @@ describe('renderManuscriptDocx: the header and the properties', () => {
       '<dcterms:created xsi:type="dcterms:W3CDTF">2026-11-05T10:20:30Z</dcterms:created>',
     );
   });
+});
+
+describe('renderManuscriptDocx: an empty book and an empty title', () => {
+  for (const [what, ms] of [
+    ['an empty book', { ...fixture(), blocks: [], notes: [] }],
+    ['an empty title', { ...fixture(), title: '', shortTitle: '' }],
+    ['an empty title and book', { ...fixture({}), title: '  ', blocks: [], notes: [] }],
+  ] as [string, Manuscript][]) {
+    it(`writes ${what} as a well-formed file with the one field`, async () => {
+      const parts = await render(ms);
+      expect([...parts.keys()].sort()).toEqual([...PARTS].sort());
+      let fields = 0;
+      for (const [name, xml] of parts) {
+        expect(parse(xml).getElementsByTagName('parsererror').length, name).toBe(0);
+        const here = xml.split('w:fldSimple').length - 1;
+        if (here > 0) expect(name).toBe('word/header1.xml');
+        fields += here;
+        for (const banned of [
+          'w:instrText',
+          'w:fldChar',
+          'updateFields',
+          'TargetMode="External"',
+        ]) {
+          expect(xml, `${name}: ${banned}`).not.toContain(banned);
+        }
+      }
+      expect(fields).toBe(1);
+      const core = parts.get('docProps/core.xml') ?? '';
+      expect(core).not.toMatch(/<dc:title>\s*<\/dc:title>|<dc:title\/>/);
+      if (ms.title.trim() === '') expect(core).not.toContain('dc:title');
+    });
+  }
 });
 
 describe('renderManuscriptDocx: XML-looking text (review focus 1)', () => {
