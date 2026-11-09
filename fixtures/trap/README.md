@@ -5,7 +5,7 @@ one outcome every way in must give it. A trap either **opens** with specific tex
 warning** (a note count, a notice), or is **refused** with a specific plain message. It never
 crashes or hangs, never runs anything, never fetches anything, and never uses unbounded memory.
 
-[MANIFEST.md](MANIFEST.md) lists every trap, generated from [`traps.ts`](traps.ts): 287 of them,
+[MANIFEST.md](MANIFEST.md) lists every trap, generated from [`traps.ts`](traps.ts): 294 of them,
 across Fountain, Markdown (a novel among them), plain text, Final Draft (`.fdx`), Highland, Fade In, HTML and EPUB
 reopening, special files (pipes, links, folders), the desktop app's modules folder, and the
 drafts and cuts files read back from beside a work.
@@ -63,6 +63,7 @@ Every way a file comes into Drafter, and the harness that runs each one
 | `desktop-modules` | The desktop app's modules folder: each `module.json`, read once at start. | `apps/desktop/src/module-folder.ts` | `harness.test.ts` |
 | `beside-read` | Drafts and cuts read back from beside the work when it opens: the cuts file (`Boca.fountain.cuts.md`), each entry checked by its ID and merged, and draft files (`Boca drafts/Boca – Draft 03.fountain`), each ID checked against its text. Untrusted: they may have been edited anywhere. | `apps/web/app/beside/read.ts` → `@drafter/history` | `harness.test.ts` |
 | `mcp` | Drafter for Claude: each tool’s read of a file in a configured folder, and every path a tool is given. | `packages/mcp/src` (`paths.ts`, `load.ts`, `inside.ts`, `tools/`) → `@drafter/archive` (`notAScript`, `reopenFormatOf`, `embeddedSource`), `@drafter/archive/node` (`readCapped`, `strictText`), and each format’s reader | `harness.test.ts`, in the trap worker, through the SDK’s in-memory transport |
+| `production` | A script's production block (locks and revisions), read as the app reads it: `readProduction` on the parsed block, then `decodeBaseline` on the open set's baseline, capped as it inflates. The bytes are read whole, past Open's 5 MB check, so the block's own caps are tried. Only the production traps go through it. | `packages/production/src` (`readProduction`, `CAPS`, `decodeBaseline`), as `apps/web/app/production/use-production.ts` uses them | `harness.test.ts` (trap worker) |
 | `classic` | A hostile script open in Classic Mode: the left pane drawn, the cursor walked through every line, and a mode switched. Every trap that opens as Fountain text (not Markdown) goes through it, after the web app's Open has made it text. | `apps/web/app/storage/open.ts` (`openFile`) → `packages/cm-fountain/src/classic` (`classic()`) | `apps/web/test/trap-classic.test.ts` (jsdom, a real `EditorView`) |
 | `novel` | A Markdown file read as a novel: its parts, chapters, and sections found, the facts in its metadata comment read, and one move. Every Markdown trap that opens goes through it, as Open's text and as the raw text where the line breaks differ. The move must keep every non-blank line. | `packages/novel/src` (`novelStructure`, `readFacts`, `downTarget`/`upTarget`, `moveNode`) | `harness.test.ts` (trap worker) |
 
@@ -126,6 +127,20 @@ lines; a metadata block damaged, not last, and twice; a 100,000-character line, 
 heading of 50,000 spaces, and 100,000 forced marks; bidirectional and combining characters on a
 hidden mark's edge; and a name and a place made to break the autofill list, which must show in
 the list as text.
+
+### Production (`production`)
+
+Seven traps (`production-*`), each the same small locked script with its `/* drafter */` block's
+`production` key broken one way: a baseline that isn't base64; a gzip bomb, 13 KB that inflates to
+9.5 MiB, past the decoder's 8 MiB cap; a page map whose lines run backwards; a closed set of
+100,000 marked lines, five times its cap; scene `numbers` that are numbers, not strings; and a
+stored baseline one character past `CAPS.baselineChars`, which makes the file about 11 MB, so Open,
+`build`, and Drafter for Claude refuse it by size (the `production` entry point reads it anyway, and
+the block is refused by its length). Each that opens must open as written, through every entry
+point a Fountain file goes through, and unlocked: no lock read, nothing thrown. The seventh,
+`production-well-formed`, is the control: a good block, which must read as a lock, so the check
+can tell. `apps/web/e2e/production.spec.ts` opens each in Chromium and checks the Production tab
+says "Not locked" and calls the block damaged.
 
 Not entry points, so no trap goes through them, but part of the survey:
 

@@ -183,7 +183,10 @@ function manifestMarkdown(): string {
     );
     for (const trap of TRAPS.filter((t) => t.format === format)) {
       const outcomes = [
-        ...via(trap).map((entry) => `**${entry}**: ${said(trap.expect[entry] as Outcome)}`),
+        ...via(trap).map(
+          (entry) =>
+            `**${entry}**: ${said(trap.expect[entry] as Outcome)}${entry === 'production' ? (trap.locked ? ', locked' : ', unlocked') : ''}`,
+        ),
         ...Object.entries(trap.keptOut ?? {}).map(
           ([entry, why]) => `kept out of **${entry}**, as ${why}`,
         ),
@@ -319,6 +322,18 @@ describe('novel: a Markdown file read as a novel', () => {
       });
       expect(answer.novel?.moved, `${trap.id}: made a move`).toBe(trap.novel.moves);
     }
+  });
+});
+
+describe('production: a script’s production block read as the app reads it', () => {
+  test.each(trapsFor('production').map((t) => [t.id, t] as const))('%s', async (_id, trap) => {
+    const bytes = trap.bytes?.() as Uint8Array;
+    const job = { kind: 'production', bytes } as const;
+    const answer = checkRan(trap, bytes.length, await ran(trap, job), 'production');
+    checkOutcome(trap, trap.expect.production as Outcome, answer.happened, 'production');
+    // A hostile block leaves the script unlocked; only the control reads as a lock.
+    expect(answer.production?.locked, `${trap.id}: locked`).toBe(trap.locked ?? false);
+    if (trap.locked) expect(answer.production?.read, `${trap.id}: read`).toBe(true);
   });
 });
 

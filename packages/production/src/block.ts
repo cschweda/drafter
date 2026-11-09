@@ -72,6 +72,10 @@ export function readProduction(meta: DrafterMeta | null): Production | null {
   for (const p of pages) {
     const page = readPage(p);
     if (!page) return null;
+    // A lock writes pages in order, and a rebase keeps a folded page on the line it folded into,
+    // so a page's line never runs back: one that does is a hand-made or damaged map.
+    const previous = readPages.at(-1);
+    if (previous && page.line < previous.line) return null;
     readPages.push(page);
   }
   const readSets: ProductionSet[] = [];

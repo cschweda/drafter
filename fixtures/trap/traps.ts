@@ -9,10 +9,11 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, symlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { deflateRawSync } from 'node:zlib';
+import { deflateRawSync, gzipSync } from 'node:zlib';
 import { SOURCE_ENTRY, sourceElement } from '../../packages/archive/src/reopen';
 import { type CutEntry, cutsFile } from '../../packages/history/src/cuts-file';
 import { draftFile } from '../../packages/history/src/draft-file';
+import { CAPS } from '../../packages/production/src/block';
 import type { Entry } from './entry-points';
 import { SYMLINK_ATTRS, type TrapEntry, trapZip } from './zip';
 
@@ -81,6 +82,11 @@ export interface Trap {
    * go into the manuscript as they are, and how many chapters the book holds.
    */
   manuscript?: { details?: Record<string, unknown>; chapters: number };
+  /**
+   * For the `production` entry point: the block must read as a lock, its baseline decoded. Only the
+   * well-formed control says so; every other trap through it must leave the script unlocked.
+   */
+  locked?: boolean;
 }
 
 /** The time one trap may take at one entry point, by default. */
@@ -886,6 +892,126 @@ const CLASSIC_TRAPS: Trap[] = [
     LIST_BREAKER,
     { inert: true },
   ),
+];
+
+// ---- Production (locks and revisions) -----------------------------------------------------------
+
+/** A locked script's text, without its block: the baseline of the well-formed lock. */
+const LOCKED_SCRIPT =
+  'Title: The Locked Box\n\nINT. SIGNAL BOX - NIGHT #1#\n\nA lever waits.\n\nEXT. YARD - DAY #2#\n\nRain on the rails.\n';
+const gzip64 = (data: Uint8Array | string) => b64(gzipSync(data, { level: 9 }));
+/** A well-formed production block for `LOCKED_SCRIPT`, which each trap breaks one way. */
+const LOCK = {
+  lockedAt: '2026-11-09',
+  firstScene: 1,
+  numbers: ['1', '2'],
+  pages: [['1', 2, 0]],
+  sets: [{ name: 'Blue', color: '#8fb4e8', date: '2026-11-09', draft: 'd'.repeat(64) }],
+  baseline: gzip64(LOCKED_SCRIPT),
+};
+/** The locked script with `production` as its block's key, written as `setMeta` writes it. */
+const lockedWith = (production: Record<string, unknown>) =>
+  `${LOCKED_SCRIPT}\n/* drafter\n${JSON.stringify({ v: 1, template: 'us-screenplay', production }).replaceAll('/', '\\/')}\n*/\n`;
+
+/** A hundred thousand fingerprints, a closed set's `lines` five times past its cap. */
+const MARKED_100K = Array.from(
+  { length: 100_000 },
+  (_, i) => `${i.toString(16).padStart(7, '0')}:1`,
+);
+/** A gzip that inflates to 9.5 MiB, past the 8 MiB the decoder may inflate a baseline to. */
+const BOMB_BASELINE = () => gzip64(new Uint8Array(9.5 * MiB).fill(0x61));
+
+const productionTrap = (
+  id: string,
+  tests: string,
+  more: Partial<Trap> & { body: string },
+): Trap => {
+  const { body, ...rest } = more;
+  return {
+    id: `production-${id}`,
+    format: 'fountain',
+    name: `production-${id}.fountain`,
+    tests,
+    bytes: () => enc(body),
+    expect: { 'web-open': opens(body), production: opens() },
+    ...rest,
+  };
+};
+
+const PRODUCTION_TRAPS: Trap[] = [
+  productionTrap(
+    'well-formed',
+    'The control: a well-formed lock opens locked, its baseline decoded, so the traps below show the reader can tell.',
+    { body: lockedWith(LOCK), locked: true },
+  ),
+  {
+    id: 'production-bad-base64',
+    format: 'fountain',
+    name: 'production-bad-base64.fountain',
+    tests:
+      'A production block whose baseline isn’t base64: the script opens as written, unlocked, and the block is called damaged.',
+    bytes: file('fountain/production-bad-base64.fountain'),
+    expect: {
+      'web-open': opens(text('fountain/production-bad-base64.fountain')),
+      production: opens(),
+    },
+  },
+  productionTrap(
+    'gzip-bomb',
+    'A baseline of 13 KB that inflates to 9.5 MiB: the decoder stops at its 8 MiB cap, and the script opens unlocked.',
+    { body: lockedWith({ ...LOCK, baseline: BOMB_BASELINE() }) },
+  ),
+  {
+    id: 'production-pages-out-of-order',
+    format: 'fountain',
+    name: 'production-pages-out-of-order.fountain',
+    tests:
+      'A page map whose labels and lines run backwards (3, 1, 2): read as damaged, never trusted, and the script opens unlocked.',
+    bytes: file('fountain/production-pages-out-of-order.fountain'),
+    expect: {
+      'web-open': opens(text('fountain/production-pages-out-of-order.fountain')),
+      production: opens(),
+    },
+  },
+  productionTrap(
+    '100k-marked-lines',
+    'A closed revision set of 100,000 marked lines, five times its cap: ignored whole, in time, and the script opens unlocked.',
+    {
+      body: lockedWith({
+        ...LOCK,
+        sets: [
+          { ...LOCK.sets[0], name: 'Blue', lines: MARKED_100K, gaps: [] },
+          { name: 'Pink', color: '#f2a7c4', date: '2026-11-10', draft: 'e'.repeat(64) },
+        ],
+      }),
+      large: true,
+      limitMs: 5000,
+    },
+  ),
+  {
+    id: 'production-numbers-wrong-type',
+    format: 'fountain',
+    name: 'production-numbers-wrong-type.fountain',
+    tests:
+      'Scene `numbers` given as numbers, not strings: the block is ignored, the script opens unlocked, its `#1#` text untouched.',
+    bytes: file('fountain/production-numbers-wrong-type.fountain'),
+    expect: {
+      'web-open': opens(text('fountain/production-numbers-wrong-type.fountain')),
+      production: opens(),
+    },
+  },
+  {
+    id: 'production-baseline-over-cap',
+    format: 'fountain',
+    name: 'production-baseline-over-cap.fountain',
+    tests:
+      'A stored baseline one character past its cap (about 11 MB): the file is over 5 MB, so Open refuses it by size; read anyway, the block is refused by length before any decoding.',
+    bytes: () => enc(lockedWith({ ...LOCK, baseline: 'A'.repeat(CAPS.baselineChars + 1) })),
+    expect: { 'web-open': refused(SAYS.tooBig), production: opens() },
+    large: true,
+    limitMs: 10_000,
+    memoryMB: 512,
+  },
 ];
 
 /** The name the list-breaker trap puts in a cue and a place, which the autofill list must show as text. */
@@ -2938,6 +3064,7 @@ export const TRAPS: readonly Trap[] = [
   ...TEXT_KINDS.flatMap(textTraps),
   ...FOUNTAIN_TRAPS,
   ...CLASSIC_TRAPS,
+  ...PRODUCTION_TRAPS,
   ...MARKDOWN_TRAPS,
   ...NOVEL_TRAPS,
   ...MANUSCRIPT_TRAPS,

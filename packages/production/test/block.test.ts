@@ -73,6 +73,34 @@ describe('the production block', () => {
     expect(readProduction({ v: 1 })).toBeNull();
   });
 
+  it('ignores pages whose lines run backwards, and keeps a fold on the line it folded into', () => {
+    const backwards = [
+      ['3', 40, 0],
+      ['1', 0, 0],
+      ['2', 20, 0],
+    ];
+    expect(readProduction(meta({ ...block, pages: backwards }))).toBeNull();
+    expect(
+      readProduction(
+        meta({
+          ...block,
+          pages: [
+            ['1', 5, 0],
+            ['2', 4, 9],
+          ],
+        }),
+      ),
+    ).toBeNull();
+    // A page folded by a rebase stays on the line of the page it folded into, printed 0 (anchors.ts).
+    const folded = [
+      ['1', 0, 0],
+      ['2', 30, 3],
+      ['3', 30, 0],
+      ['4', 50, 0],
+    ];
+    expect(readProduction(meta({ ...block, pages: folded }))?.pages).toHaveLength(4);
+  });
+
   it('caps the stored baseline by length', () => {
     const at = { ...block, baseline: 'A'.repeat(CAPS.baselineChars) };
     expect(readProduction(meta(at))?.baseline).toHaveLength(CAPS.baselineChars);
