@@ -900,41 +900,62 @@ const CLASSIC_TRAPS: Trap[] = [
 const LOCKED_SCRIPT =
   'Title: The Locked Box\n\nINT. SIGNAL BOX - NIGHT #1#\n\nA lever waits.\n\nEXT. YARD - DAY #2#\n\nRain on the rails.\n';
 const gzip64 = (data: Uint8Array | string) => b64(gzipSync(data, { level: 9 }));
+/** `make`, run once, the first time it is asked for: nothing is built when traps.ts is imported. */
+const once = <T>(make: () => T): (() => T) => {
+  let made: { value: T } | undefined;
+  return () => {
+    made ??= { value: make() };
+    return made.value;
+  };
+};
+/**
+ * An outcome that opens with exactly the text `make` gives, made only when the outcome's `text` is
+ * read (by a harness, or the manifest), not when the trap is listed.
+ */
+const opensLazily = (make: () => string): Outcome => ({
+  kind: 'opens',
+  get text() {
+    return make();
+  },
+});
 /** A well-formed production block for `LOCKED_SCRIPT`, which each trap breaks one way. */
-const LOCK = {
+const lock = once(() => ({
   lockedAt: '2026-11-09',
   firstScene: 1,
   numbers: ['1', '2'],
   pages: [['1', 2, 0]],
   sets: [{ name: 'Blue', color: '#8fb4e8', date: '2026-11-09', draft: 'd'.repeat(64) }],
   baseline: gzip64(LOCKED_SCRIPT),
-};
+}));
 /** The locked script with `production` as its block's key, written as `setMeta` writes it. */
 const lockedWith = (production: Record<string, unknown>) =>
   `${LOCKED_SCRIPT}\n/* drafter\n${JSON.stringify({ v: 1, template: 'us-screenplay', production }).replaceAll('/', '\\/')}\n*/\n`;
 
 /** A hundred thousand fingerprints, a closed set's `lines` five times past its cap. */
-const MARKED_100K = Array.from(
-  { length: 100_000 },
-  (_, i) => `${i.toString(16).padStart(7, '0')}:1`,
-);
+const marked100k = () =>
+  Array.from({ length: 100_000 }, (_, i) => `${i.toString(16).padStart(7, '0')}:1`);
 /** A gzip that inflates to 9.5 MiB, past the 8 MiB the decoder may inflate a baseline to. */
-const BOMB_BASELINE = () => gzip64(new Uint8Array(9.5 * MiB).fill(0x61));
+const bombBaseline = () => gzip64(new Uint8Array(9.5 * MiB).fill(0x61));
 
+/**
+ * A production trap whose file is the locked script with the block `production()` gives. The text
+ * is made the first time a test asks for the bytes or the outcome's text, and kept for the visit.
+ */
 const productionTrap = (
   id: string,
   tests: string,
-  more: Partial<Trap> & { body: string },
+  production: () => Record<string, unknown>,
+  more: Partial<Trap> = {},
 ): Trap => {
-  const { body, ...rest } = more;
+  const body = once(() => lockedWith(production()));
   return {
     id: `production-${id}`,
     format: 'fountain',
     name: `production-${id}.fountain`,
     tests,
-    bytes: () => enc(body),
-    expect: { 'web-open': opens(body), production: opens() },
-    ...rest,
+    bytes: () => enc(body()),
+    expect: { 'web-open': opensLazily(body), production: opens() },
+    ...more,
   };
 };
 
@@ -942,7 +963,8 @@ const PRODUCTION_TRAPS: Trap[] = [
   productionTrap(
     'well-formed',
     'The control: a well-formed lock opens locked, its baseline decoded, so the traps below show the reader can tell.',
-    { body: lockedWith(LOCK), locked: true },
+    lock,
+    { locked: true },
   ),
   {
     id: 'production-bad-base64',
@@ -959,7 +981,7 @@ const PRODUCTION_TRAPS: Trap[] = [
   productionTrap(
     'gzip-bomb',
     'A baseline of 13 KB that inflates to 9.5 MiB: the decoder stops at its 8 MiB cap, and the script opens unlocked.',
-    { body: lockedWith({ ...LOCK, baseline: BOMB_BASELINE() }) },
+    () => ({ ...lock(), baseline: bombBaseline() }),
   ),
   {
     id: 'production-pages-out-of-order',
@@ -976,14 +998,14 @@ const PRODUCTION_TRAPS: Trap[] = [
   productionTrap(
     '100k-marked-lines',
     'A closed revision set of 100,000 marked lines, five times its cap: ignored whole, in time, and the script opens unlocked.',
+    () => ({
+      ...lock(),
+      sets: [
+        { ...lock().sets[0], lines: marked100k(), gaps: [] },
+        { name: 'Pink', color: '#f2a7c4', date: '2026-11-10', draft: 'e'.repeat(64) },
+      ],
+    }),
     {
-      body: lockedWith({
-        ...LOCK,
-        sets: [
-          { ...LOCK.sets[0], name: 'Blue', lines: MARKED_100K, gaps: [] },
-          { name: 'Pink', color: '#f2a7c4', date: '2026-11-10', draft: 'e'.repeat(64) },
-        ],
-      }),
       large: true,
       limitMs: 5000,
     },
@@ -1006,7 +1028,7 @@ const PRODUCTION_TRAPS: Trap[] = [
     name: 'production-baseline-over-cap.fountain',
     tests:
       'A stored baseline one character past its cap (about 11 MB): the file is over 5 MB, so Open refuses it by size; read anyway, the block is refused by length before any decoding.',
-    bytes: () => enc(lockedWith({ ...LOCK, baseline: 'A'.repeat(CAPS.baselineChars + 1) })),
+    bytes: () => enc(lockedWith({ ...lock(), baseline: 'A'.repeat(CAPS.baselineChars + 1) })),
     expect: { 'web-open': refused(SAYS.tooBig), production: opens() },
     large: true,
     limitMs: 10_000,
