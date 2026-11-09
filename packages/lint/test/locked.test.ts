@@ -75,13 +75,37 @@ describe('locked-scene-gone', () => {
   });
 });
 
+describe('locked-scene-gone on a hostile block', () => {
+  it('reads at most 5000 numbers, quickly, and dedupes them', () => {
+    const numbers = Array.from({ length: 100_000 }, (_, i) => String(i + 1));
+    const source = locked(H('1') + H('2'), numbers);
+    const start = Date.now();
+    const found = run(source, 'locked-scene-gone');
+    expect(Date.now() - start).toBeLessThan(5000);
+    expect(found.length).toBe(4998);
+  });
+  it('gives a repeated entry one diagnostic', () => {
+    const source = locked(H('1') + H('3'), ['1', '2', '2', '3']);
+    expect(run(source, 'locked-scene-gone')).toHaveLength(1);
+  });
+});
+
 describe('locked-numbers-out-of-order and repeated-scene-number', () => {
   it('warns when a heading sorts before the one before it', () => {
     const source = locked(H('1') + H('3') + H('2'));
     const found = run(source, 'locked-numbers-out-of-order');
     expect(found).toHaveLength(1);
+    expect(found[0]?.message).toBe(
+      'Scene 2 is out of order: it follows scene 3, but locked scene numbers keep script order.',
+    );
     expect(found[0]?.severity).toBe('warning');
     expect(found[0]?.span.from).toBe(source.lastIndexOf('INT. KITCHEN'));
+  });
+
+  it('gives a repeat one warning, from repeated-scene-number only', () => {
+    const source = locked(H('1') + H('2') + H('2'));
+    expect(run(source, 'locked-numbers-out-of-order')).toEqual([]);
+    expect(run(source, 'repeated-scene-number')).toHaveLength(1);
   });
 
   it('accepts A-numbers in order', () => {

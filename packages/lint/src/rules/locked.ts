@@ -10,6 +10,9 @@ import type { Fix, LintDiagnostic, Rule } from '../types';
 
 // Lint keeps its own copy of the scene-number order from `@drafter/production`; a test checks that
 // the two agree.
+/** The most locked numbers read from a block (the production package's own cap). */
+const MAX_NUMBERS = 5000;
+
 const SHAPE = /^([A-Z]*)(\d+)([A-Z]*)$/;
 
 function parse(value: string) {
@@ -56,6 +59,7 @@ function setup(ctx: Parameters<Rule['run']>[0]) {
   return { numbers, headings };
 }
 
+// Strictly before only: an equal number is `repeated-scene-number`'s to report.
 export const lockedNumbersOutOfOrder: Rule = {
   id: 'locked-numbers-out-of-order',
   severity: 'warning',
@@ -71,7 +75,7 @@ export const lockedNumbersOutOfOrder: Rule = {
         ruleId: lockedNumbersOutOfOrder.id,
         severity: lockedNumbersOutOfOrder.severity,
         span: { ...cur.block.span },
-        message: `Scene ${cur.number} comes after scene ${prev.number}, but it sorts before it. A locked script keeps its numbers in order.`,
+        message: `Scene ${cur.number} is out of order: it follows scene ${prev.number}, but locked scene numbers keep script order.`,
       });
     }
     return found;
@@ -111,10 +115,28 @@ export const lockedSceneGone: Rule = {
     const nl = lineBreakOf(doc.source);
     const present = new Set(s.headings.map((h) => h.number));
     const last = s.headings[s.headings.length - 1] as Numbered;
+    // Running maximum of the headings' numbers, in script order: it never decreases, so the first
+    // heading that sorts after `n` is found by binary search.
+    const maxes: Numbered[] = [];
+    for (const h of s.headings) {
+      const top = maxes[maxes.length - 1];
+      maxes.push(top && compareSceneNumbers(top.number, h.number) >= 0 ? top : h);
+    }
+    const firstAfter = (n: string): Numbered | undefined => {
+      let lo = 0;
+      let hi = maxes.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (compareSceneNumbers((maxes[mid] as Numbered).number, n) > 0) hi = mid;
+        else lo = mid + 1;
+      }
+      // The running maximum names the heading that set it, which is the first one past `n`.
+      return s.headings[lo];
+    };
     const found: LintDiagnostic[] = [];
-    for (const n of s.numbers) {
+    for (const n of new Set(s.numbers.slice(0, MAX_NUMBERS))) {
       if (present.has(n)) continue;
-      const after = s.headings.find((h) => compareSceneNumbers(h.number, n) > 0);
+      const after = firstAfter(n);
       const target = after ?? last;
       let fix: Fix;
       if (after) {
