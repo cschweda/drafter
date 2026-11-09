@@ -19,8 +19,10 @@ describe('snapshot labels', () => {
       'before-draft': 'Before starting a draft',
       'before-unlock': 'Before unlocking',
       'before-clear-marks': 'Before clearing marks',
+      'before-omit': 'Before omitting scene 12A',
     };
     const detail: Partial<Record<SnapshotReason, string>> = {
+      'before-omit': '12A',
       opened: 'The Call.fountain',
       imported: 'The Call.fdx',
     };
@@ -31,6 +33,7 @@ describe('snapshot labels', () => {
     // A file's name that wasn't kept.
     expect(reasonLabel({ reason: 'opened' })).toBe('Opened a file');
     expect(reasonLabel({ reason: 'imported' })).toBe('Imported from a file');
+    expect(reasonLabel({ reason: 'before-omit' })).toBe('Before omitting a scene');
   });
 
   test('a label wins over the reason', () => {

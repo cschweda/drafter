@@ -2,10 +2,14 @@
 import { numbersScenes } from '@drafter/production';
 import { useLayout } from '~/editor/layout';
 import { useEditor } from '~/editor/session';
-import { useOutline } from '~/outline/use-outline';
-import { firstSceneNumber, productionAsking } from '~/production/commands';
+import {
+  firstSceneNumber,
+  productionAsking,
+  productionMessage,
+  productionWorking as working,
+} from '~/production/commands';
 import { longDate, openSetLine, pagesMarked, swatchOf } from '~/production/labels';
-import { useProductionActions } from '~/production/use-commands';
+import { productionReadOnly, useProductionActions } from '~/production/use-commands';
 import { DAMAGED_MESSAGE, useProduction } from '~/production/use-production';
 
 // The Production tab (production design §5): the script's state, the lock, the next revision with
@@ -15,14 +19,19 @@ const editor = useEditor();
 const { state, openSet, damaged } = useProduction();
 const { layout } = useLayout();
 const actions = useProductionActions();
-const outline = useOutline();
 
 const fountain = computed(() => editor.kind.value === 'fountain');
 const screenplay = computed(() => numbersScenes(editor.template.value));
 const locked = computed(() => state.value !== null);
-/** Why nothing can be changed here now (another tab is editing the script), or null. */
-const readOnly = computed(() => outline.readOnly.value);
-const working = ref(false);
+/**
+ * Why nothing can be changed here now, or null: another tab is editing the script, the draft being
+ * read is shown, or a stray /* stops every change.
+ */
+const readOnly = computed(() => productionReadOnly());
+// The last action's words belong to the script they were said of.
+watch(editor.loaded, () => {
+  productionMessage.value = '';
+});
 const stateLine = ref<HTMLElement>();
 
 const marked = computed(() => (openSet.value ? pagesMarked(layout.value, openSet.value.name) : 0));
@@ -35,17 +44,11 @@ const earlier = computed(() =>
 const openSwatch = computed(() => (openSet.value ? swatchOf(openSet.value) : null));
 const nextName = computed(() => (state.value ? actions.nextName() : ''));
 
-/** Runs an action, one at a time; focus goes to the state line, as the buttons change under it. */
+/** Runs an action (one at a time, the actions see to that); focus goes to the state line, as the buttons change under it. */
 async function run(act: () => Promise<boolean>) {
-  if (working.value) return;
-  working.value = true;
-  try {
-    if (await act()) {
-      await nextTick();
-      stateLine.value?.focus();
-    }
-  } finally {
-    working.value = false;
+  if (await act()) {
+    await nextTick();
+    stateLine.value?.focus();
   }
 }
 
@@ -79,7 +82,9 @@ function onFirstScene(event: Event) {
           />
           {{ openSetLine(openSet, marked) }}
         </p>
-        <p v-if="readOnly" class="note">{{ readOnly }}</p>
+        <p v-if="readOnly" class="note" data-production-read-only>{{ readOnly }}</p>
+        <!-- What the last action said, done or not; there from the start, so a change is read out. -->
+        <p role="status" class="said" data-production-said>{{ productionMessage }}</p>
 
         <!-- Not locked: the lock, and where its numbers start. -->
         <template v-if="!locked && !damaged">
@@ -91,7 +96,7 @@ function onFirstScene(event: Event) {
               step="1"
               inputmode="numeric"
               :value="firstSceneNumber"
-              :disabled="!!readOnly"
+              :disabled="!!readOnly || working"
               @change="onFirstScene"
             />
           </label>
@@ -151,12 +156,14 @@ function onFirstScene(event: Event) {
         <div v-if="locked || damaged" class="action row">
           <DButton
             v-if="locked"
-            :disabled="!!readOnly"
+            :disabled="!!readOnly || working"
             @click="productionAsking = 'clear-marks'"
           >
             Clear marks…
           </DButton>
-          <DButton :disabled="!!readOnly" @click="productionAsking = 'unlock'">Unlock…</DButton>
+          <DButton :disabled="!!readOnly || working" @click="productionAsking = 'unlock'">
+            Unlock…
+          </DButton>
         </div>
       </template>
     </section>
@@ -236,6 +243,11 @@ p {
 }
 .note {
   margin-top: 8px;
+}
+.said:not(:empty) {
+  margin-top: 8px;
+  padding-left: 8px;
+  border-left: 3px solid var(--border);
 }
 .problem {
   margin-bottom: 8px;

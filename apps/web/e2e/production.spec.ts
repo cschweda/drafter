@@ -112,6 +112,11 @@ test.describe('Production', () => {
     expect(text).toContain('EXT. ROOF - NIGHT #3#');
     await expect(panel(page).locator('[data-production-set]')).toContainText('Blue revision, ');
     await expect(panel(page).locator('[data-production-set]')).toContainText('0 pages marked');
+    // What each action did, or why it didn't, shows in the tab's status line.
+    const said = panel(page).getByRole('status');
+    await expect(said).toContainText('Pages and scene numbers are locked.');
+    await panel(page).getByRole('button', { name: 'Write new scene numbers' }).click();
+    await expect(said).toHaveText('Every scene already has its number written.');
     // The lock is one undo step.
     await showSource(page);
     await editor(page).focus();
@@ -168,7 +173,7 @@ test.describe('Production', () => {
     await written(page);
     await lockIt(page);
     const locked = (await wholeText(page)) ?? '';
-    await takeSnapshot(page);
+    // No snapshot is taken by hand: Omit scene keeps the scene's text in one of its own first.
     // The Outline's scene menu, from the keyboard.
     await command(page, 'Show Outline');
     const tree = page.getByRole('tree', { name: 'Outline' });
@@ -180,8 +185,13 @@ test.describe('Production', () => {
     await menu.getByRole('menuitem', { name: 'Omit scene' }).click();
     await expect.poll(() => wholeText(page)).toContain('.OMITTED #2#');
     expect(await wholeText(page)).not.toContain('A lamp swings');
-    // The scene's text is kept as a cut, found at the next snapshot (drafts-and-cuts design §3.1).
+    // The scene's text was kept in a snapshot just before (History says so), so the next snapshot,
+    // whatever takes it, finds it as a cut (drafts-and-cuts design §3.1).
     await takeSnapshot(page);
+    await command(page, 'History…');
+    await expect(options(page).filter({ hasText: 'Before omitting scene 2' })).toHaveCount(1);
+    await history(page).getByRole('button', { name: 'Close' }).click();
+    await expect(history(page)).toBeHidden();
     await command(page, 'Cuts…');
     await expect(page.locator('#panel-cuts')).toContainText('A lamp swings from a hook');
     // One undo brings it back.

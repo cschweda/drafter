@@ -1,3 +1,4 @@
+import { hasStrayBoneyard } from '@drafter/outline';
 import { freezeDraft } from '~/drafts/store';
 import { showTempTab } from '~/drafts/tabs';
 import { useDrafts } from '~/drafts/use-drafts';
@@ -12,10 +13,27 @@ import {
   firstSceneNumber,
   localDate,
   type ProductionActions,
+  READ_ONLY,
 } from './commands';
 
 // The Production actions in the app: the open script's editor, Drafts for each set's baseline, and
-// the snapshots taken before Unlock and Clear marks. Made on first use and kept for the visit.
+// the snapshots taken before Unlock, Clear marks, and Omit scene. Made on first use and kept for the
+// visit.
+
+/**
+ * Why Production can't change the open script now, or null: read as the editor's state changes, so
+ * the tab's buttons follow it.
+ */
+export function productionReadOnly(): string | null {
+  const editor = useEditor();
+  if (editor.locked.value)
+    return 'This script is open for editing in another Drafter tab, so Production can’t change it here.';
+  if (editor.frozen.value)
+    return 'This is a draft, opened to read: it can’t be changed, and neither can its lock or its marks.';
+  if (editor.kind.value === 'fountain' && hasStrayBoneyard(editor.doc.value))
+    return 'A /* in this script isn’t closed by its own */, so Production changes nothing until it is.';
+  return editor.view.state.readOnly ? READ_ONLY : null;
+}
 
 let shared: ProductionActions | undefined;
 
@@ -29,21 +47,18 @@ export function useProductionActions(): ProductionActions {
     template: () => editor.template.value,
     firstScene: () => firstSceneNumber.value,
     today: () => localDate(),
-    // Each baseline is a draft of the writer's (production design §6.2). A sample keeps no drafts, so
-    // its id is the text's hash alone: the baseline itself travels in the file (§6.3a).
+    // Each baseline is a draft of the writer's (production design §6.2), whose id is its text's
+    // hash. A sample keeps no drafts: the baseline itself travels in the file (§6.3a).
+    draftId: (text) => hashText(text),
     async freeze(text, note) {
       const open = script.project.value;
-      if (open && !open.sample) {
-        const out = await freezeDraft(open.id, text, note, undefined, editor.kind.value);
-        if (out.result === 'frozen') {
-          void useDrafts().load();
-          return out.row.id;
-        }
-      }
-      return hashText(text);
+      if (!open || open.sample) return;
+      const out = await freezeDraft(open.id, text, note, undefined, editor.kind.value);
+      if (out.result === 'frozen') void useDrafts().load();
     },
-    snapshot: (reason) => useSnapshots().before(reason),
+    snapshot: (reason, detail) => useSnapshots().before(reason, detail),
     say: (message) => void sayOutline(message),
+    readOnlyWhy: productionReadOnly,
     show: () => showTempTab(PRODUCTION_TAB_ID),
   });
   return shared;

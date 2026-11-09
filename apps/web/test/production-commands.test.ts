@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { Blob as NodeBlob } from 'node:buffer';
 import { history, undo } from '@codemirror/commands';
-import { EditorState } from '@codemirror/state';
+import { EditorState, StateEffect } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { parsedDoc } from '@drafter/cm-fountain';
 import { parse } from '@drafter/fountain';
@@ -10,10 +10,16 @@ import { builtins, type Template } from '@drafter/templates';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { DocumentKind } from '../app/markdown/kind';
 import {
+  ALL_NUMBERED,
+  BUSY,
+  CHANGED_MEANWHILE,
   createProductionActions,
   localDate,
   type ProductionDeps,
   productionAsking,
+  productionMessage,
+  READ_ONLY,
+  sceneGone,
 } from '../app/production/commands';
 import { longDate, swatchOf } from '../app/production/labels';
 
@@ -55,10 +61,11 @@ function setup(options: { kind?: DocumentKind; template?: Template; text?: strin
   const deps: ProductionDeps = {
     view,
     kind: () => kind,
-    template: () => options.template ?? screenplay,
+    template: vi.fn(() => options.template ?? screenplay),
     firstScene: () => 1,
     today: () => '2026-11-09',
-    freeze: vi.fn(async () => 'a'.repeat(64)),
+    draftId: vi.fn(async () => 'a'.repeat(64)),
+    freeze: vi.fn(async () => {}),
     snapshot: vi.fn(),
     say: vi.fn(),
     show: vi.fn(),
@@ -83,6 +90,7 @@ beforeAll(() => {
 
 afterEach(() => {
   productionAsking.value = null;
+  productionMessage.value = '';
 });
 
 describe('the Production commands', () => {
@@ -171,10 +179,10 @@ describe('the Production commands', () => {
     expect(view.state.doc.toString()).toBe(SCRIPT);
   });
 
-  test('an action whose text changed while it worked runs again, once', async () => {
+  test('an action whose text changed while it worked runs again, once, and freezes that text', async () => {
     const { view, deps, actions } = setup();
     let calls = 0;
-    vi.mocked(deps.freeze).mockImplementation(async () => {
+    vi.mocked(deps.draftId).mockImplementation(async () => {
       calls++;
       // The writer types while the first try works.
       if (calls === 1) view.dispatch({ changes: { from: view.state.doc.length, insert: 'X' } });
@@ -183,6 +191,63 @@ describe('the Production commands', () => {
     expect(await actions.lock()).toBe(true);
     expect(view.state.doc.toString()).toContain('Rain.\nX');
     expect(productionOf(view)).not.toBeNull();
+    // The draft is the text of the try that went in, frozen once.
+    expect(deps.freeze).toHaveBeenCalledTimes(1);
+    expect(deps.freeze).toHaveBeenCalledWith(`${SCRIPT}X`, 'Locked');
+  });
+
+  test('an action whose text kept changing says so, visibly, and leaves no draft behind', async () => {
+    const { view, deps, actions } = setup();
+    vi.mocked(deps.draftId).mockImplementation(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: 'X' } });
+      return 'b'.repeat(64);
+    });
+    expect(await actions.lock()).toBe(false);
+    expect(productionOf(view)).toBeNull();
+    expect(deps.freeze).not.toHaveBeenCalled();
+    expect(productionMessage.value).toBe(CHANGED_MEANWHILE);
+    expect(deps.say).toHaveBeenCalledWith(CHANGED_MEANWHILE);
+  });
+
+  test('nothing is frozen, snapshotted, or changed in a script that can’t be changed', async () => {
+    const { view, deps, actions } = setup();
+    await actions.lock();
+    vi.mocked(deps.freeze).mockClear();
+    const lockedText = view.state.doc.toString();
+    // A draft opened to read: the editor is read-only, and the app says why.
+    const why = 'This is a draft, opened to read.';
+    deps.readOnlyWhy = () => why;
+    expect(enabled(actions)['production-next-set']).toBe(false);
+    expect(actions.behaviors['production-unlock']?.why?.()).toBe(why);
+    expect(await actions.nextSet()).toBe(false);
+    expect(await actions.unlock()).toBe(false);
+    expect(await actions.clearMarks()).toBe(false);
+    expect(deps.freeze).not.toHaveBeenCalled();
+    expect(deps.snapshot).not.toHaveBeenCalled();
+    expect(view.state.doc.toString()).toBe(lockedText);
+    expect(productionMessage.value).toBe(why);
+    // Without the app's reason, the editor's read-only state says it.
+    deps.readOnlyWhy = undefined;
+    view.dispatch({ effects: StateEffect.appendConfig.of(EditorState.readOnly.of(true)) });
+    expect(await actions.unlock()).toBe(false);
+    expect(deps.snapshot).not.toHaveBeenCalled();
+    expect(productionMessage.value).toBe(READ_ONLY);
+  });
+
+  test('one action at a time', async () => {
+    const { deps, actions } = setup();
+    const first = actions.lock();
+    expect(await actions.lock()).toBe(false);
+    expect(productionMessage.value).toBe(BUSY);
+    expect(await first).toBe(true);
+    expect(deps.freeze).toHaveBeenCalledTimes(1);
+  });
+
+  test('Write new scene numbers says so, visibly, when every scene has its number', async () => {
+    const { actions } = setup();
+    await actions.lock();
+    expect(await actions.writeNumbers()).toBe(false);
+    expect(productionMessage.value).toBe(ALL_NUMBERED);
   });
 
   test('Start the next revision names the next set, and freezes the end of the open one', async () => {
@@ -197,14 +262,65 @@ describe('the Production commands', () => {
   });
 
   test('Omit scene replaces the scene at the cursor with OMITTED, as one undo step', async () => {
-    const { view, actions } = setup();
+    const { view, deps, actions } = setup();
     await actions.lock();
     const lockedText = view.state.doc.toString();
     view.dispatch({ selection: { anchor: 3 } });
+    let seen = '';
+    vi.mocked(deps.snapshot).mockImplementation(() => {
+      seen = view.state.doc.toString();
+    });
     expect(await actions.omit(0)).toBe(true);
+    // A snapshot of the scene first, so the recorder finds it as a cut.
+    expect(deps.snapshot).toHaveBeenCalledWith('before-omit', '1');
+    expect(seen).toBe(lockedText);
     expect(view.state.doc.toString().startsWith('.OMITTED #1#\n\nEXT. PORCH')).toBe(true);
     expect(undo(view)).toBe(true);
     expect(view.state.doc.toString()).toBe(lockedText);
+  });
+});
+
+describe('Omit scene, when the text changes while it works', () => {
+  /** Makes the next omit's first try see the text change under it, by `change`. */
+  function changeDuringOmit(
+    view: EditorView,
+    deps: ProductionDeps,
+    change: (text: string) => { from: number; to: number; insert: string },
+  ) {
+    let armed = false;
+    vi.mocked(deps.snapshot).mockImplementation(() => {
+      armed = true;
+    });
+    // The template is read inside the try, after the text was read.
+    vi.mocked(deps.template).mockImplementation(() => {
+      if (armed) {
+        armed = false;
+        view.dispatch({ changes: change(view.state.doc.toString()) });
+      }
+      return screenplay;
+    });
+  }
+
+  test('finds the scene again by its number', async () => {
+    const { view, deps, actions } = setup();
+    await actions.lock();
+    changeDuringOmit(view, deps, () => ({ from: 0, to: 0, insert: 'INT. NEW - DAY\n\nNew.\n\n' }));
+    expect(await actions.omit(1)).toBe(true);
+    const text = view.state.doc.toString();
+    expect(text).toContain('INT. KITCHEN - NIGHT #1#');
+    expect(text).toContain('.OMITTED #2#');
+    expect(text).not.toContain('Rain.');
+  });
+
+  test('says so when the scene is gone', async () => {
+    const { view, deps, actions } = setup();
+    await actions.lock();
+    changeDuringOmit(view, deps, (text) => {
+      const from = text.indexOf('EXT. PORCH');
+      return { from, to: text.indexOf('Rain.') + 'Rain.'.length, insert: '' };
+    });
+    expect(await actions.omit(1)).toBe(false);
+    expect(productionMessage.value).toBe(sceneGone('2'));
   });
 });
 

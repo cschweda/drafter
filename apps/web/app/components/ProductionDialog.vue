@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import DDialog from '~/components/ui/DDialog.vue';
-import { productionAsking } from '~/production/commands';
+import { productionAsking, productionWorking } from '~/production/commands';
 import { useProductionActions } from '~/production/use-commands';
 
 // Clear marks… and Unlock… (production design §6.4): each asks first, saying what is lost, as
 // Remove from this browser does. A snapshot is taken before either changes the text.
 const dialog = ref<InstanceType<typeof DDialog>>();
-const working = ref(false);
+/** Another Production action is under way, or this one: Confirm waits for it. */
+const working = productionWorking;
 /** What the dialog shows: kept while it closes, so its words don't vanish under the fade. */
 const shown = ref<'unlock' | 'clear-marks'>('unlock');
 
@@ -29,13 +30,9 @@ function onClose() {
 async function confirm() {
   const question = productionAsking.value;
   if (!question || working.value) return;
-  working.value = true;
-  try {
-    const actions = useProductionActions();
-    await (question === 'unlock' ? actions.unlock() : actions.clearMarks());
-  } finally {
-    working.value = false;
-  }
+  // The action sets `working` while it runs, so a second click can't start it again.
+  const actions = useProductionActions();
+  await (question === 'unlock' ? actions.unlock() : actions.clearMarks());
   productionAsking.value = null;
   dialog.value?.close();
 }

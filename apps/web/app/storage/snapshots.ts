@@ -24,7 +24,9 @@ export type SnapshotReason =
   | 'before-draft'
   // Unlock and Clear marks (production design §6.4): a revision's marks can't be had back otherwise.
   | 'before-unlock'
-  | 'before-clear-marks'; // 'before-merge' arrives with Plan G
+  | 'before-clear-marks'
+  // Omit scene (production design §7.1): its scene's text is kept, so the recorder finds it as a cut.
+  | 'before-omit'; // 'before-merge' arrives with Plan G
 
 export interface SnapshotInfo {
   id: string;

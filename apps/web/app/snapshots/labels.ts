@@ -18,12 +18,15 @@ const REASONS: Record<SnapshotReason, string> = {
   'before-draft': 'Before starting a draft',
   'before-unlock': 'Before unlocking',
   'before-clear-marks': 'Before clearing marks',
+  'before-omit': 'Before omitting a scene',
 };
 
 /** The writer's label, or why it was taken: "Saved", "Opened The Call.fountain", "Before expand". */
 export function reasonLabel(info: Pick<SnapshotInfo, 'reason' | 'label' | 'detail'>): string {
   if (info.label) return info.label;
   const name = REASONS[info.reason] ?? REASONS.manual;
+  // Omit scene keeps its scene's number: "Before omitting scene 12".
+  if (info.reason === 'before-omit' && info.detail) return `Before omitting scene ${info.detail}`;
   if (info.reason === 'opened' || info.reason === 'imported') {
     return `${name} ${info.detail || 'a file'}`;
   }

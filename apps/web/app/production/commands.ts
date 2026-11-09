@@ -1,7 +1,7 @@
 import { isolateHistory } from '@codemirror/commands';
 import type { EditorView } from '@codemirror/view';
 import { parsedDoc } from '@drafter/cm-fountain';
-import type { Block, DrafterMeta, TextChange } from '@drafter/fountain';
+import { type Block, type DrafterMeta, parse, type TextChange } from '@drafter/fountain';
 import {
   clearMarks,
   lock,
@@ -36,6 +36,15 @@ export const productionAsking = ref<ProductionQuestion | null>(null);
 /** Scene numbers start at (production design §5): the number the lock gives the first scene. */
 export const firstSceneNumber = ref(1);
 
+/** What the last action said, success or not: the Production tab shows it in a status line. */
+export const productionMessage = ref('');
+
+/** An action is under way: no other starts until it is done. */
+export const productionWorking = ref(false);
+
+/** The snapshots the actions take before they change the text. */
+export type ProductionSnapshot = 'before-unlock' | 'before-clear-marks' | 'before-omit';
+
 /** What the actions need from the app. */
 export interface ProductionDeps {
   view: EditorView;
@@ -44,11 +53,15 @@ export interface ProductionDeps {
   firstScene(): number;
   /** Today, the local date, as `YYYY-MM-DD`. */
   today(): string;
-  /** Freezes `text` as a draft with `note` (Drafts), and gives its id. */
-  freeze(text: string, note: string): Promise<string>;
-  /** Takes a snapshot of the text as it is now, before a change that takes marks away. */
-  snapshot(reason: 'before-unlock' | 'before-clear-marks'): void;
+  /** The id `freeze` will give `text`'s draft (its hash). */
+  draftId(text: string): Promise<string>;
+  /** Freezes `text` as a draft with `note` (Drafts), once its action has gone in. */
+  freeze(text: string, note: string): Promise<void>;
+  /** Takes a snapshot of the text as it is now, before a change; `detail` is Omit's scene number. */
+  snapshot(reason: ProductionSnapshot, detail?: string): void;
   say(message: string): void;
+  /** Why the script can't be changed now, or null; without it, the editor's read-only state says. */
+  readOnlyWhy?(): string | null;
   /** Shows the Production tab. */
   show(): void;
 }
@@ -67,6 +80,8 @@ export interface ProductionActions {
   sceneAtCursor(): number | null;
   /** The production as the text says now, or null; `damaged` when its block's production can't be read. */
   read(): { production: Production | null; damaged: boolean };
+  /** Why the script can't be changed now, or null. */
+  readOnlyWhy(): string | null;
   /** The name the next revision set will have: "Pink" after Blue. */
   nextName(): string;
   behaviors: Record<string, Behavior>;
@@ -81,12 +96,17 @@ export const ALREADY_LOCKED = 'The script is already locked.';
 export const NOT_SCREENPLAY = 'A stage play’s scenes aren’t numbered.';
 export const READ_ONLY = 'The script can’t be changed now.';
 export const NO_SCENE = 'The cursor isn’t in a numbered scene.';
+export const BUSY = 'Another Production change is still being made.';
+export const NOTHING_CHANGED = 'Nothing needed changing.';
+export const NO_MARKS = 'There were no marks to clear.';
 export const LOCKED =
   'Pages and scene numbers are locked. Changes from now on are marked in the Blue revision.';
 export const NUMBERS_WRITTEN = 'The new scenes’ numbers are written into their headings.';
 export const ALL_NUMBERED = 'Every scene already has its number written.';
 export const MARKS_CLEARED = 'Every revision’s marks are cleared. The script is still locked.';
 export const UNLOCKED = 'Pages and scene numbers are unlocked. The text is as it was.';
+export const sceneGone = (number: string) =>
+  `Scene ${number} isn’t in the script any more, so nothing was omitted.`;
 
 /** Today, the local date, as `YYYY-MM-DD`. */
 export function localDate(now = new Date()): string {
@@ -95,6 +115,9 @@ export function localDate(now = new Date()): string {
 }
 
 type Heading = Extract<Block, { kind: 'scene_heading' }>;
+
+/** A heading Omit scene already made: `.OMITTED #12#`. */
+const isOmitted = (heading: Heading) => /^OMITTED\b/i.test(heading.sem.text.trim());
 
 /** Puts `changes` in as one undo step: the writer's own, with no user event (see above). */
 function dispatchChanges(view: EditorView, changes: readonly TextChange[]): void {
@@ -126,7 +149,9 @@ export function createProductionActions(deps: ProductionDeps): ProductionActions
   }
 
   const fountain = () => deps.kind() === 'fountain';
-  const canEdit = () => !view.state.readOnly;
+  const readOnlyWhy = () =>
+    deps.readOnlyWhy ? deps.readOnlyWhy() : view.state.readOnly ? READ_ONLY : null;
+  const canEdit = () => readOnlyWhy() === null && !productionWorking.value;
   const locked = () => read().production !== null;
   const screenplay = () => numbersScenes(deps.template());
   const headings = () =>
@@ -145,52 +170,85 @@ export function createProductionActions(deps: ProductionDeps): ProductionActions
   function canOmit(sceneIndex: number): boolean {
     if (!fountain() || !canEdit() || !locked() || !screenplay()) return false;
     const heading = headings()[sceneIndex];
-    return !!heading?.sem.number && !/^OMITTED\b/i.test(heading.sem.text.trim());
+    return !!heading?.sem.number && !isOmitted(heading);
   }
+
+  /** What the last action said goes in the tab's status line, and to a screen reader. */
+  const say = (message: string) => {
+    productionMessage.value = message;
+    deps.say(message);
+  };
 
   /**
    * Works out `compute`'s changes on the text as it is, and puts them in when the text is still
-   * that; else once more, then says so. False when nothing changed.
+   * that; else once more, then says so. `compute` gives null when what it acts on is gone. After
+   * the changes go in, `after` runs with the text they were worked out on (a draft is frozen of
+   * it), so nothing is left behind by a try that didn't go in.
    */
-  async function apply(compute: (text: string) => Promise<TextChange[]>): Promise<boolean> {
+  async function apply(
+    compute: (text: string) => Promise<TextChange[] | null>,
+    after?: (text: string) => unknown,
+  ): Promise<'done' | 'nothing' | 'gone' | 'changed'> {
     for (let attempt = 0; attempt < 2; attempt++) {
       const before = view.state.doc;
-      const changes = await compute(before.toString());
+      const text = before.toString();
+      const changes = await compute(text);
       if (view.state.doc !== before) continue;
-      if (view.state.readOnly || changes.length === 0) return false;
+      if (changes === null) return 'gone';
+      if (changes.length === 0 || view.state.readOnly) return 'nothing';
       dispatchChanges(view, changes);
-      return true;
+      await after?.(text);
+      return 'done';
     }
-    deps.say(CHANGED_MEANWHILE);
-    return false;
+    say(CHANGED_MEANWHILE);
+    return 'changed';
   }
 
-  /** A draft frozen once per action, however many tries it takes. */
-  function freezeOnce(note: string) {
-    let id: Promise<string> | null = null;
-    return (text: string) => {
-      id ??= deps.freeze(text, note);
-      return id;
-    };
+  /**
+   * Runs `act`, one action at a time, after the read-only check: nothing is frozen, snapshotted,
+   * or changed in a script that can't be changed. Says `done` when it went in, `nothing` when it
+   * didn't need to.
+   */
+  async function guarded(
+    act: () => Promise<'done' | 'nothing' | 'gone' | 'changed'>,
+    done: string,
+    nothing = NOTHING_CHANGED,
+  ): Promise<boolean> {
+    if (productionWorking.value) {
+      say(BUSY);
+      return false;
+    }
+    const why = readOnlyWhy();
+    if (why) {
+      say(why);
+      return false;
+    }
+    productionWorking.value = true;
+    try {
+      const result = await act();
+      if (result === 'done') say(done);
+      else if (result === 'nothing') say(nothing);
+      return result === 'done';
+    } finally {
+      productionWorking.value = false;
+    }
   }
-
-  /** Says `message` when `done`, and gives `done` back. */
-  const saying = (done: boolean, message: string) => {
-    if (done) deps.say(message);
-    return done;
-  };
 
   async function doLock(): Promise<boolean> {
     if (!fountain() || locked()) return false;
-    const freeze = freezeOnce('Locked');
-    const done = await apply(async (text) =>
-      lock(text, deps.template(), {
-        today: deps.today(),
-        draftId: await freeze(text),
-        firstScene: deps.firstScene(),
-      }),
+    return guarded(
+      () =>
+        apply(
+          async (text) =>
+            lock(text, deps.template(), {
+              today: deps.today(),
+              draftId: await deps.draftId(text),
+              firstScene: deps.firstScene(),
+            }),
+          (text) => deps.freeze(text, 'Locked'),
+        ),
+      LOCKED,
     );
-    return saying(done, LOCKED);
   }
 
   const nextName = () => nextSetName(read().production?.sets ?? []);
@@ -198,43 +256,68 @@ export function createProductionActions(deps: ProductionDeps): ProductionActions
   async function doNextSet(): Promise<boolean> {
     const open = read().production?.sets.at(-1);
     if (!fountain() || !open) return false;
-    const freeze = freezeOnce(`End of the ${open.name} revision`);
     const name = nextName();
-    const done = await apply(async (text) =>
-      startNextSet(text, deps.today(), await freeze(text), deps.template()),
+    return guarded(
+      () =>
+        apply(
+          async (text) =>
+            startNextSet(text, deps.today(), await deps.draftId(text), deps.template()),
+          (text) => deps.freeze(text, `End of the ${open.name} revision`),
+        ),
+      `The ${name} revision has started. ${open.name}’s marks are kept.`,
     );
-    return saying(done, `The ${name} revision has started. ${open.name}’s marks are kept.`);
   }
 
   async function doWriteNumbers(): Promise<boolean> {
     if (!fountain() || !locked() || !screenplay()) return false;
-    const done = await apply((text) => writeSceneNumbers(text, deps.template()));
-    deps.say(done ? NUMBERS_WRITTEN : ALL_NUMBERED);
-    return done;
+    return guarded(
+      () => apply((text) => writeSceneNumbers(text, deps.template())),
+      NUMBERS_WRITTEN,
+      ALL_NUMBERED,
+    );
   }
 
   async function doOmit(sceneIndex: number): Promise<boolean> {
     if (!canOmit(sceneIndex)) return false;
-    const number = headings()[sceneIndex]?.sem.number;
-    const done = await apply(
-      async (text) => (await omitScene(text, sceneIndex, deps.template())).changes,
-    );
-    return saying(done, `Scene ${number} is omitted. Undo brings it back.`);
+    const number = headings()[sceneIndex]?.sem.number as string;
+    return guarded(async () => {
+      // The scene's text as it is now is kept in a snapshot first, so the recorder finds it as a cut.
+      deps.snapshot('before-omit', number);
+      const result = await apply(async (text) => {
+        // A retry finds the scene again by its number, wherever it is now.
+        const at = parse(text)
+          .blocks.filter((b): b is Heading => b.kind === 'scene_heading')
+          .findIndex((h) => h.sem.number === number && !isOmitted(h));
+        if (at < 0) return null;
+        return (await omitScene(text, at, deps.template())).changes;
+      });
+      if (result === 'gone') say(sceneGone(number));
+      return result;
+    }, `Scene ${number} is omitted. Undo brings it back.`);
   }
 
   async function doClearMarks(): Promise<boolean> {
     if (!fountain() || !locked()) return false;
-    deps.snapshot('before-clear-marks');
-    const freeze = freezeOnce('Marks cleared');
-    const done = await apply(async (text) => clearMarks(text, deps.today(), await freeze(text)));
-    return saying(done, MARKS_CLEARED);
+    return guarded(
+      () => {
+        deps.snapshot('before-clear-marks');
+        return apply(
+          async (text) => clearMarks(text, deps.today(), await deps.draftId(text)),
+          (text) => deps.freeze(text, 'Marks cleared'),
+        );
+      },
+      MARKS_CLEARED,
+      NO_MARKS,
+    );
   }
 
   async function doUnlock(): Promise<boolean> {
     const { production, damaged } = read();
     if (!fountain() || (!production && !damaged)) return false;
-    deps.snapshot('before-unlock');
-    return saying(await apply((text) => unlock(text)), UNLOCKED);
+    return guarded(() => {
+      deps.snapshot('before-unlock');
+      return apply((text) => unlock(text));
+    }, UNLOCKED);
   }
 
   // ---- The commands -------------------------------------------------------------------------
@@ -246,7 +329,8 @@ export function createProductionActions(deps: ProductionDeps): ProductionActions
   };
   const base = (): Array<[boolean, string]> => [
     [fountain(), NOT_FOUNTAIN],
-    [canEdit(), READ_ONLY],
+    [readOnlyWhy() === null, readOnlyWhy() ?? READ_ONLY],
+    [!productionWorking.value, BUSY],
   ];
   const command = (checks: () => Array<[boolean, string]>, run: () => unknown): Behavior => ({
     enabled: () => whyOff(...base(), ...checks()) === undefined,
@@ -302,6 +386,7 @@ export function createProductionActions(deps: ProductionDeps): ProductionActions
     canOmit,
     sceneAtCursor,
     read,
+    readOnlyWhy,
     nextName,
     behaviors,
   };
