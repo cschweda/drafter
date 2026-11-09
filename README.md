@@ -18,7 +18,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.26.1.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. **Novel**, a place to draft a book in Markdown, now sends the book out too: v0.26.1 exports a novel as a standard manuscript, as a PDF or a Word file. Classic Mode is there for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks. See the [roadmap](#roadmap).
+> **Status: v0.26.2.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. **Novel**, a place to draft a book in Markdown, sends the book out as a standard manuscript, as a PDF or a Word file. v0.26.2 adds an **About** menu beside Help, where Report a problem… and Suggest an idea… can now send by email on drafter.dev, and plainer autosave warnings that never stop you typing. Classic Mode is there for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks. See the [roadmap](#roadmap).
 
 ## Free, no login, private
 
@@ -179,7 +179,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.26.1, there are **8,360 unit and property tests** (in 23 packages, the web app, and the desktop app), **1,433 browser tests**, each run in five browser setups (7,165 runs), 139 end-to-end tests of the desktop app, and **287 trap documents** with 1,329 checks:
+**What runs.** As of v0.26.2, there are **8,380 unit and property tests** (in 23 packages, the web app, and the desktop app), **1,436 browser tests**, each run in five browser setups (7,180 runs), 139 end-to-end tests of the desktop app, and **287 trap documents** with 1,329 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.

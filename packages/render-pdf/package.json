@@ -1,6 +1,6 @@
 {
   "name": "@drafter/render-pdf",
-  "version": "0.26.1",
+  "version": "0.26.2",
   "description": "PDF output for Drafter: laid-out script pages in Courier Prime, Markdown documents in Inter Tight, and a novel's standard manuscript in Liberation Serif or Courier Prime.",
   "license": "MIT",
   "type": "module",

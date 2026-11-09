@@ -4,7 +4,7 @@ The [README](../README.md#roadmap) has the short list: what's next, and what com
 
 ## Where things stand
 
-Drafter is at **v0.26.1**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
+Drafter is at **v0.26.2**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
 
 Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. Lately it brought:
 
@@ -23,6 +23,7 @@ Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. La
 - **Your script stays with you** (v0.25.1): a privacy audit and a red/blue team audit, both in the README's [Audit record](../README.md#audit-record), with every finding fixed or listed; a **Contrast** button with a slider for each pane and its WCAG 2.1 ratio; Typewriter sounds; and Copy technical details for bug reports and ideas.
 - **Novel** (v0.26.0): drafting a novel in Markdown, with chapters, sections, and parts, an Outline and Cards with a status and synopsis for each, focus on one passage, and word targets ([help](https://drafter.dev/docs/novel/), [design](drafter-novel-design.md)). Also: the top bar's **File** menu, Save As beside Save, Export as Fountain, and dropdowns in the help pages' bar.
 - **The manuscript exports** (v0.26.1): a novel's standard manuscript, the format agents, editors, and contests ask for, as a PDF and a Word file, after a Manuscript details box whose answers stay in the book ([help](https://drafter.dev/docs/novel/#sending-it-out), [design](drafter-manuscript-design.md)).
+- **An About menu, and reports by email** (v0.26.2): Help for learning Drafter and About for Drafter itself; Report a problem… and Suggest an idea… can send by email on drafter.dev, through the site's own function and Resend; plain autosave warnings, typing never blocked by a script's file, and Drafter's settings block hidden in the editor.
 
 Next, in order:
 

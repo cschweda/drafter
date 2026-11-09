@@ -45,6 +45,34 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.26.2-about-menu',
+    date: '2026-11-09',
+    version: '0.26.2',
+    kind: 'New',
+    title: 'An About menu, and reports by email',
+    text: 'Help is now for learning Drafter, and About is for Drafter itself: What’s new, privacy, updates, and Report a problem… and Suggest an idea…, which on drafter.dev can now send straight to Drafter’s maker by email, no GitHub account needed.',
+    link: { href: '/docs/privacy/#reporting', label: 'What a report sends' },
+    banner: true,
+  },
+  {
+    id: 'v0.26.2-autosave',
+    date: '2026-11-09',
+    version: '0.26.2',
+    kind: 'Improved',
+    title: 'Plainer warnings, and nothing stops your typing',
+    text: 'The status bar says Autosave: on, not guaranteed, or off. A script whose file can’t be checked yet stays editable, and Reload for a new version no longer asks about changes autosave already has.',
+    link: { href: '/docs/saving/#recovery-copy', label: 'Autosave' },
+  },
+  {
+    id: 'v0.26.2-settings-block',
+    date: '2026-11-09',
+    version: '0.26.2',
+    kind: 'Improved',
+    title: 'Drafter’s settings block is out of sight',
+    text: 'The lines at the end of a script where Drafter keeps its template and settings are hidden in the editor and kept from being deleted by accident. The file still has them, for other apps to skip.',
+    link: { href: '/docs/open-formats/#what-drafter-saves', label: 'What Drafter saves' },
+  },
+  {
     id: 'v0.26.1-manuscript',
     date: '2026-11-05',
     version: '0.26.1',
