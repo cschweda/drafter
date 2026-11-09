@@ -41,7 +41,7 @@ function lineMapper(oldText: string, newText: string): (page: LockedPage) => Map
 interface Placed extends Mapped {
   label: string;
   at: number;
-  /** False when the page collides with an earlier one or has no text left. */
+  /** False when the page collides with an earlier one (same line, no further into it) or has no text left. */
   kept: boolean;
 }
 
@@ -50,11 +50,17 @@ function place(pages: readonly LockedPage[], oldText: string, newText: string): 
   const { starts } = splitLines(newText);
   const out: Placed[] = [];
   let last = -1;
+  let lastPrinted = 0;
   for (const page of pages) {
     const m = map(page);
     const at = starts[m.line] ?? newText.length;
-    const kept = at > last && at < newText.length;
-    if (kept) last = at;
+    // A long paragraph or speech can hold several page starts, further into it each time.
+    const after = at > last || (at === last && m.printed > lastPrinted);
+    const kept = after && at < newText.length;
+    if (kept) {
+      last = at;
+      lastPrinted = m.printed;
+    }
     out.push({ label: page.label, line: m.line, printed: m.printed, at, kept });
   }
   return out;

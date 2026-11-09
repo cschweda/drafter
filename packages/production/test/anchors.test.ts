@@ -68,6 +68,22 @@ describe('page anchors', () => {
     expect(r.anchors).toEqual([{ label: '2', at: 2, printed: 5 }]);
   });
 
+  it('keeps pages that start further into the same line', () => {
+    const long: LockedPage[] = [
+      { label: '1', line: 0, printed: 0 },
+      { label: '2', line: 1, printed: 0 },
+      { label: '3', line: 1, printed: 40 },
+      { label: '4', line: 1, printed: 40 },
+    ];
+    const r = resolveAnchors(long, base, base);
+    expect(r.anchors.map((a) => [a.label, a.at, a.printed])).toEqual([
+      ['1', 0, 0],
+      ['2', 2, 0],
+      ['3', 2, 40],
+    ]);
+    expect(r.dropped).toEqual(['4']);
+  });
+
   it('rebase keeps labels', () => {
     const cur = ['new', 'a', 'b', 'C!', 'd', 'f'].join('\n');
     const direct = resolveAnchors(pages, base, cur);
