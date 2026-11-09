@@ -12,7 +12,7 @@ Please report a security problem privately, not in a public issue:
 
 Or, if you'd rather not use GitHub: Email cschweda@gmail.com with the details.
 
-Please don't open a public issue for a security problem. Drafter's Help → Report a problem… opens
+Please don't open a public issue for a security problem. Drafter's About → Report a problem… opens
 a public one, so it points here instead. Only the maintainer sees a private report or an email.
 You'll hear back the same way, and the fix and its credit, if you'd like it, go in the changelog
 once it is out.

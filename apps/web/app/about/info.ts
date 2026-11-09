@@ -1,4 +1,4 @@
-// What About Drafter says (Help → About Drafter), and the version info that starts the technical
+// What About Drafter says (About → About Drafter), and the version info that starts the technical
 // details its Copy technical details button copies for a bug report (`setup.ts` adds the rest): the version, which app this is, the system, and the browser (or, in
 // the desktop app, Electron and Chromium). Nothing personal: no paths, no names, no scripts.
 // Pure apart from `buildInfo` and `currentAbout`, which read the build's constants and the page.

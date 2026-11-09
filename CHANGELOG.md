@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **An About menu, beside Help.** The top bar's Help menu is now two: **Help** keeps the tour, the help pages, Download the desktop app, and the sample scripts; **About** has About Drafter, What's new, Privacy, Third-party licences, Technical details, **Report a problem…**, **Suggest an idea…**, Copy technical details, and Check for updates…. On a narrow screen About folds into More actions as a submenu before anything you use while writing, so File stays in the bar on a phone.
+- **Send a report by email, from the dialog** (drafter.dev only). Once the site's Resend settings are in place, Report a problem… and Suggest an idea… offer **Send email** beside Open on GitHub: the report, exactly as its preview shows, and an optional reply address, go to drafter.dev's own server function, which emails them to the maintainer through Resend. No GitHub account or email app is needed. Until the settings are there, the dialog stays as it was. The desktop app and a self-hosted copy don't offer it. The Privacy page says what it sends, and when.
+- For contributors: `apps/web/netlify/report.mjs`, the report function (`createReportHandler`, after frotzlens's), with its tests: a fixed recipient, a honeypot field, a three-second floor, size limits, and five reports a minute per address. It reads `RESEND_API_KEY`, `REPORT_TO`, and `REPORT_FROM` from the site's environment; `GET` says whether they're set. `DRAFTER_REPORTS=email` in `netlify.toml` turns the dialog's side on, for drafter.dev's build only.
+
 ### Changed
 
 - **Drafter's settings block is hidden in the editor.** The `/* drafter … */` lines at the end of a script, where Drafter keeps its template, scene colours, and the script's own dictionary, showed struck through in Fountain mode, where they looked like an error or like text to delete. They are now hidden and kept safe in Fountain mode as they already were in Classic Mode: Select All and Delete, or typing at the very end, leaves them be. The file still has them, so other Fountain apps and older Drafters read it as before; the cheat sheet and the Open formats page say so.

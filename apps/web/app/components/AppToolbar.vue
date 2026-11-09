@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { aboutMenuGroups } from '~/commands/help-menu';
 import { formatKeys, isApple } from '~/commands/keys';
 import { openPalette } from '~/commands/palette';
 import { commandById } from '~/commands/registry';
@@ -52,7 +53,7 @@ function toggleStructure() {
 // Below 1024px the bar is icons; when even they don't fit (a phone at 320px with a module's buttons
 // and the unsaved dot, say), they fold into "More actions" at the bar's end, one at a time in
 // TOOLBAR_FOLD_ORDER (the theme first, Open last), measured, never counted. The mark (the Drafter
-// menu), the title and its dot, the search, and Help never fold. A folded button's tour step points
+// menu), the title and its dot, the search, and Help never fold; About folds as a submenu. A folded button's tour step points
 // at More actions (tour.config.ts). The bar never scrolls sideways or widens the page (Task 6's
 // stopgap did).
 const bar = ref<HTMLElement>();
@@ -255,6 +256,13 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
       },
     });
   }
+  if (has('about')) {
+    out.push({
+      label: 'About',
+      icon: 'i-lucide-info',
+      children: aboutMenuGroups(entry).flat(),
+    });
+  }
   if (has('theme')) {
     out.push({
       label: dark.value ? 'Switch to light theme' : 'Switch to dark theme',
@@ -402,8 +410,10 @@ const overflowItems = computed<DropdownMenuItem[]>(() => {
         </div>
       </template>
     </UPopover>
-    <!-- Help, always in view: a menu of its own, not a section of the Drafter menu (Task 3b). -->
+    <!-- Help and About, always in view: menus of their own, not sections of the Drafter menu
+         (Task 3b; split in two 2026-11-09). -->
     <HelpMenu />
+    <AboutMenu />
     <button
       type="button"
       class="ib fold-theme-item"
@@ -663,6 +673,7 @@ kbd {
 .toolbar.fold-contrast .fold-contrast-item,
 .toolbar.fold-focus .fold-focus-item,
 .toolbar.fold-theme .fold-theme-item,
+.toolbar.fold-about :deep(.fold-about-item),
 .toolbar.fold-modules :deep(.modules > button) {
   display: none;
 }

@@ -177,7 +177,7 @@ useDocsHead({
       icons) and nothing else. It doesn’t save your scripts. The one thing your browser does on its
       own is this: when Drafter opens, the browser asks drafter.dev for the worker’s file
       (<code>/sw.js</code>) to see whether there is a new version, and downloads the new files when
-      there is one. <strong>Help → Check for updates…</strong> makes that same request when you
+      there is one. <strong>About → Check for updates…</strong> makes that same request when you
       choose it, and nothing else. That request carries nothing from your scripts. When a new
       version is ready,
       Drafter says so and waits for you to choose Reload; it never reloads on its own. You can
@@ -186,14 +186,21 @@ useDocsHead({
 
     <h2 id="reporting">Reporting a problem or suggesting an idea</h2>
     <p>
-      <strong>Help → Report a problem…</strong> and <strong>Suggest an idea…</strong> send nothing
+      <strong>About → Report a problem…</strong> and <strong>Suggest an idea…</strong> send nothing
       by themselves. What you type stays on this device until you choose
-      <strong>Open on GitHub</strong>. Only then does it leave, and only the report the dialog shows
-      you: GitHub’s new-issue page opens with it filled in, in your browser, and you review it and
-      submit it there yourself, with your own GitHub account. Drafter has no server and no token, so
-      it can’t post anything for you. Your script is never included: not its text, its title, its
+      <strong>Open on GitHub</strong> or <strong>Send email</strong>. Only then does it leave, and
+      only the report the dialog shows you. <strong>Open on GitHub</strong> opens GitHub’s new-issue
+      page with it filled in, in your browser, and you review it and submit it there yourself, with
+      your own GitHub account; Drafter holds no GitHub token, so it can’t post anything there for
+      you. <strong>Send email</strong>, offered on drafter.dev only, sends that same report, and the
+      reply address if you typed one, to drafter.dev’s own small server function, which emails it
+      to Drafter’s maker through Resend, an email service. It is the one time Drafter itself sends
+      something you wrote, and it happens only when you press the button. The function keeps
+      nothing; your address is used only to reply. The desktop app and a self-hosted copy don’t
+      offer it. While the dialog is open on drafter.dev, it asks that function once whether email
+      is set up, a request that carries nothing about you. Your script is never included: not its text, its title, its
       file name, or your notes. <strong>Include technical details</strong> adds only what
-      <strong>Help → Copy technical details</strong> copies, and you can turn it off: Drafter’s
+      <strong>About → Copy technical details</strong> copies, and you can turn it off: Drafter’s
       version, which app this is, the system and browser, the language, the screen and window
       size, touch or mouse, whether Drafter is installed, works offline, saves in place, and keeps
       its storage, whether you’re online, and a few of your settings (the kind of script, Fountain

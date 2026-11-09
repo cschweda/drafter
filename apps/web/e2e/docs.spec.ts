@@ -5,6 +5,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { DICTIONARIES } from '../../../packages/spell/src/dictionaries';
 import { DEPENDENCY_NOTES, TECH_SECTIONS } from '../app/about/tech';
 import { COMMAND_DATA, DOWNLOAD_PAGE, HELP_PAGES, helpHref } from '../app/commands/data';
+import { ABOUT_PAGE_IDS } from '../app/commands/help-menu';
 import { showView } from './modules';
 
 // The help pages (Phase 1 design §4.5): Saving and your browser, Keyboard shortcuts, and Privacy.
@@ -44,6 +45,29 @@ async function showSource(page: Page) {
 async function openMenu(page: Page) {
   await helpButton(page).click();
   await expect(menu(page)).toBeVisible();
+}
+
+/** The About pages (What's new, Privacy, Licences, Technical details) are in About, not Help (2026-11-09). */
+const ABOUT_TITLES = new Set(
+  HELP_PAGES.filter((page) => ABOUT_PAGE_IDS.includes(page.id)).map((page) => page.title),
+);
+const aboutButton = (page: Page) =>
+  page.getByRole('banner').getByRole('button', { name: 'About', exact: true });
+const aboutMenu = (page: Page) => page.getByRole('menu', { name: 'About' });
+
+/** Opens the menu that lists `title`: Help, or About (on a phone, folded into More actions). */
+async function openMenuFor(page: Page, title: string) {
+  if (!ABOUT_TITLES.has(title)) {
+    await openMenu(page);
+    return menu(page);
+  }
+  if (await aboutButton(page).isVisible()) await aboutButton(page).click();
+  else {
+    await page.getByRole('banner').getByRole('button', { name: 'More actions' }).click();
+    await page.getByRole('menuitem', { name: 'About', exact: true }).click();
+  }
+  await expect(aboutMenu(page)).toBeVisible();
+  return aboutMenu(page);
 }
 
 /** The body's background, as the browser computes it. */
@@ -798,10 +822,10 @@ const gone = (tab: Page) => (error: unknown) => {
 test.describe('from the app', () => {
   /** Chooses `title` from Help in a new tab, which opens at the page. Returns that tab. */
   async function fromMenu(page: Page, title: string, how: 'click' | 'keyboard') {
-    await openMenu(page);
+    const list = await openMenuFor(page, title);
     const opened = page.context().waitForEvent('page');
     if (how === 'click') {
-      await menu(page).getByRole('menuitem', { name: title, exact: true }).click();
+      await list.getByRole('menuitem', { name: title, exact: true }).click();
     } else {
       // Arrow down to the item.
       let found = false;
@@ -828,7 +852,7 @@ test.describe('from the app', () => {
     await tab.close();
   });
 
-  test('reaches the pages from Help, each in a new tab, and leaves the editor tab as it was', async ({
+  test('reaches the pages from Help and About, each in a new tab, and leaves the editor tab as it was', async ({
     page,
   }) => {
     let asked = false;
@@ -851,14 +875,17 @@ test.describe('from the app', () => {
     expect(asked).toBe(false);
   });
 
-  test('reaches the pages from Help with the keyboard alone', async ({ page }) => {
+  test('reaches the pages from Help and About with the keyboard alone', async ({ page }) => {
     // A fresh start and a walk down the menu for each of the sixteen pages: over 30 s on CI.
     test.slow();
     for (const { title, path } of HELP_PAGES) {
       await start(page);
-      await helpButton(page).focus();
+      const about = ABOUT_TITLES.has(title);
+      // On a phone About folds into More actions; the click test reaches its pages there.
+      if (about && !(await aboutButton(page).isVisible())) continue;
+      await (about ? aboutButton(page) : helpButton(page)).focus();
       await page.keyboard.press('Enter');
-      await expect(menu(page)).toBeVisible();
+      await expect(about ? aboutMenu(page) : menu(page)).toBeVisible();
       const opened = page.context().waitForEvent('page');
       let found = false;
       for (let i = 0; i < 60 && !found; i += 1) {

@@ -339,7 +339,7 @@ pnpm -r test
 pnpm dev              # the app, at http://localhost:3000
 ```
 
-Found a bug or have an idea? **Help → Report a problem…** or **Suggest an idea…** in the app fills in a [GitHub issue](https://github.com/cschweda/drafter/issues/new/choose) for you to submit, or email cschweda@gmail.com; security problems go through [SECURITY.md](SECURITY.md).
+Found a bug or have an idea? **About → Report a problem…** or **Suggest an idea…** in the app fills in a [GitHub issue](https://github.com/cschweda/drafter/issues/new/choose) for you to submit, or, on drafter.dev, sends it to me by email with **Send email**; you can also email cschweda@gmail.com; security problems go through [SECURITY.md](SECURITY.md).
 
 [How Drafter works](docs/HOW-IT-WORKS.md) has four diagrams of it. [Developing Drafter](docs/DEVELOPMENT.md) has how it works, the packages, the stack, storage and browsers, every command, the samples, contributing (commits, the changelog, releasing), and the design documents. [Why Drafter](docs/WHY.md) has the idea behind it and its principles, and [`docs/DECISIONS.md`](docs/DECISIONS.md) records the choices along the way.
 

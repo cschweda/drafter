@@ -40,6 +40,12 @@ const DESKTOP = process.env.DRAFTER_DESKTOP === '1';
 // scripts/csp.mjs allows plausible.io in the policy only when a page loads it, and every event
 // is cut down to the page and the site before it goes (scripts/plausible.mjs).
 const PLAUSIBLE = process.env.DRAFTER_ANALYTICS === 'plausible' && !DESKTOP;
+// Report a problem / Suggest an idea can send by email through drafter.dev's own Netlify Function
+// (netlify/report.mjs, through Resend; the maintainer, 2026-11-09). Only the site's build offers it
+// (`DRAFTER_REPORTS=email` in netlify.toml): never the desktop app, a local or test build, or a
+// self-hosted copy, which have no such function. Even then, the dialog shows Send email only once
+// the function says the Resend settings are there.
+const REPORT_EMAIL = process.env.DRAFTER_REPORTS === 'email' && !DESKTOP;
 const moduleIcons = await moduleIconNames(MODULES);
 // About Drafter (Help): the version (the desktop app's, which Electron reports there too) and the
 // commit being built, when git can say (scripts/version.mjs).
@@ -147,6 +153,7 @@ export default defineNuxtConfig({
     define: {
       __DRAFTER_TEST_MODULES__: JSON.stringify(TEST_MODULES),
       __DRAFTER_DESKTOP__: JSON.stringify(DESKTOP),
+      __DRAFTER_REPORT_EMAIL__: JSON.stringify(REPORT_EMAIL),
       __DRAFTER_VERSION__: JSON.stringify(VERSION),
       __DRAFTER_COMMIT__: JSON.stringify(COMMIT?.commit ?? ''),
       __DRAFTER_COMMIT_DATE__: JSON.stringify(COMMIT?.date ?? ''),
