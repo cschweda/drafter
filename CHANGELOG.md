@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
-- For contributors: the design for Production (`docs/drafter-production-design.md`), v0.27.0: revision sets in color with printed marks, locked pages (12A) and scene numbers (5A, OMITTED), scene numbers that start anywhere, a revised-pages PDF, a breakdown report, and sides; the open revision's baseline travels in the file, compressed, so marks print the same on any computer. Awaiting the maintainer's approval.
+- For contributors: the design for Production (`docs/drafter-production-design.md`), v0.27.0: revision sets in color with printed marks, locked pages (12A) and scene numbers (5A, OMITTED), scene numbers that start anywhere, a revised-pages PDF, a breakdown report, and sides; the open revision's baseline travels in the file, compressed, so marks print the same on any computer. Approved 2026-11-09.
 
 ## [0.26.2] - 2026-11-09
 

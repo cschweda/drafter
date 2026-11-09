@@ -1,6 +1,6 @@
 # Production: revisions, locked pages and scenes, breakdowns, and sides (v0.27.0)
 
-**Status:** design, 2026-11-09. Written by Claude on the maintainer's instruction ("skip the questions, write the design"), from the roadmap, the [Phase 2 design](drafter-phase2-design.md) (Production, §5.3, §5.5), the [technical design](drafter-technical-design.md) §8.6, the [version history design](drafter-version-history-design.md) §2, the [Classic Mode design](drafter-classic-mode-design.md), and the code as it stands at v0.26.2. Everything marked **Call (Claude)** is Claude's decision, not the maintainer's; the maintainer approves the document as a whole before a plan is written.
+**Status:** approved by the maintainer, 2026-11-09. Written by Claude on the maintainer's instruction ("skip the questions, write the design"), from the roadmap, the [Phase 2 design](drafter-phase2-design.md) (Production, §5.3, §5.5), the [technical design](drafter-technical-design.md) §8.6, the [version history design](drafter-version-history-design.md) §2, the [Classic Mode design](drafter-classic-mode-design.md), and the code as it stands at v0.26.2. Everything marked **Call (Claude)** is Claude's decision, not the maintainer's; the maintainer approves the document as a whole before a plan is written.
 
 ## 1. Why
 
