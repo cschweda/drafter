@@ -83,6 +83,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
     section: 'writing',
   },
   { id: 'help-novel', path: '/docs/novel', title: 'Novel', section: 'writing' },
+  { id: 'help-production', path: '/docs/production', title: 'Production', section: 'writing' },
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser', section: 'files' },
   {
     id: 'help-drafts-and-cuts',

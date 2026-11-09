@@ -25,7 +25,7 @@ export const CHEAT_SHEET: readonly CheatSheetEntry[] = [
     id: 'scene-heading',
     name: 'Scene heading',
     mark: 'INT. or EXT., or a leading .',
-    rule: 'A line that starts with INT., EXT., EST., INT./EXT. or I/E, with a blank line before and after it, starts a scene and says where and when. Any line that starts with a dot and then a letter or number is a heading too, which is how a heading that names no place is written. A stage play’s scenes are ## lines instead (see Stage plays, below).',
+    rule: 'A line that starts with INT., EXT., EST., INT./EXT. or I/E, with a blank line before and after it, starts a scene and says where and when. Any line that starts with a dot and then a letter or number is a heading too, which is how a heading that names no place is written. A stage play’s scenes are ## lines instead (see Stage plays, below). A scene number goes at the end between # marks: INT. KITCHEN - NIGHT #12#. After pages are locked, a scene added later gets an A-number, such as 5A, and a cut scene stays as .OMITTED #12#.',
     example: 'INT. KITCHEN - NIGHT\n\n.FLASHBACK',
     reads: ['scene_heading', 'scene_heading'],
   },

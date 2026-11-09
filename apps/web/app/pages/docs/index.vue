@@ -22,6 +22,8 @@ const about: Record<string, string> = {
     'Typing a script with Enter and Tab, the way many screenwriters expect, with names and places filled in, over a file that stays Fountain.',
   'help-novel':
     'Writing a novel in plain Markdown: chapters, sections, and parts, the Outline and Cards, focus on one chapter, and word targets.',
+  'help-production':
+    'Locking pages and scene numbers, revisions in colors with marks in the margin, A-pages and A-scenes, and OMITTED scenes.',
   'help-saving':
     'What Save does in each browser, keeping scripts in a synced folder, autosave, and installing Drafter as an app.',
   'help-drafts-and-cuts':

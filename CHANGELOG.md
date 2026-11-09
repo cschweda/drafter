@@ -8,6 +8,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **Production: locked pages and revisions (v0.27.0, free).** For a script going into production. **Lock pages and scene numbers** writes a number into every scene (`#12#`) and remembers where every page starts, so later edits never move them: new pages are 12A, a page left empty folds into its neighbour (13-14), and a scene added later is 5A. **Start the next revision** opens the next color (White, Blue, Pink, Yellow, Green, Goldenrod, Buff, Salmon, Cherry, then Double), and an asterisk in the right margin marks only the words that changed. **Omit scene** leaves `.OMITTED #12#` in its place, after a snapshot. **Clear marks…** and **Unlock…** undo it, each after a snapshot. A Production tab in the Inspector, a revision chip in the status bar, three Problems warnings (a scene number out of order, on more than one scene, or gone, with **Put back as OMITTED**), a Production help page, and a note in the cheat sheet. The open revision's "before" text is kept compressed in the settings block at the end of the file, so marks look the same on any computer. Revised pages, the breakdown, and sides come next.
+- For contributors: the `@drafter/production` package (lock, revision sets, A-numbers with `numberBetween`, fingerprints and marks, the settings-block format).
+- For contributors: `@drafter/layout` gains page labels, locked pagination (a locked page start overrides the keep rules), and `applyMarks`; the layout worker takes the locked page map and returns only marks.
+- For contributors: three lint rules in `@drafter/lint`: `locked-numbers-out-of-order`, `repeated-scene-number`, and `locked-scene-gone`.
 - For contributors: the design for Production (`docs/drafter-production-design.md`), v0.27.0: revision sets in color with printed marks, locked pages (12A) and scene numbers (5A, OMITTED), scene numbers that start anywhere, a revised-pages PDF, a breakdown report, and sides; the open revision's baseline travels in the file, compressed, so marks print the same on any computer. Approved 2026-11-09.
 
 ## [0.26.2] - 2026-11-09
