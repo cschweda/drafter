@@ -10,6 +10,8 @@ import { problemsLabel, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
+import { swatchOf } from '~/production/labels';
+import { useProduction } from '~/production/use-production';
 import { historyOpen } from '~/snapshots/history';
 import { snapshotProblem } from '~/snapshots/use-snapshots';
 import { useSpell } from '~/spell/use-spell';
@@ -46,6 +48,16 @@ const { problem: spellProblem } = useSpell();
 const { progress, goal } = useGoal();
 const sprint = useSprint();
 const { chip } = useStorageNotice();
+// A locked script whose block can't be read (production design §6.3a): its marks can't be shown.
+const { problem: productionProblem, openSet } = useProduction();
+// The open revision set's chip (production design §5): "Blue rev.", which opens the Production tab.
+const revision = computed(() => {
+  const set = openSet.value;
+  return set && !markdown.value ? { name: set.name, swatch: swatchOf(set) } : null;
+});
+function showProduction() {
+  void commandById('show-production')?.run();
+}
 // Words and time today (docs/drafter-stats-design.md §3): from the day's first edit, never for a
 // sample or in a read-only tab (`today` is null there). A goal in words already says the words.
 const { today } = useWritingStats();
@@ -214,6 +226,7 @@ const errors = computed(() =>
     blankError.value,
     snapshotProblem.value,
     spellProblem.value,
+    productionProblem.value,
   ].some(Boolean),
 );
 /** Something that can't wait for a wider screen: the bar shows it, and only it, on a phone. (An
@@ -235,6 +248,7 @@ const urgent = computed(
       <p v-if="blankError" role="alert" class="failed">{{ blankError }}</p>
       <p v-if="snapshotProblem" role="alert" class="failed">{{ snapshotProblem }}</p>
       <p v-if="spellProblem" role="alert" class="failed">{{ spellProblem }}</p>
+      <p v-if="productionProblem" role="alert" class="failed">{{ productionProblem }}</p>
     </div>
     <footer class="status" :class="{ urgent }">
       <div class="row">
@@ -259,6 +273,23 @@ const urgent = computed(
           @click="openDrafts"
         >
           {{ draftLabel }}
+        </button>
+        <button
+          v-if="revision"
+          type="button"
+          class="revision-button item wide-only"
+          title="Production"
+          :aria-label="`${revision.name} rev., the open revision: Production`"
+          data-item="revision"
+          @click="showProduction"
+        >
+          <span
+            v-if="revision.swatch"
+            class="swatch"
+            :style="{ backgroundColor: revision.swatch }"
+            aria-hidden="true"
+          />
+          {{ revision.name }} rev.
         </button>
         <button
           v-if="warning"
@@ -373,6 +404,18 @@ const urgent = computed(
 .item[aria-expanded="true"] {
   background: var(--raised);
   color: var(--text);
+}
+/* A revision set's color for the screen; its name says it too (production design §6.1). */
+.swatch {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+@media (forced-colors: active) {
+  .swatch {
+    border: 1px solid CanvasText;
+  }
 }
 .history-button {
   flex: 0 1 auto;

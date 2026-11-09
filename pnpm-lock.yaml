@@ -124,6 +124,9 @@ importers:
       '@drafter/outline':
         specifier: workspace:*
         version: link:../../packages/outline
+      '@drafter/production':
+        specifier: workspace:*
+        version: link:../../packages/production
       '@drafter/render-docx':
         specifier: workspace:*
         version: link:../../packages/render-docx
@@ -470,6 +473,21 @@ importers:
       mdast-util-from-markdown:
         specifier: ^2.1.0
         version: 2.1.0
+
+  packages/production:
+    dependencies:
+      '@drafter/compare':
+        specifier: workspace:*
+        version: link:../compare
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
+      '@drafter/layout':
+        specifier: workspace:*
+        version: link:../layout
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
 
   packages/render-docx:
     dependencies:

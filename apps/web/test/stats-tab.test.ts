@@ -48,7 +48,13 @@ describe('the Stats tab', () => {
   test('a Markdown document’s view tabs are Stats alone', () => {
     expect(STATS_TAB_ID).toBe('stats');
     expect(viewTabs('markdown')).toEqual([{ id: 'stats', label: 'Stats' }]);
-    expect(viewTabs('fountain').map((t) => t.id)).toEqual(['cards', 'notes', 'stats', 'scaffold']);
+    expect(viewTabs('fountain').map((t) => t.id)).toEqual([
+      'cards',
+      'notes',
+      'stats',
+      'scaffold',
+      'production',
+    ]);
   });
 
   test('showStats opens the tab in the Inspector', async () => {

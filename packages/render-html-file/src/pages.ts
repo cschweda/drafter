@@ -245,7 +245,7 @@ export function pagesHtml(
   const pages: readonly Page[] =
     layout.pages.length > 0
       ? layout.pages
-      : [{ number: 1, lines: [], sceneNumbersLeft: [], sceneNumbersRight: [] }];
+      : [{ number: 1, label: '1', lines: [], sceneNumbersLeft: [], sceneNumbersRight: [] }];
   const marks = new Map<number, Marks>();
   for (const block of new Set(targets)) {
     const at = layout.index[block];

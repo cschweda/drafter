@@ -104,11 +104,14 @@ test.describe('script modules', () => {
     await expect(countScenes(page)).toHaveCount(0);
     await expect(fixtureTab(page)).toHaveCount(0);
     // Nor under More, which has only the app's own now, with Problems showing: below 1024px Cards,
-    // Stats, Scaffold, Notes, and History (Task 9); Notes in the Inspector (design §3.3).
+    // Stats, Scaffold, Notes, Production, and History (Task 9); Notes and Production in the Inspector
+    // (design §3.3).
     await page.locator('[data-pane]').last().getByRole('button', { name: 'More tabs' }).click();
     const wide = (page.viewportSize()?.width ?? 0) >= 1024;
     await expect(page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem')).toHaveText(
-      wide ? [/^Notes, \d+ open$/] : ['Cards', 'Stats', 'Scaffold', /^Notes, \d+ open$/, 'History'],
+      wide
+        ? [/^Notes, \d+ open$/, 'Production']
+        : ['Cards', 'Stats', 'Scaffold', /^Notes, \d+ open$/, 'Production', 'History'],
     );
     await page.keyboard.press('Escape');
     await expect(page.getByText('Fixture Info:')).toHaveCount(0);

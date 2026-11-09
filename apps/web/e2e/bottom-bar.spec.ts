@@ -59,6 +59,7 @@ test('the bottom tab bar switches Write, Script, Outline, and More', async ({ pa
     'Stats',
     'Scaffold',
     /^Notes(, \d+ open)?$/,
+    'Production',
     /^Problems(, \d+)?$/,
     'History',
   ]);

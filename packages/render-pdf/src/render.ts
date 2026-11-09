@@ -143,7 +143,7 @@ export async function renderPdf(
   const pages: readonly Page[] =
     layout.pages.length > 0
       ? layout.pages
-      : [{ number: 1, lines: [], sceneNumbersLeft: [], sceneNumbersRight: [] }];
+      : [{ number: 1, label: '1', lines: [], sceneNumbersLeft: [], sceneNumbersRight: [] }];
   const report = (stage: RenderProgress['stage'], done: number, total: number) =>
     opts.onProgress?.({ stage, done, total });
   report('draw', 0, pages.length);

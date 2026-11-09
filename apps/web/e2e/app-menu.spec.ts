@@ -397,6 +397,7 @@ test.describe('the Help menu', () => {
       /^Fountain cheat sheet/,
       /^Classic Mode/,
       /^Novel/,
+      /^Production/,
       /^Saving and your browser/,
       /^Drafts and cuts/,
       /^Story map/,

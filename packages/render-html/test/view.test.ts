@@ -699,6 +699,7 @@ describe('reveal', () => {
       pages: [
         {
           number: 1,
+          label: '1',
           lines: [blank(text(3, 'X')), text(1, 'B'), blank(), text(2, 'C')],
           sceneNumbersLeft: [],
           sceneNumbersRight: [],

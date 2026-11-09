@@ -850,12 +850,19 @@ test.describe('the tab row', () => {
             'Scaffold',
             // The sample's open notes are counted in Notes' name.
             /^Notes, \d+ open$/,
+            'Production',
             /^Problems(, \d+)?$/,
             /^(Scenes|Cast)$/,
             /^(Scenes|Cast)$/,
             'History',
           ]
-        : [/^Notes, \d+ open$/, /^Problems(, \d+)?$/, /^(Scenes|Cast)$/, /^(Scenes|Cast)$/],
+        : [
+            /^Notes, \d+ open$/,
+            'Production',
+            /^Problems(, \d+)?$/,
+            /^(Scenes|Cast)$/,
+            /^(Scenes|Cast)$/,
+          ],
     );
     await menu(page).getByRole('menuitem', { name: 'Cast' }).click();
     await expect(menu(page)).toBeHidden();

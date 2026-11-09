@@ -43,6 +43,20 @@ describe('pageLabel', () => {
   test('is empty before the first layout', () => {
     expect(pageLabel(null)).toBe('');
   });
+  test('reads a locked script’s labels: Page 12A of 118', () => {
+    const l = {
+      pages: [
+        { number: 12, label: '12' },
+        { number: 13, label: '12A' },
+        { number: 14, label: '118' },
+      ],
+      index: [{ page: 12 }, { page: 13 }, { page: 14 }],
+      diagnostics: [],
+    } as unknown as Layout;
+    const at = pageOf(l, 1);
+    expect(at).toEqual({ current: 13, last: 14, label: '12A', lastLabel: '118' });
+    expect(pageLabel(at)).toBe('Page 12A of 118');
+  });
 });
 
 describe('blockIndexAt', () => {

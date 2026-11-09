@@ -64,10 +64,10 @@ describe('panes', () => {
   });
 
   describe('the bottom tab bar (fresh-look design §6)', () => {
-    test("a script's bar is Write, Script, Outline; More holds Cards, Stats, Scaffold, Notes, Problems, then History", () => {
+    test("a script's bar is Write, Script, Outline; More holds Cards, Stats, Scaffold, Notes, Production, Problems, then History", () => {
       expect(phoneTabs('fountain')).toEqual({
         row: ['source', 'script', 'outline'],
-        more: ['cards', 'stats', 'scaffold', 'notes', 'problems', 'history'],
+        more: ['cards', 'stats', 'scaffold', 'notes', 'production', 'problems', 'history'],
       });
     });
     test("a Markdown document's bar is Write and Preview; More holds Stats, Problems, History", () => {
@@ -106,6 +106,7 @@ describe('panes', () => {
         'stats',
         'scaffold',
         'notes',
+        'production',
         'problems',
         'module-a--t',
         'history',
@@ -114,13 +115,23 @@ describe('panes', () => {
   });
 
   describe('the Inspector (fresh-look design §3.3, Call 14)', () => {
-    test("a script's Inspector row is Script, Outline, Cards, Stats, Scaffold; More holds Notes, Problems, Compare, Cuts, and module tabs", () => {
+    test("a script's Inspector row is Script, Outline, Cards, Stats, Scaffold; More holds Notes, Production, Problems, Compare, Cuts, and module tabs", () => {
       expect(inspectorTabs('fountain')).toEqual({
         row: ['script', 'outline', 'cards', 'stats', 'scaffold'],
-        more: ['notes', 'problems', 'compare', 'cuts', 'drafts', 'draft-steps', 'draft'],
+        more: [
+          'notes',
+          'production',
+          'problems',
+          'compare',
+          'cuts',
+          'drafts',
+          'draft-steps',
+          'draft',
+        ],
       });
       expect(inspectorTabs('fountain', ['module-a--x', 'module-b--y']).more).toEqual([
         'notes',
+        'production',
         'problems',
         'compare',
         'cuts',
@@ -220,12 +231,13 @@ describe('panes', () => {
       expect(ids(more)).toEqual(['module:a', 'module:c']);
     });
 
-    test('puts Cards, Notes, Stats, and Scaffold in the slot and More, before module tabs', () => {
+    test('puts Cards, Notes, Stats, Scaffold, and Production in the slot and More, before module tabs', () => {
       expect(VIEW_TABS).toEqual([
         { id: 'cards', label: 'Cards' },
         { id: 'notes', label: 'Notes' },
         { id: 'stats', label: 'Stats' },
         { id: 'scaffold', label: 'Scaffold' },
+        { id: 'production', label: 'Production' },
       ]);
       const { row, more } = tabRow(TABS, [...viewTabs('fountain'), ...others], 'source', null);
       expect(ids(row)).toEqual(['source', 'script', 'problems', 'outline']);
@@ -234,6 +246,7 @@ describe('panes', () => {
         'notes',
         'stats',
         'scaffold',
+        'production',
         'module:a',
         'module:b',
         'module:c',
@@ -245,6 +258,7 @@ describe('panes', () => {
         'notes',
         'stats',
         'scaffold',
+        'production',
         'module:a',
         'module:b',
         'module:c',
@@ -257,6 +271,7 @@ describe('panes', () => {
         'notes',
         'stats',
         'scaffold',
+        'production',
         'module:a',
         'module:c',
       ]);

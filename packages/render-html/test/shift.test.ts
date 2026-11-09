@@ -91,6 +91,22 @@ describe('shiftOf', () => {
       expect(shiftOf(page, structuredClone(page))).toEqual({ offset: 0, block: 0 });
   });
 
+  it('finds no shift when only a mark or only a label changes', () => {
+    const page = rich[0] as Page;
+    const marked = shifted(page, 0, 0);
+    (marked.lines.find((l) => l.span.to > l.span.from) as LayoutLine).mark = { set: 'blue' };
+    expect(shiftOf(page, marked)).toBeNull();
+    const withRight = rich.find((p) => p.lines.some((l) => l.right)) as Page;
+    const rightMarked = shifted(withRight, 0, 0);
+    ((rightMarked.lines.find((l) => l.right) as LayoutLine).right as LayoutLine).mark = {
+      set: 'blue',
+    };
+    expect(shiftOf(withRight, rightMarked)).toBeNull();
+    const relabelled = shifted(page, 0, 0);
+    relabelled.label = '1A';
+    expect(shiftOf(page, relabelled)).toBeNull();
+  });
+
   it('finds no shift when a line, a run, or a right part is added or taken away', () => {
     const withRight = rich.find((p) => p.lines.some((l) => l.right)) as Page;
     const withRuns = rich.find((p) => p.lines.some((l) => l.runs.length > 1)) as Page;

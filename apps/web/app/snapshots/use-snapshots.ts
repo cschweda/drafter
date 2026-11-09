@@ -19,7 +19,7 @@ export interface SnapshotSession {
   /** Takes one of the open script now ('manual', with an optional label); 'failed' when nothing is kept here (a sample, a read-only tab). */
   take(label?: string): Promise<TakeResult>;
   /** Captures the text now, synchronously, and keeps it in the background as `reason`; the caller doesn't wait. Nothing for a sample or a read-only tab. */
-  before(reason: Extract<SnapshotReason, `before-${string}`>): void;
+  before(reason: Extract<SnapshotReason, `before-${string}`>, detail?: string): void;
   /** Keeps the text of a script just made from `name` (a Final Draft file) as an 'imported' snapshot, in the background. */
   afterImport(text: string, name: string): void;
   /** Bumped after every take or change, so History can list again. */
@@ -156,9 +156,9 @@ function create(): SnapshotSession {
       const named = label?.trim();
       return keep(id, text(), 'manual', named ? { label: named } : {});
     },
-    before(reason) {
+    before(reason, detail) {
       const id = kept();
-      if (id !== null) void keep(id, text(), reason);
+      if (id !== null) void keep(id, text(), reason, detail ? { detail } : {});
     },
     afterImport(imported, name) {
       const id = kept();

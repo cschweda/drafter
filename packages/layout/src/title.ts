@@ -137,7 +137,7 @@ export function titlePage(
     return row ?? blankLine(tp.span.from);
   });
   return {
-    page: { number: 0, lines, sceneNumbersLeft: [], sceneNumbersRight: [] },
+    page: { number: 0, label: '', lines, sceneNumbersLeft: [], sceneNumbersRight: [] },
     last,
   };
 }

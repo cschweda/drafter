@@ -1,12 +1,14 @@
 import type { Block, Doc } from '@drafter/fountain';
 import { type Role, type RoleStyle, resolveRole, type Template } from '@drafter/templates';
 import { blankLine, blockLines, columns, type Frame, frameOf, isBlank, joined } from './lines';
+import { printedLabels, suffix } from './locked';
 import { numbersOf, rolesOf } from './numbers';
 import { titlePage } from './title';
 import {
   type Layout,
   type LayoutDiagnostic,
   type LayoutLine,
+  type LockedPages,
   type Page,
   type PaginateOptions,
   type SceneNumbering,
@@ -38,6 +40,8 @@ interface SpeechItem extends Spacing {
   tags: Tag[];
   /** `spoken[k]`: how many of the first k body lines are dialogue. */
   spoken: number[];
+  /** Ends in `(MORE)`: the part of a speech before a locked page's start. */
+  more?: true;
 }
 
 interface DualItem extends Spacing {
@@ -46,7 +50,14 @@ interface DualItem extends Spacing {
 }
 
 type Printed = BlockItem | SpeechItem | DualItem;
-type Item = Printed | { type: 'break' };
+/** What a locked page's start sets: the label A-pages count from, and the label it prints. */
+interface PageStart {
+  label: string;
+  printed: string;
+}
+
+/** A page break; one that starts a locked page carries its label. */
+type Item = Printed | { type: 'break'; start?: PageStart };
 
 interface Printing {
   role: Role;
@@ -76,7 +87,7 @@ const heightOf = (item: Printed) =>
     ? item.lines.length
     : item.type === 'dual'
       ? item.rows.length
-      : item.cue.length + item.body.length;
+      : item.cue.length + item.body.length + (item.more ? 1 : 0);
 
 /**
  * Lays a parsed script out on pages (technical design §5): the title page,
@@ -108,7 +119,9 @@ export function paginate(doc: Doc, template: Template, opts: PaginateOptions = {
 
   const option = opts.sceneNumbers ?? template.sceneNumbers.enabled;
   const numbering: SceneNumbering = option === true ? 'all' : option === false ? 'none' : option;
-  const { items, scenes } = new Items(doc, template, height, diagnostics).build(numbering);
+  const built = new Items(doc, template, height, diagnostics).build(numbering);
+  const { scenes } = built;
+  const items = opts.locked ? lockedItems(built.items, doc.blocks, opts.locked) : built.items;
   const pager = new Pager(template, height, scenes, doc.blocks.length);
   new Filler(template, height, pager).fill(items);
   for (const body of pager.pages) pages.push(body);
@@ -395,6 +408,7 @@ class Filler {
       // A page break ends the page unless it's still empty, so it never makes a blank page.
       if (item.type === 'break') {
         pager.newPage();
+        if (item.start) pager.start(item.start);
         continue;
       }
       if (pager.room <= 0) pager.newPage();
@@ -457,7 +471,7 @@ class Filler {
     }
     if (item.type === 'dual') return space + item.rows.length <= room;
     return (
-      space + item.cue.length + item.body.length <= room ||
+      space + heightOf(item) <= room ||
       this.#split(item, item.cue.length, 0, room - space, true) !== null
     );
   }
@@ -513,10 +527,11 @@ class Filler {
     let s = space;
     for (;;) {
       const at = cue[0]?.span.from ?? body[from]?.span.from ?? pager.flow;
-      if (s + cue.length + body.length - from <= pager.room) {
+      if (s + cue.length + body.length - from + (item.more ? 1 : 0) <= pager.room) {
         pager.space(s, at);
         pager.putAll(cue);
         pager.putAll(body, from);
+        if (item.more) pager.put(this.#more(pager.flow));
         return;
       }
       const room = pager.room - s;
@@ -544,6 +559,7 @@ class Filler {
       // Nowhere to split at all, such as a parenthetical taller than a page.
       pager.putAll(cue);
       pager.putAll(body, from);
+      if (item.more) pager.put(this.#more(pager.flow));
       return;
     }
   }
@@ -587,6 +603,11 @@ class Pager {
   /** How far into the source printing has got: where blank lines stand. */
   flow = 0;
   #lines: LayoutLine[] = [];
+  /** The label of the page being filled, when it isn't its number. */
+  #label: string | null = null;
+  /** The last locked page's label, which A-pages count from, and how many have followed it. */
+  #base: string | null = null;
+  #extra = 0;
   #left: Page['sceneNumbersLeft'] = [];
   #right: Page['sceneNumbersRight'] = [];
 
@@ -636,6 +657,13 @@ class Pager {
     }
   }
 
+  /** Starts a locked page: the page being filled, which is empty, takes its label. */
+  start(start: PageStart) {
+    this.#base = start.label;
+    this.#extra = 0;
+    this.#label = start.printed;
+  }
+
   /** Finishes the page, if anything is on it. */
   newPage() {
     if (this.#lines.length === 0) return;
@@ -644,21 +672,175 @@ class Pager {
     const { page } = this.template;
     const result: Page = {
       number,
+      label: this.#label ?? String(number),
       lines: this.#lines,
       sceneNumbersLeft: this.#left,
       sceneNumbersRight: this.#right,
     };
     const { numbering } = page;
     if (numbering.position === 'top-right' && number >= numbering.firstNumbered) {
-      const text = numbering.format.replaceAll('{n}', String(number));
+      const text = numbering.format.replaceAll('{n}', result.label);
       const width = page.width - page.margin.left - page.margin.right;
       result.pageNumber = { text, line: numbering.line, col: Math.max(0, width - columns(text)) };
     }
-    if (page.header !== undefined) result.header = page.header.replaceAll('{n}', String(number));
-    if (page.footer !== undefined) result.footer = page.footer.replaceAll('{n}', String(number));
+    if (page.header !== undefined) result.header = page.header.replaceAll('{n}', result.label);
+    if (page.footer !== undefined) result.footer = page.footer.replaceAll('{n}', result.label);
     this.pages.push(result);
+    // Past a locked page, pages are its A-pages until the next one starts.
+    if (this.#base !== null) this.#label = this.#base + suffix(++this.#extra);
     this.#lines = [];
     this.#left = [];
     this.#right = [];
   }
+}
+
+/** A locked page's start, resolved to the block and the printed line of it the page starts at. */
+interface Resolved {
+  start: PageStart;
+  at: number;
+  printed: number;
+  block: number;
+}
+
+/** The index of the block holding offset `at`, or of the first block after it; `blocks.length` past the end. */
+function blockAt(blocks: readonly Block[], at: number): number {
+  let lo = 0;
+  let hi = blocks.length;
+  // The first block that ends after `at`.
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((blocks[mid] as Block).span.to > at) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo;
+}
+
+/** The lines an item prints from source, with the block each belongs to. */
+function sourceLines(item: Printed): readonly LayoutLine[] {
+  if (item.type === 'block') return item.lines;
+  if (item.type === 'speech') return item.body;
+  return item.rows;
+}
+
+/** The first and last block an item prints, or null when it prints none. */
+function blocksOf(item: Printed): [number, number] | null {
+  let first = Number.POSITIVE_INFINITY;
+  let last = -1;
+  const lines = item.type === 'speech' ? [...item.cue, ...item.body] : sourceLines(item);
+  for (const line of lines)
+    for (const part of line.right ? [line, line.right] : [line]) {
+      if (part.blockIndex < 0) continue;
+      first = Math.min(first, part.blockIndex);
+      last = Math.max(last, part.blockIndex);
+    }
+  return last < 0 ? null : [first, last];
+}
+
+/**
+ * Where in an item a locked page starts: the index of the line in its lines (a block) or its body
+ * (a speech) that opens the page; 0 for the whole item. The anchor's source line's first printed
+ * line, `printed` lines on, clamped to the block's last printed line.
+ */
+function cutOf(item: Printed, anchor: Resolved): number {
+  if (item.type === 'dual') return 0;
+  const lines = sourceLines(item);
+  const own: number[] = [];
+  for (let k = 0; k < lines.length; k++)
+    if ((lines[k] as LayoutLine).blockIndex === anchor.block) own.push(k);
+  if (own.length === 0) return 0;
+  let first = own.findIndex((k) => (lines[k] as LayoutLine).span.from >= anchor.at);
+  if (first < 0) first = own.length - 1;
+  return own[Math.min(first + Math.max(0, anchor.printed), own.length - 1)] as number;
+}
+
+/** Splits a block or speech at line indexes `cuts` (ascending, each > 0), a page start before each piece but the first. */
+function pieces(item: BlockItem | SpeechItem, cuts: number[]): Printed[] {
+  const out: Printed[] = [];
+  if (item.type === 'block') {
+    const ends = [0, ...cuts, item.lines.length];
+    for (let p = 0; p + 1 < ends.length; p++) {
+      const last = p + 2 === ends.length;
+      out.push({
+        type: 'block',
+        lines: item.lines.slice(ends[p], ends[p + 1]),
+        spaceBefore: p === 0 ? item.spaceBefore : 0,
+        spaceAfter: last ? item.spaceAfter : 0,
+        keepWithNext: last ? item.keepWithNext : false,
+        keepTogether: false,
+      });
+    }
+    return out;
+  }
+  const { body, tags, spoken } = item;
+  const ends = [0, ...cuts, body.length];
+  for (let p = 0; p + 1 < ends.length; p++) {
+    let from = ends[p] as number;
+    let to = ends[p + 1] as number;
+    while (from < to && tags[from] === 'gap') from++;
+    while (to > from && tags[to - 1] === 'gap') to--;
+    const last = p + 2 === ends.length;
+    const piece: SpeechItem = {
+      type: 'speech',
+      cue: p === 0 ? item.cue : item.contd,
+      contd: item.contd,
+      body: body.slice(from, to),
+      tags: tags.slice(from, to),
+      spoken: spoken.slice(from, to + 1).map((n) => n - (spoken[from] as number)),
+      spaceBefore: p === 0 ? item.spaceBefore : 0,
+      spaceAfter: last ? item.spaceAfter : 0,
+      keepWithNext: last ? item.keepWithNext : false,
+    };
+    if (!last) piece.more = true;
+    out.push(piece);
+  }
+  return out;
+}
+
+/**
+ * The items of a locked script (production design §7.2): a page break before each locked page's
+ * start, splitting a block between its printed lines, or a speech with `(MORE)` and `(CONT'D)`.
+ */
+function lockedItems(
+  items: readonly Item[],
+  blocks: readonly Block[],
+  locked: LockedPages,
+): Item[] {
+  const printed = printedLabels(locked);
+  const anchors: Resolved[] = locked.anchors
+    .map((a) => ({
+      start: { label: a.label, printed: printed(a.label) },
+      at: a.at,
+      printed: a.printed,
+      block: blockAt(blocks, a.at),
+    }))
+    .sort((a, b) => a.at - b.at);
+  const out: Item[] = [];
+  let next = 0;
+  for (const item of items) {
+    const range = item.type === 'break' ? null : blocksOf(item);
+    if (item.type === 'break' || range === null) {
+      out.push(item);
+      continue;
+    }
+    // Cut points in this item, by line index, the later anchor winning a tie.
+    const cuts = new Map<number, PageStart>();
+    for (; next < anchors.length && (anchors[next] as Resolved).block <= range[1]; next++) {
+      const anchor = anchors[next] as Resolved;
+      cuts.set(anchor.block < range[0] ? 0 : cutOf(item, anchor), anchor.start);
+    }
+    const before = cuts.get(0);
+    if (before) out.push({ type: 'break', start: before });
+    cuts.delete(0);
+    if (cuts.size === 0 || item.type === 'dual') {
+      out.push(item);
+      continue;
+    }
+    const at = [...cuts.keys()].sort((a, b) => a - b);
+    const parts = pieces(item, at);
+    for (let p = 0; p < parts.length; p++) {
+      if (p > 0) out.push({ type: 'break', start: cuts.get(at[p - 1] as number) as PageStart });
+      out.push(parts[p] as Printed);
+    }
+  }
+  return out;
 }

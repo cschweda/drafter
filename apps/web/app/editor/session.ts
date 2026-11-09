@@ -77,6 +77,8 @@ export interface EditorSession {
    * itself is read-only, as it was frozen (beside/draft-open.ts). Either one keeps it read-only.
    */
   setFrozen(on: boolean): void;
+  /** Whether the text shown is a frozen draft's (`setFrozen`), read-only apart from the tab lock. */
+  readonly frozen: Readonly<ShallowRef<boolean>>;
   /**
    * Calls `listener` after every change to the text or the selection, and after `load`, with the
    * state the editor now has. Update listeners in the state itself are lost when `load` replaces
@@ -140,6 +142,7 @@ function create(): EditorSession {
   const locked = shallowRef(false);
   /** Read-only for a frozen draft's text (`setFrozen`), apart from the tab lock. */
   let frozen = false;
+  const frozenRef = shallowRef(false);
   const kind = shallowRef<DocumentKind>('fountain');
   const novel = shallowRef(false);
   const loaded = shallowRef(0);
@@ -336,6 +339,7 @@ function create(): EditorSession {
   function setFrozen(on: boolean) {
     if (on === frozen) return;
     frozen = on;
+    frozenRef.value = on;
     view.dispatch({ effects: readOnly.reconfigure(readOnlyExtension(on || locked.value)) });
   }
 
@@ -403,6 +407,7 @@ function create(): EditorSession {
     setKind,
     setReadOnly,
     setFrozen,
+    frozen: frozenRef,
     onState,
     onUpdate,
     onChange,

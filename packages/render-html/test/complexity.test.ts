@@ -23,6 +23,7 @@ function line(role: string, block: number, text: string, right?: LayoutLine): La
 
 const page = (lines: LayoutLine[], number = 1): Page => ({
   number,
+  label: String(number),
   lines,
   sceneNumbersLeft: [],
   sceneNumbersRight: [],

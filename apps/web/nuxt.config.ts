@@ -183,7 +183,7 @@ export default defineNuxtConfig({
           replacement: `${PACKAGES}/markdown/src/$1.ts`,
         },
         {
-          find: /^@drafter\/(archive|cast|cm-fountain|compare|fdx|fountain|history|layout|lint|markdown|notes|novel|outline|render-docx|render-html|render-html-file|render-pdf|render-text|spell|story-map|templates)$/,
+          find: /^@drafter\/(archive|cast|cm-fountain|compare|fdx|fountain|history|layout|lint|markdown|notes|novel|outline|render-docx|render-html|render-html-file|render-pdf|render-text|spell|story-map|templates|production)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,
         },
       ],

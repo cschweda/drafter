@@ -315,7 +315,9 @@ describe('pagesHtml', () => {
       span: { from: 0, to: 0 },
     };
     const layout: Layout = {
-      pages: [{ number: 1, lines: [line], sceneNumbersLeft: [], sceneNumbersRight: [] }],
+      pages: [
+        { number: 1, label: '1', lines: [line], sceneNumbersLeft: [], sceneNumbersRight: [] },
+      ],
       index: [],
       diagnostics: [],
     };
