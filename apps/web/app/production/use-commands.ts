@@ -20,6 +20,10 @@ import {
 // the snapshots taken before Unlock, Clear marks, and Omit scene. Made on first use and kept for the
 // visit.
 
+/** Said while a stray `/*` stops every Production change: what it is, and what to do about it. */
+export const STRAY_COMMENT =
+  'A /* in this script isn’t closed by its own */. Type */ where that comment ends, or delete the /*, and Production can change the script again.';
+
 /**
  * Why Production can't change the open script now, or null: read as the editor's state changes, so
  * the tab's buttons follow it.
@@ -30,8 +34,7 @@ export function productionReadOnly(): string | null {
     return 'This script is open for editing in another Drafter tab, so Production can’t change it here.';
   if (editor.frozen.value)
     return 'This is a draft, opened to read: it can’t be changed, and neither can its lock or its marks.';
-  if (editor.kind.value === 'fountain' && hasStrayBoneyard(editor.doc.value))
-    return 'A /* in this script isn’t closed by its own */, so Production changes nothing until it is.';
+  if (editor.kind.value === 'fountain' && hasStrayBoneyard(editor.doc.value)) return STRAY_COMMENT;
   return editor.view.state.readOnly ? READ_ONLY : null;
 }
 

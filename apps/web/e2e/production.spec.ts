@@ -365,6 +365,21 @@ test.describe('Production', () => {
     await expect(stars(page)).toHaveCount(1);
   });
 
+  test('a stray /* says how to let Production change the script again', async ({ page }) => {
+    await written(page);
+    await lockIt(page);
+    await showSource(page);
+    const text = (await wholeText(page)) ?? '';
+    const stray = text.replace('turning the brass key', 'turning /* oops the brass key');
+    expect(stray).not.toBe(text);
+    await replaceWhole(page, stray);
+    await expect.poll(() => wholeText(page)).toBe(stray);
+    await showProduction(page);
+    await expect(panel(page).locator('[data-production-read-only]')).toHaveText(
+      'A /* in this script isn’t closed by its own */. Type */ where that comment ends, or delete the /*, and Production can change the script again.',
+    );
+  });
+
   test('Unlock asks first, and leaves the text as it was', async ({ page }) => {
     await written(page);
     await lockIt(page);

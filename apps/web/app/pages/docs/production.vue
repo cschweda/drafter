@@ -37,6 +37,8 @@ useDocsHead({
     <p>
       <strong>Locking</strong> freezes two things at once: the number of every scene and the number
       of every page. After that, an edit never changes a number someone has already printed.
+      Locking also records the script as it stands as the <strong>White</strong> draft, in Drafts,
+      and opens the first revision, <strong>Blue</strong>.
     </p>
     <ul>
       <li>
@@ -57,9 +59,9 @@ useDocsHead({
     <h2 id="revisions">Revisions and their colors</h2>
     <p>
       A <strong>revision</strong> is one round of changes that goes out to the crew on pages of a
-      new color, so everyone can tell the newest pages at a glance. Locking opens the first
-      revision. <strong>Start the next revision</strong> closes it and opens the next color. The
-      colors come in this order:
+      new color, so everyone can tell the newest pages at a glance. The locked script is White;
+      locking opens the first revision, Blue. <strong>Start the next revision</strong> closes it
+      and opens the next color. The colors come in this order:
     </p>
     <p>
       White, Blue, Pink, Yellow, Green, Goldenrod, Buff, Salmon, Cherry, and then Double: Double
@@ -74,10 +76,10 @@ useDocsHead({
 
     <h2 id="a-pages">A-pages and folded ranges</h2>
     <p>
-      A page that comes after a locked page and before the next one gets the first page’s number and
-      a letter. If your new material spills past page 12, the extra pages are
-      <strong>12A</strong>, <strong>12B</strong>, and so on. These are the
-      <strong>A-pages</strong>. Page 13 stays page 13.
+      Pages that spill past a locked page, such as page 12, are numbered <strong>12A</strong>,
+      <strong>12B</strong>, and so on. These are the <strong>A-pages</strong>. Page 13 stays page
+      13. New pages at the very start of the script, before page 1, become page 1 and its A-pages,
+      <strong>1A</strong>, <strong>1B</strong>: page 1 always starts at the top.
     </p>
     <p>
       The other way round, when a cut leaves a locked page with no text, it is folded into the page
@@ -88,8 +90,10 @@ useDocsHead({
     <h2 id="a-scenes">A-scenes</h2>
     <p>
       A scene you add after locking cannot take the next number, because that number is taken. It
-      takes the number before it and a letter: between scene 5 and scene 6 comes
-      <strong>5A</strong>, then <strong>5B</strong> after that. Until you write the number, the new
+      usually takes the number of the scene before it plus a letter: between scene 5 and scene 6
+      comes <strong>5A</strong>, then <strong>5B</strong> after that. A few places need a letter in
+      front instead, such as <strong>A5A</strong> between 5 and 5A, or <strong>A1</strong> before
+      scene 1; the table shows each case. Until you write the number, the new
       heading shows the number it will have, dimmer, in the Source pane. Drafter writes the
       numbers into the text when you start the next revision, lock again, or choose
       <strong>Write new scene numbers</strong>; never while you type.
@@ -164,10 +168,13 @@ useDocsHead({
 
     <h2 id="unlock">Unlocking and clearing marks</h2>
     <p>
-      <strong>Clear marks…</strong> removes the asterisks and closes the revision without changing
-      any number. <strong>Unlock…</strong> goes further: the scene numbers and page numbers are
-      released, and the script is free again. Both ask first, and both take a snapshot before they
-      act, so what you had is in History.
+      <strong>Clear marks…</strong> removes every revision’s asterisks and starts again from the
+      script as it is now: a fresh White draft and a new Blue revision. The marks go; the lock, the
+      scene numbers, and the page numbers stay. <strong>Unlock…</strong> goes further: the scene
+      numbers and page numbers are released, and the script is free again. Unlock leaves your text
+      as it is, so the scene numbers written into it (<code>#12#</code>) and any
+      <code>.OMITTED</code> headings stay; delete them yourself if you no longer want them. Both ask
+      first, and both take a snapshot before they act, so what you had is in History.
     </p>
     <p>
       Next: revised pages, a breakdown report, and sides come in a later release. This page will
