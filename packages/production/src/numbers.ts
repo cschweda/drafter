@@ -59,7 +59,8 @@ export function compareSceneNumbers(a: string, b: string): number {
  *    preferring to bump the last letter, else appending an A:
  *    5/6 -> 5A, 5A/6 -> 5B, 5A/5B -> 5AA, 5Z/6 -> 5ZA.
  * 2. If no suffix fits (nothing lies between 5 and 5A), put a longer letter
- *    prefix on `after`: 5/5A -> A5A, then 5/A5A -> AA5A.
+ *    prefix on `after`: 5/5A -> A5A, then 5/A5A -> AA5A. When `before` is
+ *    already prefixed, step its prefix up instead: A5A/5A -> B5A.
  * 3. Before the first scene, prefix `after`: A1, then AA1.
  * Every answer sorts strictly between the two neighbours.
  */
@@ -78,10 +79,25 @@ export function numberBetween(before: string | null, after: string | null): stri
   }
   const q = after === null ? null : parse(after);
   if (q) {
-    const prefixed = `A${after}`;
-    if (fits(prefixed)) return prefixed;
+    const tail = `${q.digits}${q.suffix}`;
+    // First try stacking more A's on the front of `after`'s own prefix. A
+    // longer prefix sorts earlier, so this lands just after `before` when
+    // `before` has a shorter prefix (5/5A -> A5A, 5/A5A -> AA5A).
+    for (let k = 1; k <= 8; k++) {
+      const candidate = `${'A'.repeat(k)}${q.prefix}${tail}`;
+      if (fits(candidate)) return candidate;
+    }
+    // Otherwise `before` already carries a prefix (A5A, just before 5A). Same-
+    // length prefixes sort alphabetically, so step the last letter up
+    // (A5A/5A -> B5A -> C5A) while it stays under `after`.
+    const stepped = bumpLast(p.prefix);
+    if (p.prefix !== '' && stepped !== null && fits(`${stepped}${tail}`)) {
+      return `${stepped}${tail}`;
+    }
   }
-  // Last resort (neighbours out of order or oddly shaped): go a level deeper.
+  // No sensible number found: unparseable neighbours, or a run of 26+ scenes
+  // squeezed into one gap. Hang a letter on `before`; this may not sort
+  // strictly between the neighbours.
   return `${before}A`;
 }
 
