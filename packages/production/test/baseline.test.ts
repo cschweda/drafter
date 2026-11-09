@@ -49,4 +49,9 @@ describe('baseline codec', () => {
     expect(await decodeBaseline(bomb)).toBeNull();
     expect(await decodeBaseline(await encodeBaseline('hello'), 4)).toBeNull();
   });
+
+  it('keeps a leading byte-order mark', async () => {
+    const text = '﻿INT. ROOM - DAY\n\nShe waits.\n';
+    expect(await decodeBaseline(await encodeBaseline(text))).toBe(text);
+  });
 });

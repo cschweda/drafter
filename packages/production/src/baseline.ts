@@ -72,7 +72,8 @@ export async function decodeBaseline(
   const bytes = await collect(stream, maxBytes);
   if (!bytes) return null;
   try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    // ignoreBOM keeps a leading U+FEFF in the text, so a script that starts with one round-trips.
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
   } catch {
     return null;
   }

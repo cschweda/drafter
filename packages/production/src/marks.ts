@@ -59,6 +59,8 @@ function openMarks(baseline: string, current: string): OpenMarks {
         pos += part.text.length;
       }
       if (marked) out.lines.add(i);
+      // An edit that only took words out has nothing new to mark, so the line is marked whole.
+      else if (words.removed.some((part) => part.kind === 'removed')) wholeLine(i);
     }
   }
   return out;
@@ -87,20 +89,21 @@ export async function productionMarks(input: {
     const { lines, starts } = splitLines(current);
     const prints = await fingerprintLines(current);
     const gapsTaken = new Set(mine.gaps);
+    // Newest first, each set's fingerprints as sets, built once per call.
+    const sets = closed
+      .map((set) => ({ name: set.name, lines: new Set(set.lines), gaps: new Set(set.gaps) }))
+      .reverse();
     for (let i = 0; i < lines.length; i++) {
-      // Walk from the newest closed set back.
-      for (let k = closed.length - 1; k >= 0; k--) {
-        const set = closed[k];
-        if (!mine.lines.has(i) && lines[i].length > 0 && set.lines?.includes(prints[i])) {
-          spans.push({ from: starts[i], to: starts[i] + lines[i].length, set: set.name });
-          break;
-        }
+      const print = prints[i];
+      if (!mine.lines.has(i) && lines[i].length > 0) {
+        const set = sets.find((s) => s.lines.has(print));
+        if (set) spans.push({ from: starts[i], to: starts[i] + lines[i].length, set: set.name });
       }
-      for (let k = closed.length - 1; k >= 0; k--) {
-        if (!gapsTaken.has(starts[i]) && closed[k].gaps?.includes(prints[i])) {
-          gaps.push({ at: starts[i], set: closed[k].name });
+      if (!gapsTaken.has(starts[i])) {
+        const set = sets.find((s) => s.gaps.has(print));
+        if (set) {
+          gaps.push({ at: starts[i], set: set.name });
           gapsTaken.add(starts[i]);
-          break;
         }
       }
     }
