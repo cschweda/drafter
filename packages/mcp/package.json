@@ -47,11 +47,11 @@
     "@drafter/outline": "workspace:*",
     "@drafter/story-map": "workspace:*",
     "@drafter/templates": "workspace:*",
-    "@modelcontextprotocol/server": "2.3.1",
+    "@modelcontextprotocol/server": "2.4.0",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@drafter/render-html-file": "workspace:*",
-    "@modelcontextprotocol/client": "2.3.1"
+    "@modelcontextprotocol/client": "2.4.0"
   }
 }
