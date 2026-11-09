@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- Dependencies brought up to date: Electron 45.2.1 (the desktop app's runtime), pdf.js 6.5.438, the MCP SDK 2.4.0 behind Drafter for Claude, Biome 2.6.4, tsdown 0.23.4, vue-tsc 3.3.14, the Lucide icons 1.2.150, and fake-indexeddb 6.2.7; the self-hosting image's Caddy 2.11.9. The SDK now carries fast-uri 3.1.8 inside it, whose licence text Drafter for Claude keeps and passes on; the licences page and `docs/DEPENDENCIES.md` give the new versions.
+- For contributors: Drafter for Claude's bundle test reads past JSDoc comment lines when it looks for imports, so a type written `{{ x: import('…') }}` in a dependency (fast-uri 3.1.8 has one) isn't taken for code.
+
 ### Added
 
 - **An About menu, beside Help.** The top bar's Help menu is now two: **Help** keeps the tour, the help pages, Download the desktop app, and the sample scripts; **About** has About Drafter, What's new, Privacy, Third-party licences, Technical details, **Report a problem…**, **Suggest an idea…**, Copy technical details, and Check for updates…. On a narrow screen About folds into More actions as a submenu before anything you use while writing, so File stays in the bar on a phone.

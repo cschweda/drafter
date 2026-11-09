@@ -50,12 +50,19 @@ describe('the bundle', () => {
   it('one file, and it imports only Node’s own modules', () => {
     expect(readdirSync(DIST)).toEqual(['drafter-mcp.js']);
     const builtins = new Set(builtinModules);
+    // A JSDoc block's lines start with `*`; their `import('…')` are types, not code. fast-uri 3.1.8
+    // (inside the MCP SDK 2.4.0) has one the lookbehind below can't tell from code:
+    // `@returns {{ parsed: import('./types/index').URIComponent, … }}`.
+    const live = code
+      .split('\n')
+      .filter((line) => !/^\s*\*/.test(line))
+      .join('\n');
     const specifiers = [
       // Static imports and re-exports, at the start of a line (the bundle's own).
       ...code.matchAll(/^\s*(?:import|export)\b[^'"`;]*?\bfrom\s*['"]([^'"]+)['"]/gm),
       ...code.matchAll(/^\s*import\s*['"]([^'"]+)['"]/gm),
       // Not a JSDoc type (`{import('./types').X}`), which is a comment.
-      ...code.matchAll(/(?<![{|<\w.$])import\(\s*['"]([^'"]+)['"]\s*\)/g),
+      ...live.matchAll(/(?<![{|<\w.$])import\(\s*['"]([^'"]+)['"]\s*\)/g),
       // Not Ajv's generated code, which names its runtime in a template string (`require("ajv/…")`)
       // that is never run here.
       ...code.matchAll(/(?<![`\w.$])require\(\s*['"]([^'"]+)['"]\s*\)/g),

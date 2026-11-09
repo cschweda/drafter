@@ -8,14 +8,14 @@
 //     folder;
 //   - code the SDK's own dist files carry inline, which has no folder of its own: the SDK's build
 //     marks each inlined module with a `//#region …/node_modules/.pnpm/<name>@<version>/…` line
-//     (2.3.1 inlines the JSON Schema validators Ajv, with ajv-formats, fast-deep-equal, fast-uri,
+//     (2.4.0 inlines the JSON Schema validators Ajv, with ajv-formats, fast-deep-equal, fast-uri,
 //     and json-schema-traverse, in ajvProvider-*.mjs, and @cfworker/json-schema in
 //     cfWorkerProvider-*.mjs). Their licences are kept in scripts/licences/<name>@<version>.txt,
 //     taken from each version's npm package (@cfworker/json-schema's has no LICENSE file; its
 //     text is the LICENSE.md of its repository, github.com/cfworker/cfworker), and their SPDX
 //     names from each one's npm metadata (INLINE below).
 // Anything the script doesn't know stops the build: a package with no licence file, inlined code
-// with no kept licence, or a NOTICE file (Apache-2.0 asks for a NOTICE to be passed on; 2.3.1 of
+// with no kept licence, or a NOTICE file (Apache-2.0 asks for a NOTICE to be passed on; 2.4.0 of
 // the SDK has none, so one appearing needs a person to look).
 import { appendFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, normalize } from 'node:path';
@@ -27,7 +27,7 @@ export const INLINE = {
   'ajv@8.18.0': 'MIT',
   'ajv-formats@3.0.1': 'MIT',
   'fast-deep-equal@3.1.3': 'MIT',
-  'fast-uri@3.1.0': 'BSD-3-Clause',
+  'fast-uri@3.1.8': 'BSD-3-Clause',
   'json-schema-traverse@1.0.0': 'MIT',
   '@cfworker/json-schema@4.1.1': 'MIT',
   'content-type@1.0.5': 'MIT',
