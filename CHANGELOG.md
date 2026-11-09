@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- For contributors: the design for Production (`docs/drafter-production-design.md`), v0.27.0: revision sets in color with printed marks, locked pages (12A) and scene numbers (5A, OMITTED), scene numbers that start anywhere, a revised-pages PDF, a breakdown report, and sides; the open revision's baseline travels in the file, compressed, so marks print the same on any computer. Awaiting the maintainer's approval.
+
 ## [0.26.2] - 2026-11-09
 
 **About, and reports by email.** The top bar's Help menu is now two: **Help** for learning Drafter, and **About** for Drafter itself, with **Report a problem…** and **Suggest an idea…**, which on drafter.dev can now **send by email** with no GitHub account. Typing is never blocked by a script's file, the warnings say **autosave** in plain words, Drafter's settings block is hidden in the editor, and Reload for a new version stops asking about changes autosave already has. Electron, pdf.js, and the MCP SDK are up to date.
