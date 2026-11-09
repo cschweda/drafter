@@ -37,10 +37,35 @@ describe('page anchors', () => {
     expect(r.dropped).toEqual(['3']);
   });
 
-  it('maps to the end of the text when everything after was removed', () => {
+  it('drops anchors that land at the end of the text', () => {
     const r = resolveAnchors(pages, base, 'a\nb');
-    expect(ats(r)).toEqual([0, 3]);
-    expect(r.dropped).toEqual(['3']);
+    expect(ats(r)).toEqual([0]);
+    expect(r.dropped).toEqual(['2', '3']);
+  });
+
+  it('keeps a fold across a rebase', () => {
+    const p = [
+      { label: '13', line: 0, printed: 0 },
+      { label: '14', line: 2, printed: 0 },
+      { label: '15', line: 4, printed: 0 },
+    ];
+    const cur = ['c', 'd', 'e', 'f'].join('\n');
+    const rebased = rebaseAnchors(p, base, cur);
+    expect(rebased.map((x) => x.label)).toEqual(['13', '14', '15']);
+    expect(rebased[1]).toEqual({ label: '14', line: 0, printed: 0 });
+    const r = resolveAnchors(rebased, cur, cur);
+    expect(r.dropped).toEqual(['14']);
+    expect(r.anchors[0]).toEqual({ label: '13', at: 0, printed: 0 });
+    expect(r.anchors.map((a) => a.label)).toEqual(['13', '15']);
+  });
+
+  it('carries printed unclamped when an edited anchor line got shorter', () => {
+    const r = resolveAnchors(
+      [{ label: '2', line: 1, printed: 5 }],
+      'a\nlong long line\nc',
+      'a\nx\nc',
+    );
+    expect(r.anchors).toEqual([{ label: '2', at: 2, printed: 5 }]);
   });
 
   it('rebase keeps labels', () => {

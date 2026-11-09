@@ -38,46 +38,65 @@ function lineMapper(oldText: string, newText: string): (page: LockedPage) => Map
   };
 }
 
-/** Where each locked page starts in `current`; collisions keep the first and report the later labels as dropped. */
+interface Placed extends Mapped {
+  label: string;
+  at: number;
+  /** False when the page collides with an earlier one or has no text left. */
+  kept: boolean;
+}
+
+function place(pages: readonly LockedPage[], oldText: string, newText: string): Placed[] {
+  const map = lineMapper(oldText, newText);
+  const { starts } = splitLines(newText);
+  const out: Placed[] = [];
+  let last = -1;
+  for (const page of pages) {
+    const m = map(page);
+    const at = starts[m.line] ?? newText.length;
+    const kept = at > last && at < newText.length;
+    if (kept) last = at;
+    out.push({ label: page.label, line: m.line, printed: m.printed, at, kept });
+  }
+  return out;
+}
+
+/**
+ * Where each locked page starts in `current`. A page that collides with an earlier one, or whose start
+ * is at the end of the text (no text left), is dropped and its label reported so the caller can fold it.
+ * `printed` is carried as locked and not clamped: paginate clamps it to the anchor block's printed-line count.
+ */
 export function resolveAnchors(
   pages: readonly LockedPage[],
   baseline: string,
   current: string,
 ): { anchors: Anchor[]; dropped: string[] } {
-  const map = lineMapper(baseline, current);
-  const { starts } = splitLines(current);
-  const anchors: Anchor[] = [];
-  const dropped: string[] = [];
-  let last = -1;
-  for (const page of pages) {
-    const m = map(page);
-    const at = starts[m.line] ?? current.length;
-    if (at <= last) {
-      dropped.push(page.label);
-      continue;
-    }
-    last = at;
-    anchors.push({ label: page.label, at, printed: m.printed });
-  }
-  return { anchors, dropped };
+  const placed = place(pages, baseline, current);
+  return {
+    anchors: placed
+      .filter((p) => p.kept)
+      .map((p) => ({ label: p.label, at: p.at, printed: p.printed })),
+    dropped: placed.filter((p) => !p.kept).map((p) => p.label),
+  };
 }
 
-/** The pages with lines indexing `newBaseline`, for starting the next revision set; collapsed pages are omitted. */
+/**
+ * The pages with lines indexing `newBaseline`, for starting the next revision set. A collapsed page is
+ * kept on the line of the page it folded into (printed 0), so the fold survives and a later resolve reports it.
+ */
 export function rebaseAnchors(
   pages: readonly LockedPage[],
   oldBaseline: string,
   newBaseline: string,
 ): LockedPage[] {
-  const map = lineMapper(oldBaseline, newBaseline);
-  const { starts } = splitLines(newBaseline);
   const out: LockedPage[] = [];
-  let last = -1;
-  for (const page of pages) {
-    const m = map(page);
-    const at = starts[m.line] ?? newBaseline.length;
-    if (at <= last) continue;
-    last = at;
-    out.push({ label: page.label, line: m.line, printed: m.printed });
+  let into: Placed | undefined;
+  for (const p of place(pages, oldBaseline, newBaseline)) {
+    if (p.kept) {
+      into = p;
+      out.push({ label: p.label, line: p.line, printed: p.printed });
+    } else {
+      out.push({ label: p.label, line: into ? into.line : p.line, printed: 0 });
+    }
   }
   return out;
 }
