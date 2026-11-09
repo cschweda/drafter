@@ -471,6 +471,22 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0
 
+  packages/production:
+    dependencies:
+      '@drafter/compare':
+        specifier: workspace:*
+        version: link:../compare
+      '@drafter/fountain':
+        specifier: workspace:*
+        version: link:../fountain
+      '@drafter/layout':
+        specifier: workspace:*
+        version: link:../layout
+    devDependencies:
+      '@drafter/templates':
+        specifier: workspace:*
+        version: link:../templates
+
   packages/render-docx:
     dependencies:
       '@drafter/archive':
