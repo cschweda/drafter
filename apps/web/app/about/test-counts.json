@@ -17,10 +17,10 @@
     "desktop": 139
   },
   "trap": {
-    "traps": 287,
-    "checks": 1329,
+    "traps": 294,
+    "checks": 1376,
     "byFormat": {
-      "fountain": 58,
+      "fountain": 65,
       "markdown": 41,
       "text": 20,
       "fdx": 30,
