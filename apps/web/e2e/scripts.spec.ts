@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
-import { pressToolbarButton } from './modules';
+import { pressToolbarButton, wholeText } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -20,7 +20,8 @@ const sampleShown = (page: Page) =>
 const chip = (page: Page) => page.locator('.chip.template');
 const row = (page: Page, title: string) => menu(page).locator('li', { hasText: title });
 const confirm = (page: Page) => page.getByRole('dialog');
-const bar = (page: Page) => page.getByText('This script is open for editing in another tab');
+const bar = (page: Page) =>
+  page.getByText('You can’t type here because this script is open in another Drafter tab');
 
 interface Row {
   id: string;
@@ -138,9 +139,11 @@ test.describe('new scripts and switching', () => {
     await expect(editor(page)).toBeFocused();
     await page.keyboard.insertText('A kitchen.');
     // The cursor sat before the metadata block, which is still the last thing in the text.
-    await expect(editor(page)).toHaveText(
-      /Draft date: [^\n]*\s*A kitchen\.\s*\/\* drafter\s*\{"v":1,"template":"stage-play-standard"\}\s*\*\/\s*$/,
-    );
+    await expect
+      .poll(() => wholeText(page))
+      .toMatch(
+        /Draft date: [^\n]*\s*A kitchen\.\s*\/\* drafter\s*\{"v":1,"template":"stage-play-standard"\}\s*\*\/\s*$/,
+      );
   });
 
   test('lists the new items in order, screenplay first', async ({ page }) => {

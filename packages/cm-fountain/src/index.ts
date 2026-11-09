@@ -19,6 +19,7 @@ export {
   elementAt,
   elementCommand,
   isBlankScript,
+  metadataKept,
   onlyClearedBlock,
   openChooser,
   savedText,

@@ -295,7 +295,9 @@ test.describe('saving to a file (Chromium)', () => {
     const second = await context.newPage();
     await stubPickers(second);
     await start(second);
-    await expect(second.getByText('This script is open for editing in another tab')).toBeVisible();
+    await expect(
+      second.getByText('You can’t type here because this script is open in another Drafter tab'),
+    ).toBeVisible();
     await expect(editor(second)).toContainText('HELD');
     await expect(saveButton(second)).toHaveAttribute('aria-disabled', 'true');
     await nextFileName(second, 'readonly.fountain');

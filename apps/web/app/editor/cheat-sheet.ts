@@ -170,7 +170,7 @@ export const CHEAT_SHEET: readonly CheatSheetEntry[] = [
     id: 'drafter-block',
     name: 'Drafter’s settings block',
     mark: '/* drafter */',
-    rule: 'Drafter keeps what it needs to remember about a script, such as its template, in one boneyard at the very end of the file that starts /* drafter. Other Fountain programs skip a boneyard, so the file stays portable. Leave it as it is: Drafter writes it.',
+    rule: 'Drafter keeps what it needs to remember about a script, such as its template, in one boneyard at the very end of the file that starts /* drafter. Other Fountain programs skip a boneyard, so the file stays portable. Drafter hides it in the editor and keeps it safe, so you never see it there; you’ll only see it if you open the file in another program. Leave it as it is: Drafter writes it.',
     example: 'She waits.\n\n/* drafter\n{ "v": 1, "template": "us-screenplay" }\n*/',
     reads: ['action', 'boneyard'],
   },

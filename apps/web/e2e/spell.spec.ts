@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
-import { showView } from './modules';
+import { showView, wholeText } from './modules';
 
 // Drafter's spellcheck (Phase 2 design §12; Plan D): the worker checks the text after a pause, and
 // the Source pane underlines what it marks. Every name, place, and misspelling here is invented.
@@ -276,27 +276,27 @@ test.describe('the spelling menu', () => {
   }) => {
     await setText(page, WORDS);
     await expectMarks(page, ['phnoe', 'phnoe', 'drowr']);
-    // How many marks are drawn when the metadata block first is: the edit's own transaction.
+    // How many marks are drawn the first time they change: the edit's own transaction takes both
+    // phnoes at once (the block that records the word is hidden, so the marks are what is seen).
     await page.evaluate(() => {
       const w = window as unknown as { marksWithBlock: number | null };
       w.marksWithBlock = null;
       const content = document.querySelector('.cm-content') as HTMLElement;
       new MutationObserver(() => {
-        if (w.marksWithBlock === null && content.textContent?.includes('/* drafter')) {
-          w.marksWithBlock = content.querySelectorAll('.cm-misspelled').length;
-        }
+        const n = content.querySelectorAll('.cm-misspelled').length;
+        if (w.marksWithBlock === null && n !== 3) w.marksWithBlock = n;
       }).observe(content, { childList: true, subtree: true, characterData: true });
     });
     await marks(page).first().click({ button: 'right' });
     await menu(page).getByRole('menuitem', { name: 'Add to this script’s dictionary' }).click();
-    await expect(editor(page)).toContainText('"dictionary":["phnoe"]');
+    await expect.poll(() => wholeText(page)).toContain('"dictionary":["phnoe"]');
     expect(
       await page.evaluate(() => (window as unknown as { marksWithBlock: number }).marksWithBlock),
     ).toBe(1);
     await expectMarks(page, ['drowr']);
     await expect(announcer(page)).toHaveText('Added “phnoe” to this script’s dictionary.');
     await page.keyboard.press('ControlOrMeta+z');
-    await expect(editor(page)).not.toContainText('/* drafter');
+    await expect.poll(() => wholeText(page)).not.toContain('/* drafter');
     await expectMarks(page, ['phnoe', 'phnoe', 'drowr']);
   });
 
@@ -307,7 +307,7 @@ test.describe('the spelling menu', () => {
     await menu(page).getByRole('menuitem', { name: 'Add to my dictionary' }).click();
     await expectMarks(page, ['phnoe', 'phnoe']);
     // Not in the file.
-    await expect(editor(page)).not.toContainText('/* drafter');
+    await expect.poll(() => wholeText(page)).not.toContain('/* drafter');
     await page.keyboard.press('ControlOrMeta+Alt+n');
     await expect(editor(page)).toContainText('Untitled Screenplay');
     await setText(page, 'INT. YARD - DAY\n\nThe drowr and the wuold.\n');
@@ -325,7 +325,7 @@ test.describe('the spelling menu', () => {
       .first()
       .evaluate((el) => el.closest('.cm-line')?.textContent?.indexOf('A phnoe'));
     expect(left).toBeGreaterThan(0);
-    await expect(editor(page)).not.toContainText('/* drafter');
+    await expect.poll(() => wholeText(page)).not.toContain('/* drafter');
   });
 
   test('Next and Previous misspelling move the cursor and say the word', async ({ page }) => {

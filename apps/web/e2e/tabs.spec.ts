@@ -11,7 +11,8 @@ async function violations(page: Page) {
 }
 
 const editor = (page: Page) => page.locator('.cm-content');
-const bar = (page: Page) => page.getByText('This script is open for editing in another tab');
+const bar = (page: Page) =>
+  page.getByText('You can’t type here because this script is open in another Drafter tab');
 const editHere = (page: Page) => page.getByRole('button', { name: 'Type here instead' });
 
 interface Row {

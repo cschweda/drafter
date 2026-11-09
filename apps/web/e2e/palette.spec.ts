@@ -464,7 +464,9 @@ test.describe('in a tab that only shows a script', () => {
   test('hides the commands that would change the text', async ({ context }) => {
     await openTab(context);
     const b = await openTab(context);
-    await expect(b.getByText('This script is open for editing in another tab')).toBeVisible();
+    await expect(
+      b.getByText('You can’t type here because this script is open in another Drafter tab'),
+    ).toBeVisible();
     await openPalette(b);
     await query(b).fill('make');
     await expect(palette(b)).toContainText('Nothing matches');

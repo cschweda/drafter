@@ -238,7 +238,7 @@ test.describe('below 640px', () => {
     await expect(status(page).locator('[data-tour="template"]')).toBeHidden();
     await chip.click();
     await expect(page.locator('#recovery-why')).toBeVisible();
-    await expect(page.locator('#recovery-why')).toContainText('Save the script to a file');
+    await expect(page.locator('#recovery-why')).toContainText('save the script to a file');
   });
 
   test('keeps the errors’ region in place, so an error is said as it arrives', async ({
