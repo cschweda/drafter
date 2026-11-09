@@ -8,10 +8,20 @@ import { applyFix } from './helpers';
 const screenplay = builtins['us-screenplay'] as Template;
 const stagePlay = builtins['stage-play-standard'] as Template;
 
+/** A production block with the shape the production package reads; `extra` overrides its keys. */
+const block = (production: Record<string, unknown>) =>
+  `/* drafter\n${JSON.stringify({ v: 1, production })}\n*/\n`;
+const shaped = (numbers: unknown, extra: Record<string, unknown> = {}) => ({
+  lockedAt: '2026-11-09',
+  firstScene: 1,
+  numbers,
+  pages: [['1', 0, 0]],
+  sets: [],
+  baseline: 'H4sIAAAAAAAAAwMAAAAAAAAAAAA=',
+  ...extra,
+});
 const locked = (body: string, numbers: string[] | null = ['1', '2', '3']) =>
-  numbers === null
-    ? body
-    : `${body}/* drafter\n${JSON.stringify({ v: 1, production: { numbers } })}\n*/\n`;
+  numbers === null ? body : `${body}${block(shaped(numbers))}`;
 
 const run = (source: string, id: string, template: Template = screenplay): LintDiagnostic[] =>
   lint(parse(source), template).filter((d) => d.ruleId === id);
@@ -76,13 +86,34 @@ describe('locked-scene-gone', () => {
 });
 
 describe('locked-scene-gone on a hostile block', () => {
-  it('reads at most 5000 numbers, quickly, and dedupes them', () => {
-    const numbers = Array.from({ length: 100_000 }, (_, i) => String(i + 1));
-    const source = locked(H('1') + H('2'), numbers);
+  it('reads up to 5000 numbers, quickly, and ignores a block with more', () => {
+    const many = (n: number) => Array.from({ length: n }, (_, i) => String(i + 1));
     const start = Date.now();
-    const found = run(source, 'locked-scene-gone');
+    expect(run(locked(H('1') + H('2'), many(5000)), 'locked-scene-gone')).toHaveLength(4998);
+    // Past the production package's cap the block isn't read, so it isn't a lock.
+    expect(run(locked(H('1') + H('2'), many(100_000)), 'locked-scene-gone')).toEqual([]);
     expect(Date.now() - start).toBeLessThan(5000);
-    expect(found.length).toBe(4998);
+  });
+
+  it('gives no locked-number warnings on a block the production package rejects', () => {
+    const ids = ['locked-numbers-out-of-order', 'repeated-scene-number', 'locked-scene-gone'];
+    const body = H('3') + H('1') + H('1');
+    const rejected = [
+      // Like the traps: numbers of the wrong type, no baseline, a baseline past the cap.
+      shaped(['1', 2, '3']),
+      shaped(['1', '2', '3'], { baseline: '' }),
+      shaped(['1', '2', '3'], {
+        baseline: 'A'.repeat(Math.ceil(((8 * 1024 * 1024 + 1024) * 4) / 3) + 1),
+      }),
+      shaped(['1', '2', '3'], { firstScene: '1' }),
+      shaped(['1', '2', '3'], { pages: {} }),
+      shaped(['1', '2', '3'], { sets: Array.from({ length: 65 }, () => ({})) }),
+      { numbers: ['1', '2', '3'] },
+    ];
+    for (const production of rejected)
+      for (const id of ids) expect(run(body + block(production), id)).toEqual([]);
+    // The same body under a well-formed block does warn.
+    expect(run(locked(body), 'repeated-scene-number')).toHaveLength(1);
   });
   it('gives a repeated entry one diagnostic', () => {
     const source = locked(H('1') + H('3'), ['1', '2', '2', '3']);

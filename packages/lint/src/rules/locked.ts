@@ -10,8 +10,31 @@ import type { Fix, LintDiagnostic, Rule } from '../types';
 
 // Lint keeps its own copy of the scene-number order from `@drafter/production`; a test checks that
 // the two agree.
-/** The most locked numbers read from a block (the production package's own cap). */
+/** The production package's caps on a block (`CAPS` in its block.ts): past them, it isn't read. */
 const MAX_NUMBERS = 5000;
+const MAX_PAGES = 5000;
+const MAX_SETS = 64;
+const MAX_BASELINE_CHARS = Math.ceil(((8 * 1024 * 1024 + 1024) * 4) / 3);
+
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/**
+ * The locked numbers, when the block has the shape `readProduction` (in `@drafter/production`)
+ * accepts at its top level, else null: a block the app opens as unlocked gets no locked-number
+ * warnings. The pages' and sets' insides aren't checked here, only their counts.
+ */
+function lockedNumbers(raw: unknown): string[] | null {
+  if (!isObject(raw)) return null;
+  const { lockedAt, firstScene, numbers, pages, sets, baseline } = raw;
+  if (typeof lockedAt !== 'string' || typeof baseline !== 'string' || baseline === '') return null;
+  if (baseline.length > MAX_BASELINE_CHARS) return null;
+  if (typeof firstScene !== 'number' || !Number.isInteger(firstScene)) return null;
+  if (!Array.isArray(pages) || pages.length > MAX_PAGES) return null;
+  if (!Array.isArray(sets) || sets.length > MAX_SETS) return null;
+  if (!Array.isArray(numbers) || numbers.length > MAX_NUMBERS) return null;
+  return numbers.every((n): n is string => typeof n === 'string') ? numbers : null;
+}
 
 const SHAPE = /^([A-Z]*)(\d+)([A-Z]*)$/;
 
@@ -46,10 +69,8 @@ interface Numbered {
 
 /** The locked numbers, and the numbered headings in order; null when the rules don't apply. */
 function setup(ctx: Parameters<Rule['run']>[0]) {
-  const production = ctx.doc.meta?.production as { numbers?: unknown } | undefined;
-  const list = production?.numbers;
-  if (!Array.isArray(list) || !isScreenplay(ctx.template)) return null;
-  const numbers = list.filter((n): n is string => typeof n === 'string');
+  const numbers = lockedNumbers(ctx.doc.meta?.production);
+  if (!numbers || !isScreenplay(ctx.template)) return null;
   const headings: Numbered[] = [];
   for (const block of ctx.doc.blocks) {
     if (block.kind !== 'scene_heading') continue;
@@ -134,7 +155,7 @@ export const lockedSceneGone: Rule = {
       return s.headings[lo];
     };
     const found: LintDiagnostic[] = [];
-    for (const n of new Set(s.numbers.slice(0, MAX_NUMBERS))) {
+    for (const n of new Set(s.numbers)) {
       if (present.has(n)) continue;
       const after = firstAfter(n);
       const target = after ?? last;
