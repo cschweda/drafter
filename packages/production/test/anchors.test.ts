@@ -8,6 +8,11 @@ const pages: LockedPage[] = [
   { label: '2', line: 2, printed: 3 },
   { label: '3', line: 4, printed: 0 },
 ];
+const starts = (text: string) => {
+  const out = [0];
+  for (let i = text.indexOf('\n'); i !== -1; i = text.indexOf('\n', i + 1)) out.push(i + 1);
+  return out;
+};
 const ats = (r: { anchors: { at: number }[] }) => r.anchors.map((a) => a.at);
 
 describe('page anchors', () => {
@@ -21,9 +26,10 @@ describe('page anchors', () => {
   it('follows an edited anchor and a removed one', () => {
     const cur = ['new', 'a', 'b', 'C!', 'd', 'f'].join('\n');
     const r = resolveAnchors(pages, base, cur);
-    // a -> line 1 (offset 4); c edited -> line 3 (offset 8, printed kept); e removed -> next survivor f (line 5, offset 13), printed 0
+    // page 1 stays pinned to the start (Ruling 27); c edited -> line 3 (offset 8, printed kept);
+    // e removed -> next survivor f (line 5, offset 13), printed 0
     expect(r.anchors).toEqual([
-      { label: '1', at: 4, printed: 0 },
+      { label: '1', at: 0, printed: 0 },
       { label: '2', at: 8, printed: 3 },
       { label: '3', at: 13, printed: 0 },
     ]);
@@ -61,11 +67,14 @@ describe('page anchors', () => {
 
   it('carries printed unclamped when an edited anchor line got shorter', () => {
     const r = resolveAnchors(
-      [{ label: '2', line: 1, printed: 5 }],
+      [
+        { label: '1', line: 0, printed: 0 },
+        { label: '2', line: 1, printed: 5 },
+      ],
       'a\nlong long line\nc',
       'a\nx\nc',
     );
-    expect(r.anchors).toEqual([{ label: '2', at: 2, printed: 5 }]);
+    expect(r.anchors[1]).toEqual({ label: '2', at: 2, printed: 5 });
   });
 
   it('keeps pages that start further into the same line', () => {
@@ -82,6 +91,21 @@ describe('page anchors', () => {
       ['3', 2, 40],
     ]);
     expect(r.dropped).toEqual(['4']);
+  });
+
+  it('pins page 1 to the start when text is added before it', () => {
+    const p: LockedPage[] = [
+      { label: '1', line: 2, printed: 1 },
+      { label: '2', line: 4, printed: 0 },
+    ];
+    const cur = ['cold', 'open', 'a', 'b', 'c', 'd', 'e', 'f'].join('\n');
+    const r = resolveAnchors(p, base, cur);
+    expect(r.anchors).toEqual([
+      { label: '1', at: 0, printed: 0 },
+      { label: '2', at: starts(cur)[6], printed: 0 },
+    ]);
+    expect(r.dropped).toEqual([]);
+    expect(rebaseAnchors(p, base, cur)[0]).toEqual({ label: '1', line: 0, printed: 0 });
   });
 
   it('rebase keeps labels', () => {

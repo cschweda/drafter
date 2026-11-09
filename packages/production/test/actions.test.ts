@@ -206,9 +206,8 @@ describe('startNextSet', () => {
     const marked = marks.spans.map((s) => scriptText(next).slice(s.from, s.to));
     expect(marked).toContain('INT. HALLWAY - NIGHT #1A#');
     expect(marks.spans.every((s) => s.set === 'Blue')).toBe(true);
-    // The pages follow the text: page 1 still starts at the first scene.
-    const lines = scriptText(next).split('\n');
-    expect(lines[production?.pages[0]?.line as number]).toBe('INT. KITCHEN - NIGHT #1#');
+    // Page 1 is pinned to the top of the script (Ruling 27).
+    expect(production?.pages[0]).toMatchObject({ label: '1', line: 0, printed: 0 });
   });
 
   it('a stage play starts its next set without numbering anything', async () => {

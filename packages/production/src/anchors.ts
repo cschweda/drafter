@@ -51,8 +51,10 @@ function place(pages: readonly LockedPage[], oldText: string, newText: string): 
   const out: Placed[] = [];
   let last = -1;
   let lastPrinted = 0;
-  for (const page of pages) {
-    const m = map(page);
+  for (const [k, page] of pages.entries()) {
+    // The first locked page starts at the top of the script, whatever was added before it, so new
+    // opening material flows into page 1 and overflows as 1A, 1B: no page ever prints as 1 twice.
+    const m = k === 0 ? { line: 0, printed: 0 } : map(page);
     const at = starts[m.line] ?? newText.length;
     // A long paragraph or speech can hold several page starts, further into it each time.
     const after = at > last || (at === last && m.printed > lastPrinted);
@@ -67,7 +69,8 @@ function place(pages: readonly LockedPage[], oldText: string, newText: string): 
 }
 
 /**
- * Where each locked page starts in `current`. A page that collides with an earlier one, or whose start
+ * Where each locked page starts in `current`. The first page is pinned to the text's start (material
+ * added before it becomes its A-pages). A page that collides with an earlier one, or whose start
  * is at the end of the text (no text left), is dropped and its label reported so the caller can fold it.
  * `printed` is carried as locked and not clamped: paginate clamps it to the anchor block's printed-line count.
  */

@@ -94,6 +94,29 @@ describe('locked pagination', () => {
     expect(byLabel(layout, '12B')?.number).toBe((byLabel(layout, '12')?.number ?? 0) + 2);
   });
 
+  it('new opening pages before page 1 print as 1A, 1B, never a second 1', () => {
+    // Page 1's anchor is pinned to the start of the text (production Ruling 27), so it holds the
+    // title page's offset; with nothing added, the layout is the unlocked one.
+    const plain = anchorsOf(unlocked, base);
+    const pinned = plain.map((a, i) => (i === 0 ? { ...a, at: 0, printed: 0 } : a));
+    expect(paginate(parse(base), screenplay, { locked: { anchors: pinned, folded: [] } })).toEqual(
+      unlocked,
+    );
+    // A cold open added after the title page, before page 1's old start.
+    const at = (plain[0] as Anchor).at;
+    const added = `EXT. ROOFTOP - NIGHT\n\n${Array.from({ length: 50 }, (_, i) => `Cold open ${i + 1}.`).join('\n\n')}\n\n`;
+    const source = base.slice(0, at) + added + base.slice(at);
+    const anchors = shifted(plain, at, added.length).map((a, i) =>
+      i === 0 ? { ...a, at: 0, printed: 0 } : a,
+    );
+    const layout = paginate(parse(source), screenplay, { locked: { anchors, folded: [] } });
+    const got = labels(layout);
+    expect(new Set(got).size).toBe(got.length);
+    expect(got.slice(0, 3)).toEqual(['1', '1A', '1B']);
+    expect(got.slice(got.indexOf('2'))).toEqual(labels(unlocked).slice(1));
+    expect(texts(byLabel(layout, '1'))[0]).toBe('EXT. ROOFTOP - NIGHT');
+  });
+
   it('a shrunk page ends short', () => {
     // Remove everything on page 12 after its first block.
     const start = anchorOf('12').at;
