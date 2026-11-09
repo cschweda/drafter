@@ -63,6 +63,11 @@ export function reloadAnywayLabel(recovery: string): string {
 export interface UpdateDeps {
   /** Whether the open script has changes that aren't in its file. */
   unsaved(): boolean;
+  /**
+   * Whether Drafter's autosave is working (the browser lets it write; it needn't have promised to
+   * keep it). A reload then loses nothing: the script comes back as it was, still unsaved.
+   */
+  kept(): boolean;
   /** Saves the open script (the Save command). Rejects when the save fails. */
   save(): Promise<'saved' | 'cancelled'>;
   /** Whether the save that just finished was a download (a browser that can't write the file itself). */
@@ -103,13 +108,25 @@ export function createUpdateFlow(deps: UpdateDeps) {
     }
   }
 
-  /** Reload: at once when nothing is unsaved, else the question first. */
+  /**
+   * Reload: at once when nothing is unsaved, or when autosave has the changes, after writing the
+   * last of them (the maintainer, 2026-11-09: the question "always" appeared, and the autosave
+   * already had the changes, so it asked about nothing a reload could lose). The question comes
+   * only when autosave isn't working, before or after that last write: then a reload would lose them.
+   */
   async function reload(): Promise<void> {
-    if (deps.unsaved()) {
-      stage.value = 'confirm';
+    if (!deps.unsaved()) {
+      await apply('toast');
       return;
     }
-    await apply('toast');
+    if (deps.kept()) {
+      await deps.flush();
+      if (deps.kept()) {
+        await apply('toast', { anyway: true });
+        return;
+      }
+    }
+    stage.value = 'confirm';
   }
 
   /** Saves, and reloads only if the save worked. A cancelled or failed save leaves the question up. */

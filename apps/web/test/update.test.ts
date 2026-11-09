@@ -22,11 +22,18 @@ import {
 // design §11): it never reloads by itself, and with changes that aren't in a file it asks first.
 
 function setup(
-  options: { unsaved?: boolean; save?: 'saved' | 'cancelled' | 'throws'; download?: boolean } = {},
+  options: {
+    unsaved?: boolean;
+    kept?: boolean;
+    save?: 'saved' | 'cancelled' | 'throws';
+    download?: boolean;
+  } = {},
 ) {
   const calls: string[] = [];
   const flow = createUpdateFlow({
     unsaved: () => options.unsaved ?? false,
+    // Autosave isn't working, unless a test says so: the question is asked only then (2026-11-09).
+    kept: () => options.kept ?? false,
     save: async () => {
       calls.push('save');
       if (options.save === 'throws') throw new Error('no');
@@ -84,6 +91,42 @@ describe('Reload', () => {
   });
 });
 
+describe('Reload with autosave working', () => {
+  test('writes the last changes to autosave and reloads, with no question', async () => {
+    const { flow, calls } = setup({ unsaved: true, kept: true });
+    await flow.reload();
+    expect(calls).toEqual(['flush', 'apply-anyway']);
+    expect(flow.stage.value).not.toBe('confirm');
+  });
+
+  test('asks after all when autosave stops working with that last write', async () => {
+    let kept = true;
+    const calls: string[] = [];
+    const flow = createUpdateFlow({
+      unsaved: () => true,
+      kept: () => kept,
+      save: async () => 'saved',
+      savedByDownload: () => false,
+      flush: async () => {
+        calls.push('flush');
+        kept = false;
+      },
+      apply: async () => {
+        calls.push('apply');
+      },
+    });
+    await flow.reload();
+    expect(calls).toEqual(['flush']);
+    expect(flow.stage.value).toBe('confirm');
+  });
+
+  test('with nothing unsaved, reloads as before', async () => {
+    const { flow, calls } = setup({ unsaved: false, kept: true });
+    await flow.reload();
+    expect(calls).toEqual(['apply']);
+  });
+});
+
 describe('Reload anyway', () => {
   test('keeps the recovery copy up to date first, then applies, asking to leave without a question', async () => {
     const { flow, calls } = setup({ unsaved: true });
@@ -131,6 +174,7 @@ describe('Save first', () => {
     const apply = vi.fn();
     const flow = createUpdateFlow({
       unsaved: () => true,
+      kept: () => false,
       save,
       apply,
       savedByDownload: () => false,
@@ -246,6 +290,7 @@ describe('while the new version is applied', () => {
     const make = (unsaved: boolean) => {
       const flow = createUpdateFlow({
         unsaved: () => unsaved,
+        kept: () => false,
         save: async () => 'saved',
         savedByDownload: () => false,
         flush: async () => {},
@@ -268,6 +313,7 @@ describe('while the new version is applied', () => {
   test('stays busy while a reload is under way (the updater never settles then)', async () => {
     const flow = createUpdateFlow({
       unsaved: () => false,
+      kept: () => false,
       save: async () => 'saved',
       savedByDownload: () => false,
       flush: async () => {},
@@ -285,6 +331,7 @@ describe('while the new version is applied', () => {
     for (const unsaved of [false, true]) {
       const flow = createUpdateFlow({
         unsaved: () => unsaved,
+        kept: () => false,
         save: async () => 'saved',
         savedByDownload: () => false,
         flush: async () => {},
@@ -306,6 +353,7 @@ describe('while the new version is applied', () => {
   test('Reload anyway whose recovery copy can’t be written keeps the question, with its buttons', async () => {
     const flow = createUpdateFlow({
       unsaved: () => true,
+      kept: () => false,
       save: async () => 'saved',
       savedByDownload: () => false,
       flush: async () => {

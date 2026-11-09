@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
+import { failStorageWrites } from './modules';
 
 // Help: About Drafter, the sample scripts, and Check for updates (decided 2026-10-29). The
 // accessibility of these dialogs is left to the final accessibility pass.
@@ -376,15 +377,18 @@ test.describe('Check for updates', () => {
     await expect(page.locator('[data-update]')).toHaveCount(0);
   });
 
-  test('offers Reload when a new build is waiting, which asks first with changes unsaved', async ({
+  test('offers Reload when a new build is waiting, which asks first when unsaved changes aren’t autosaved', async ({
     page,
   }) => {
     await fakeWorker(page, 'waiting');
     await start(page);
     await runCommand(page, 'New screenplay');
+    // The question comes only when autosave isn't working (2026-11-09), so its writes fail here.
+    await failStorageWrites(page);
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.type('\nUNSAVED LINE.\n');
+    await expect(page.getByRole('button', { name: 'Autosave: off' })).toBeVisible();
     await runCommand(page, 'Check for updates…');
     const dialog = checkDialog(page);
     await expect(dialog.getByRole('status')).toHaveText(
@@ -396,9 +400,7 @@ test.describe('Check for updates', () => {
     await expect(dialog).toBeHidden();
     // The offer's own question: nothing reloads with changes that aren't in a file.
     const toast = page.locator('[data-update]');
-    await expect(toast).toContainText(
-      'Your unsaved changes are in Drafter’s autosave in this browser',
-    );
+    await expect(toast).toContainText('Autosave isn’t working in this browser right now');
     await expect(toast.getByRole('button', { name: 'Save first' })).toBeFocused();
     await toast.getByRole('button', { name: 'Cancel' }).click();
     await expect(toast.getByRole('button', { name: 'Reload' })).toBeVisible();

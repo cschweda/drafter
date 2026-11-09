@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- **Reloading for a new version no longer asks about unsaved changes when autosave has them.** Reload (and the desktop app's Restart) used to ask "Your unsaved changes are in Drafter's autosave…, but they aren't in your file yet" every time a script had changes, though a reload loses nothing then: the script comes back as it was, still marked unsaved. Now Drafter writes the last of your typing to autosave and reloads. It still asks, with **Save first**, when autosave isn't working, because then a reload would lose your changes.
 - Dependencies brought up to date: Electron 45.2.1 (the desktop app's runtime), pdf.js 6.5.438, the MCP SDK 2.4.0 behind Drafter for Claude, Biome 2.6.4, tsdown 0.23.4, vue-tsc 3.3.14, the Lucide icons 1.2.150, and fake-indexeddb 6.2.7; the self-hosting image's Caddy 2.11.9. The SDK now carries fast-uri 3.1.8 inside it, whose licence text Drafter for Claude keeps and passes on; the licences page and `docs/DEPENDENCIES.md` give the new versions.
 - For contributors: Drafter for Claude's bundle test reads past JSDoc comment lines when it looks for imports, so a type written `{{ x: import('…') }}` in a dependency (fast-uri 3.1.8 has one) isn't taken for code.
 
