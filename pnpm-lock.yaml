@@ -482,7 +482,6 @@ importers:
       '@drafter/layout':
         specifier: workspace:*
         version: link:../layout
-    devDependencies:
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates

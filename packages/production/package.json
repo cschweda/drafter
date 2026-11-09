@@ -31,9 +31,7 @@
   "dependencies": {
     "@drafter/compare": "workspace:*",
     "@drafter/fountain": "workspace:*",
-    "@drafter/layout": "workspace:*"
-  },
-  "devDependencies": {
+    "@drafter/layout": "workspace:*",
     "@drafter/templates": "workspace:*"
   }
 }
