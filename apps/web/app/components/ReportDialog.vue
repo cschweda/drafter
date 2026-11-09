@@ -302,9 +302,20 @@ function clearReport() {
           <span class="label">Your email (optional, if you’d like a reply)</span>
           <input v-model="replyTo" type="email" maxlength="254" autocomplete="email" />
         </label>
-        <!-- A field people never see or fill; a bot that fills it is told yes, and nothing is sent. -->
+        <!-- A field people never see or fill; a bot that fills it is told yes, and nothing is sent.
+             Named nothing a browser's autofill or a password manager recognises: "Website" was,
+             and Chrome filled it, so a person's report was taken for a bot's (2026-11-09). -->
         <label class="trap" aria-hidden="true">
-          Website <input v-model="website" type="text" tabindex="-1" autocomplete="off" />
+          Leave this empty
+          <input
+            v-model="website"
+            type="text"
+            tabindex="-1"
+            autocomplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+            data-form-type="other"
+          />
         </label>
         <DButton variant="primary" :disabled="!typed || sending" data-report-send-email @click="sendByEmail">
           {{ sending ? 'Sending…' : 'Send email' }}
