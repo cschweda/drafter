@@ -543,3 +543,18 @@ export async function submitThenOpenMenu(page: Page, words: string, name: string
       [words, name],
     );
 }
+
+/**
+ * Makes every IndexedDB write fail from now on, as a full disk or a browser that stops letting a
+ * site store would: autosave says "Autosave: off" after the next change. The database stays open,
+ * so this is the case of a session whose autosave stops working, not one that never had it.
+ */
+export async function failStorageWrites(page: Page) {
+  await page.evaluate(() => {
+    const fail = () => {
+      throw new DOMException('The disk is full.', 'QuotaExceededError');
+    };
+    IDBObjectStore.prototype.put = fail;
+    IDBObjectStore.prototype.add = fail;
+  });
+}

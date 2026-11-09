@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, type Page, test } from '@playwright/test';
 import { HELP_PAGES } from '../app/commands/data';
 import { removePickers, stubPickers, textOf } from './fs-stub';
-import { pressToolbarButton } from './modules';
+import { failStorageWrites, pressToolbarButton } from './modules';
 
 // Offline use and updates (Phase 1 design §11), on Chromium with the service worker allowed (every
 // other spec blocks it: playwright.config.ts). The build is the production one that
@@ -28,12 +28,11 @@ const update = (page: Page) => page.getByRole('region', { name: 'Update' });
 const reload = (page: Page) => update(page).getByRole('button', { name: 'Reload', exact: true });
 const later = (page: Page) => update(page).getByRole('button', { name: 'Later' });
 const saveFirst = (page: Page) => update(page).getByRole('button', { name: 'Save first' });
-const reloadAnyway = (page: Page) => update(page).getByRole('button', { name: 'Reload anyway' });
 const cancel = (page: Page) => update(page).getByRole('button', { name: 'Cancel' });
 const updated = (page: Page) => page.getByRole('region', { name: 'Updated' });
 const GETTING = 'Getting the newest version…';
-const UNSAVED =
-  'Your unsaved changes are in Drafter’s autosave in this browser, but they aren’t in your file yet.';
+const UNSAVED_OFF =
+  'Autosave isn’t working in this browser right now, so your unsaved changes aren’t in your file or anywhere else yet.';
 
 /** The worker is active and controls the page: the first visit has been cached. */
 async function controlled(page: Page) {
@@ -412,31 +411,9 @@ test.describe('a new version', () => {
     await controlled(page);
   });
 
-  test('asks before reloading with unsaved changes', async ({ page }) => {
-    await start(page);
-    await typeAtEnd(page, '\n\nA line that is not in any file.');
-    await mark(page);
-    await deployNewVersion(page);
-    await reload(page).click();
-    // The question, in place of the buttons, and nothing has reloaded.
-    await expect(update(page)).toContainText(UNSAVED);
-    await expect(saveFirst(page)).toBeFocused();
-    await expect(reloadAnyway(page)).toBeVisible();
-    await expect(cancel(page)).toBeVisible();
-    await notReloaded(page);
-    // Cancel goes back to the offer, and Reload has focus.
-    await cancel(page).click();
-    await expect(update(page)).not.toContainText(UNSAVED);
-    await expect(reload(page)).toBeFocused();
-    await notReloaded(page);
-    // Reload anyway reloads, and the text is in the recovery copy.
-    await reload(page).click();
-    await reloadAnyway(page).click();
-    await reloaded(page);
-    await expectAtEnd(page, 'A line that is not in any file.');
-  });
-
-  test('Reload anyway does not bring up the browser’s own leave-this-page question as well', async ({
+  // With autosave working, a reload loses nothing (the script comes back as it was, still unsaved),
+  // so Reload reloads with no question (the maintainer, 2026-11-09: it "always" appeared).
+  test('reloads at once with unsaved changes autosave has, and brings them back', async ({
     page,
   }) => {
     // A script of the writer's own that has changes: the browser would ask before leaving it.
@@ -455,18 +432,41 @@ test.describe('a new version', () => {
     await mark(page);
     await deployNewVersion(page);
     await reload(page).click();
-    await expect(update(page)).toContainText(UNSAVED);
-    await reloadAnyway(page).click();
     await reloaded(page);
     await expectAtEnd(page, 'Typed in a script of my own.');
+    // Neither Drafter's question nor the browser's own leave-this-page one.
     expect(asked).toEqual([]);
+  });
+
+  test('asks before reloading when autosave isn’t working, and Cancel keeps the page', async ({
+    page,
+  }) => {
+    await start(page);
+    await mark(page);
+    await failStorageWrites(page);
+    await typeAtEnd(page, '\n\nA line that is not in any file.');
+    await expect(page.getByRole('button', { name: 'Autosave: off' })).toBeVisible();
+    await deployNewVersion(page);
+    await reload(page).click();
+    // The question, in place of the buttons, and nothing has reloaded.
+    await expect(update(page)).toContainText(UNSAVED_OFF);
+    await expect(saveFirst(page)).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Reload and lose them' })).toBeVisible();
+    await expect(cancel(page)).toBeVisible();
+    await notReloaded(page);
+    // Cancel goes back to the offer, and Reload has focus.
+    await cancel(page).click();
+    await expect(update(page)).not.toContainText(UNSAVED_OFF);
+    await expect(reload(page)).toBeFocused();
+    await notReloaded(page);
+    await expectAtEnd(page, 'A line that is not in any file.');
   });
 
   // drafter.dev is deployed on every push, and each build's worker is different (its build id is
   // in the precache list). A tab offered one version may have a newer one on the server by the
   // time the writer chooses: reloading into the older one would only bring the offer straight
   // back, with the same text restored, as if the choice had done nothing.
-  for (const how of ['Reload', 'Reload anyway'] as const) {
+  for (const how of ['Reload', 'Reload with unsaved changes'] as const) {
     test(`${how} reloads into the newest version, even one deployed after the offer appeared`, async ({
       page,
     }) => {
@@ -481,14 +481,13 @@ test.describe('a new version', () => {
         .getByRole('group', { name: 'Scripts', exact: true })
         .getByRole('button', { name: 'New screenplay' })
         .click();
-      if (how === 'Reload anyway') await typeAtEnd(page, '\n\nTyped before two deploys.');
+      if (how !== 'Reload') await typeAtEnd(page, '\n\nTyped before two deploys.');
       await mark(page);
       await deployNewVersion(page);
       await expect(update(page)).toContainText('A new version of Drafter is ready');
       // Another deploy: the server has a newer worker than the one waiting, and the tab hasn't looked.
       deployAgain();
       await reload(page).click();
-      if (how === 'Reload anyway') await reloadAnyway(page).click();
       await reloaded(page);
       await expect(editor(page)).toBeVisible();
       await controlled(page);
@@ -501,12 +500,14 @@ test.describe('a new version', () => {
           return !!(registration?.waiting || registration?.installing);
         }),
       ).toBe(false);
-      if (how === 'Reload anyway') await expectAtEnd(page, 'Typed before two deploys.');
+      if (how !== 'Reload') await expectAtEnd(page, 'Typed before two deploys.');
       expect(asked).toEqual([]);
     });
   }
 
-  test('Reload anyway still reloads when the new version never takes over', async ({ page }) => {
+  test('Reload with unsaved changes still reloads when the new version never takes over', async ({
+    page,
+  }) => {
     const asked: string[] = [];
     page.on('dialog', (dialog) => {
       asked.push(dialog.type());
@@ -526,8 +527,8 @@ test.describe('a new version', () => {
     await page.evaluate(() => {
       ServiceWorker.prototype.postMessage = () => {};
     });
+    // Autosave has the changes, so Reload asks nothing (2026-11-09).
     await reload(page).click();
-    await reloadAnyway(page).click();
     await reloaded(page);
     await expectAtEnd(page, 'Typed, and the worker never answers.');
     expect(asked).toEqual([]);
@@ -546,7 +547,6 @@ test.describe('a new version', () => {
       ServiceWorker.prototype.postMessage = () => {};
     });
     await reload(page).click();
-    await reloadAnyway(page).click();
     await expect(update(page)).toContainText(GETTING);
     await expect(page.locator('[data-update-region]')).toContainText(GETTING);
     for (const button of await update(page).getByRole('button').all()) {
@@ -590,6 +590,8 @@ test.describe('a new version', () => {
   test('Save first saves, and reloads only after it has', async ({ page }) => {
     await stubPickers(page);
     await start(page);
+    // The question comes only when autosave isn't working (2026-11-09), so its writes fail here.
+    await failStorageWrites(page);
     await typeAtEnd(page, '\n\nA line for the file.');
     await mark(page);
     await deployNewVersion(page);
@@ -604,6 +606,8 @@ test.describe('a new version', () => {
   test('Save first does not reload when the save is cancelled', async ({ page }) => {
     await stubPickers(page);
     await start(page);
+    // The question comes only when autosave isn't working (2026-11-09), so its writes fail here.
+    await failStorageWrites(page);
     await typeAtEnd(page, '\n\nStill not saved.');
     await mark(page);
     await page.evaluate(() => {
@@ -612,13 +616,15 @@ test.describe('a new version', () => {
     await deployNewVersion(page);
     await reload(page).click();
     await saveFirst(page).click();
-    await expect(update(page)).toContainText(UNSAVED);
+    await expect(update(page)).toContainText(UNSAVED_OFF);
     await notReloaded(page);
     expect(await textOf(page, 'The Call.fountain')).toBeNull();
   });
 
   test('can be answered from the keyboard alone', async ({ page }) => {
     await start(page);
+    // The question comes only when autosave isn't working (2026-11-09), so its writes fail here.
+    await failStorageWrites(page);
     await typeAtEnd(page, '\n\nTyped, then keys only.');
     await mark(page);
     await deployNewVersion(page);
@@ -630,19 +636,19 @@ test.describe('a new version', () => {
     // Escape is Cancel, and puts focus back on Reload.
     await page.keyboard.press('Escape');
     await expect(reload(page)).toBeFocused();
-    await expect(update(page)).not.toContainText(UNSAVED);
+    await expect(update(page)).not.toContainText(UNSAVED_OFF);
     await notReloaded(page);
     // Tab moves along the buttons in order, and Space chooses.
     await page.keyboard.press('Space');
     await expect(saveFirst(page)).toBeFocused();
     await page.keyboard.press('Tab');
-    await expect(reloadAnyway(page)).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Reload and lose them' })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(cancel(page)).toBeFocused();
     await page.keyboard.press('Shift+Tab');
+    await expect(page.getByRole('button', { name: 'Reload and lose them' })).toBeFocused();
     await page.keyboard.press('Enter');
     await reloaded(page);
-    await expectAtEnd(page, 'Typed, then keys only.');
   });
 
   test('Save first where Save is a download waits for the download, and keeps Reload', async ({
@@ -650,6 +656,8 @@ test.describe('a new version', () => {
   }) => {
     await removePickers(page);
     await start(page);
+    // The question comes only when autosave isn't working (2026-11-09), so its writes fail here.
+    await failStorageWrites(page);
     await typeAtEnd(page, '\n\nDownloaded, then reloaded.');
     await mark(page);
     await deployNewVersion(page);
@@ -661,7 +669,7 @@ test.describe('a new version', () => {
     await expect(update(page)).toContainText(
       'Your script is downloading. Reload when it has finished.',
     );
-    await expect(update(page)).not.toContainText(UNSAVED);
+    await expect(update(page)).not.toContainText(UNSAVED_OFF);
     await expect(reload(page)).toBeFocused();
     await expect(later(page)).toBeVisible();
     await notReloaded(page);
@@ -674,6 +682,8 @@ test.describe('a new version', () => {
   test('a download under way is still said after focus mode', async ({ page }) => {
     await removePickers(page);
     await start(page);
+    // The question comes only when autosave isn't working (2026-11-09), so its writes fail here.
+    await failStorageWrites(page);
     await typeAtEnd(page, '\n\nDownloaded, then focused.');
     await deployNewVersion(page);
     await reload(page).click();
@@ -714,10 +724,8 @@ test.describe('a new version', () => {
     await notReloaded(other);
     await expect(update(other)).toContainText('A new version of Drafter is ready');
     await expectAtEnd(other, 'Typed in the second tab.');
-    // Its own Reload still reloads it, after the question about its changes.
+    // Its own Reload reloads it, with no question: autosave has its changes.
     await reload(other).click();
-    await expect(update(other)).toContainText(UNSAVED);
-    await reloadAnyway(other).click();
     await reloaded(other);
     // The text is in the recovery copy.
     await expect
