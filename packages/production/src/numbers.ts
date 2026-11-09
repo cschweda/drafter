@@ -16,31 +16,27 @@ function parse(value: string): Parsed | null {
   return m ? { prefix: m[1] ?? '', digits: m[2] ?? '', suffix: m[3] ?? '' } : null;
 }
 
-// Letters count like spreadsheet columns: A..Z, then AA, AB.. AZ, BA.. ZZ, AAA.
-// Shorter suffixes sort first, which is why 5Z comes before 5AA.
-function nextLetters(letters: string): string {
-  if (letters === '') return 'A';
-  const chars = letters.split('');
-  for (let i = chars.length - 1; i >= 0; i--) {
-    if (chars[i] !== 'Z') {
-      chars[i] = String.fromCharCode((chars[i] as string).charCodeAt(0) + 1);
-      return chars.join('');
-    }
-    chars[i] = 'A';
-  }
-  return `A${chars.join('')}`;
-}
-
+// Suffix letters sort in plain dictionary order, empty first:
+// 5 < 5A < 5AA < 5AB < 5B < ... < 5Z < 5ZA. Plain string comparison does that.
 function compareLetters(a: string, b: string): number {
-  if (a.length !== b.length) return a.length - b.length;
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+// Add one to the last letter (A -> B). Z cannot go up, and an empty suffix
+// starts at A, so those return null and the caller appends a letter instead.
+function bumpLast(letters: string): string | null {
+  if (letters === '') return 'A';
+  const last = letters.charAt(letters.length - 1);
+  if (last === 'Z') return null;
+  return letters.slice(0, -1) + String.fromCharCode(last.charCodeAt(0) + 1);
+}
+
 /**
- * Script order of two scene numbers: by digits, then prefix (A1 and AA1 come
- * before 1, the longer prefix earliest), then suffix (1 < 1A < 1B < 1Z < 1AA).
- * A number that is not in this shape (a writer's own scheme like 12.1) falls
- * back to a plain natural-number string compare.
+ * Script order of two scene numbers: digits numerically, then the letter
+ * suffix in dictionary order (5 < 5A < 5AA < 5AB < 5B < 5Z < 5ZA), then the
+ * prefix with the longer one first (AA1 < A1 < 1, and A5A < 5A). A number not
+ * in this shape (a writer's own scheme like 12.1) falls back to a plain
+ * natural-number string compare.
  */
 export function compareSceneNumbers(a: string, b: string): number {
   const pa = parse(a);
@@ -48,33 +44,45 @@ export function compareSceneNumbers(a: string, b: string): number {
   if (!pa || !pb) return a.localeCompare(b, 'en', { numeric: true });
   const digits = Number(pa.digits) - Number(pb.digits);
   if (digits !== 0) return digits < 0 ? -1 : 1;
-  if (pa.prefix !== pb.prefix) {
-    return pa.prefix.length !== pb.prefix.length
-      ? pb.prefix.length - pa.prefix.length
-      : pa.prefix < pb.prefix
-        ? -1
-        : 1;
-  }
-  return compareLetters(pa.suffix, pb.suffix);
+  const suffix = compareLetters(pa.suffix, pb.suffix);
+  if (suffix !== 0) return suffix;
+  if (pa.prefix === pb.prefix) return 0;
+  if (pa.prefix.length !== pb.prefix.length) return pb.prefix.length - pa.prefix.length;
+  return pa.prefix < pb.prefix ? -1 : 1;
 }
 
 /**
  * The number for a scene added between two numbered scenes. `null` means
  * "nothing on that side" (before the first scene, or after the last).
  *
- * Limit: if the two neighbours are already adjacent in letters (5A and 5AA
- * have nothing between them), the result goes one level deeper than `before`
- * and so may not sort strictly between them. That is the brief's 5 / 5A -> 5AA.
+ * 1. Find the shortest suffix strictly between the neighbours' suffixes,
+ *    preferring to bump the last letter, else appending an A:
+ *    5/6 -> 5A, 5A/6 -> 5B, 5A/5B -> 5AA, 5Z/6 -> 5ZA.
+ * 2. If no suffix fits (nothing lies between 5 and 5A), put a longer letter
+ *    prefix on `after`: 5/5A -> A5A, then 5/A5A -> AA5A.
+ * 3. Before the first scene, prefix `after`: A1, then AA1.
+ * Every answer sorts strictly between the two neighbours.
  */
 export function numberBetween(before: string | null, after: string | null): string {
   if (before === null) return after === null ? '1' : `A${after}`;
   const p = parse(before);
   // A writer's own scheme: we cannot count in it, so just hang a letter on it.
   if (!p) return `${before}A`;
-  const next = `${p.prefix}${p.digits}${nextLetters(p.suffix)}`;
-  if (after === null || compareSceneNumbers(next, after) < 0) return next;
-  // No room at this level. Between a bare 5 and 5A the deeper level is 5AA.
-  return p.suffix === '' ? `${before}AA` : `${before}A`;
+  const fits = (candidate: string) =>
+    compareSceneNumbers(before, candidate) < 0 &&
+    (after === null || compareSceneNumbers(candidate, after) < 0);
+  const stem = `${p.prefix}${p.digits}`;
+  const bumped = bumpLast(p.suffix);
+  for (const letters of [bumped, `${p.suffix}A`]) {
+    if (letters !== null && fits(`${stem}${letters}`)) return `${stem}${letters}`;
+  }
+  const q = after === null ? null : parse(after);
+  if (q) {
+    const prefixed = `A${after}`;
+    if (fits(prefixed)) return prefixed;
+  }
+  // Last resort (neighbours out of order or oddly shaped): go a level deeper.
+  return `${before}A`;
 }
 
 /**
