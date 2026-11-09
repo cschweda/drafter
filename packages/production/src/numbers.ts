@@ -63,8 +63,26 @@ export function compareSceneNumbers(a: string, b: string): number {
  *    already prefixed, step its prefix up instead: A5A/5A -> B5A.
  * 3. Before the first scene, prefix `after`: A1, then AA1.
  * Every answer sorts strictly between the two neighbours.
+ *
+ * `issued` holds numbers the lock has already given out. Once issued, a number never revives, even
+ * when its scene was deleted: an issued answer is stepped past (5A issued: 5B), going a level
+ * deeper the same way when a level is used up (5A..5Z issued: 5ZA).
  */
-export function numberBetween(before: string | null, after: string | null): string {
+export function numberBetween(
+  before: string | null,
+  after: string | null,
+  issued?: ReadonlySet<string>,
+): string {
+  let candidate = nextBetween(before, after);
+  // Each step lands strictly past the last (or appends a letter), so this ends; the cap only
+  // guards against a hostile issued list.
+  for (let i = 0; issued?.has(candidate) && i < 10_000; i++) {
+    candidate = nextBetween(candidate, after);
+  }
+  return candidate;
+}
+
+function nextBetween(before: string | null, after: string | null): string {
   if (before === null) return after === null ? '1' : `A${after}`;
   const p = parse(before);
   // A writer's own scheme: we cannot count in it, so just hang a letter on it.
@@ -104,9 +122,13 @@ export function numberBetween(before: string | null, after: string | null): stri
 /**
  * Fill in numbers for a script's scenes in order. Written numbers are kept;
  * each run of nulls is filled left to right, each new number chained from the
- * one before it (5A, 5B, 5C), always staying under the next written number.
+ * one before it (5A, 5B, 5C), always staying under the next written number,
+ * and never giving out a number in `issued` again.
  */
-export function provisionalNumbers(numbers: readonly (string | null)[]): string[] {
+export function provisionalNumbers(
+  numbers: readonly (string | null)[],
+  issued?: ReadonlySet<string>,
+): string[] {
   const out: string[] = [];
   let previous: string | null = null;
   for (let i = 0; i < numbers.length; i++) {
@@ -125,7 +147,7 @@ export function provisionalNumbers(numbers: readonly (string | null)[]): string[
         break;
       }
     }
-    const made = numberBetween(previous, next);
+    const made = numberBetween(previous, next, issued);
     out.push(made);
     previous = made;
   }

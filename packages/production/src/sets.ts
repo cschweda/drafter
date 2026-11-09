@@ -34,11 +34,11 @@ export const REVISION_COLORS: Record<string, string> = {
 
 /**
  * The default name of the next set. A set can be renamed (Tan, Gray, a number), so this counts by
- * position, not by name: after one set, the next is the second name; after the list runs out it
- * stays on the last name rather than inventing one.
+ * position, not by name. `sets` is `production.sets` as stored, the locked White draft first, so
+ * [White, Blue] gives Pink. After the list runs out it stays on the last name rather than
+ * inventing one.
  */
 export function nextSetName(sets: readonly ProductionSet[]): string {
-  // The locked draft is White, so the first set is index 1.
-  const i = Math.min(sets.length + 1, REVISION_NAMES.length - 1);
+  const i = Math.min(sets.length, REVISION_NAMES.length - 1);
   return REVISION_NAMES[i] as string;
 }

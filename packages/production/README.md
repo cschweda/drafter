@@ -6,11 +6,13 @@ Production for [Drafter](https://github.com/cschweda/drafter): a script locked f
 import { nextSetName, productionMeta, readProduction } from '@drafter/production';
 
 const production = readProduction(doc.meta); // null when absent or malformed, never throws
-nextSetName(production.sets); // 'Pink' after Blue: the industry order, counted by position
+nextSetName(production.sets); // sets as stored, White first: [White, Blue] gives 'Pink'
 const meta = productionMeta(doc.meta, production); // give this to setMeta; null removes the key
 ```
 
 `readProduction` is defensive: wrong types, arrays past their caps (`CAPS`), and a missing baseline all give `null`, so a hostile or truncated block leaves the script open and unlocked. In the block, a locked page is a tuple `[label, line, printed]`; in TypeScript it is a `LockedPage`.
+
+The writer's actions (`lock`, `startNextSet`, `writeSceneNumbers`, `omitScene`, `clearMarks`, `unlock`) are async and return `TextChange[]` against the text they were given, for the caller to apply as one undo step: scene numbers written into headings and one rewrite of the block. A scene number, once issued, is never given out again.
 
 The revision names run White, Blue, Pink, Yellow, Green, Goldenrod, Buff, Salmon, Cherry, then Double White and so on (`REVISION_NAMES`). Each has a screen swatch (`REVISION_COLORS`) chosen to keep 3:1 contrast against both themes' pages; the mark itself is always drawn in the text color.
 

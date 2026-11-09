@@ -112,7 +112,43 @@ describe('provisionalNumbers chaining', () => {
             `${label} -> ${out}`,
           ).toBeLessThan(0);
         }
+        // Every number the first pass issued is spent: a second pass gives none of them again
+        // and still stays in order between the same neighbours.
+        const issued = new Set(out.filter((_, i) => input[i] === null));
+        const again = provisionalNumbers(input, issued);
+        input.forEach((n, i) => {
+          if (n !== null) expect(again[i], label).toBe(n);
+          else expect(issued.has(again[i] as string), `${label} -> ${again}`).toBe(false);
+        });
+        for (let i = 1; i < again.length; i++) {
+          expect(
+            compareSceneNumbers(again[i - 1] as string, again[i] as string),
+            `${label} -> ${again}`,
+          ).toBeLessThan(0);
+        }
       }
     }
+  });
+});
+
+describe('issued numbers never revive', () => {
+  it('steps past an issued number to the next one that fits', () => {
+    expect(numberBetween('5', '6', new Set(['5A']))).toBe('5B');
+    expect(numberBetween('5', '6', new Set(['5A', '5B']))).toBe('5C');
+    expect(numberBetween('5', '5A', new Set(['A5A']))).toBe('B5A');
+    expect(numberBetween(null, '1', new Set(['A1']))).toBe('B1');
+    expect(numberBetween('5', '6', new Set())).toBe('5A');
+  });
+  it('goes a level deeper when every letter at this one is issued', () => {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((l) => `5${l}`);
+    expect(numberBetween('5', '6', new Set(letters))).toBe('5ZA');
+  });
+  it('provisionalNumbers chains past issued numbers', () => {
+    expect(provisionalNumbers(['5', null, null, '6'], new Set(['5A', '5C']))).toEqual([
+      '5',
+      '5B',
+      '5D',
+      '6',
+    ]);
   });
 });

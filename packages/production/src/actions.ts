@@ -13,7 +13,7 @@ import { rebaseAnchors } from './anchors';
 import { decodeBaseline, encodeBaseline } from './baseline';
 import { productionMeta, readProduction } from './block';
 import { closeSet } from './marks';
-import { provisionalNumbers } from './numbers';
+import { compareSceneNumbers, provisionalNumbers } from './numbers';
 import { pageMapOf } from './pages';
 import { nextSetName, REVISION_COLORS } from './sets';
 import type { Production, ProductionSet } from './types';
@@ -82,18 +82,28 @@ function applyChanges(text: string, changes: readonly TextChange[]): string {
 function aNumbers(doc: Doc, issued: readonly string[]): { edits: TextChange[]; numbers: string[] } {
   const heads = headingsOf(doc);
   const written = heads.map((h) => h.sem.number);
-  const filled = provisionalNumbers(written);
+  // Once issued, a number never revives, even when its scene was deleted (design §7.1).
+  const filled = provisionalNumbers(written, new Set(issued));
   const edits: TextChange[] = [];
   const numbers = [...issued];
+  const inScript = new Set(filled);
   for (let i = 0; i < heads.length; i++) {
     if (written[i] !== null) continue;
     const number = filled[i] as string;
     edits.push(numberEdit(heads[i] as Heading, number));
     if (numbers.includes(number)) continue;
-    // Just after the scene before it, which is already in the list.
+    // Just after the scene before it, which is already in the list, and after any deleted scene's
+    // number there that sorts before it.
     const previous = i > 0 ? filled[i - 1] : undefined;
-    const at = previous === undefined ? -1 : numbers.indexOf(previous);
-    numbers.splice(at + 1, 0, number);
+    let at = (previous === undefined ? -1 : numbers.indexOf(previous)) + 1;
+    while (
+      at < numbers.length &&
+      !inScript.has(numbers[at] as string) &&
+      compareSceneNumbers(numbers[at] as string, number) < 0
+    ) {
+      at++;
+    }
+    numbers.splice(at, 0, number);
   }
   return { edits, numbers };
 }
@@ -145,7 +155,8 @@ const freshSets = (today: string, draftId: string): ProductionSet[] => [
 
 /**
  * Locks pages and scene numbers (design §7). In a screenplay, every heading without a number gets
- * the next unused one from `firstScene` up; written numbers are kept. Records the issued numbers,
+ * the next unused integer past the heading before it, from `firstScene` up; written numbers are
+ * kept (unnumbered, #7#, unnumbered gives 1, 7, 8). Records the issued numbers,
  * the page map of the text as now laid out, White closed and Blue open, and the baseline.
  * An already locked script gets no changes. A template that can't be laid out throws, as paginate
  * does.
@@ -162,15 +173,19 @@ export async function lock(
   if (numbersScenes(template)) {
     const heads = headingsOf(doc);
     const used = new Set(heads.map((h) => h.sem.number).filter((n): n is string => n !== null));
+    // The next number is past the heading before it (a written #7# is followed by 8), never
+    // below firstScene, and never one already written.
     let next = opts.firstScene;
     for (const heading of heads) {
       let number = heading.sem.number;
       if (number === null) {
         while (used.has(String(next))) next++;
-        number = String(next++);
+        number = String(next);
         used.add(number);
         edits.push(numberEdit(heading, number));
       }
+      const digits = /\d+/.exec(number);
+      next = Math.max(next, digits ? Number(digits[0]) + 1 : next);
       numbers.push(number);
     }
   }
@@ -214,8 +229,7 @@ export async function startNextSet(
     const open = production.sets.at(-1);
     const closed = open ? [await closeSet(oldBaseline, script, open)] : [];
     const earlier = production.sets.slice(0, -1);
-    // The first set is the locked White draft; nextSetName counts the revisions after it.
-    const name = nextSetName([...earlier, ...closed].slice(1));
+    const name = nextSetName(production.sets);
     return {
       ...production,
       numbers,
@@ -242,12 +256,16 @@ const NONE = { changes: [] as TextChange[], removed: '' };
  * Replaces scene `sceneIndex` (0-based, counting scene headings) with `.OMITTED #n#` and a blank
  * line, keeping its number (design §7.1). The scene runs from its heading through the line before
  * the next heading, or the block, or the end. `removed` is the scene's text, for the caller to keep
- * as a cut. Nothing for an unlocked script, a scene without a number, or one already omitted.
+ * as a cut. Nothing for an unlocked script, a stage play, a scene without a number, or one already
+ * omitted.
  */
 export async function omitScene(
   text: string,
   sceneIndex: number,
+  template: Template,
 ): Promise<{ changes: TextChange[]; removed: string }> {
+  // A play's scenes are sections, never omitted, even a heading numbered by hand (design §3).
+  if (!numbersScenes(template)) return NONE;
   const doc = parse(text);
   if (!readProduction(doc.meta)) return NONE;
   const heads = headingsOf(doc);

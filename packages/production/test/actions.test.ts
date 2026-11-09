@@ -116,6 +116,16 @@ describe('lock', () => {
     expect(production?.pages[0]?.label).toBe('1');
   });
 
+  it('numbers an unnumbered heading past the written number before it', async () => {
+    const after = await locked(WITH_SEVEN, 1);
+    expect(headings(after)).toEqual([
+      'INT. KITCHEN - NIGHT #1#',
+      'EXT. BACK PORCH - LATER #7#',
+      'INT. HALL - NIGHT #8#',
+    ]);
+    expect(productionOf(after)?.numbers).toEqual(['1', '7', '8']);
+  });
+
   it('lock opens Blue against the locked text', async () => {
     const after = await locked();
     const production = productionOf(after);
@@ -231,10 +241,29 @@ describe('writeSceneNumbers', () => {
   });
 });
 
+describe('issued numbers', () => {
+  it('never revive: a deleted 1A is not given out again', async () => {
+    const after = await locked(SCREENPLAY, 1);
+    const added = insertBefore(after, 'EXT. BACK', 'INT. HALL - NIGHT\n\nShe listens.\n\n');
+    const numbered = apply(added, await writeSceneNumbers(added));
+    expect(headings(numbered)).toContain('INT. HALL - NIGHT #1A#');
+    // The writer deletes the 1A heading by hand, then adds another scene in the same place.
+    const deleted = numbered.replace('INT. HALL - NIGHT #1A#\n\n', '');
+    const again = insertBefore(deleted, 'EXT. BACK', 'INT. ATTIC - DAY\n\nDust.\n\n');
+    const next = apply(again, await writeSceneNumbers(again));
+    expect(headings(next)).toEqual([
+      'INT. KITCHEN - NIGHT #1#',
+      'INT. ATTIC - DAY #1B#',
+      'EXT. BACK PORCH - LATER #2#',
+    ]);
+    expect(productionOf(next)?.numbers).toEqual(['1', '1A', '1B', '2']);
+  });
+});
+
 describe('omitScene', () => {
   it('omitScene leaves .OMITTED #12# and returns the scene', async () => {
     const after = await locked(SCREENPLAY, 12);
-    const { changes, removed } = await omitScene(after, 0);
+    const { changes, removed } = await omitScene(after, 0, screenplay);
     const next = apply(after, changes);
     expect(removed.startsWith('INT. KITCHEN - NIGHT #12#\n')).toBe(true);
     expect(removed.endsWith('\n\n')).toBe(true);
@@ -248,7 +277,7 @@ describe('omitScene', () => {
 
   it('omits the last scene up to the block', async () => {
     const after = await locked(SCREENPLAY, 1);
-    const { changes, removed } = await omitScene(after, 1);
+    const { changes, removed } = await omitScene(after, 1, screenplay);
     const next = apply(after, changes);
     expect(removed.startsWith('EXT. BACK PORCH - LATER #2#')).toBe(true);
     expect(removed).toContain('END OF SAMPLE');
@@ -259,9 +288,60 @@ describe('omitScene', () => {
   it('refuses an unnumbered scene, a missing one, and an unlocked script', async () => {
     const after = await locked(SCREENPLAY, 1);
     const edited = insertBefore(after, 'EXT. BACK', 'INT. HALL - NIGHT\n\nShe listens.\n\n');
-    expect(await omitScene(edited, 1)).toEqual({ changes: [], removed: '' });
-    expect(await omitScene(edited, 9)).toEqual({ changes: [], removed: '' });
-    expect(await omitScene(WITH_SEVEN, 1)).toEqual({ changes: [], removed: '' });
+    expect(await omitScene(edited, 1, screenplay)).toEqual({ changes: [], removed: '' });
+    expect(await omitScene(edited, 9, screenplay)).toEqual({ changes: [], removed: '' });
+    expect(await omitScene(WITH_SEVEN, 1, screenplay)).toEqual({ changes: [], removed: '' });
+  });
+});
+
+describe('omitScene in a stage play', () => {
+  it('refuses even a scene the writer numbered by hand', async () => {
+    const after = apply(
+      STAGE_PLAY,
+      await lock(STAGE_PLAY, stagePlay, { today, draftId, firstScene: 1 }),
+    );
+    const edited = insertBefore(after, 'MARGARET\n(quietly)', 'INT. HALL - NIGHT #3#\n\nDust.\n\n');
+    expect(await omitScene(edited, 0, stagePlay)).toEqual({ changes: [], removed: '' });
+    // The same text as a screenplay would omit it.
+    expect((await omitScene(edited, 0, screenplay)).removed).toContain('INT. HALL - NIGHT #3#');
+  });
+});
+
+describe('CRLF scripts', () => {
+  const crlf = (text: string) => text.replace(/\r?\n/g, '\r\n');
+  const onlyCrlf = (text: string) => expect(text.replace(/\r\n/g, '')).not.toMatch(/[\r\n]/);
+
+  it('lock, startNextSet and omitScene keep the line breaks', async () => {
+    const text = crlf(SCREENPLAY);
+    const after = await locked(text, 1);
+    onlyCrlf(after);
+    expect(
+      after.startsWith(
+        text
+          .replace('INT. KITCHEN - NIGHT\r\n', 'INT. KITCHEN - NIGHT #1#\r\n')
+          .replace('EXT. BACK PORCH - LATER\r\n', 'EXT. BACK PORCH - LATER #2#\r\n'),
+      ),
+    ).toBe(true);
+    expect(after.endsWith('\r\n*/\r\n')).toBe(true);
+    expect(productionOf(after)?.numbers).toEqual(['1', '2']);
+
+    const added = insertBefore(after, 'EXT. BACK', crlf('INT. HALL - NIGHT\n\nShe listens.\n\n'));
+    const next = apply(added, await startNextSet(added, today, draftId));
+    onlyCrlf(next);
+    expect(
+      next.startsWith(
+        added
+          .slice(0, added.indexOf('/* drafter'))
+          .replace('INT. HALL - NIGHT\r\n', 'INT. HALL - NIGHT #1A#\r\n'),
+      ),
+    ).toBe(true);
+    expect(await decodeBaseline(productionOf(next)?.baseline as string)).toBe(scriptText(next));
+
+    const { changes, removed } = await omitScene(next, 1, screenplay);
+    const omitted = apply(next, changes);
+    onlyCrlf(omitted);
+    expect(omitted).toBe(next.replace(removed, '.OMITTED #1A#\r\n\r\n'));
+    expect(removed).toBe('INT. HALL - NIGHT #1A#\r\n\r\nShe listens.\r\n\r\n');
   });
 });
 
@@ -288,7 +368,7 @@ describe('unlock', () => {
   it('unlock leaves written numbers and OMITTED headings', async () => {
     const text = `${SCREENPLAY.trimEnd()}\n\n/* drafter\n{"v":1,"template":"us-screenplay"}\n*/\n`;
     const after = await locked(text, 1);
-    const omitted = apply(after, (await omitScene(after, 0)).changes);
+    const omitted = apply(after, (await omitScene(after, 0, screenplay)).changes);
     const open = apply(omitted, await unlock(omitted));
     expect(productionOf(open)).toBeNull();
     expect(parse(open).meta).toEqual({ v: 1, template: 'us-screenplay' });

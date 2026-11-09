@@ -24,14 +24,16 @@ const contrast = (a: string, b: string): number => {
 describe('revision sets', () => {
   it('names follow the industry order', () => {
     expect(REVISION_NAMES).toHaveLength(18);
-    expect(nextSetName([])).toBe('Blue');
-    const upToCherry = REVISION_NAMES.slice(1, 9).map(set);
+    // The sets as stored: the locked White draft first.
+    expect(nextSetName([set('White')])).toBe('Blue');
+    expect(nextSetName([set('White'), set('Blue')])).toBe('Pink');
+    const upToCherry = REVISION_NAMES.slice(0, 9).map(set);
     expect(upToCherry.at(-1)?.name).toBe('Cherry');
     expect(nextSetName(upToCherry)).toBe('Double White');
   });
 
   it('a renamed set still advances', () => {
-    expect(nextSetName([set('Tan')])).toBe('Pink');
+    expect(nextSetName([set('White'), set('Tan')])).toBe('Pink');
   });
 
   it('stays on the last name when the list runs out', () => {
