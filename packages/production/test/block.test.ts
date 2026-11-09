@@ -73,6 +73,13 @@ describe('the production block', () => {
     expect(readProduction({ v: 1 })).toBeNull();
   });
 
+  it('caps the stored baseline by length', () => {
+    const at = { ...block, baseline: 'A'.repeat(CAPS.baselineChars) };
+    expect(readProduction(meta(at))?.baseline).toHaveLength(CAPS.baselineChars);
+    const past = { ...block, baseline: 'A'.repeat(CAPS.baselineChars + 1) };
+    expect(readProduction(meta(past))).toBeNull();
+  });
+
   it('writes pages as tuples and drops the key on null', () => {
     const p = readProduction(meta(block));
     const out = productionMeta({ v: 1, template: 'us-screenplay', other: 1 }, p ?? null);

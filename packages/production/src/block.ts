@@ -11,6 +11,13 @@ export const CAPS = {
   numbers: 5000,
   /** Each set's `lines` and each set's `gaps`. */
   lines: 20000,
+  /** The baseline text once decoded; the decoder (Task 2) enforces it as it inflates. */
+  baselineBytes: 8 * 1024 * 1024,
+  /**
+   * The baseline as stored (gzip, then base64): the decoded cap plus a small header's room,
+   * times 4/3. A longer string is refused here, before any decoder is handed it.
+   */
+  baselineChars: Math.ceil(((8 * 1024 * 1024 + 1024) * 4) / 3),
 } as const;
 
 const KEY = 'production';
@@ -56,6 +63,7 @@ export function readProduction(meta: DrafterMeta | null): Production | null {
   if (!isObject(raw)) return null;
   const { lockedAt, firstScene, numbers, pages, sets, baseline } = raw;
   if (typeof lockedAt !== 'string' || typeof baseline !== 'string' || baseline === '') return null;
+  if (baseline.length > CAPS.baselineChars) return null;
   if (typeof firstScene !== 'number' || !Number.isInteger(firstScene)) return null;
   if (!isStringArray(numbers, CAPS.numbers)) return null;
   if (!Array.isArray(pages) || pages.length > CAPS.pages) return null;
