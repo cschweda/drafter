@@ -1,7 +1,7 @@
 import type { EditorState } from '@codemirror/state';
 import { parsedDoc } from '@drafter/cm-fountain';
 import type { PageMarks } from '@drafter/compare';
-import type { Layout } from '@drafter/layout';
+import { applyMarks, type Layout } from '@drafter/layout';
 import type { Template } from '@drafter/templates';
 import {
   type ComputedRef,
@@ -13,7 +13,8 @@ import {
   shallowRef,
   watch,
 } from 'vue';
-import { createLayoutClient, type LayoutClient } from './layout-client';
+import { type ProductionState, useProduction } from '../production/use-production';
+import { createLayoutClient, type LayoutClient, type LayoutProductionFacts } from './layout-client';
 import { blockIndexAt, type PagePosition, pageOf } from './pages';
 import { useEditor } from './session';
 
@@ -60,6 +61,29 @@ function create(): LayoutSession {
   const cursorBlock = shallowRef(-1);
   const marks = shallowRef<{ seq: number; marks: PageMarks } | null>(null);
   const baseline = shallowRef<{ id: number; text: string } | null>(null);
+  // A locked script's production (production design §6.2, §7.2): every request carries it, and the
+  // worker answers the locked pages, then the revision marks, which go on the layout shown.
+  const production = useProduction().state;
+  // Each production read gets an id, so its facts go to the worker only when they are new.
+  let productionId = 0;
+  let sentState: ProductionState | null = null;
+  const productionRequest = (): { id: number; facts: LayoutProductionFacts } | undefined => {
+    const state = production.value;
+    if (!state) return undefined;
+    if (state !== sentState) {
+      sentState = state;
+      productionId++;
+    }
+    return {
+      id: productionId,
+      facts: {
+        baseline: state.baselineText,
+        pages: state.pages,
+        closed: state.sets.slice(0, -1),
+        open: state.sets.at(-1)?.name ?? '',
+      },
+    };
+  };
 
   // The template each pending request was made with, so a layout is drawn with its own.
   const templates = new Map<number, Template>();
@@ -88,6 +112,13 @@ function create(): LayoutSession {
           // Only the shown layout's, and only while Show changes is on.
           if (seq === shownSeq.value && baseline.value) marks.value = { seq, marks: found };
         },
+        (found, seq) => {
+          // The revision marks of the shown layout, printed on its lines (`LayoutLine.mark`).
+          const shown = layout.value;
+          if (seq === shownSeq.value && shown && production.value) {
+            layout.value = applyMarks(shown, found);
+          }
+        },
       );
     } catch (error) {
       console.error(`Layout failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -100,7 +131,7 @@ function create(): LayoutSession {
   // The session lives for the visit, so its watchers belong to no component.
   effectScope(true).run(() => {
     watch(
-      [doc, template, kind, baseline],
+      [doc, template, kind, baseline, production],
       () => {
         // A Markdown document has no pages: the worker is left alone until it is Fountain again.
         if (!client || kind.value === 'markdown') return;
@@ -108,6 +139,7 @@ function create(): LayoutSession {
           view.state.doc.toString(),
           template.value,
           baseline.value ?? undefined,
+          productionRequest(),
         );
         templates.set(newest, template.value);
         updating.value = true;

@@ -70,6 +70,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/notes',
       '@drafter/novel',
       '@drafter/outline',
+      '@drafter/production',
       '@drafter/render-docx',
       '@drafter/render-html',
       '@drafter/render-html-file',
@@ -130,6 +131,11 @@ export const PACKAGES: readonly PackageNote[] = [
     name: '@drafter/outline',
     does: 'The scene index (scenes, sections, page counts, running times, and every speech) and the edits the Outline and Cards make; and a script as Markdown, as a treatment or the whole script.',
     uses: ['@drafter/fountain', '@drafter/layout', '@drafter/notes', '@drafter/templates'],
+  },
+  {
+    name: '@drafter/production',
+    does: 'A locked script: its scene numbers and pages, the revision sets (Blue, Pink, …) and their marks, kept in the script’s own block so the file alone shows them.',
+    uses: ['@drafter/compare', '@drafter/fountain', '@drafter/layout', '@drafter/templates'],
   },
   {
     name: '@drafter/compare',

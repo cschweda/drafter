@@ -119,6 +119,13 @@ function lineElement(doc: Document, part: Part, template: Template): HTMLElement
   el.dataset.from = String(line.span.from);
   el.dataset.to = String(line.span.to);
   if (line.synthetic === 'more') el.setAttribute('aria-hidden', 'true');
+  if (line.mark) {
+    // The asterisk is hidden from a screen reader (`drawMarks`); the line says its set instead.
+    const said = doc.createElement('span');
+    said.className = 'drafter-sr-only drafter-revision-said';
+    said.textContent = `changed in ${line.mark.set}, `;
+    el.append(said);
+  }
   for (const run of line.runs) {
     if (run.text !== '') el.append(runElement(doc, run));
   }
@@ -214,6 +221,32 @@ function drawBody(
   if (cue) name(cue);
 }
 
+/** How far in from the page's right edge a revision mark's asterisk stands, in columns: where Compare's Pages view draws its own. */
+const STAR_COLUMN_FROM_RIGHT = 5;
+
+/**
+ * Revision marks (production design §6.2): an asterisk in the right margin of each row with a
+ * marked line, in the type's color (a swatch alone would fail a reader who can't tell the colors
+ * apart). Hidden from a screen reader, which hears the line's own "changed in Blue, ".
+ */
+function drawMarks(doc: Document, root: HTMLElement, page: Page, template: Template) {
+  page.lines.forEach((line, row) => {
+    const set = line.mark?.set ?? line.right?.mark?.set;
+    if (set === undefined) return;
+    const el = doc.createElement('div');
+    el.className = 'drafter-line drafter-revision-star';
+    el.setAttribute('aria-hidden', 'true');
+    el.dataset.set = set;
+    place(
+      el,
+      template.page.margin.top + row,
+      Math.max(template.page.width - STAR_COLUMN_FROM_RIGHT, 0),
+    );
+    el.textContent = '*';
+    root.append(el);
+  });
+}
+
 /**
  * Page numbers, scene numbers, the header, and the footer: lines of their own,
  * hidden from screen readers, at the positions the text export uses.
@@ -249,7 +282,8 @@ function drawFurniture(doc: Document, root: HTMLElement, page: Page, template: T
 /**
  * One page as DOM (technical design §6.1 and §13): a `div.drafter-page` with a
  * visually hidden marker, then the page's lines, each absolutely positioned by
- * its row and column, and then the furniture. Text reaches the page only
+ * its row and column, then a revision mark's asterisk for each marked row, and
+ * then the furniture. Text reaches the page only
  * through `textContent`.
  */
 export function buildPage(
@@ -266,10 +300,12 @@ export function buildPage(
 
   const marker = doc.createElement('span');
   marker.className = 'drafter-sr-only';
-  marker.textContent = page.number === 0 ? 'Title page' : `Page ${page.number}`;
+  // A locked script's page prints its label (12A, 13-14); unlocked, the label is the number.
+  marker.textContent = page.number === 0 ? 'Title page' : `Page ${page.label}`;
   el.append(marker);
 
   drawBody(doc, el, page, template, roles);
+  drawMarks(doc, el, page, template);
   drawFurniture(doc, el, page, template);
   return el;
 }

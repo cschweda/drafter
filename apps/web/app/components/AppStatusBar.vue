@@ -10,6 +10,7 @@ import { problemsLabel, useProblems } from '~/editor/problems';
 import { useEditor } from '~/editor/session';
 import { wordsLabel } from '~/markdown/preview';
 import { useMarkdown } from '~/markdown/use-markdown';
+import { useProduction } from '~/production/use-production';
 import { historyOpen } from '~/snapshots/history';
 import { snapshotProblem } from '~/snapshots/use-snapshots';
 import { useSpell } from '~/spell/use-spell';
@@ -46,6 +47,8 @@ const { problem: spellProblem } = useSpell();
 const { progress, goal } = useGoal();
 const sprint = useSprint();
 const { chip } = useStorageNotice();
+// A locked script whose block can't be read (production design §6.3a): its marks can't be shown.
+const { problem: productionProblem } = useProduction();
 // Words and time today (docs/drafter-stats-design.md §3): from the day's first edit, never for a
 // sample or in a read-only tab (`today` is null there). A goal in words already says the words.
 const { today } = useWritingStats();
@@ -214,6 +217,7 @@ const errors = computed(() =>
     blankError.value,
     snapshotProblem.value,
     spellProblem.value,
+    productionProblem.value,
   ].some(Boolean),
 );
 /** Something that can't wait for a wider screen: the bar shows it, and only it, on a phone. (An
@@ -235,6 +239,7 @@ const urgent = computed(
       <p v-if="blankError" role="alert" class="failed">{{ blankError }}</p>
       <p v-if="snapshotProblem" role="alert" class="failed">{{ snapshotProblem }}</p>
       <p v-if="spellProblem" role="alert" class="failed">{{ spellProblem }}</p>
+      <p v-if="productionProblem" role="alert" class="failed">{{ productionProblem }}</p>
     </div>
     <footer class="status" :class="{ urgent }">
       <div class="row">

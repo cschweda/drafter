@@ -42,6 +42,7 @@ flowchart BT
   drafter_mcp["drafter-mcp"]
   cm_fountain["@drafter/cm-fountain"]
   outline["@drafter/outline"]
+  production["@drafter/production"]
   compare["@drafter/compare"]
   history["@drafter/history"]
   cast["@drafter/cast"]
@@ -63,6 +64,7 @@ flowchart BT
   fountain["@drafter/fountain"]
   cm_fountain --> web
   history --> web
+  production --> web
   render_docx --> web
   render_html --> web
   render_pdf --> web
@@ -79,6 +81,7 @@ flowchart BT
   lint --> cm_fountain
   layout --> outline
   notes --> outline
+  compare --> production
   layout --> compare
   compare --> history
   markdown --> history
