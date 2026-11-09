@@ -7,10 +7,10 @@ import { STARTER_KINDS } from '~/editor/starter-kinds';
 
 // The Help menu (fresh-look Task 3b; the maintainer, 2026-10-31: Help "should be visible at all
 // times and not part of another (much larger) dropdown"): a button of its own in the top bar,
-// after Focus. Take the tour; the help pages (each opens in a new tab, named by its title); the
-// Sample scripts submenu (a tiny sample of each kind, then the guided starters, each opened as a
-// new script); Reset sample (off unless a sample is open); Report a problem… and Suggest an idea…;
-// Check for updates…; and About Drafter.
+// after Focus, with About beside it (2026-11-09). Take the tour; the help pages About doesn't list
+// (each opens in a new tab, named by its title) and Download the desktop app; the Sample scripts
+// submenu (a tiny sample of each kind, then the guided starters, each opened as a new script); and
+// Reset sample (off unless a sample is open). The reports, updates, and About Drafter are About's.
 // Each item runs its registered command (`useCommandMenu`), as the Drafter menu's do. On a wide
 // screen the button says Help with the Drafter menu's chevron; below 1024px it is a question mark.
 const button = ref<HTMLElement | null>(null);
@@ -52,93 +52,23 @@ const sampleScripts = computed<DropdownMenuItem>(() => ({
 // The help pages, then Download the desktop app (named by its command, not the page's title).
 const pageIds = new Set([...HELP_PAGES.map((page) => page.id), DOWNLOAD_PAGE.id]);
 const items = computed<DropdownMenuItem[][]>(() => {
-  const ids = HELP_MENU_COMMANDS;
-  const pages = ids.filter((id) => pageIds.has(id));
+  const pages = HELP_MENU_COMMANDS.filter((id) => pageIds.has(id));
   return [
     item('take-the-tour'),
     pages.flatMap(item),
     [sampleScripts.value, ...item('reset-sample')],
-    [...item('report-problem'), ...item('suggest-idea'), ...item('copy-technical-details')],
-    [...item('check-for-updates'), ...item('about-drafter')],
   ];
 });
 </script>
 
 <template>
-  <!-- MenuButton: non-modal, with Tab closing the menu and giving focus back to the button. -->
+  <!-- MenuButton: non-modal, with Tab closing the menu and giving focus back to the button.
+       The button's look is menus.css's `.bar-menu`, shared with About. -->
   <MenuButton :items="items" :content="{ align: 'end', onCloseAutoFocus }">
-    <button ref="button" type="button" class="help" aria-label="Help" title="Help">
-      <UIcon name="i-lucide-circle-help" class="help-icon" aria-hidden="true" />
+    <button ref="button" type="button" class="bar-menu" aria-label="Help" title="Help">
+      <UIcon name="i-lucide-circle-help" class="bar-menu-icon" aria-hidden="true" />
       <span class="label" aria-hidden="true">Help</span>
       <UIcon name="i-lucide-chevron-down" class="caret" aria-hidden="true" />
     </button>
   </MenuButton>
 </template>
-
-<style scoped>
-/* A borderless button like the top bar's Open and Export: the word and the Drafter menu's chevron. */
-.help {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 2px;
-  height: 30px;
-  padding: 0 6px 0 10px;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: none;
-  /* The word and its chevron both --text, as the Drafter menu's chevron is (it says: a menu). */
-  color: var(--text);
-  font: 500 13px/1 var(--font-sans);
-  white-space: nowrap;
-  cursor: pointer;
-}
-.help:hover,
-.help[aria-expanded="true"] {
-  background: var(--raised);
-}
-.help-icon {
-  display: none;
-  flex: none;
-  width: 16px;
-  height: 16px;
-}
-.caret {
-  flex: none;
-  width: 14px;
-  height: 14px;
-  color: var(--text);
-  transition: transform var(--dur) var(--ease);
-}
-.help[aria-expanded="true"] .caret {
-  transform: rotate(180deg);
-}
-@media (prefers-reduced-motion: reduce) {
-  .caret {
-    transition: none;
-  }
-}
-
-/* Below 1024px the top bar is icons: Help is a question mark, still named Help. */
-@media (max-width: 1023.98px) {
-  .help {
-    justify-content: center;
-    width: 30px;
-    padding: 0;
-  }
-  .help-icon {
-    display: block;
-  }
-  .label,
-  .caret {
-    display: none;
-  }
-}
-
-/* The narrowest phones (320px, WCAG 1.4.10): as the bar's other buttons, never under 24px. */
-@media (max-width: 399.98px) {
-  .help {
-    width: 26px;
-  }
-}
-</style>

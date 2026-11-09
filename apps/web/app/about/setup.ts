@@ -1,4 +1,4 @@
-// The technical details a bug report carries (Help → Copy technical details, About, and Report a
+// The technical details a bug report carries (About → Copy technical details, About, and Report a
 // problem…): About's version info, then the writer's setup, so the maintainer can see where a
 // problem happens: the address the web app came from (in words, never the name of a server of
 // one's own), the language, the screen, touch or mouse, whether it is installed, works offline,

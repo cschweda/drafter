@@ -293,3 +293,87 @@
     min-height: 44px;
   }
 }
+
+/* The top bar's menu buttons, Help and About (2026-11-09): the word and the Drafter menu's
+   chevron, a borderless button like Open and Export; below 1024px an icon, still named by the word. */
+.bar-menu {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  padding: 0 6px 0 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  /* The word and its chevron both --text, as the Drafter menu's chevron is (it says: a menu). */
+  color: var(--text);
+  font: 500 13px / 1 var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.bar-menu:hover,
+.bar-menu[aria-expanded="true"] {
+  background: var(--raised);
+}
+.bar-menu-icon {
+  display: none;
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.bar-menu .caret {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--text);
+  transition: transform var(--dur) var(--ease);
+}
+.bar-menu[aria-expanded="true"] .caret {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar-menu .caret {
+    transition: none;
+  }
+}
+
+/* Below 1024px the top bar is icons: Help is a question mark, still named Help. */
+@media (max-width: 1023.98px) {
+  .bar-menu {
+    justify-content: center;
+    width: 30px;
+    padding: 0;
+  }
+  .bar-menu-icon {
+    display: block;
+  }
+  .bar-menu .label,
+  .bar-menu .caret {
+    display: none;
+  }
+}
+
+/* The narrowest phones (320px, WCAG 1.4.10): as the bar's other buttons, never under 24px. */
+@media (max-width: 399.98px) {
+  .bar-menu {
+    width: 26px;
+  }
+}
+
+/* About is its icon alone until 1280px: at 1024px the bar doesn't fold, and the word made it a row
+   too wide beside a long template chip (2026-11-09). Still named About, as below 1024px. */
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .bar-menu.about-menu {
+    justify-content: center;
+    width: 30px;
+    padding: 0;
+  }
+  .bar-menu.about-menu .bar-menu-icon {
+    display: block;
+  }
+  .bar-menu.about-menu .label,
+  .bar-menu.about-menu .caret {
+    display: none;
+  }
+}

@@ -5,7 +5,7 @@ import { checkMessage } from '~/update/check';
 import { actionLabel } from '~/update/flow';
 import { runUpdateCheck, takeUpdate, updateCheckOpen, useUpdateCheck } from '~/update/use-check';
 
-// Help → Check for updates: "Checking…" with a moving bar (a check can take a while when a new
+// About → Check for updates: "Checking…" with a moving bar (a check can take a while when a new
 // version is found and downloads: drafter.dev is rebuilt on every push), then what was found. A new version is the app's own
 // offer (`UpdatePrompt.vue`): Reload, Restart, or Get it here does what the offer's button does
 // (asking first when changes are unsaved), and Close leaves the offer up. Nothing here reloads

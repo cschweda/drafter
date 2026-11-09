@@ -86,7 +86,8 @@ test.describe('the toolbar at 320px', () => {
     expect(layout.bar[0]).toBeLessThanOrEqual(layout.bar[1] as number);
     // The mark (the app menu), File, the writing mode, the palette, Help, and More actions (the top
     // bar's order; Structure has no strip to show here). The title keeps a few letters and the
-    // switch never folds, so the theme, Focus, Export, and Save fold into More actions first.
+    // switch never folds, so the theme, Focus, About, Export, and Save fold into More actions first
+    // (About before them, 2026-11-09, so File stays).
     expect(layout.buttons.map((b) => b.name)).toEqual([
       'Drafter menu',
       'Writing mode: Fountain. Switch to Classic.',
@@ -110,10 +111,10 @@ test.describe('the toolbar at 320px', () => {
     await expect(caret).toBeVisible();
     expect(Math.round((await caret.boundingBox())?.width ?? 0)).toBe(14);
     const help = page.getByRole('banner').getByRole('button', { name: 'Help', exact: true });
-    await expect(help.locator('.help-icon')).toBeVisible();
+    await expect(help.locator('.bar-menu-icon')).toBeVisible();
     await help.click();
     const menu = page.getByRole('menu', { name: 'Help' });
-    await expect(menu.getByRole('menuitem', { name: /^About Drafter/ })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: /^Take the tour/ })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();
   });

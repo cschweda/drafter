@@ -14,6 +14,19 @@ const editor = (page: Page) => page.locator('.cm-content');
 // Help is its own menu in the top bar (fresh-look Task 3b).
 const helpButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: 'Help' });
 const helpMenu = (page: Page) => page.getByRole('menu', { name: 'Help' });
+const aboutButton = (page: Page) =>
+  page.getByRole('banner').getByRole('button', { name: 'About', exact: true });
+const aboutMenu = (page: Page) => page.getByRole('menu', { name: 'About' });
+
+/** Opens About (2026-11-09): its own button, or on a phone More actions' About submenu. */
+async function openAbout(page: Page) {
+  if (await aboutButton(page).isVisible()) await aboutButton(page).click();
+  else {
+    await page.getByRole('banner').getByRole('button', { name: 'More actions' }).click();
+    await page.getByRole('menuitem', { name: 'About', exact: true }).click();
+  }
+  await expect(aboutMenu(page)).toBeVisible();
+}
 const item = (page: Page, name: RegExp) => page.getByRole('menuitem', { name });
 const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const about = (page: Page) => page.getByRole('dialog', { name: 'Drafter', exact: true });
@@ -68,8 +81,7 @@ function stored(page: Page): Promise<Row[]> {
 test.describe('About Drafter', () => {
   test('shows the version, the app, and the links, which open in a new tab', async ({ page }) => {
     await start(page);
-    await helpButton(page).click();
-    await expect(helpMenu(page)).toBeVisible();
+    await openAbout(page);
     await item(page, /^About Drafter/).click();
     const dialog = about(page);
     await expect(dialog).toBeVisible();
@@ -175,10 +187,9 @@ test.describe('About Drafter', () => {
 });
 
 test.describe('Technical details', () => {
-  test('Help → Technical details opens the page in a new tab', async ({ page }) => {
+  test('About → Technical details opens the page in a new tab', async ({ page }) => {
     await start(page);
-    await helpButton(page).click();
-    await expect(helpMenu(page)).toBeVisible();
+    await openAbout(page);
     const opened = page.context().waitForEvent('page');
     await item(page, /^Technical details/).click();
     const tab = await opened;
@@ -397,7 +408,7 @@ test.describe('Check for updates', () => {
   test('says so when there is no service worker', async ({ page }) => {
     await fakeWorker(page, 'none');
     await start(page);
-    await helpButton(page).click();
+    await openAbout(page);
     await item(page, /^Check for updates…/).click();
     await expect(checkDialog(page).getByRole('status')).toHaveText(
       /^This copy of Drafter has no service worker/,
@@ -476,10 +487,14 @@ test.describe('What is Drafter? and What’s new', () => {
     [/^What is Drafter\?/, '/docs/what-is-drafter/', 'What is Drafter?'],
     [/^What’s new/, '/docs/whats-new/', 'What’s new'],
   ] as const) {
-    test(`Help → ${title} opens the page in a new tab`, async ({ page }) => {
+    test(`${title} opens the page in a new tab`, async ({ page }) => {
       await start(page);
-      await helpButton(page).click();
-      await expect(helpMenu(page)).toBeVisible();
+      // What's new is About's (2026-11-09); What is Drafter? stays in Help.
+      if (title === 'What’s new') await openAbout(page);
+      else {
+        await helpButton(page).click();
+        await expect(helpMenu(page)).toBeVisible();
+      }
       const opened = page.context().waitForEvent('page');
       await item(page, name).click();
       const tab = await opened;

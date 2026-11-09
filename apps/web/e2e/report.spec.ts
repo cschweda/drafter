@@ -12,8 +12,18 @@ const VERSION = (
 ).version;
 
 const editor = (page: Page) => page.locator('.cm-content');
-const helpButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: 'Help' });
-const helpMenu = (page: Page) => page.getByRole('menu', { name: 'Help' });
+// The reports are in About (2026-11-09), which folds into More actions on a phone.
+const aboutButton = (page: Page) =>
+  page.getByRole('banner').getByRole('button', { name: 'About', exact: true });
+const aboutMenu = (page: Page) => page.getByRole('menu', { name: 'About' });
+async function openAbout(page: Page) {
+  if (await aboutButton(page).isVisible()) await aboutButton(page).click();
+  else {
+    await page.getByRole('banner').getByRole('button', { name: 'More actions' }).click();
+    await page.getByRole('menuitem', { name: 'About', exact: true }).click();
+  }
+  await expect(aboutMenu(page)).toBeVisible();
+}
 const palette = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
 const report = (page: Page) => page.locator('dialog[data-report]');
 const field = (page: Page, name: string) => report(page).getByRole('textbox', { name });
@@ -50,10 +60,9 @@ async function fillProblem(page: Page) {
 }
 
 test.describe('Report a problem', () => {
-  test('opens from Help, and says what it needs and what it never sends', async ({ page }) => {
+  test('opens from About, and says what it needs and what it never sends', async ({ page }) => {
     await start(page);
-    await helpButton(page).click();
-    await expect(helpMenu(page)).toBeVisible();
+    await openAbout(page);
     await page.getByRole('menuitem', { name: /^Report a problem…/ }).click();
     const dialog = page.getByRole('dialog', { name: 'Report a problem' });
     await expect(dialog).toBeVisible();

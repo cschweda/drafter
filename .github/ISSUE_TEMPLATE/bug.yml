@@ -1,4 +1,4 @@
-# Report a problem. Drafter's Help → Report a problem… fills these fields from the link it opens
+# Report a problem. Drafter's About → Report a problem… fills these fields from the link it opens
 # (`?template=bug.yml&title=…&what-happened=…&expected=…&version=…`), by each field's id, so the
 # ids here and in apps/web/app/report/issue.ts must match (apps/web/test/report-issue.test.ts).
 name: Report a problem
@@ -27,7 +27,7 @@ body:
     id: version
     attributes:
       label: Technical details
-      description: Help → Copy technical details (your Drafter version, system, browser, screen, and settings), or Report a problem… adds them for you.
+      description: About → Copy technical details (your Drafter version, system, browser, screen, and settings), or Report a problem… adds them for you.
       render: text
     validations:
       required: false

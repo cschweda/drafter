@@ -375,16 +375,14 @@ test.describe('the Help menu', () => {
       await expect(helpButton(page).locator('.caret')).toBeVisible();
     } else {
       // A phone has the icon alone: a question mark, still named Help.
-      await expect(helpButton(page).locator('.help-icon')).toBeVisible();
+      await expect(helpButton(page).locator('.bar-menu-icon')).toBeVisible();
     }
     const box = await helpButton(page).boundingBox();
     expect(box?.width ?? 0).toBeGreaterThanOrEqual(24);
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(24);
   });
 
-  test('holds the tour, the help pages, Download, the samples, Report a problem, Suggest an idea, Copy technical details, Check for updates, and About, in order', async ({
-    page,
-  }) => {
+  test('holds the tour, the help pages, Download, and the samples, in order', async ({ page }) => {
     await start(page);
     await helpButton(page).click();
     await expect(helpMenu(page)).toBeVisible();
@@ -405,19 +403,10 @@ test.describe('the Help menu', () => {
       /^Drafter for Claude/,
       /^Self-hosting/,
       /^Keyboard shortcuts/,
-      /^Privacy/,
       /^Open formats/,
-      /^Third-party licences/,
-      /^Technical details/,
-      /^What’s new/,
       /^Download the desktop app/,
       /^Sample scripts/,
       /^Reset sample/,
-      /^Report a problem…/,
-      /^Suggest an idea…/,
-      /^Copy technical details/,
-      /^Check for updates…/,
-      /^About Drafter/,
     ];
     expect(names).toHaveLength(expected.length);
     for (const [i, name] of expected.entries()) expect(names[i], String(name)).toMatch(name);
@@ -436,18 +425,12 @@ test.describe('the Help menu', () => {
     await page.keyboard.press('Enter');
     await expect(helpItem(page, /^Take the tour/)).toBeFocused();
     await page.keyboard.press('End');
-    await expect(helpItem(page, /^About Drafter/)).toBeFocused();
+    await expect(helpItem(page, /^Reset sample/)).toBeFocused();
     await page.keyboard.press('ArrowUp');
-    await expect(helpItem(page, /^Check for updates…/)).toBeFocused();
+    await expect(helpItem(page, /^Sample scripts/)).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(helpMenu(page)).toBeHidden();
     await expect(helpButton(page)).toBeFocused();
-    // Enter on About Drafter opens it.
-    await page.keyboard.press('ArrowDown');
-    await expect(helpMenu(page)).toBeVisible();
-    await page.keyboard.press('End');
-    await page.keyboard.press('Enter');
-    await expect(page.getByRole('dialog', { name: 'Drafter', exact: true })).toBeVisible();
   });
 
   test('turns its chevron while open, as the Drafter menu does', async ({ page }) => {
@@ -460,5 +443,49 @@ test.describe('the Help menu', () => {
     await expect
       .poll(async () => turned(await caret.evaluate((el) => getComputedStyle(el).transform)))
       .toBe(180);
+  });
+});
+
+// About, beside Help (2026-11-09): Drafter itself, and the reports.
+const aboutButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: 'About' });
+const aboutMenu = (page: Page) => page.getByRole('menu', { name: 'About' });
+
+test.describe('the About menu', () => {
+  test('holds About Drafter, the About pages, the reports, and Check for updates, in order', async ({
+    page,
+  }) => {
+    test.skip(!wide(page), 'a phone folds About into More actions');
+    await start(page);
+    await aboutButton(page).click();
+    await expect(aboutMenu(page)).toBeVisible();
+    const names = (await aboutMenu(page).getByRole('menuitem').allTextContents()).map((n) =>
+      n.trim(),
+    );
+    const expected = [
+      /^About Drafter/,
+      /^What’s new/,
+      /^Privacy/,
+      /^Third-party licences/,
+      /^Technical details/,
+      /^Report a problem…/,
+      /^Suggest an idea…/,
+      /^Copy technical details/,
+      /^Check for updates…/,
+    ];
+    expect(names).toHaveLength(expected.length);
+    for (const [i, name] of expected.entries()) expect(names[i], String(name)).toMatch(name);
+    await page.keyboard.press('Escape');
+    await expect(aboutMenu(page)).toBeHidden();
+    await expect(aboutButton(page)).toBeFocused();
+  });
+
+  test('opens About Drafter from the keyboard', async ({ page, isMobile }) => {
+    test.skip(!!isMobile || !wide(page), 'a phone has no keyboard, and folds About');
+    await start(page);
+    await aboutButton(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(aboutMenu(page).getByRole('menuitem', { name: /^About Drafter/ })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Drafter', exact: true })).toBeVisible();
   });
 });

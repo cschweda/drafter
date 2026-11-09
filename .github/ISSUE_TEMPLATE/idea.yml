@@ -1,4 +1,4 @@
-# Suggest an idea. Drafter's Help → Suggest an idea… fills these fields from the link it opens
+# Suggest an idea. Drafter's About → Suggest an idea… fills these fields from the link it opens
 # (`?template=idea.yml&title=…&idea=…&version=…`), by each field's id, so the ids here and in
 # apps/web/app/report/issue.ts must match (apps/web/test/report-issue.test.ts).
 name: Suggest an idea
@@ -21,7 +21,7 @@ body:
     id: version
     attributes:
       label: Technical details
-      description: Help → Copy technical details, or Suggest an idea… adds them for you.
+      description: About → Copy technical details, or Suggest an idea… adds them for you.
       render: text
     validations:
       required: false
