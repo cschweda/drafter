@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { Blob as NodeBlob } from 'node:buffer';
+import { createHash } from 'node:crypto';
 import { history, undo } from '@codemirror/commands';
 import { EditorState, StateEffect } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { parsedDoc } from '@drafter/cm-fountain';
 import { parse } from '@drafter/fountain';
-import { REVISION_COLORS, readProduction } from '@drafter/production';
+import { decodeBaseline, REVISION_COLORS, readProduction, scriptText } from '@drafter/production';
 import { builtins, type Template } from '@drafter/templates';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { DocumentKind } from '../app/markdown/kind';
@@ -18,6 +19,7 @@ import {
   type ProductionDeps,
   productionAsking,
   productionMessage,
+  productionWorking,
   READ_ONLY,
   sceneGone,
 } from '../app/production/commands';
@@ -64,7 +66,8 @@ function setup(options: { kind?: DocumentKind; template?: Template; text?: strin
     template: vi.fn(() => options.template ?? screenplay),
     firstScene: () => 1,
     today: () => '2026-11-09',
-    draftId: vi.fn(async () => 'a'.repeat(64)),
+    // A hash, as the app's is: each text its own id.
+    draftId: vi.fn(async (text: string) => createHash('sha256').update(text).digest('hex')),
     freeze: vi.fn(async () => {}),
     snapshot: vi.fn(),
     say: vi.fn(),
@@ -173,10 +176,67 @@ describe('the Production commands', () => {
   test('locking is one undo step, and freezes the Locked draft', async () => {
     const { view, deps, actions } = setup();
     await actions.lock();
-    expect(deps.freeze).toHaveBeenCalledWith(SCRIPT, 'Locked');
     expect(view.state.doc.toString()).toContain('EXT. PORCH - LATER #2#');
+    // The draft is the locked script (numbers written, block left out): the baseline, and its id
+    // is the one the block records (Ruling 28).
+    const production = productionOf(view);
+    const baseline = await decodeBaseline(production?.baseline as string);
+    expect(baseline).toBe(scriptText(view.state.doc.toString()));
+    expect(baseline).toContain('INT. KITCHEN - NIGHT #1#');
+    expect(deps.freeze).toHaveBeenCalledWith(baseline, 'Locked');
+    expect(production?.sets.map((s) => s.draft)).toEqual([
+      await deps.draftId(baseline as string),
+      await deps.draftId(baseline as string),
+    ]);
     expect(undo(view)).toBe(true);
     expect(view.state.doc.toString()).toBe(SCRIPT);
+  });
+
+  test('Start the next revision and Clear marks freeze the text they leave, under the id they record', async () => {
+    const { view, deps, actions } = setup();
+    await actions.lock();
+    const rain = () => view.state.doc.toString().indexOf('Rain.') + 'Rain.'.length;
+    view.dispatch({ changes: { from: rain(), insert: '\n\nINT. HALL - DAY\n\nNew.' } });
+    expect(await actions.nextSet()).toBe(true);
+    let production = productionOf(view);
+    let script = scriptText(view.state.doc.toString());
+    // The new scene's A-number is in the frozen draft.
+    expect(script).toContain('INT. HALL - DAY #2A#');
+    expect(await decodeBaseline(production?.baseline as string)).toBe(script);
+    expect(deps.freeze).toHaveBeenLastCalledWith(script, 'End of the Blue revision');
+    expect(production?.sets.at(-1)?.draft).toBe(await deps.draftId(script));
+
+    view.dispatch({ changes: { from: rain(), insert: ' More rain.' } });
+    expect(await actions.clearMarks()).toBe(true);
+    production = productionOf(view);
+    script = scriptText(view.state.doc.toString());
+    expect(deps.freeze).toHaveBeenLastCalledWith(script, 'Marks cleared');
+    expect(production?.sets.map((s) => s.draft)).toEqual([
+      await deps.draftId(script),
+      await deps.draftId(script),
+    ]);
+  });
+
+  test('Omit, Clear marks, and Unlock take no snapshot when they change nothing', async () => {
+    const { view, deps, actions } = setup();
+    // Not locked: Unlock has nothing to remove.
+    expect(await actions.unlock()).toBe(false);
+    await actions.lock();
+    // Just locked: no marks to clear.
+    expect(await actions.clearMarks()).toBe(false);
+    // A scene that is gone by the time the omit is worked out.
+    view.dispatch({ selection: { anchor: 3 } });
+    vi.mocked(deps.template).mockImplementation(() => {
+      if (productionWorking.value) {
+        const text = view.state.doc.toString();
+        const from = text.indexOf('INT. KITCHEN');
+        if (from >= 0)
+          view.dispatch({ changes: { from, to: text.indexOf('EXT. PORCH'), insert: '' } });
+      }
+      return screenplay;
+    });
+    expect(await actions.omit(0)).toBe(false);
+    expect(deps.snapshot).not.toHaveBeenCalled();
   });
 
   test('an action whose text changed while it worked runs again, once, and freezes that text', async () => {
@@ -191,9 +251,10 @@ describe('the Production commands', () => {
     expect(await actions.lock()).toBe(true);
     expect(view.state.doc.toString()).toContain('Rain.\nX');
     expect(productionOf(view)).not.toBeNull();
-    // The draft is the text of the try that went in, frozen once.
+    // The draft is the text the try that went in left, frozen once.
     expect(deps.freeze).toHaveBeenCalledTimes(1);
-    expect(deps.freeze).toHaveBeenCalledWith(`${SCRIPT}X`, 'Locked');
+    expect(deps.freeze).toHaveBeenCalledWith(scriptText(view.state.doc.toString()), 'Locked');
+    expect(vi.mocked(deps.freeze).mock.calls[0]?.[0]).toContain('Rain.\nX');
   });
 
   test('an action whose text kept changing says so, visibly, and leaves no draft behind', async () => {
@@ -287,13 +348,10 @@ describe('Omit scene, when the text changes while it works', () => {
     deps: ProductionDeps,
     change: (text: string) => { from: number; to: number; insert: string },
   ) {
-    let armed = false;
-    vi.mocked(deps.snapshot).mockImplementation(() => {
-      armed = true;
-    });
-    // The template is read inside the try, after the text was read.
+    let armed = true;
+    // The template is read inside the try, after the text was read; the first read there changes it.
     vi.mocked(deps.template).mockImplementation(() => {
-      if (armed) {
+      if (armed && productionWorking.value) {
         armed = false;
         view.dispatch({ changes: change(view.state.doc.toString()) });
       }

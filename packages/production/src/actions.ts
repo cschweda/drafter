@@ -140,6 +140,15 @@ async function finish(
   return [...edits, ...moved];
 }
 
+/**
+ * A set's draft id: given as is, or worked out from the script text the action leaves (block left
+ * out), which is the text the caller freezes as that draft (its hash).
+ */
+export type DraftId = string | ((script: string) => string | Promise<string>);
+
+const idOf = async (draftId: DraftId, script: string): Promise<string> =>
+  typeof draftId === 'string' ? draftId : draftId(script);
+
 const setOf = (name: string, today: string, draftId: string): ProductionSet => ({
   name,
   color: REVISION_COLORS[name.replace(/^Double /, '')] ?? (REVISION_COLORS.White as string),
@@ -164,7 +173,7 @@ const freshSets = (today: string, draftId: string): ProductionSet[] => [
 export async function lock(
   text: string,
   template: Template,
-  opts: { today: string; draftId: string; firstScene: number },
+  opts: { today: string; draftId: DraftId; firstScene: number },
 ): Promise<TextChange[]> {
   const doc = parse(text);
   if (readProduction(doc.meta)) return [];
@@ -194,7 +203,7 @@ export async function lock(
     firstScene: opts.firstScene,
     numbers,
     pages: pageMapOf(paginate(parse(script), template), script),
-    sets: freshSets(opts.today, opts.draftId),
+    sets: freshSets(opts.today, await idOf(opts.draftId, script)),
     baseline: await encodeBaseline(script),
   }));
 }
@@ -214,7 +223,7 @@ const writesNumbers = (production: Production, template?: Template) =>
 export async function startNextSet(
   text: string,
   today: string,
-  draftId: string,
+  draftId: DraftId,
   template?: Template,
 ): Promise<TextChange[]> {
   const doc = parse(text);
@@ -234,7 +243,7 @@ export async function startNextSet(
       ...production,
       numbers,
       pages: rebaseAnchors(production.pages, oldBaseline, script),
-      sets: [...earlier, ...closed, setOf(name, today, draftId)],
+      sets: [...earlier, ...closed, setOf(name, today, await idOf(draftId, script))],
       baseline: await encodeBaseline(script),
     };
   });
@@ -289,7 +298,7 @@ export async function omitScene(
 export async function clearMarks(
   text: string,
   today: string,
-  draftId: string,
+  draftId: DraftId,
 ): Promise<TextChange[]> {
   const production = readProduction(parse(text).meta);
   if (!production) return [];
@@ -298,7 +307,7 @@ export async function clearMarks(
   return finish(text, [], async (script) => ({
     ...production,
     pages: rebaseAnchors(production.pages, oldBaseline, script),
-    sets: freshSets(today, draftId),
+    sets: freshSets(today, await idOf(draftId, script)),
     baseline: await encodeBaseline(script),
   }));
 }

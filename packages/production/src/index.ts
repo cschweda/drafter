@@ -1,5 +1,6 @@
 export {
   clearMarks,
+  type DraftId,
   lock,
   numbersScenes,
   omitScene,
