@@ -1,6 +1,7 @@
 export {
   clearMarks,
   lock,
+  numbersScenes,
   omitScene,
   scriptText,
   startNextSet,

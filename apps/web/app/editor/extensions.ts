@@ -33,6 +33,7 @@ import { useSettings } from '../settings/settings';
 import { onSpellContextMenu } from '../spell/menu';
 import { sayClassic } from './element-notice';
 import { keySounds } from './key-sounds';
+import { provisionalNumbersExtension } from './provisional';
 import { revealedLine } from './reveal-line';
 import { theme } from './theme';
 import { typewriterScrolling } from './typewriter';
@@ -263,6 +264,8 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
     // The current line, which carries the bar that shows the editor has focus (editor/theme.ts).
     highlightActiveLine(),
     revealedLine,
+    // A locked screenplay's new scenes show their A-numbers, dimmed (production/provisional.ts).
+    provisionalNumbersExtension,
     foldGutter(),
     search(),
     EditorView.lineWrapping,

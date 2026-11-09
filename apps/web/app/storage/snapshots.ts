@@ -21,7 +21,10 @@ export type SnapshotReason =
   | 'before-reload'
   | 'before-scene-restore'
   // Start new draft (drafts-and-cuts §3.1): what was cut is recorded with the draft it was cut in.
-  | 'before-draft'; // 'before-merge' arrives with Plan G
+  | 'before-draft'
+  // Unlock and Clear marks (production design §6.4): a revision's marks can't be had back otherwise.
+  | 'before-unlock'
+  | 'before-clear-marks'; // 'before-merge' arrives with Plan G
 
 export interface SnapshotInfo {
   id: string;

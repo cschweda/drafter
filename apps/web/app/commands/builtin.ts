@@ -52,6 +52,7 @@ import { runMove } from '~/outline/move';
 import { sayOutline } from '~/outline/notice';
 import { openSceneDetails } from '~/outline/scene-details';
 import { useOutline } from '~/outline/use-outline';
+import { useProductionActions } from '~/production/use-commands';
 import { showScaffold } from '~/scaffold/show';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
@@ -567,6 +568,8 @@ export function registerBuiltinCommands(): void {
     },
     // Sprints (Phase 1 design §7.3): in sprint-commands.ts.
     ...sprintBehaviors(),
+    // Production (production design §5): the tab, the lock, the revision sets, Omit scene.
+    ...useProductionActions().behaviors,
     // The Stats tab (seeing-the-script design §4.1), beside the Source: the Counts panel's Stats…
     // and the Drafter menu open it too.
     'show-stats': {

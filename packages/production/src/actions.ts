@@ -34,7 +34,7 @@ export function scriptText(text: string): string {
 }
 
 /** Whether `template` prints a scene heading as one: a screenplay, not a play (design §3). */
-function numbersScenes(template: Template): boolean {
+export function numbersScenes(template: Template): boolean {
   const probe = {
     kind: 'scene_heading',
     forced: false,

@@ -12,7 +12,7 @@ export type TabsKind = 'fountain' | 'markdown' | 'novel';
 /** A tab's id: one of the core four, a view tab (Cards, Notes, Stats), or a script module's (`moduleTabId`). */
 export type TabId = string;
 export type CoreTabId = 'source' | 'script' | 'problems' | 'outline';
-export type ViewTabId = 'cards' | 'notes' | 'stats' | 'scaffold';
+export type ViewTabId = 'cards' | 'notes' | 'stats' | 'scaffold' | 'production';
 export type PaneId = 'left' | 'right';
 export interface PaneTabs {
   left: TabId;
@@ -32,6 +32,7 @@ export type InspectorTabId =
   | 'stats'
   | 'scaffold'
   | 'notes'
+  | 'production'
   | 'problems'
   | 'compare'
   | 'cuts'
@@ -49,7 +50,7 @@ const DRAFT_TABS: InspectorTabId[] = ['cuts', 'drafts', 'draft-steps', 'draft'];
 
 /**
  * The Inspector's tabs for a document of `kind` (Call 14): the row, and More with the rest, in
- * order. A script: Script, Outline, Cards, Stats, Scaffold in the row; Notes, Problems, Compare,
+ * order. A script: Script, Outline, Cards, Stats, Scaffold in the row; Notes, Production, Problems, Compare,
  * Cuts, Drafts, the draft being read, then the modules' tabs (`modules`) under More. A Markdown
  * document: Preview and Stats; Problems, Compare, Cuts, Drafts, the draft being read, and the
  * modules' tabs under More. A novel: Preview, Outline, Cards, and Stats, and the same More. Compare, Cuts, and the drafts' two are listed only while open
@@ -68,7 +69,7 @@ export function inspectorTabs(
   }
   return {
     row: ['script', 'outline', 'cards', 'stats', 'scaffold'],
-    more: ['notes', 'problems', 'compare', ...DRAFT_TABS, ...own],
+    more: ['notes', 'production', 'problems', 'compare', ...DRAFT_TABS, ...own],
   };
 }
 
@@ -114,6 +115,9 @@ export const STATS_TAB_ID = 'stats';
 /** Scaffold (seeing-the-script design §5.1): who is in the cursor's scene, beside the Source. */
 export const SCAFFOLD_TAB_ID = 'scaffold';
 
+/** Production (production design §5): locks, revision sets, and scene numbers, for a script. */
+export const PRODUCTION_TAB_ID = 'production';
+
 /**
  * Cards, Notes, Stats, and Scaffold (design §5.8; seeing-the-script design §4.1, §5.1): not core,
  * so they share the slot and More with module tabs, first in More, in the design's order, until
@@ -124,6 +128,7 @@ export const VIEW_TABS: ReadonlyArray<{ id: ViewTabId; label: string }> = [
   { id: 'notes', label: 'Notes' },
   { id: STATS_TAB_ID, label: 'Stats' },
   { id: SCAFFOLD_TAB_ID, label: 'Scaffold' },
+  { id: PRODUCTION_TAB_ID, label: 'Production' },
 ];
 
 /**
@@ -175,7 +180,7 @@ export const HISTORY_ITEM = 'history';
 
 /**
  * The bottom tab bar (fresh-look design §6): Write, Script (a Markdown document's Preview), and
- * Outline (not in a plain Markdown document; a novel has its own), then More with Cards, Stats, Scaffold, Notes, Problems,
+ * Outline (not in a plain Markdown document; a novel has its own), then More with Cards, Stats, Scaffold, Notes, Production, Problems,
  * the modules' tabs, and History, which opens its dialog. Compare, Cuts, Drafts, and the draft
  * being read lead More while they are open. A tab from More shows on the bar while it is the one showing (BottomTabBar).
  */
@@ -212,7 +217,17 @@ export function phoneTabs(
   }
   return {
     row: ['source', 'script', 'outline'],
-    more: [...lead, 'cards', 'stats', 'scaffold', 'notes', 'problems', ...modules, HISTORY_ITEM],
+    more: [
+      ...lead,
+      'cards',
+      'stats',
+      'scaffold',
+      'notes',
+      'production',
+      'problems',
+      ...modules,
+      HISTORY_ITEM,
+    ],
   };
 }
 

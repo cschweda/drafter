@@ -28,6 +28,9 @@ export interface CommandData {
   webOnly?: boolean;
 }
 
+/** What a writer looking for Production might search the palette for. */
+const PRODUCTION_WORDS = ['production', 'lock', 'revisions', 'scene numbers', 'shooting script'];
+
 /** What a writer who wants Classic Mode might search the palette for. */
 const MODE_WORDS = ['final draft', 'mode', 'typing'];
 
@@ -457,6 +460,14 @@ export const COMMAND_DATA: readonly CommandData[] = [
     icon: 'i-lucide-map-pin',
     keywords: ['locations', 'Scaffold'],
   },
+  // Production (production design §5): the tab with the lock, the revision sets, and the scene numbers.
+  {
+    id: 'show-production',
+    title: 'Show Production',
+    group: 'View',
+    icon: 'i-lucide-clapperboard',
+    keywords: PRODUCTION_WORDS,
+  },
   { id: 'switch-theme', title: 'Switch theme', group: 'View' },
   { id: 'show-line-numbers', title: 'Show line numbers', group: 'View' },
   { id: 'hide-line-numbers', title: 'Hide line numbers', group: 'View' },
@@ -525,6 +536,46 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // New note (Phase 2 design §8): at the end of the cursor's line, with an optional category.
   { id: 'new-note', title: 'New note…', group: 'Edit' },
   { id: 'expand-outline', title: 'Expand outline', group: 'Edit' },
+  // Production (production design §5, §6.4, §7), for a script: Clear marks and Unlock ask first.
+  {
+    id: 'production-lock',
+    title: 'Lock pages and scene numbers',
+    group: 'Edit',
+    icon: 'i-lucide-lock',
+    keywords: PRODUCTION_WORDS,
+  },
+  {
+    id: 'production-next-set',
+    title: 'Start the next revision',
+    group: 'Edit',
+    keywords: [...PRODUCTION_WORDS, 'revision set', 'colored pages', 'Blue pages', 'Pink pages'],
+  },
+  {
+    id: 'production-write-numbers',
+    title: 'Write new scene numbers',
+    group: 'Edit',
+    keywords: [...PRODUCTION_WORDS, 'A-scenes', 'A-numbers'],
+  },
+  {
+    id: 'production-omit-scene',
+    title: 'Omit scene',
+    group: 'Edit',
+    keywords: [...PRODUCTION_WORDS, 'OMITTED', 'cut scene'],
+  },
+  {
+    id: 'production-clear-marks',
+    title: 'Clear marks…',
+    group: 'Edit',
+    keywords: PRODUCTION_WORDS,
+  },
+  {
+    id: 'production-unlock',
+    title: 'Unlock…',
+    group: 'Edit',
+    icon: 'i-lucide-lock-open',
+    keywords: PRODUCTION_WORDS,
+  },
+
   { id: 'redo', title: 'Redo', group: 'Edit', keys: 'Mod-Shift-z' },
   { id: 'find', title: 'Find', group: 'Edit', keys: 'Mod-f' },
   // Check spelling shows Problems on its Spelling group (Plan D, Call 13).
