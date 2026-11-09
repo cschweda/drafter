@@ -6,6 +6,7 @@ import { fdxNote } from './rules/fdx';
 import { duplicateField } from './rules/fields';
 import { headingNoTime } from './rules/heading';
 import { highlandNote, osfNote } from './rules/import-notes';
+import { lockedNumbersOutOfOrder, lockedSceneGone, repeatedSceneNumber } from './rules/locked';
 import { similarNames } from './rules/names';
 import {
   headingBlankAfter,
@@ -36,6 +37,9 @@ export const rules: readonly Rule[] = [
   duplicateField,
   transitionNotLast,
   similarNames,
+  lockedNumbersOutOfOrder,
+  repeatedSceneNumber,
+  lockedSceneGone,
 ];
 
 /**
