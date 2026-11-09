@@ -23,7 +23,7 @@ import { actionLabel } from '~/update/flow';
 import { runUpdateCheck, takeUpdate, useUpdateCheck } from '~/update/use-check';
 import { writeClipboard } from '~/utils/clipboard';
 
-// Help → About Drafter: the version (for a bug report, with Copy technical details, and Check for
+// About → About Drafter: the version (for a bug report, with Copy technical details, and Check for
 // updates… beside it), which app this is, and the links. Every link leaves the app: a new tab on
 // the web, the system browser in the desktop app (its window-open handler hands an https address to the browser and never
 // navigates the app's window). The help pages open as the Help commands open them.

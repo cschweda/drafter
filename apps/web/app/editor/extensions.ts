@@ -19,6 +19,7 @@ import {
   fountain,
   invertSceneMoves,
   invertSpellMarks,
+  metadataKept,
   parsedDoc,
   relint as relintView,
   sceneIds,
@@ -215,7 +216,8 @@ export function languageExtension(
   kind: DocumentKind,
 ): Extension {
   if (kind === 'markdown') return markdownModule ? markdownModule.markdownMode() : [];
-  return fountain({ template, lintOptions, onCursorElement, onHint });
+  // Drafter's settings block is hidden and kept in Fountain too, as in Classic Mode.
+  return [fountain({ template, lintOptions, onCursorElement, onHint }), metadataKept];
 }
 
 /**

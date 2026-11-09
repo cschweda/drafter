@@ -12,3 +12,13 @@
   # drafter.dev counts visits with Plausible (no cookies, nothing about the
   # visitor or their script). Only this build sets it: nuxt.config.ts.
   DRAFTER_ANALYTICS = "plausible"
+  # Report a problem / Suggest an idea may send by email through the function below (Resend). The
+  # dialog offers it only when the function has RESEND_API_KEY, REPORT_TO, and REPORT_FROM, which
+  # are set in Netlify's site settings, never here: nuxt.config.ts.
+  DRAFTER_REPORTS = "email"
+
+# The report function (netlify/report.mjs), at /.netlify/functions/report. Paths are from the
+# repository root, as the build's are.
+[functions]
+  directory = "apps/web/netlify/functions"
+  node_bundler = "esbuild"

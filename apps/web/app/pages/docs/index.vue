@@ -23,7 +23,7 @@ const about: Record<string, string> = {
   'help-novel':
     'Writing a novel in plain Markdown: chapters, sections, and parts, the Outline and Cards, focus on one chapter, and word targets.',
   'help-saving':
-    'What Save does in each browser, keeping scripts in a synced folder, the recovery copy, and installing Drafter as an app.',
+    'What Save does in each browser, keeping scripts in a synced folder, autosave, and installing Drafter as an app.',
   'help-drafts-and-cuts':
     'Numbered drafts you can read, compare, and restore, and everything you cut, kept for ideas.',
   'help-story-map':
@@ -72,7 +72,7 @@ const about: Record<string, string> = {
 
     <h2 id="reporting">Reporting a problem</h2>
     <p>
-      Found something wrong, or have an idea? Choose <strong>Help → Report a problem…</strong> or
+      Found something wrong, or have an idea? Choose <strong>About → Report a problem…</strong> or
       <strong>Suggest an idea…</strong> (in the search too, and in About). Write a title and a few
       lines, and the dialog shows exactly what will be sent, with your version info if you leave it
       on. <strong>Open on GitHub</strong> opens GitHub’s new-issue page with it all filled in, and you

@@ -166,7 +166,7 @@ describe('History of this scene', () => {
   });
 
   test('refused for a deleted scene and in a read-only tab', async () => {
-    const why = 'This script is open for editing in another tab.';
+    const why = 'You can’t type here because this script is open in another Drafter tab.';
     const readOnly = setup({ readOnly: why });
     expect(await readOnly.use(version())).toBe(false);
     expect(readOnly.said).toEqual([why]);

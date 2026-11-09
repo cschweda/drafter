@@ -48,10 +48,10 @@ function announceSave() {
 /**
  * Said by the status bar after Save, Save As, or opening a file is tried in a tab that only shows
  * a script another tab is editing. That tab may show old text, so it writes nothing and opens
- * nothing until the writer chooses "Edit here instead".
+ * nothing until the writer chooses "Type here instead".
  */
 export const READ_ONLY_HINT =
-  'This tab only shows a script that’s open for editing in another tab. Choose “Edit here instead” first.';
+  'This tab only shows a script that’s open for editing in another tab. Choose “Type here instead” first.';
 export const readOnlyHint = ref('');
 // It goes away when the tab can edit.
 watch(useGuard().readOnly, (on) => {

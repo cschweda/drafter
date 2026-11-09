@@ -262,7 +262,9 @@ test.describe('opening a file (Chromium, with the picker)', () => {
     const second = await context.newPage();
     await stubPickers(second);
     await start(second);
-    await expect(second.getByText('This script is open for editing in another tab')).toBeVisible();
+    await expect(
+      second.getByText('You can’t type here because this script is open in another Drafter tab'),
+    ).toBeVisible();
     await putFile(second, 'Door.fountain', SCRIPT);
     const count = (await stored(second)).length;
 
@@ -270,12 +272,12 @@ test.describe('opening a file (Chromium, with the picker)', () => {
     for (const name of ['Open a file…', 'New screenplay', 'New stage play', 'Save As…']) {
       await expect(menu(second).getByRole('button', { name })).toBeDisabled();
     }
-    await expect(menu(second).getByText('Choose “Edit here instead” first')).toBeVisible();
+    await expect(menu(second).getByText('Choose “Type here instead” first')).toBeVisible();
     await second.keyboard.press('Escape');
 
     // Save says why, and writes nothing.
     await second.getByRole('button', { name: 'Save', exact: true }).click({ force: true });
-    await expect(alert(second)).toContainText('Choose “Edit here instead” first');
+    await expect(alert(second)).toContainText('Choose “Type here instead” first');
     await nextFileName(second, 'nope.fountain');
     await second.keyboard.press('ControlOrMeta+s');
     expect(await files(second)).toEqual(['Door.fountain']);
@@ -290,7 +292,7 @@ test.describe('opening a file (Chromium, with the picker)', () => {
     expect((await stored(second)).length).toBe(count);
 
     // Editing here lifts all of it.
-    await second.getByRole('button', { name: 'Edit here instead' }).click();
+    await second.getByRole('button', { name: 'Type here instead' }).click();
     await expect(alert(second)).toHaveCount(0);
     await openMenu(second);
     await expect(menu(second).getByRole('button', { name: 'Open a file…' })).toBeEnabled();

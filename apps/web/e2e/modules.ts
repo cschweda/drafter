@@ -362,6 +362,25 @@ export const wholeText = (page: Page) =>
   });
 
 /**
+ * Replaces the whole script as the app would (a load, not the writer's typing), so Drafter's
+ * settings block, which the editor hides and keeps from typing (2026-11-09), is replaced too.
+ */
+export async function replaceWhole(page: Page, text: string) {
+  await page.evaluate((next) => {
+    type View = {
+      state: { doc: { length: number } };
+      dispatch(spec: { changes: { from: number; to: number; insert: string } }): void;
+    };
+    type Linked = { view?: View };
+    const content = document.querySelector('.cm-content') as
+      | (Element & { cmTile?: Linked; cmView?: Linked })
+      | null;
+    const view = (content?.cmTile ?? content?.cmView)?.view;
+    view?.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
+  }, text);
+}
+
+/**
  * Expects keys typed with focus in `panel` (a tab that isn't the editor) to leave the script as it
  * was, and the cursor to be where it was when the editor has focus again. Safari would otherwise
  * type into the editor, whose selection is still in the page (decided 2026-10-29). The cursor is put
@@ -523,4 +542,19 @@ export async function submitThenOpenMenu(page: Page, words: string, name: string
       },
       [words, name],
     );
+}
+
+/**
+ * Makes every IndexedDB write fail from now on, as a full disk or a browser that stops letting a
+ * site store would: autosave says "Autosave: off" after the next change. The database stays open,
+ * so this is the case of a session whose autosave stops working, not one that never had it.
+ */
+export async function failStorageWrites(page: Page) {
+  await page.evaluate(() => {
+    const fail = () => {
+      throw new DOMException('The disk is full.', 'QuotaExceededError');
+    };
+    IDBObjectStore.prototype.put = fail;
+    IDBObjectStore.prototype.add = fail;
+  });
 }

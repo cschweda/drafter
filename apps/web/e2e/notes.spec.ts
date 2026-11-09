@@ -8,6 +8,7 @@ import {
   start,
   textOf,
   turnOnFixture,
+  wholeText,
 } from './modules';
 
 // The Notes tab (Phase 2 design §8, §10, Plan B): every note and boneyard but the scene fields, in
@@ -207,7 +208,7 @@ test.describe('the Notes tab', () => {
     await expect(rowMenu(page)).toBeVisible();
     await rowMenu(page).getByRole('menuitem', { name: 'Color of character…' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'teal' }).click();
-    await expect.poll(() => textOf(page)).toMatch(/"categories":\s*\{\s*"character":\s*"teal"/);
+    await expect.poll(() => wholeText(page)).toMatch(/"categories":\s*\{\s*"character":\s*"teal"/);
     await expect(announcer(page)).toHaveText('Colored the character category teal.');
   });
 
@@ -458,7 +459,7 @@ test.describe('the Notes tab', () => {
 
   test('offers no edits in a read-only tab, and says why', async ({ context, isMobile }) => {
     test.skip(!!isMobile, 'two browser tabs are the same on a phone');
-    const why = 'This script is open for editing in another tab.';
+    const why = 'You can’t type here because this script is open in another Drafter tab.';
     const first = await context.newPage();
     await start(first);
     const second = await context.newPage();

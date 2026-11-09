@@ -163,7 +163,7 @@ useDocsHead({
     <h2 id="where-they-are-kept">Where drafts and cuts are kept</h2>
     <p>
       Drafter always keeps your drafts and cuts in its own storage (the same place as the
-      <a href="/docs/saving/#recovery-copy">recovery copy</a>), so the lists work offline in any
+      <a href="/docs/saving/#recovery-copy">autosave</a>), so the lists work offline in any
       browser. Where it can, it also writes them as plain files next to your script, and the Drafts
       and Cuts lists always say which: <strong>“Saved beside Boca.fountain.”</strong> or
       <strong>“In this browser only.”</strong>

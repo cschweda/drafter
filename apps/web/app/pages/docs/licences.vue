@@ -17,7 +17,7 @@ useDocsHead({
 const NSPELL_VERSION = '2.1.5';
 const IS_BUFFER_VERSION = '2.0.5';
 // Drafter for Claude's, pinned in packages/mcp/package.json (the same check).
-const MCP_SDK_VERSION = '2.3.1';
+const MCP_SDK_VERSION = '2.4.0';
 const ZOD_VERSION = '4.6.7';
 
 const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);

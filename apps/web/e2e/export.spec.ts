@@ -891,7 +891,9 @@ test.describe('export options', () => {
     const other = await context.newPage();
     await removePickers(other);
     await other.goto('/');
-    await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+    await expect(
+      other.getByText('You can’t type here because this script is open in another Drafter tab'),
+    ).toBeVisible();
     await openOptions(other);
     await expect(optionsDialog(other)).toContainText(
       'Another tab has this script open, so its export options can’t be changed here.',
@@ -925,7 +927,9 @@ test.describe('export options', () => {
     const other = await context.newPage();
     await removePickers(other);
     await other.goto('/');
-    await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+    await expect(
+      other.getByText('You can’t type here because this script is open in another Drafter tab'),
+    ).toBeVisible();
     await openOptions(other);
     await expect(optionsDialog(other)).toContainText(
       'A Markdown document has no scene numbers, title page, or notes to choose; it can still carry its text for Drafter to reopen.',

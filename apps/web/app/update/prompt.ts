@@ -19,9 +19,11 @@ let flow: ReturnType<typeof createUpdateFlow> | undefined;
 /** The offer's choices (the toast, the question, a download under way): one for the visit. */
 export function useUpdateFlow(): ReturnType<typeof createUpdateFlow> {
   if (!flow) {
-    const { dirty, flush } = useScript();
+    const { dirty, flush, recovery } = useScript();
     flow = createUpdateFlow({
       unsaved: () => dirty.value,
+      // Autosave is writing (kept, or not promised but there): a reload brings the changes back.
+      kept: () => recovery.value !== 'unavailable',
       save,
       // Where the browser can't write the file itself, Save is a download.
       savedByDownload: () => !useFiles().canSaveInPlace,

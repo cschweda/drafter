@@ -13,7 +13,7 @@ drafter.dev and the desktop app (for [Linux](desktop-install-linux.md), [Windows
 | Menus | The Drafter menu in the toolbar, and the command palette. | Also a menu bar (File, Edit, View, Go, Help). |
 | Closing with unsaved changes | The browser's own "Leave page?" warning. | Asks **Save**, **Don't Save**, or **Cancel**. |
 | Working offline | After the first visit, through the browser's service worker. | Always: everything is in the app. |
-| Updates | A new version is offered when you next open the site, with **Reload**; **Help → Check for updates…** asks the browser to look now. | Checked once when Drafter starts (you can turn it off), and whenever you choose **Help → Check for Updates…**. The AppImage and the Windows app install it only when you choose **Restart**; the `.deb` offers **Get it**, the release page. |
+| Updates | A new version is offered when you next open the site, with **Reload**; **About → Check for updates…** asks the browser to look now. | Checked once when Drafter starts (you can turn it off), and whenever you choose **Help → Check for Updates…**. The AppImage and the Windows app install it only when you choose **Restart**; the `.deb` offers **Get it**, the release page. |
 | Network | Loads the site from drafter.dev; after that, only the browser's check for a new version. | None, apart from the update check (or none at all with it off, unless you choose Check for Updates). |
 | Spellcheck | Drafter's own in the script, offline. Other text fields use your browser's. | The same in the script. Other text fields use the app's own English dictionary, so they work offline too. |
 | Installing as an app | Chrome and Edge can install the site as an app; Safari can add it to the Dock or Home Screen. | It is an app. |

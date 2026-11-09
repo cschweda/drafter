@@ -25,8 +25,8 @@ const label = computed(() =>
     <!-- What a screen reader hears when a save lands, as in the status bar. -->
     <span class="sr-only" role="status">{{ saveAnnouncement }}</span>
     <span v-if="warning === 'unavailable'" role="alert" class="failed">
-      Drafter can’t keep a recovery copy in this browser right now. Your changes exist only in
-      memory until you save the script to a file.
+      Autosave isn’t working in this browser right now. Your changes are only in this page
+      until you save the script to a file.
     </span>
     <span v-if="fileTrouble" role="status" class="failed">
       {{ troubleMessage(fileTrouble) }} Leave focus mode to deal with it.

@@ -78,7 +78,7 @@ export function helpBehaviors({ canStart }: When): Record<string, Behavior> {
         },
       ]),
     ),
-    // Help → Check for updates (the service worker's check on the web, the updater's in the desktop app), and
+    // About → Check for updates (the service worker's check on the web, the updater's in the desktop app), and
     // About Drafter (the version, for a bug report, and the links). The desktop app's About Drafter runs this too.
     'check-for-updates': {
       run: () => {
@@ -90,7 +90,7 @@ export function helpBehaviors({ canStart }: When): Record<string, Behavior> {
         aboutOpen.value = true;
       },
     },
-    // Help → Report a problem… and Suggest an idea…: the dialog that fills in GitHub's page.
+    // About → Report a problem… and Suggest an idea…: the dialog that fills in GitHub's page.
     'report-problem': {
       run: () => {
         reportOpen.value = 'problem';
@@ -101,14 +101,14 @@ export function helpBehaviors({ canStart }: When): Record<string, Behavior> {
         reportOpen.value = 'idea';
       },
     },
-    // Help → Copy technical details: for a GitHub issue, read as the command runs (in its click).
+    // About → Copy technical details: for a GitHub issue, read as the command runs (in its click).
     'copy-technical-details': {
       run: async () => {
         const ok = await writeClipboard(technicalDetails());
         await sayInToast(
           ok
             ? 'Copied the technical details. Paste them into your GitHub issue.'
-            : 'Couldn’t copy. Help → Report a problem… shows the technical details, to select and copy.',
+            : 'Couldn’t copy. About → Report a problem… shows the technical details, to select and copy.',
         );
       },
     },

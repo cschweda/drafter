@@ -397,7 +397,9 @@ test.describe('in a read-only tab', () => {
 
     const other = await context.newPage();
     await other.goto('/');
-    await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+    await expect(
+      other.getByText('You can’t type here because this script is open in another Drafter tab'),
+    ).toBeVisible();
     await expect(other.locator('.cm-content')).toContainText('then louder');
     await showView(other, 'Problems');
     const panel = other.getByRole('tabpanel', { name: /^Problems/ });

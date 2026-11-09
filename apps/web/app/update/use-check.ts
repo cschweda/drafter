@@ -5,7 +5,7 @@ import { createUpdateCheck } from './check';
 import { later, useUpdateFlow } from './prompt';
 import { applyUpdate, availableVersion, needRefresh, updateKind } from './state';
 
-// Help → Check for updates, in the page: the dialog's open state, the one check for the visit,
+// About → Check for updates, in the page: the dialog's open state, the one check for the visit,
 // and what a found update does. A found update becomes the offer the app already has
 // (`UpdatePrompt.vue`): Reload or Restart goes through its flow, which asks first when changes
 // are unsaved, and Close leaves that offer up.

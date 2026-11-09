@@ -125,7 +125,7 @@ for (const theme of THEMES) {
       await breakIndexedDb(page);
       await page.goto('/');
       const alert = page.locator('[data-warning="unavailable"]');
-      await expect(alert).toContainText('only in memory');
+      await expect(alert).toContainText('only in this page');
       await expectTone(page, alert, 'danger');
       await clean(page, '[data-warning="unavailable"]', 'the unavailable alert');
     });
@@ -138,9 +138,9 @@ for (const theme of THEMES) {
       const second = await context.newPage();
       await second.goto('/');
       await expect(
-        second.getByText('This script is open for editing in another tab'),
+        second.getByText('You can’t type here because this script is open in another Drafter tab'),
       ).toBeVisible();
-      const bar = second.locator('.bar', { hasText: 'This script is open for editing' });
+      const bar = second.locator('.bar', { hasText: 'open in another Drafter tab' });
       await expectTone(second, bar, 'warn');
       await clean(second, '.bar.tone-warn', 'the read-only bar');
     });

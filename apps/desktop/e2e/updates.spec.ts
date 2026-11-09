@@ -212,27 +212,10 @@ test('never restarts to update by itself', async ({ desktop, profile }) => {
   expect(installs(profile)).toEqual([]);
   await expect(editor(page)).toContainText('INT. LIGHTHOUSE - NIGHT');
 
-  // Restart asks first, and Cancel keeps everything as it was.
-  await button(page, 'Restart').click();
-  await expect(toast(page)).toContainText(
-    'Your unsaved changes stay in Drafter’s recovery copy, but they aren’t in your file yet.',
-  );
-  await expect(button(page, 'Save first')).toBeFocused();
-  await expect(button(page, 'Restart anyway')).toBeVisible();
-  await button(page, 'Cancel').click();
-  await expect(button(page, 'Restart')).toBeVisible();
-  await settle(500);
-  expect(installs(profile)).toEqual([]);
-
-  // Escape is Cancel, from the keyboard.
-  await button(page, 'Restart').click();
-  await page.keyboard.press('Escape');
-  await expect(button(page, 'Restart')).toBeVisible();
-
-  // Restart anyway: the recovery copy is written, the app quits without asking again.
-  await button(page, 'Restart').click();
+  // Restart: autosave has the changes, so it writes the last of them and restarts, asking nothing
+  // (2026-11-09; the question is for when autosave isn't working, as apps/web's tests show).
   const gone = exited(launched);
-  await button(page, 'Restart anyway').click();
+  await button(page, 'Restart').click();
   await gone;
   expect(installs(profile)).toEqual(['install']);
   expect(closeAsked(profile)).toEqual([]);
@@ -253,8 +236,8 @@ test('keeps asking about unsaved changes after an install that fails', async ({
   const { page, app } = launched;
   await chooseNewScreenplay(page);
   await typeAtEnd(page, '\nINT. LIGHTHOUSE - NIGHT\n');
+  // Autosave has the changes: Restart goes straight to the install, which fails.
   await button(page, 'Restart').click();
-  await button(page, 'Restart anyway').click();
 
   // The updater said it could not install: the toast says so, the app goes on.
   await expect(toast(page)).toContainText('Drafter couldn’t install the update');

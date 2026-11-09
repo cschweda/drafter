@@ -20,10 +20,10 @@ async function toastWithAdvice(page: Page) {
   await expect(toast).toBeVisible();
   const why = toast.getByRole('button', { name: 'Why?' });
   if (!wide(page)) {
-    await expect(toast).not.toContainText('may clear your recovery copy');
+    await expect(toast).not.toContainText('might delete Drafter’s autosave');
     await why.click();
   } else await expect(why).toHaveCount(0);
-  await expect(toast).toContainText('may clear');
+  await expect(toast).toContainText('might delete');
   return toast;
 }
 
@@ -229,7 +229,7 @@ test.describe('the recovery copy', () => {
       await expect(editor(page)).toContainText('Title: The Call');
       // The chip is there only when it matters (fresh-look Task 6).
       await page.waitForTimeout(500);
-      await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toHaveCount(0);
+      await expect(status(page).getByRole('button', { name: /Autosave:/ })).toHaveCount(0);
       await expect(warning(page)).toHaveCount(0);
       expect(
         await page.evaluate(() => (window as unknown as { sawWarning: boolean }).sawWarning),
@@ -242,8 +242,8 @@ test.describe('the recovery copy', () => {
       await stubPersistence(page, false);
       await hearLiveRegions(page);
       await page.goto('/');
-      await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toHaveText(
-        'Recovery copy: may be cleared',
+      await expect(status(page).getByRole('button', { name: /Autosave:/ })).toHaveText(
+        'Autosave: not guaranteed',
       );
       // A toast, with the advice and a way to save, not a bar above the panes.
       const toast = await toastWithAdvice(page);
@@ -251,7 +251,7 @@ test.describe('the recovery copy', () => {
       // Its text is said in a polite live region.
       await expect
         .poll(() => page.evaluate(() => (window as unknown as { heard: string[] }).heard))
-        .toContainEqual(expect.stringMatching(/^polite: .*may be cleared/));
+        .toContainEqual(expect.stringMatching(/^polite: .*isn’t guaranteed/));
       await expect(page.locator('.top [data-warning]')).toHaveCount(0);
       // Said politely: the alert region is for a copy that can't be kept at all.
       await expect(page.locator('[role="alert"] [data-warning]')).toHaveCount(0);
@@ -263,7 +263,7 @@ test.describe('the recovery copy', () => {
         wide(page) ? 'true' : null,
       );
       // The status bar still says so, and the toast doesn't come back in this visit.
-      await expect(status(page)).toContainText('Recovery copy: may be cleared');
+      await expect(status(page)).toContainText('Autosave: not guaranteed');
       await page.getByRole('button', { name: 'File', exact: true }).click();
       await page
         .getByRole('group', { name: 'Scripts', exact: true })
@@ -289,7 +289,9 @@ test.describe('the recovery copy', () => {
       await breakIndexedDb(page);
       await page.goto('/');
       const urgent = page.locator('[role="alert"][data-warning-region]');
-      await expect(urgent.locator('[data-warning="unavailable"]')).toContainText('only in memory');
+      await expect(urgent.locator('[data-warning="unavailable"]')).toContainText(
+        'only in this page',
+      );
       await expect(page.locator('[data-warning="not-persistent"]')).toHaveCount(0);
     });
 
@@ -329,7 +331,7 @@ test.describe('the recovery copy', () => {
       await dismiss.focus();
       await page.keyboard.press('Escape');
       await expect(warning(page)).toHaveCount(0);
-      await expect(status(page)).toContainText('Recovery copy: may be cleared');
+      await expect(status(page)).toContainText('Autosave: not guaranteed');
     });
 
     test('asks the browser to keep storage when the first script is created', async ({ page }) => {
@@ -366,13 +368,13 @@ test.describe('the recovery copy', () => {
       await breakIndexedDb(page);
       await page.goto('/');
       await expect(editor(page)).toContainText('Title: The Call');
-      await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toHaveText(
-        'Recovery copy: unavailable',
+      await expect(status(page).getByRole('button', { name: /Autosave:/ })).toHaveText(
+        'Autosave: off',
       );
       await expect(warning(page)).toBeVisible();
       // It matters most, so it is announced at once.
       await expect(page.locator('[role="alert"] [data-warning]')).toBeVisible();
-      await expect(warning(page)).toContainText('only in memory');
+      await expect(warning(page)).toContainText('only in this page');
       await typeAtEnd(page, '\n\nStill typing.');
       await expect(editor(page)).toContainText('Still typing.');
       // It has no way to dismiss, and it stays.
@@ -388,11 +390,11 @@ test.describe('the recovery copy', () => {
       await breakIndexedDb(page);
       await page.clock.install();
       await page.goto('/');
-      await expect(status(page)).toContainText('Recovery copy: unavailable');
+      await expect(status(page)).toContainText('Autosave: off');
       await typeAtEnd(page, '\n\nTyped while storage was down.');
       await mendIndexedDb(page);
       await page.clock.runFor(30_000);
-      await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toHaveCount(0);
+      await expect(status(page).getByRole('button', { name: /Autosave:/ })).toHaveCount(0);
       // The text in the editor became a script of its own, and is still open.
       await expect(editor(page)).toContainText('Typed while storage was down.');
       await expect
@@ -403,7 +405,7 @@ test.describe('the recovery copy', () => {
     test('explains the recovery copy from its button, with the keyboard', async ({ page }) => {
       await stubPersistence(page, false);
       await page.goto('/');
-      const button = status(page).getByRole('button', { name: /Recovery copy/ });
+      const button = status(page).getByRole('button', { name: /Autosave:/ });
       await expect(button).toBeVisible();
       await button.focus();
       await expect(button).toHaveAttribute('aria-expanded', 'false');
@@ -436,7 +438,7 @@ test.describe('the recovery copy', () => {
       page.evaluate((value) => {
         (window as unknown as { failWrites: boolean }).failWrites = value;
       }, on);
-    const recovery = (page: Page) => status(page).getByRole('button', { name: /Recovery copy/ });
+    const recovery = (page: Page) => status(page).getByRole('button', { name: /Autosave:/ });
     /** A copy that is kept has no chip (fresh-look Task 6). */
     const kept = (page: Page) => expect(recovery(page)).toHaveCount(0);
 
@@ -449,7 +451,7 @@ test.describe('the recovery copy', () => {
       await kept(page);
       await failWrites(page, true);
       await typeAtEnd(page, '\n\nNot written.');
-      await expect(recovery(page)).toHaveText('Recovery copy: unavailable');
+      await expect(recovery(page)).toHaveText('Autosave: off');
       await expect(warning(page)).toBeVisible();
       // Storage works again; the next change writes the text that was waiting.
       await failWrites(page, false);
@@ -469,10 +471,10 @@ test.describe('the recovery copy', () => {
       await failWrites(page, true);
       await typeAtEnd(page, '\n\nWaiting.');
       await page.clock.runFor(1000);
-      await expect(recovery(page)).toHaveText('Recovery copy: unavailable');
+      await expect(recovery(page)).toHaveText('Autosave: off');
       // Still failing after one retry.
       await page.clock.runFor(30_000);
-      await expect(recovery(page)).toHaveText('Recovery copy: unavailable');
+      await expect(recovery(page)).toHaveText('Autosave: off');
       await failWrites(page, false);
       await page.clock.runFor(30_000);
       await kept(page);
@@ -604,7 +606,7 @@ test.describe('the install advice in the storage warning', () => {
     await page.goto('/');
     const notice = await toastWithAdvice(page);
     await expect(notice).toContainText(
-      'This browser may clear your recovery copy. Save the script to a file',
+      'Your browser might delete Drafter’s autosave. Save the script to a file',
     );
     await expect(notice).toContainText(expected?.says as RegExp);
     await expect(notice).not.toContainText(expected?.not as RegExp);
@@ -630,7 +632,7 @@ test.describe('the install advice in the storage warning', () => {
     await page.goto('/');
     const notice = await toastWithAdvice(page);
     await expect(notice).toContainText(
-      'This browser may clear your recovery copy. Save the script to a file to keep it safe.',
+      'Your browser might delete Drafter’s autosave. Save the script to a file to keep a copy of your own.',
     );
     await expect(notice).not.toContainText(/install|Safari|Dock|Home Screen|address bar/i);
   });
@@ -678,7 +680,7 @@ test.describe('the storage warnings', () => {
     await stubPersistence(page, false);
     await page.goto('/');
     await status(page)
-      .getByRole('button', { name: /Recovery copy/ })
+      .getByRole('button', { name: /Autosave:/ })
       .click();
     expect(await violations(page)).toEqual([]);
   });

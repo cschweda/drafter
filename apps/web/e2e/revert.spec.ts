@@ -299,7 +299,9 @@ test.describe('Revert to Saved (Chromium)', () => {
 
     const other = await context.newPage();
     await other.goto('/');
-    await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+    await expect(
+      other.getByText('You can’t type here because this script is open in another Drafter tab'),
+    ).toBeVisible();
     await expect(editor(other)).toContainText('CHANGED');
     await openMenu(other);
     await expect(revert(other)).toHaveAttribute('aria-disabled', 'true');

@@ -294,7 +294,9 @@ test.describe('manuscript export', () => {
     const second = await context.newPage();
     await removePickers(second);
     await second.goto('/');
-    await expect(second.getByText('This script is open for editing in another tab.')).toBeVisible();
+    await expect(
+      second.getByText('You can’t type here because this script is open in another Drafter tab.'),
+    ).toBeVisible();
     await expect(editor(second)).toContainText('Low Tide');
     const before = await bookText(second);
     await runCommand(second, 'Export as Manuscript (PDF)…');

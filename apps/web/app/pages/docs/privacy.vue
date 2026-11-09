@@ -36,7 +36,7 @@ useDocsHead({
       </li>
       <li>
         <strong>Kept on your device only.</strong> Your script is in the files you save, and in a
-        recovery copy, its history, drafts, and cuts in this browser’s own storage, or in the
+        autosave, its history, drafts, and cuts in this browser’s own storage, or in the
         desktop app’s folder on your computer (<a href="#where-your-work-lives">below</a>).
       </li>
       <li>
@@ -137,7 +137,7 @@ useDocsHead({
         say, or download one. You can open it in any program that reads Fountain or plain text.
       </li>
       <li>
-        <strong>In a recovery copy in this browser.</strong> Drafter keeps a copy of each script in
+        <strong>In Drafter’s autosave in this browser.</strong> Drafter keeps a copy of each script in
         the browser’s IndexedDB, its database for a website, so a crash doesn’t cost you your work.
         It stays on this device. See
         <a href="/docs/saving/#recovery-copy">Saving and your browser</a> for what it is and what can
@@ -153,7 +153,7 @@ useDocsHead({
         you spent editing the script and how many words and pages it grew; nothing about what you
         typed, and nothing for a sample. Removing a script removes them. The theme you chose, whether you have seen the tour, and which
         What’s new notes you have seen are in the browser’s localStorage, a small store for a website’s own notes. So, for a moment while a
-        page closes, is any text not yet written to the recovery copy; the next visit moves it there.
+        page closes, is any text not yet written to the autosave; the next visit moves it there.
         None of it is a cookie, and none of it leaves this device.
       </li>
     </ul>
@@ -177,7 +177,7 @@ useDocsHead({
       icons) and nothing else. It doesn’t save your scripts. The one thing your browser does on its
       own is this: when Drafter opens, the browser asks drafter.dev for the worker’s file
       (<code>/sw.js</code>) to see whether there is a new version, and downloads the new files when
-      there is one. <strong>Help → Check for updates…</strong> makes that same request when you
+      there is one. <strong>About → Check for updates…</strong> makes that same request when you
       choose it, and nothing else. That request carries nothing from your scripts. When a new
       version is ready,
       Drafter says so and waits for you to choose Reload; it never reloads on its own. You can
@@ -186,14 +186,21 @@ useDocsHead({
 
     <h2 id="reporting">Reporting a problem or suggesting an idea</h2>
     <p>
-      <strong>Help → Report a problem…</strong> and <strong>Suggest an idea…</strong> send nothing
+      <strong>About → Report a problem…</strong> and <strong>Suggest an idea…</strong> send nothing
       by themselves. What you type stays on this device until you choose
-      <strong>Open on GitHub</strong>. Only then does it leave, and only the report the dialog shows
-      you: GitHub’s new-issue page opens with it filled in, in your browser, and you review it and
-      submit it there yourself, with your own GitHub account. Drafter has no server and no token, so
-      it can’t post anything for you. Your script is never included: not its text, its title, its
+      <strong>Open on GitHub</strong> or <strong>Send email</strong>. Only then does it leave, and
+      only the report the dialog shows you. <strong>Open on GitHub</strong> opens GitHub’s new-issue
+      page with it filled in, in your browser, and you review it and submit it there yourself, with
+      your own GitHub account; Drafter holds no GitHub token, so it can’t post anything there for
+      you. <strong>Send email</strong>, offered on drafter.dev only, sends that same report, and the
+      reply address if you typed one, to drafter.dev’s own small server function, which emails it
+      to Drafter’s maker through Resend, an email service. It is the one time Drafter itself sends
+      something you wrote, and it happens only when you press the button. The function keeps
+      nothing; your address is used only to reply. The desktop app and a self-hosted copy don’t
+      offer it. While the dialog is open on drafter.dev, it asks that function once whether email
+      is set up, a request that carries nothing about you. Your script is never included: not its text, its title, its
       file name, or your notes. <strong>Include technical details</strong> adds only what
-      <strong>Help → Copy technical details</strong> copies, and you can turn it off: Drafter’s
+      <strong>About → Copy technical details</strong> copies, and you can turn it off: Drafter’s
       version, which app this is, the system and browser, the language, the screen and window
       size, touch or mouse, whether Drafter is installed, works offline, saves in place, and keeps
       its storage, whether you’re online, and a few of your settings (the kind of script, Fountain

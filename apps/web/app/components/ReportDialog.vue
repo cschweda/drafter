@@ -16,15 +16,20 @@ import {
   mailLink,
   SECURITY_URL,
 } from '~/report/issue';
+import { emailReady, reportPayload, sendReport } from '~/report/send';
 import { writeClipboard } from '~/utils/clipboard';
 
-// Help → Report a problem… and Suggest an idea… (also in the palette, About, and the desktop app's
+// About → Report a problem… and Suggest an idea… (also in the palette, About, and the desktop app's
 // Help menu). Drafter has no server and keeps no token, so it never sends anything: the writer
 // fills in a few fields, sees exactly what will go, and Open on GitHub opens GitHub's new-issue
 // page with that text filled in (a new tab; the desktop app's system browser), where they review
 // it and submit it with their own account. Copy, and an email from their own email app, are the
 // ways without an account, or offline. Nothing from the script goes in: no text, title, file
 // name, or note.
+//
+// On drafter.dev, once the maintainer's Resend settings are in place (report/send.ts), Send email
+// sends the report from here, to the maintainer, with no account or email app: the one time this
+// dialog sends anything, and only when the writer presses it.
 //
 // A report is never lost (the maintainer: "I don't want the reports lost and have to type over"):
 // Copy report, Write an email, and Open on GitHub each put the whole report on the clipboard, and
@@ -44,6 +49,38 @@ const readDetails = useTechnicalDetails();
  * place, which opens the email app and leaves the page as it is.
  */
 const mailTarget = desktop() ? '_blank' : undefined;
+
+/** Send email is offered: drafter.dev's build, with Resend set up (asked as the dialog opens). */
+const canSend = ref(false);
+const replyTo = ref('');
+/** The honeypot: hidden from people, filled by bots. */
+const website = ref('');
+const openedAt = ref(0);
+const sending = ref(false);
+/** What Send email said last: sent, or why not. */
+const sent = ref<{ ok: boolean; text: string } | null>(null);
+
+async function sendByEmail() {
+  if (!typed.value || sending.value) return;
+  sending.value = true;
+  sent.value = null;
+  const result = await sendReport(
+    reportPayload(
+      draft,
+      versionInfo.value,
+      replyTo.value,
+      website.value,
+      Date.now() - openedAt.value,
+    ),
+  );
+  sending.value = false;
+  sent.value = result.ok
+    ? { ok: true, text: 'Sent. Thank you! It’s still kept here until you clear it.' }
+    : {
+        ok: false,
+        text: `${result.error} Your report is still here: try Open on GitHub, or copy it.`,
+      };
+}
 
 const KIND_OPTIONS: { value: IssueKind; label: string }[] = [
   { value: 'problem', label: 'Problem' },
@@ -79,7 +116,12 @@ watch(reportOpen, async (kind) => {
     copied.value = '';
     onLine();
     versionInfo.value = readDetails();
+    openedAt.value = Date.now();
+    sent.value = null;
     shown.value = true;
+    void emailReady().then((ready) => {
+      canSend.value = ready;
+    });
     await nextTick();
     if (dialog.value && !dialog.value.open) dialog.value.showModal();
   } else if (dialog.value?.open) dialog.value.close();
@@ -245,12 +287,41 @@ function clearReport() {
       </p>
 
       <p id="report-note" class="note">
-        Your script is never included. You’ll finish on GitHub, which needs a free GitHub account.
+        Your script is never included.
+        <template v-if="canSend">Send it by email from here, or finish on GitHub (a free account).</template>
+        <template v-else>You’ll finish on GitHub, which needs a free GitHub account.</template>
         For a security problem,
         <a :href="SECURITY_URL" target="_blank" rel="noopener noreferrer" data-report-security
           >use the private report instead</a
         >, or email {{ CONTACT_EMAIL }} with the details.
       </p>
+      <div v-if="canSend" class="send" data-report-send>
+        <h3>Send by email</h3>
+        <p>No GitHub account needed: this goes straight to Drafter’s maker.</p>
+        <label class="field">
+          <span class="label">Your email (optional, if you’d like a reply)</span>
+          <input v-model="replyTo" type="email" maxlength="254" autocomplete="email" />
+        </label>
+        <!-- A field people never see or fill; a bot that fills it is told yes, and nothing is sent.
+             Named nothing a browser's autofill or a password manager recognises: "Website" was,
+             and Chrome filled it, so a person's report was taken for a bot's (2026-11-09). -->
+        <label class="trap" aria-hidden="true">
+          Leave this empty
+          <input
+            v-model="website"
+            type="text"
+            tabindex="-1"
+            autocomplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+            data-form-type="other"
+          />
+        </label>
+        <DButton variant="primary" :disabled="!typed || sending" data-report-send-email @click="sendByEmail">
+          {{ sending ? 'Sending…' : 'Send email' }}
+        </DButton>
+        <p v-if="sent" role="status" :class="['sent', { failed: !sent.ok }]" data-report-sent>{{ sent.text }}</p>
+      </div>
       <div class="email">
         <p>
           No GitHub account? Email <span class="address" data-report-email>{{ CONTACT_EMAIL }}</span>.
@@ -295,6 +366,28 @@ h3 {
 }
 p {
   margin: 0 0 8px;
+}
+.send {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.send h3 {
+  margin-top: 0;
+}
+.trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.sent {
+  margin: 8px 0 0;
+}
+.sent.failed {
+  font-weight: 600;
 }
 .offline {
   padding: 8px 10px;

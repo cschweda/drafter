@@ -2,7 +2,7 @@ import { type Ref, ref } from 'vue';
 import type { DesktopUpdateCheck } from '../desktop';
 import type { UpdateKind } from './state';
 
-// Help → Check for updates: a check the writer asks for, now. On the web it asks the service
+// About → Check for updates: a check the writer asks for, now. On the web it asks the service
 // worker's registration to look for a new version (`registration.update()`, the worker's own
 // request for `/sw.js`, and nothing else: no new network call). In the desktop app it asks the
 // main process's updater (electron-updater, or the Mac app's release check), which checks whether

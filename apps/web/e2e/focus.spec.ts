@@ -323,15 +323,15 @@ test.describe('what the corner keeps from the bars that are gone', () => {
       };
     });
     await start(page);
-    await expect(page.locator('[data-warning="unavailable"]')).toContainText('only in memory');
+    await expect(page.locator('[data-warning="unavailable"]')).toContainText('only in this page');
     await page.keyboard.press('ControlOrMeta+Shift+Enter');
     await on(page);
     await expect(page.locator('[data-warning="unavailable"]')).toHaveCount(0);
-    await expect(marker(page).getByRole('alert')).toContainText('only in memory');
+    await expect(marker(page).getByRole('alert')).toContainText('only in this page');
     // Leaving puts the bar back, and the corner's copy goes.
     await page.keyboard.press('Escape');
     await off(page);
-    await expect(page.locator('[data-warning="unavailable"]')).toContainText('only in memory');
+    await expect(page.locator('[data-warning="unavailable"]')).toContainText('only in this page');
   });
 
   test('says a script’s file is gone', async ({ page, browserName, isMobile }) => {
@@ -357,7 +357,7 @@ test.describe('what the corner keeps from the bars that are gone', () => {
       await root.removeEntry('The Call.fountain');
     });
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await expect(marker(page)).toContainText("Drafter can't find The Call.fountain");
+    await expect(marker(page)).toContainText("Drafter can't find the file The Call.fountain");
   });
 
   test('says a changed file was loaded, as a status', async ({ page, browserName, isMobile }) => {

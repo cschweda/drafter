@@ -29,7 +29,7 @@ const options = (page: Page) =>
   history(page).getByRole('listbox', { name: 'Snapshots' }).getByRole('option');
 const labelField = (page: Page) => history(page).getByRole('textbox', { name: 'Label' });
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
-const READ_ONLY = 'This script is open for editing in another tab.';
+const READ_ONLY = 'You can’t type here because this script is open in another Drafter tab.';
 const cutsTab = (page: Page) =>
   page.getByRole('tab', { name: 'Cuts', exact: true, selected: true });
 

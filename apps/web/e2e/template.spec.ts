@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { replaceWhole, wholeText } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const script = (page: Page) => page.getByRole('region', { name: 'Script' });
@@ -27,10 +28,9 @@ async function choose(page: Page, name: string) {
 
 /** The editor's text at the end of the script: it draws only the lines in view, and the block is the last thing. */
 async function endText(page: Page) {
-  await editor(page).focus();
-  await page.keyboard.press('ControlOrMeta+End');
-  await expect(editor(page)).toContainText('END OF SAMPLE');
-  return editor(page).textContent();
+  // The block is hidden in the editor (2026-11-09), so the text is read from its state.
+  await expect.poll(() => wholeText(page)).toContain('END OF SAMPLE');
+  return wholeText(page);
 }
 
 async function typeAtEnd(page: Page, text: string) {
@@ -213,6 +213,27 @@ test.describe('the list of document types', () => {
 });
 
 // The palette switches template wherever the chip is hidden, so these run on the phones too.
+// Drafter's settings block is hidden in the Source and kept from the writer's typing (2026-11-09):
+// it looked like an error, or like text to delete. The file still has it.
+test.describe('the settings block in the Source', () => {
+  test.skip(({ isMobile }) => !!isMobile, 'the chip is hidden on a phone');
+
+  test('is not shown, survives Select All and Delete, and stays in the text', async ({ page }) => {
+    await start(page);
+    await choose(page, 'Stage play');
+    await expect.poll(() => wholeText(page)).toMatch(STAGE_BLOCK);
+    await expect(editor(page)).not.toContainText('/* drafter');
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.insertText('A kitchen.');
+    await expect(editor(page)).toContainText('A kitchen.');
+    await expect(editor(page)).not.toContainText('/* drafter');
+    await expect.poll(() => wholeText(page)).toMatch(/A kitchen\.\s*\/\* drafter/);
+    await expect(chip(page)).toHaveText('Stage play');
+  });
+});
+
 test.describe('switching template from the palette', () => {
   const paletteDialog = (page: Page) => page.getByRole('dialog', { name: 'Command palette' });
   const paletteOption = (page: Page, name: string) =>
@@ -253,7 +274,9 @@ test.describe('switching template from the palette', () => {
     await expect(status(page)).toContainText('Screenplay');
     const other = await context.newPage();
     await other.goto('/');
-    await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+    await expect(
+      other.getByText('You can’t type here because this script is open in another Drafter tab'),
+    ).toBeVisible();
     await other.keyboard.press('ControlOrMeta+k');
     await paletteDialog(other).locator('input').fill('Template');
     await expect(paletteOption(other, 'Template: Stage play')).toHaveCount(0);
@@ -277,8 +300,7 @@ test.describe('a template Drafter does not have', () => {
 
   async function setText(page: Page, text: string) {
     await editor(page).click();
-    await page.keyboard.press('ControlOrMeta+A');
-    await page.keyboard.insertText(text);
+    await replaceWhole(page, text);
   }
 
   test('reads “Screenplay (fallback)” in the chip and the status bar, and the menu says why', async ({
@@ -319,7 +341,7 @@ test.describe('a template Drafter does not have', () => {
     await expect(chip(page)).toHaveText('Screenplay (fallback)');
     await choose(page, 'Screenplay');
     await expect(chip(page)).toHaveText('Screenplay');
-    const after = (await editor(page).textContent()) ?? '';
+    const after = (await wholeText(page)) ?? '';
     expect(after).toMatch(/"template":"us-screenplay"/);
     expect(after).not.toMatch(/my-own/);
     await page.keyboard.press('ControlOrMeta+z');

@@ -11,8 +11,9 @@ async function violations(page: Page) {
 }
 
 const editor = (page: Page) => page.locator('.cm-content');
-const bar = (page: Page) => page.getByText('This script is open for editing in another tab');
-const editHere = (page: Page) => page.getByRole('button', { name: 'Edit here instead' });
+const bar = (page: Page) =>
+  page.getByText('You can’t type here because this script is open in another Drafter tab');
+const editHere = (page: Page) => page.getByRole('button', { name: 'Type here instead' });
 
 interface Row {
   id: string;
@@ -313,7 +314,7 @@ test.describe('one tab at a time', () => {
     await b.goto('/');
     await expect(bar(b)).toBeVisible();
     const heard = async () =>
-      (await alertsHeard(b)).filter((text) => text.includes('Edit here instead'));
+      (await alertsHeard(b)).filter((text) => text.includes('Type here instead'));
     await b.keyboard.press('ControlOrMeta+s');
     await expect.poll(heard).toHaveLength(1);
     await b.keyboard.press('ControlOrMeta+s');
@@ -400,7 +401,7 @@ test.describe('one tab at a time', () => {
     await editHere(b).click();
     await expect(bar(a)).toBeVisible();
     await expect(a.locator('p[role="status"][data-mark="same"]')).toContainText(
-      'This script is open for editing in another tab.',
+      'You can’t type here because this script is open in another Drafter tab.',
     );
   });
 

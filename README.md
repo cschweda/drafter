@@ -38,7 +38,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 Writers worry, rightly, about a script getting out before it's ready. Drafter is built so it can't, and an [audit](docs/privacy-audit-2026-11-03.md) checks it.
 
 - **Nothing in the cloud.** No server stores anything about your script, at drafter.dev or anywhere else: not its text, its title, its length, or its name. drafter.dev is a set of static files that sends the app to your browser. It has no database, no accounts, and nowhere to upload to. The desktop app has no server at all.
-- **Kept on your device only.** Your script lives in the files you save, plus a recovery copy, its history, drafts, and cuts. In the web app those are in your browser's own storage (IndexedDB) on this device, and in the desktop app in its folder on your computer. Drafts and cuts are also plain files beside your script.
+- **Kept on your device only.** Your script lives in the files you save, plus Drafter's autosave, its history, drafts, and cuts. In the web app those are in your browser's own storage (IndexedDB) on this device, and in the desktop app in its folder on your computer. Drafts and cuts are also plain files beside your script.
 - **No AI.** Drafter has no AI in it: no AI service, no model, and nothing that reads your script to suggest, summarize, or learn from it. Your words never train anything. If you want your own AI app to read your scripts, [Drafter for Claude](https://drafter.dev/docs/drafter-for-claude/) is a separate program you set up yourself. It reads only the folders you name, and Drafter never starts it.
 - **It leaves only when you send it.** A file you share, a report you open on GitHub, an email you write: those go because you chose them, and only what you see goes.
 
@@ -81,7 +81,7 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 - **Story map.** One dark page that answers "What are you writing?" in pictures, to send to anyone: the story's shape, its people, and every scene so far, with a few lines of dialogue and what is still to write. It opens on a phone, runs no code, and never includes your notes.
 - **Drafter for Claude.** Let Claude (or another AI app you use) read the scripts, drafts, and cuts in folders you choose, for storyboards, notes, and insights across a series. Drafter itself never calls an AI. [Setting it up](https://drafter.dev/docs/drafter-for-claude/).
 - **See the script.** **Scaffold** follows your cursor and shows who is in the scene, where, and for how long, with a page for each character and place. The **Stats tab** has each character's screen time and dialogue share, and a character-by-scene grid that shows who vanishes for 20 pages. Running times by scene and act, at your own minutes a page or from the dialogue.
-- **Files and formats.** Real `.fountain` files, saved straight back in Chrome and Edge, with a recovery copy kept as you type. Final Draft, Highland, Fade In, and Markdown in; PDF, Final Draft, Markdown, plain text, HTML, EPUB, and a story map out. See [Formats](#formats).
+- **Files and formats.** Real `.fountain` files, saved straight back in Chrome and Edge, autosaved in the browser as you type. Final Draft, Highland, Fade In, and Markdown in; PDF, Final Draft, Markdown, plain text, HTML, EPUB, and a story map out. See [Formats](#formats).
 - **Make it yours.** A calm dark theme by default, or light, or one that follows your system. Paper pages or a dark page for night, five text sizes, and optional script modules. Below 1024 pixels, one pane at a time, made for a phone.
 - **Get started.** A guided tour on a first visit, a **guided first screenplay** and **stage play** that teach each element as you read, sample scripts under **Help**, and help pages.
 - **Desktop.** Apps for Windows and Linux, and a Mac build, that always save in place and open a `.fountain` file with a double-click.
@@ -233,7 +233,7 @@ Sources: each maker's own pricing, features, and help pages (Final Draft, Writer
 
 **On the web:** open [drafter.dev](https://drafter.dev) and write, on a computer or a phone, offline once it has loaded. Chrome and Edge save straight back to your file; other browsers download a copy ([Storage and browsers](docs/DEVELOPMENT.md#storage-and-browsers)). Install it as an app from the address bar to keep it in your Dock or Start menu.
 
-**On the desktop:** the same editor in a window of its own, built with Electron. It always saves in place, keeps its recovery copy in its own folder where no browser can clear it (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`), opens a `.fountain` file with a double-click, has a menu bar and a modules folder, and asks **Save**, **Don't Save**, or **Cancel** before closing. It always works offline, and makes no network request but one update check at start, never installs by itself (the AppImage and Windows offer **Restart**, the `.deb` **Get it**), and the check can be turned off in Settings. [Drafter on the web and on the desktop](docs/web-and-desktop.md) compares the two.
+**On the desktop:** the same editor in a window of its own, built with Electron. It always saves in place, keeps its autosave in its own folder where no browser can delete it (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`), opens a `.fountain` file with a double-click, has a menu bar and a modules folder, and asks **Save**, **Don't Save**, or **Cancel** before closing. It always works offline, and makes no network request but one update check at start, never installs by itself (the AppImage and Windows offer **Restart**, the `.deb` **Get it**), and the check can be turned off in Settings. [Drafter on the web and on the desktop](docs/web-and-desktop.md) compares the two.
 
 ### Windows
 
@@ -288,7 +288,7 @@ The first run builds the app, which takes a few minutes. Then open `http://local
 - **Other devices take more work.** It listens only on its own computer. Reaching it from elsewhere needs your own HTTPS proxy, because browsers allow offline use, installing, and saving in place only on `localhost` or HTTPS. It has no sign-in, so anyone who can reach the address can open the app, though they'd see only what's in their own browser.
 - **Docker has to be running,** and it's a sizeable program to install just for this.
 
-**Why the downloaded app may suit you better:** if what you want is privacy, the [desktop app](#get-drafter) is usually the better choice, on Windows or Linux. It has no analytics, needs no Docker or server, and works offline. It always saves in place, and keeps its recovery copy in its own folder where no browser can clear it. Self-hosting makes more sense if you want the browser version, can't install apps, are on a Mac and don't want to build the app, or want to serve Drafter to a group from a server you run.
+**Why the downloaded app may suit you better:** if what you want is privacy, the [desktop app](#get-drafter) is usually the better choice, on Windows or Linux. It has no analytics, needs no Docker or server, and works offline. It always saves in place, and keeps its autosave in its own folder where no browser can delete it. Self-hosting makes more sense if you want the browser version, can't install apps, are on a Mac and don't want to build the app, or want to serve Drafter to a group from a server you run.
 
 ## Formats
 
@@ -339,7 +339,7 @@ pnpm -r test
 pnpm dev              # the app, at http://localhost:3000
 ```
 
-Found a bug or have an idea? **Help → Report a problem…** or **Suggest an idea…** in the app fills in a [GitHub issue](https://github.com/cschweda/drafter/issues/new/choose) for you to submit, or email cschweda@gmail.com; security problems go through [SECURITY.md](SECURITY.md).
+Found a bug or have an idea? **About → Report a problem…** or **Suggest an idea…** in the app fills in a [GitHub issue](https://github.com/cschweda/drafter/issues/new/choose) for you to submit, or, on drafter.dev, sends it to me by email with **Send email**; you can also email cschweda@gmail.com; security problems go through [SECURITY.md](SECURITY.md).
 
 [How Drafter works](docs/HOW-IT-WORKS.md) has four diagrams of it. [Developing Drafter](docs/DEVELOPMENT.md) has how it works, the packages, the stack, storage and browsers, every command, the samples, contributing (commits, the changelog, releasing), and the design documents. [Why Drafter](docs/WHY.md) has the idea behind it and its principles, and [`docs/DECISIONS.md`](docs/DECISIONS.md) records the choices along the way.
 
@@ -365,4 +365,4 @@ Made by Christopher Schweda ([cschweda](https://github.com/cschweda)), who also 
 
 [MIT](LICENSE) © 2026 Christopher Schweda. Courier Prime and Inter Tight are distributed under the SIL Open Font License, each with its license file alongside the fonts. The logo, icons, and share image are in [`brand/`](brand/). See the [Changelog](CHANGELOG.md) for every release.
 
-**Trademark.** Drafter™ and the Drafter logo are trademarks of Christopher Schweda. The MIT License covers the code, so you are free to use, change, and share it; it doesn't grant use of the Drafter name or logo. A changed copy you share needs a name of its own.
+**Trademark.** Drafter™ and the Drafter logo are trademarks of Christopher Schweda. The MIT License covers the code, so you are free to use, change, and share it; it doesn't grant use of the Drafter name or logo. A changed copy you share needs a name of its own. Final Draft is a trademark of its owner. Drafter reads and writes its file format so a script can move between the two apps, and isn't connected with or endorsed by Final Draft.

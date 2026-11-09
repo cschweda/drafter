@@ -37,7 +37,8 @@ useDocsHead({
         <strong>What Drafter adds</strong> (a scene’s colour, the template, your script’s own
         dictionary, export options) goes in one small block at the end of the file, in plain JSON
         inside a Fountain comment (<code>/* drafter … */</code>), which other Fountain apps skip and
-        never print. Nothing is hidden anywhere else.
+        never print. Drafter hides the block in its own editor and keeps it from being deleted, so
+        you’ll only see it if you open the file in another program; leave it as it is there too. Nothing is hidden anywhere else.
       </li>
     </ul>
 
@@ -52,6 +53,10 @@ useDocsHead({
         or a tablet.
       </li>
     </ul>
+    <p class="docs-note">
+      Final Draft is a trademark of its owner. Drafter reads and writes its file format so a script
+      can move between the two apps, and isn’t connected with or endorsed by Final Draft.
+    </p>
 
     <h2 id="reopening-exports">Opening an HTML or EPUB file again</h2>
     <p>

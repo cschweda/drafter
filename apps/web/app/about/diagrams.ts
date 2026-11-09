@@ -23,7 +23,7 @@ export const HOW_IT_WORKS: readonly HowItWorksDiagram[] = [
     id: 'saving',
     title: 'How saving works',
     description:
-      'How saving works. The text in the editor goes three ways: a recovery copy, kept as you type; Save, when you choose; and snapshots, the earlier versions. Save goes back to your file in Chrome and Edge, downloads a copy in other browsers, and in the desktop app always saves in place.',
+      'How saving works. The text in the editor goes three ways: autosave, as you type; Save, when you choose; and snapshots, the earlier versions. Save goes back to your file in Chrome and Edge, downloads a copy in other browsers, and in the desktop app always saves in place.',
   },
   {
     id: 'safe-open',

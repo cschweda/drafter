@@ -67,11 +67,11 @@ export const fileTrouble = ref<FileTrouble | null>(null);
 export function troubleMessage(trouble: FileTrouble): string {
   switch (trouble.kind) {
     case 'permission':
-      return `This script is saved in ${trouble.fileName}.`;
+      return `This script is linked to the file ${trouble.fileName}. Your browser needs your OK before Drafter can check that file for changes. You can keep typing.`;
     case 'gone':
-      return `Drafter can't find ${trouble.fileName}. It may have been moved or deleted.`;
+      return `Drafter can't find the file ${trouble.fileName}: it was moved, renamed, or deleted. Your script is safe here, and you can keep typing.`;
     case 'not-text':
-      return `Drafter can't read ${trouble.fileName} as text, so it hasn't been checked for changes.`;
+      return `The file ${trouble.fileName} no longer looks like a text file, so Drafter can't check it for changes. Your script is safe here, and you can keep typing.`;
   }
 }
 
@@ -148,8 +148,9 @@ async function doCheck(ask: boolean, forSave: boolean): Promise<Outcome> {
   await ready(script);
 
   const settle = (trouble: FileTrouble | null) => {
+    // Never a reason to stop typing: a file that can't be read is checked later, and if both it
+    // and the browser's copy changed by then, the writer is asked which to keep (both are kept).
     fileTrouble.value = trouble;
-    script.fileLocked.value = trouble?.kind === 'permission';
   };
   // What a save would write: a line Classic Mode just made inside a speech is left out (savedText).
   const text = () => savedText(editor.view.state).toString();
@@ -329,14 +330,13 @@ function beforeSave(): Promise<Outcome> {
   return doCheck(true, true);
 }
 
-/** "Edit this browser's copy": the script lets go of its file, and the bar goes. */
+/** "Keep working without the file": the script lets go of its file, and the bar goes. */
 async function editCopy(): Promise<void> {
   const script = useScript();
   const id = script.project.value?.id;
   if (!id) return;
   await script.unbindFile(id);
   fileTrouble.value = null;
-  script.fileLocked.value = false;
 }
 
 export function useFileCheck(): {
