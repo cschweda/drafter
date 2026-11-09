@@ -357,7 +357,7 @@ test.describe('what the corner keeps from the bars that are gone', () => {
       await root.removeEntry('The Call.fountain');
     });
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await expect(marker(page)).toContainText("Drafter can't find The Call.fountain");
+    await expect(marker(page)).toContainText("Drafter can't find the file The Call.fountain");
   });
 
   test('says a changed file was loaded, as a status', async ({ page, browserName, isMobile }) => {

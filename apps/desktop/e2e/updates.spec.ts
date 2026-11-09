@@ -215,7 +215,7 @@ test('never restarts to update by itself', async ({ desktop, profile }) => {
   // Restart asks first, and Cancel keeps everything as it was.
   await button(page, 'Restart').click();
   await expect(toast(page)).toContainText(
-    'Your unsaved changes stay in Drafter’s recovery copy, but they aren’t in your file yet.',
+    'Your unsaved changes are in Drafter’s autosave, but they aren’t in your file yet.',
   );
   await expect(button(page, 'Save first')).toBeFocused();
   await expect(button(page, 'Restart anyway')).toBeVisible();

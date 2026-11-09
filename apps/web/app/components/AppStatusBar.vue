@@ -111,16 +111,16 @@ function openDrafts() {
 
 const RECOVERY: Record<RecoveryState, { label: string; why: string }> = {
   persistent: {
-    label: 'Recovery copy: kept in this browser',
-    why: 'Drafter keeps a copy of your script in this browser as you type, and the browser has agreed to keep it. Close the page or restart the browser and your script comes back. Saving it to a file is still the way to have a copy of your own.',
+    label: 'Autosave: on',
+    why: 'Drafter saves your script in this browser as you type, and the browser has promised to keep it. Close the page or restart the computer and your script is still here. Saving to a file is still the way to have a copy of your own.',
   },
   'not-persistent': {
-    label: 'Recovery copy: may be cleared',
-    why: 'Drafter keeps a copy of your script in this browser as you type, but the browser has not promised to keep it. It may clear the copy when space runs low, in a private window, or when site data is cleared. Save the script to a file to be safe.',
+    label: 'Autosave: not guaranteed',
+    why: 'Drafter saves your script in this browser as you type, but the browser hasn’t promised to keep it. It might delete it if your disk runs low on space, in a private window, or when you clear your browsing data. Nothing is wrong now: save the script to a file to be safe.',
   },
   unavailable: {
-    label: 'Recovery copy: unavailable',
-    why: 'The browser won’t let Drafter keep a copy right now, so your changes exist only in memory. Save the script to a file to keep them. Drafter tries again every 30 seconds.',
+    label: 'Autosave: off',
+    why: 'The browser won’t let Drafter autosave right now, so your changes are only in this page. Save the script to a file to keep them. Drafter tries again every 30 seconds.',
   },
 };
 

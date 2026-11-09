@@ -16,7 +16,7 @@ export const quietly = (action: () => Promise<unknown>) => () => void action().c
 /** When a command applies, as `registerBuiltinCommands` reads it from the open script and the tab. */
 export interface When {
   hasScript(): boolean;
-  /** A script is open, no switch is under way, and "Edit here instead" isn't waiting. */
+  /** A script is open, no switch is under way, and "Type here instead" isn't waiting. */
   idle(): boolean;
   /** Starting a script needs a tab that can edit, and no switch under way. */
   canStart(): boolean;

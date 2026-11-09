@@ -553,14 +553,18 @@ test.describe('going there, and where you are', () => {
     await expect(scenes(first)).toHaveCount(2);
     const second = await context.newPage();
     await second.goto('/');
-    await expect(second.getByText('This script is open for editing in another tab.')).toBeVisible();
+    await expect(
+      second.getByText('You can’t type here because this script is open in another Drafter tab.'),
+    ).toBeVisible();
     await expect(scenes(second)).toHaveCount(2);
     await scenes(second).nth(1).click();
     await expect(editor(second)).toBeFocused();
     await expect(scenes(second).nth(1)).toHaveAttribute('aria-current', 'location');
     await expect.poll(() => scriptShows(second, 'EXT. BACK PORCH - LATER')).toBe(true);
     // Still read-only: going there changed nothing.
-    await expect(second.getByText('This script is open for editing in another tab.')).toBeVisible();
+    await expect(
+      second.getByText('You can’t type here because this script is open in another Drafter tab.'),
+    ).toBeVisible();
   });
 });
 

@@ -24,7 +24,7 @@ import {
 // written before the window goes, whichever the answer.
 
 const CHANGES = 'Save the changes to';
-const DETAIL = "Your unsaved changes stay in Drafter's recovery copy either way.";
+const DETAIL = "Your unsaved changes are in Drafter's autosave either way.";
 
 const openButton = (page: Page) => page.getByRole('button', { name: 'File', exact: true });
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });

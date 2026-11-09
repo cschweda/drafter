@@ -8,7 +8,7 @@ if (!page) throw new Error('The Saving page is not in the list of help pages.');
 useDocsHead({
   ...page,
   description:
-    'How Save works in each browser; synced folders; opening Final Draft, Highland, Fade In, and Markdown files; exporting; the recovery copy; installing as an app; and the desktop app.',
+    'How Save works in each browser; synced folders; opening Final Draft, Highland, Fade In, and Markdown files; exporting; autosave; installing as an app; and the desktop app.',
 });
 </script>
 
@@ -18,7 +18,7 @@ useDocsHead({
     <p class="docs-lead">
       A script in Drafter is a file, a plain <code>.fountain</code> text file that any other
       screenwriting program can open. What Save does with that file depends on your browser. Behind
-      it, Drafter also keeps a recovery copy of every script in this browser, so a crash or a closed
+      it, Drafter also autosaves every script in this browser as you type, so a crash or a closed
       tab doesn’t cost you your work.
     </p>
 
@@ -47,7 +47,7 @@ useDocsHead({
       title, a red dot on the tab’s icon, and a red dot with “Unsaved” after the script’s title at
       the top, which saves when you click it (on a phone, the dot alone). If you close the tab or leave the site with changes that
       aren’t saved, your browser asks first. That question is the browser’s own and doesn’t always
-      appear on phones and tablets; the recovery copy, below, is there for those times.
+      appear on phones and tablets; autosave, below, is there for those times.
     </p>
 
     <h2 id="browsers">Browsers compared</h2>
@@ -67,7 +67,7 @@ useDocsHead({
         </thead>
         <tbody>
           <tr>
-            <th scope="row">Keeps a recovery copy in the browser</th>
+            <th scope="row">Autosaves in the browser</th>
             <td>Yes</td>
             <td>Yes</td>
             <td>Yes</td>
@@ -112,14 +112,14 @@ useDocsHead({
             <td>Yes, as a download</td>
           </tr>
           <tr>
-            <th scope="row">Agrees to keep the recovery copy</th>
+            <th scope="row">Promises to keep the autosave</th>
             <td>Usually, once you have used Drafter for a while</td>
             <td>It asks you</td>
             <td>Only when Drafter is installed as an app</td>
             <td>Varies</td>
           </tr>
           <tr>
-            <th scope="row">Risk of the browser deleting the recovery copy</th>
+            <th scope="row">Risk of the browser deleting the autosave</th>
             <td>Low once it agrees</td>
             <td>Low once it agrees</td>
             <td>
@@ -176,9 +176,10 @@ useDocsHead({
       <li>
         When you open a script that has a file, Drafter reads the file first. If your browser has
         been told to allow that (<strong>Allow on every visit</strong>, in Chrome’s permission
-        question), the check just happens. Otherwise the script opens read-only under a bar that
-        says “This script is saved in” and the file’s name, with a <strong>Check for changes</strong>
-        button. One click asks permission and checks.
+        question), the check just happens. Otherwise a bar says the script is linked to that file
+        and that your browser needs your OK, with a <strong>Check the file</strong> button. One
+        click asks permission and checks. You can keep typing meanwhile: if the file turns out to
+        have changed too, Drafter asks which version to keep, as below.
       </li>
       <li>
         If only the file changed, Drafter loads it and says “Updated from” and the file’s name.
@@ -189,8 +190,9 @@ useDocsHead({
         you choose, the other is kept as a separate script in this browser, so nothing is lost.
       </li>
       <li>
-        If the file was moved or deleted, or its drive isn’t there, Drafter says so and offers
-        <strong>Save As</strong> or <strong>Edit this browser’s copy</strong>.
+        If the file was moved, renamed, or deleted, or its drive isn’t there, Drafter says so,
+        tells you the script is safe, and offers <strong>Save to a new file…</strong> or
+        <strong>Keep working without the file</strong>. You can keep typing either way.
       </li>
     </ul>
     <p>
@@ -433,10 +435,10 @@ useDocsHead({
       opens its Save dialog, and writes a <code>.docx</code> only where that dialog chose one.
     </p>
 
-    <h2 id="recovery-copy">The recovery copy</h2>
+    <h2 id="recovery-copy">Autosave</h2>
     <p>
-      Drafter keeps a copy of every script in this browser’s own storage, whether or not the script
-      has a file. It is written as you type, within a moment of a pause, and it is what brings your
+      Drafter autosaves every script in this browser’s own storage, whether or not the script has a
+      file. It is written as you type, within a moment of a pause, and it is what brings your
       work back after a crash, a killed tab, or a closed window: open Drafter and each script is as
       you left it, unsaved changes included and still marked as unsaved.
     </p>
@@ -448,17 +450,19 @@ useDocsHead({
       <li>Safari can clear a site’s data after about a week without a visit, unless Drafter is installed as an app.</li>
     </ul>
     <p>
-      Drafter tells you when the recovery copy isn’t safe. If the browser may clear it, a note says
-      “This browser may clear your recovery copy,” and suggests saving to a file or installing
-      Drafter as an app. If the browser won’t let Drafter keep one at all, an alert says “Drafter
-      can’t keep a recovery copy in this browser right now. Your changes exist only in memory until
-      you save the script to a file.” Take either as a reason to save now. A saved file is always the
+      Drafter tells you when autosave isn’t safe. If the browser hasn’t promised to keep it, the
+      status bar says <strong>Autosave: not guaranteed</strong>, and a note says “Your browser might
+      delete Drafter’s autosave” and suggests saving to a file or installing Drafter as an app.
+      Nothing is wrong yet; it is a reminder. If the browser won’t let Drafter autosave at all, the
+      status bar says <strong>Autosave: off</strong> and an alert says “Autosave isn’t working in
+      this browser right now. Your changes are only in this page until you save the script to a
+      file.” Take either as a reason to save now. A saved file is always the
       one copy you control.
     </p>
 
     <h2 id="history">History and snapshots</h2>
     <p>
-      Besides the recovery copy, Drafter keeps earlier versions of each script in this browser,
+      Besides autosave, Drafter keeps earlier versions of each script in this browser,
       called snapshots, so you can go back to one. It takes one after every 10 minutes of active
       writing, every time you save to a file, and when you open a file. It also takes one before
       Expand outline, Fix all, Revert to Saved, or loading a changed file over the script, and when
@@ -523,7 +527,7 @@ useDocsHead({
     <p>
       Installing gives Drafter a window and an icon of its own, and it opens without the browser’s
       toolbars. Drafter works offline after your first visit either way. In Safari, installing also
-      makes the recovery copy durable.
+      makes the autosave durable.
     </p>
     <ul>
       <li>
@@ -551,7 +555,7 @@ useDocsHead({
     </p>
     <ul>
       <li>Save writes back to the file you opened, whatever browser you would have used.</li>
-      <li>The recovery copy lives in the app, where no browser can clear it.</li>
+      <li>Autosave lives in the app, where no browser can delete it.</li>
       <li>You can open a script by double-clicking a <code>.fountain</code> file.</li>
       <li>It has a menu bar.</li>
       <li>
@@ -562,7 +566,7 @@ useDocsHead({
       </li>
       <li>
         It saves the same plain-text files as this site, so a script moves freely between the two.
-        Each keeps its own recovery copy and recent scripts.
+        Each keeps its own autosave and recent scripts.
       </li>
     </ul>
     <p>

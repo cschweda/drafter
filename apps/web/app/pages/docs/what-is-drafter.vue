@@ -267,7 +267,7 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
         <li>
           <strong>No server keeping your scripts.</strong> drafter.dev is a static site: it has no
           server that could receive your script. Your work stays on your device, in the files you
-          save and in a recovery copy in your browser.
+          save and in Drafter’s autosave in your browser.
         </li>
         <li>
           <strong>No cookies, no tracking of you, no telemetry.</strong> The website, drafter.dev, measures visitor traffic with Plausible, privacy-focused analytics with no cookies; the downloaded desktop app has no analytics at all. See

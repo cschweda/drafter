@@ -237,7 +237,7 @@ describe('the spelling actions', () => {
     expect(markdown.state.doc.toString()).toBe(md);
 
     // A read-only tab: the reason it's given, for both; the editor's own read-only state too.
-    const why = 'This script is open for editing in another tab.';
+    const why = 'You can’t type here because this script is open in another Drafter tab.';
     const { view: locked } = viewOf(TEXT, marksOf(TEXT, 'phnoe'), { readOnly: true });
     expect(whyNot(locked, 'replace', 'fountain', why)).toBe(why);
     expect(whyNot(locked, 'add-to-script', 'fountain', why)).toBe(why);

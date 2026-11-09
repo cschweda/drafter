@@ -32,11 +32,11 @@ async function saveElsewhere() {
       class="action"
       @click="check({ ask: true })"
     >
-      Check for changes
+      Check the file
     </button>
     <template v-else-if="trouble">
-      <button type="button" class="action" @click="saveElsewhere">Save As</button>
-      <button type="button" class="action" @click="editCopy">Edit this browser's copy</button>
+      <button type="button" class="action" @click="saveElsewhere">Save to a new file…</button>
+      <button type="button" class="action" @click="editCopy">Keep working without the file</button>
     </template>
     <span role="status" class="notice">{{ updatedNotice }}</span>
   </div>

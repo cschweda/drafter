@@ -67,7 +67,7 @@ describe('installAdvice', () => {
   test('tells an installed app only to save to a file', () => {
     const advice = installAdvice('installed');
     expect(advice).toBe(
-      'This browser may clear your recovery copy. Save the script to a file to keep it safe.',
+      'Your browser might delete Drafter’s autosave. Save the script to a file to keep a copy of your own.',
     );
     expect(advice).not.toMatch(/install|Safari|Dock|Home Screen|address bar/i);
   });
@@ -81,7 +81,7 @@ describe('installAdvice', () => {
   test('always leads with saving to a file', () => {
     for (const kind of ['chromium', 'safari', 'other', 'installed'] as const) {
       expect(installAdvice(kind)).toMatch(
-        /^This browser may clear your recovery copy\. Save the script to a file/,
+        /^Your browser might delete Drafter’s autosave\. Save the script to a file/,
       );
     }
   });

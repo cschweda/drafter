@@ -16,7 +16,6 @@ import { type ComputedRef, computed, effectScope } from 'vue';
 import { type ApplyOptions, applyTextChanges } from '../editor/apply-changes';
 import { useLayout } from '../editor/layout';
 import { useEditor } from '../editor/session';
-import { useScript } from '../storage/script';
 import { sayOutline } from './notice';
 
 // The Outline's model (Phase 2 design §6.1): the scene index of the editor's parse, recomputed
@@ -39,7 +38,7 @@ export interface OutlineSession {
   itemById(id: string): OutlineItem | undefined;
   /** Why nothing can be changed from the Outline now, or null when it can. */
   readOnly: ComputedRef<string | null>;
-  /** Why this tab can't edit the script at all now (another tab has it, or its file is being checked), or null. */
+  /** Why this tab can't edit the script at all now (another tab has it), or null. */
   locked: ComputedRef<string | null>;
   /** Applies a view's changes as one transaction (one undo). False when nothing could change. */
   apply(changes: readonly TextChange[], options?: ApplyOptions): boolean;
@@ -54,7 +53,6 @@ let session: OutlineSession | undefined;
 function create(): OutlineSession {
   const editor = useEditor();
   const { layout } = useLayout();
-  const script = useScript();
   return effectScope(true).run(() => {
     const index = computed(() =>
       editor.kind.value === 'markdown'
@@ -69,8 +67,8 @@ function create(): OutlineSession {
     const idOf = (item: OutlineItem) => ids.value.get(item.span.from) ?? `block-${item.block}`;
     const itemById = (id: string) => index.value.items.find((item) => idOf(item) === id);
     const locked = computed(() => {
-      if (editor.locked.value) return 'This script is open for editing in another tab.';
-      if (script.fileLocked.value) return 'Drafter is checking this script’s file first.';
+      if (editor.locked.value)
+        return 'You can’t type here because this script is open in another Drafter tab.';
       return null;
     });
     const readOnly = computed(() => {

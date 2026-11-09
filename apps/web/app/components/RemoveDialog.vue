@@ -73,7 +73,7 @@ async function confirm() {
     <template v-if="removing">
       <h2 id="remove-open-title" class="d-dialog-title">Remove “{{ removing.title }}” from this browser?</h2>
       <p id="remove-open-why">
-        Drafter forgets this script and its recovery copy. A file you saved it to isn’t touched.
+        Drafter forgets this script and its autosave. A file you saved it to isn’t touched.
         <template v-if="neverSaved">
           This script has never been saved to a file, so removing it deletes the only copy.
         </template>

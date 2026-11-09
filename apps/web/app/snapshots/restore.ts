@@ -15,13 +15,12 @@ export const GONE = 'That snapshot isn’t there any more, so nothing was change
 
 /**
  * Why History's Restore, Label…, Delete, and Take snapshot are off, or null (Call 25): another tab
- * is editing the script, or its file is being checked. The Outline's words for the same states.
+ * is editing the script. The Outline's words for the same state.
  */
 export function historyReadOnly(): string | null {
   if (useGuard().readOnly.value || useEditor().locked.value) {
-    return 'This script is open for editing in another tab.';
+    return 'You can’t type here because this script is open in another Drafter tab.';
   }
-  if (useScript().fileLocked.value) return 'Drafter is checking this script’s file first.';
   return null;
 }
 

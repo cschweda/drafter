@@ -167,7 +167,7 @@ describe('the spelling menu', () => {
 
   test('disables a suggestion and the script’s dictionary in a read-only tab, with the reason', () => {
     const view = viewOf(TEXT, [MARK], 23);
-    const why = 'This script is open for editing in another tab.';
+    const why = 'You can’t type here because this script is open in another Drafter tab.';
     const groups = spellMenuItems(view, ['phone', 'phony'], 'fountain', why, hooks());
     // The reason first, as the Outline's menu has it.
     expect(groups[0]).toEqual([{ type: 'label', label: why }]);

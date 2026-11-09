@@ -87,11 +87,11 @@ describe('the wording', () => {
   });
 
   test('says Drafter’s recovery copy on the desktop, the browser’s on the web', () => {
-    expect(unsavedMessage('ok')).toMatch(/this browser’s recovery copy/);
+    expect(unsavedMessage('ok')).toMatch(/Drafter’s autosave in this browser/);
     expect(unsavedMessage('ok', 'restart')).toBe(
-      'Your unsaved changes stay in Drafter’s recovery copy, but they aren’t in your file yet.',
+      'Your unsaved changes are in Drafter’s autosave, but they aren’t in your file yet.',
     );
-    expect(unsavedMessage('unavailable', 'restart')).toMatch(/^Drafter can’t keep a recovery copy/);
+    expect(unsavedMessage('unavailable', 'restart')).toMatch(/^Autosave isn’t working/);
     expect(unsavedMessage('unavailable', 'restart')).not.toMatch(/browser/);
   });
 });

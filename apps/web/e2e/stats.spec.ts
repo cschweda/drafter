@@ -530,7 +530,7 @@ test.describe('writing stats', () => {
     );
     const other = await context.newPage();
     await other.goto('/');
-    await expect(other.getByRole('button', { name: 'Edit here instead' })).toBeVisible();
+    await expect(other.getByRole('button', { name: 'Type here instead' })).toBeVisible();
     await runCommand(other, 'Show stats');
     await expect(stats(other)).toContainText(
       'Another tab has this script open, so its rates can’t be changed here.',
@@ -555,7 +555,7 @@ test.describe('writing stats', () => {
     await expect.poll(() => statsKeys(page), { timeout: 10_000 }).toHaveLength(1);
     const other = await context.newPage();
     await other.goto('/');
-    await expect(other.getByRole('button', { name: 'Edit here instead' })).toBeVisible();
+    await expect(other.getByRole('button', { name: 'Type here instead' })).toBeVisible();
     await runCommand(other, 'Show stats');
     await expect(stats(other)).toContainText(
       'Another tab is editing this script, and counts its writing time there.',

@@ -291,7 +291,7 @@ test.describe('saving to a file (Chromium)', () => {
     await first.keyboard.insertText('HELD');
     await expect.poll(async () => (await mine(first))?.source).toContain('HELD');
 
-    // A read-only tab may show old text, so it writes nothing until "Edit here instead".
+    // A read-only tab may show old text, so it writes nothing until "Type here instead".
     const second = await context.newPage();
     await stubPickers(second);
     await start(second);
@@ -300,7 +300,7 @@ test.describe('saving to a file (Chromium)', () => {
     await expect(saveButton(second)).toHaveAttribute('aria-disabled', 'true');
     await nextFileName(second, 'readonly.fountain');
     await second.keyboard.press('ControlOrMeta+s');
-    await expect(second.getByRole('alert').filter({ hasText: 'Edit here instead' })).toBeVisible();
+    await expect(second.getByRole('alert').filter({ hasText: 'Type here instead' })).toBeVisible();
     await saveButton(second).click({ force: true });
     await openButton(second).click();
     await expect(menu(second).getByRole('button', { name: 'Save As…' })).toBeDisabled();
@@ -311,8 +311,8 @@ test.describe('saving to a file (Chromium)', () => {
     expect(await editor(second).getAttribute('contenteditable')).toBe('false');
 
     // Editing here lifts it, and then it saves.
-    await second.getByRole('button', { name: 'Edit here instead' }).click();
-    await expect(second.getByRole('alert').filter({ hasText: 'Edit here instead' })).toHaveCount(0);
+    await second.getByRole('button', { name: 'Type here instead' }).click();
+    await expect(second.getByRole('alert').filter({ hasText: 'Type here instead' })).toHaveCount(0);
     await second.keyboard.press('ControlOrMeta+s');
     await expectSaved(second);
     expect(await textOf(second, 'readonly.fountain')).toContain('HELD');

@@ -385,7 +385,9 @@ test.describe('Check for updates', () => {
     await expect(dialog).toBeHidden();
     // The offer's own question: nothing reloads with changes that aren't in a file.
     const toast = page.locator('[data-update]');
-    await expect(toast).toContainText('Your unsaved changes stay in this browser’s recovery copy');
+    await expect(toast).toContainText(
+      'Your unsaved changes are in Drafter’s autosave in this browser',
+    );
     await expect(toast.getByRole('button', { name: 'Save first' })).toBeFocused();
     await toast.getByRole('button', { name: 'Cancel' }).click();
     await expect(toast.getByRole('button', { name: 'Reload' })).toBeVisible();

@@ -41,7 +41,7 @@ test.describe('on a wide screen', () => {
   test('is one 24px row', async ({ page }) => {
     await storageMayBeCleared(page);
     await start(page);
-    await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toBeVisible();
+    await expect(status(page).getByRole('button', { name: /Autosave:/ })).toBeVisible();
     const bar = await status(page).boundingBox();
     expect(bar?.height).toBeGreaterThanOrEqual(23);
     expect(bar?.height).toBeLessThanOrEqual(25);
@@ -156,7 +156,7 @@ test.describe('on a wide screen', () => {
     // A sprint's controls are in the bar too.
     await runCommand(page, 'Start a 15-minute sprint');
     await expect(status(page).locator('[data-sprint]')).toBeVisible();
-    await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toBeVisible();
+    await expect(status(page).getByRole('button', { name: /Autosave:/ })).toBeVisible();
     const styles = await status(page).evaluate((footer) =>
       Array.from(footer.querySelectorAll<HTMLElement>('*'))
         .filter((el) => el.offsetParent !== null)
@@ -178,7 +178,7 @@ test.describe('on a wide screen', () => {
     await storageKept(page);
     await start(page);
     await expect(status(page).locator('.history-button')).toBeVisible();
-    await expect(status(page).getByRole('button', { name: /Recovery copy/ })).toHaveCount(0);
+    await expect(status(page).getByRole('button', { name: /Autosave:/ })).toHaveCount(0);
   });
 
   test('names the file, and its button opens History', async ({ page }) => {
@@ -231,7 +231,7 @@ test.describe('below 640px', () => {
     await storageMayBeCleared(page);
     if (!isMobile) await page.setViewportSize({ width: 390, height: 800 });
     await start(page);
-    const chip = page.getByRole('button', { name: 'Recovery copy: may be cleared' });
+    const chip = page.getByRole('button', { name: 'Autosave: not guaranteed' });
     await expect(chip).toBeVisible();
     // Only the warning: the counts and the template are in Stats and the Drafter menu here.
     await expect(status(page).locator('.counts-button')).toBeHidden();

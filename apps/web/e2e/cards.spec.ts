@@ -235,7 +235,7 @@ test.describe('the Cards tab', () => {
 
   test('offers no edits in a read-only tab, and says why', async ({ context, isMobile }) => {
     test.skip(!!isMobile, 'two browser tabs are the same on a phone');
-    const why = 'This script is open for editing in another tab.';
+    const why = 'You can’t type here because this script is open in another Drafter tab.';
     const first = await context.newPage();
     await start(first);
     const second = await context.newPage();
@@ -394,7 +394,7 @@ test.describe('moving cards', () => {
 
   test("doesn't move a card in a read-only tab", async ({ context, isMobile }) => {
     test.skip(!!isMobile, 'two browser tabs are the same on a phone');
-    const why = 'This script is open for editing in another tab.';
+    const why = 'You can’t type here because this script is open in another Drafter tab.';
     const first = await context.newPage();
     await start(first);
     const second = await context.newPage();

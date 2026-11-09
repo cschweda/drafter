@@ -210,11 +210,6 @@ export interface ScriptSession {
   /** A switch of scripts is under way: further requests to switch are ignored until it ends. */
   readonly busy: Readonly<ComputedRef<boolean>>;
   /**
-   * The editor is read-only until the script's file can be checked (the browser has not given
-   * Drafter permission to read it). Whoever sets it clears it; showing another script clears it.
-   */
-  readonly fileLocked: Ref<boolean>;
-  /**
    * Keeps `source` as a script of its own, without opening it: the version a changed file or this
    * browser's text had when the writer chose the other (Phase 1 design §9.6).
    */
@@ -303,7 +298,6 @@ function create(): ScriptSession {
   const recovery = ref<RecoveryState>('not-persistent');
   const ready = ref(false);
   const dismissed = ref(false);
-  const fileLocked = ref(false);
   // Before a project is open the editor holds the sample, in memory.
   const baseline = shallowRef<Text | null>(text(SAMPLE_SCREENPLAY));
   let writer: Writer | undefined;
@@ -356,8 +350,6 @@ function create(): ScriptSession {
     lastDoc = view.state.doc;
     baseline.value = from;
     project.value = next;
-    // The new script's file has not been checked yet.
-    fileLocked.value = false;
     const id = next.id;
     writer = writable ? createWriter((source) => persist(id, source)) : undefined;
     // Text typed while the script was being read.
@@ -599,8 +591,7 @@ function create(): ScriptSession {
       // Only on the sample's own text: once the writer has changed it, emptying it would wipe their work.
       !dirty.value &&
       !guard.readOnly.value &&
-      !switching.value &&
-      !fileLocked.value,
+      !switching.value,
   );
 
   function startBlank(): boolean {
@@ -702,7 +693,7 @@ function create(): ScriptSession {
   };
 
   const canResetSample = computed(
-    () => !!project.value?.sample && !guard.readOnly.value && !switching.value && !fileLocked.value,
+    () => !!project.value?.sample && !guard.readOnly.value && !switching.value,
   );
 
   function resetSample(): boolean {
@@ -1046,7 +1037,7 @@ function create(): ScriptSession {
   // version is fetched and takes over, so nothing typed then is lost to the reload).
   effectScope(true).run(() => {
     watch(
-      () => guard.readOnly.value || switching.value || fileLocked.value || applyingUpdate.value,
+      () => guard.readOnly.value || switching.value || applyingUpdate.value,
       (on) => editor.setReadOnly(on),
       { immediate: true, flush: 'sync' },
     );
@@ -1159,7 +1150,6 @@ function create(): ScriptSession {
     replaceWith,
     changed,
     busy: switching,
-    fileLocked,
     flush: async () => {
       await writer?.flush().catch(() => {});
     },
