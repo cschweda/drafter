@@ -115,14 +115,17 @@ const messageOf = (error: unknown) => (error instanceof Error ? error.message : 
  * production's id, and its facts only when the id changes. Its layout is of the locked pages, and
  * after it (and after Show changes' marks) come its revision marks, of the same text, with the same
  * number. The marks are offsets into the text without its block, which are offsets into the whole
- * text (`scriptOf`); the main thread puts them on the layout (`applyMarks`). An id the worker has
- * no facts for is laid out unlocked, with no revision marks.
+ * text (`scriptOf`); the client puts them on the layout (`applyMarks`) and shows it once. An id the
+ * worker has no facts for is laid out unlocked, and answered no revision marks.
  */
 export function createLayoutCompute(mark = marksOf, revise = revisionMarksOf): LayoutCompute {
   let baseline: { id: number; text: string } | null = null;
   let production: { id: number; facts: LayoutProductionFacts } | null = null;
+  /** The newest request handled, so a locked request's marks aren't made once a newer one has come. */
+  let latest = 0;
   return {
     async handle(request, post) {
+      latest = Math.max(latest, request.seq);
       const asked = request.baseline;
       if (asked?.text !== undefined) baseline = { id: asked.id, text: asked.text };
       const wanted = request.production;
@@ -146,7 +149,17 @@ export function createLayoutCompute(mark = marksOf, revise = revisionMarksOf): L
         post({ seq: request.seq, marks });
       }
 
-      if (!facts || !doc) return;
+      // The client holds a locked request's layout until its revision marks come, so a request
+      // with a production is always answered them: none when the worker has no facts for its id.
+      if (!wanted) return;
+      if (!facts || !doc) {
+        post({ seq: request.seq, production: NO_REVISION_MARKS });
+        return;
+      }
+      // Requests that came while typing go first. The client waits only for the newest layout,
+      // so marks for one a newer request has replaced would be thrown away: they aren't made.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      if (latest > request.seq) return;
       let marks: Marks;
       try {
         marks = await revise(facts, scriptOf(doc));
@@ -154,6 +167,7 @@ export function createLayoutCompute(mark = marksOf, revise = revisionMarksOf): L
         console.error(`Revision marks failed: ${messageOf(error)}`);
         marks = NO_REVISION_MARKS;
       }
+      if (latest > request.seq) return;
       post({ seq: request.seq, production: marks });
     },
   };

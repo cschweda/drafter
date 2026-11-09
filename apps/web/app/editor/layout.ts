@@ -1,7 +1,7 @@
 import type { EditorState } from '@codemirror/state';
 import { parsedDoc } from '@drafter/cm-fountain';
 import type { PageMarks } from '@drafter/compare';
-import { applyMarks, type Layout } from '@drafter/layout';
+import type { Layout } from '@drafter/layout';
 import type { Template } from '@drafter/templates';
 import {
   type ComputedRef,
@@ -62,7 +62,7 @@ function create(): LayoutSession {
   const marks = shallowRef<{ seq: number; marks: PageMarks } | null>(null);
   const baseline = shallowRef<{ id: number; text: string } | null>(null);
   // A locked script's production (production design §6.2, §7.2): every request carries it, and the
-  // worker answers the locked pages, then the revision marks, which go on the layout shown.
+  // client gives the layout of the locked pages once, with the revision marks on its lines.
   const production = useProduction().state;
   // Each production read gets an id, so its facts go to the worker only when they are new.
   let productionId = 0;
@@ -111,13 +111,6 @@ function create(): LayoutSession {
         (found, seq) => {
           // Only the shown layout's, and only while Show changes is on.
           if (seq === shownSeq.value && baseline.value) marks.value = { seq, marks: found };
-        },
-        (found, seq) => {
-          // The revision marks of the shown layout, printed on its lines (`LayoutLine.mark`).
-          const shown = layout.value;
-          if (seq === shownSeq.value && shown && production.value) {
-            layout.value = applyMarks(shown, found);
-          }
         },
       );
     } catch (error) {

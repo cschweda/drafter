@@ -14,6 +14,7 @@ import {
   type LayoutProductionFacts,
   type LayoutReply,
   type LayoutRequest,
+  PRODUCTION_WAIT_MS,
 } from '../app/editor/layout-client';
 import { computeLayout, createLayoutCompute, lockedPagesOf } from '../app/workers/compute';
 
@@ -131,14 +132,18 @@ describe('a locked script in the layout worker', () => {
     expect(again).toHaveLength(2);
     const marks = (again[1] as { production: Marks }).production;
     expect(marks.spans.map((s) => edited.slice(s.from, s.to))).toEqual(['great ']);
-    // An id the worker has no facts for is laid out unlocked, with no marks.
+    // An id the worker has no facts for is laid out unlocked, and answered no marks, since the
+    // client holds a locked request's layout until they come.
     const unknown = await answer(compute, {
       seq: 3,
       source: edited,
       template,
       production: { id: 9 },
     });
-    expect(unknown).toHaveLength(1);
+    expect(unknown).toEqual([
+      { seq: 3, layout: paginate(parse(edited), template) },
+      { seq: 3, production: { spans: [], gaps: [] } },
+    ]);
   });
 
   test('a page whose text is all gone folds into the page before it: 3-4', async () => {
@@ -157,6 +162,30 @@ describe('a locked script in the layout worker', () => {
     });
     const labels = (reply as { layout: Layout }).layout.pages.map((p) => p.label);
     expect(labels.slice(0, 4)).toEqual(['1', '2', '3-4', '5']);
+  });
+
+  test('makes no marks for a request a newer one has replaced', async () => {
+    const { text, facts } = await locked();
+    const revise = vi.fn(async () => ({ spans: [], gaps: [] }));
+    const compute = createLayoutCompute(undefined, revise);
+    const first: LayoutReply[] = [];
+    const second: LayoutReply[] = [];
+    // The second comes while the first's marks are still to be made, as typing sends them.
+    const one = compute.handle(
+      { seq: 1, source: text, template, production: { id: 1, locked: facts } },
+      (r) => first.push(r),
+    );
+    const two = compute.handle(
+      { seq: 2, source: `${text}\nMore.\n`, template, production: { id: 1 } },
+      (r) => second.push(r),
+    );
+    await Promise.all([one, two]);
+    expect(first.map((r) => Object.keys(r).sort())).toEqual([['layout', 'seq']]);
+    expect(second.map((r) => Object.keys(r).sort())).toEqual([
+      ['layout', 'seq'],
+      ['production', 'seq'],
+    ]);
+    expect(revise).toHaveBeenCalledTimes(1);
   });
 
   test('a request without production is answered as before', async () => {
@@ -229,17 +258,40 @@ describe("the layout client's production", () => {
 
   const facts: LayoutProductionFacts = { baseline: 'A\n', pages: [], closed: [], open: 'Blue' };
 
-  test('sends the facts once per id, and the marks reach the caller only for the layout shown', () => {
-    const worker = fakeWorker();
-    const shown: number[] = [];
+  const layout = (n: number) =>
+    ({
+      pages: [
+        {
+          number: 1,
+          label: '1',
+          lines: [
+            { col: 0, runs: [], role: 'action', blockIndex: 0, span: { from: n, to: n + 5 } },
+          ],
+          sceneNumbersLeft: [],
+          sceneNumbersRight: [],
+        },
+      ],
+      index: [],
+      diagnostics: [],
+    }) as unknown as Layout;
+  const blue: Marks = { spans: [{ from: 0, to: 100, set: 'Blue' }], gaps: [] };
+  const isMarked = (l: Layout) => l.pages[0]?.lines[0]?.mark?.set === 'Blue';
+
+  function clientOn(worker: ReturnType<typeof fakeWorker>) {
+    const shown: Array<{ seq: number; marked: boolean }> = [];
     const marked: number[] = [];
     const client = createLayoutClient(
       worker,
-      (_, seq) => shown.push(seq),
-      () => {},
+      (l, seq) => shown.push({ seq, marked: isMarked(l) }),
       () => {},
       (_, seq) => marked.push(seq),
     );
+    return { client, shown, marked };
+  }
+
+  test('sends the facts once per id', () => {
+    const worker = fakeWorker();
+    const { client } = clientOn(worker);
     client.request('a', template, undefined, { id: 1, facts });
     vi.advanceTimersByTime(50);
     client.request('ab', template, undefined, { id: 1, facts });
@@ -254,13 +306,67 @@ describe("the layout client's production", () => {
       undefined,
       { id: 2, locked: facts },
     ]);
+  });
 
-    const layout = { pages: [], index: [], diagnostics: [] } as unknown as Layout;
-    const none: Marks = { spans: [], gaps: [] };
-    worker.reply({ seq: 2, layout });
-    worker.reply({ seq: 1, production: none });
-    worker.reply({ seq: 2, production: none });
-    expect(shown).toEqual([2]);
-    expect(marked).toEqual([2]);
+  test('a locked layout is shown once, already marked, with Show changes’ marks after it', () => {
+    const worker = fakeWorker();
+    const { client, shown, marked } = clientOn(worker);
+    client.request('a', template, { id: 1, text: 'a' }, { id: 1, facts });
+    vi.advanceTimersByTime(50);
+    worker.reply({ seq: 1, layout: layout(0) });
+    worker.reply({ seq: 1, marks: { lines: [], gaps: [], stops: [] } });
+    // Nothing yet: the layout waits for its revision marks, and Show changes' with it.
+    expect(shown).toEqual([]);
+    expect(marked).toEqual([]);
+    worker.reply({ seq: 1, production: blue });
+    expect(shown).toEqual([{ seq: 1, marked: true }]);
+    expect(marked).toEqual([1]);
+    // A stray second answer changes nothing.
+    worker.reply({ seq: 1, production: blue });
+    expect(shown).toHaveLength(1);
+  });
+
+  test('a newer layout replaces the waiting one, and older marks are dropped', () => {
+    const worker = fakeWorker();
+    const { client, shown } = clientOn(worker);
+    client.request('a', template, undefined, { id: 1, facts });
+    vi.advanceTimersByTime(50);
+    client.request('ab', template, undefined, { id: 1, facts });
+    vi.advanceTimersByTime(50);
+    worker.reply({ seq: 1, layout: layout(0) });
+    worker.reply({ seq: 2, layout: layout(1) });
+    worker.reply({ seq: 1, production: blue });
+    expect(shown).toEqual([]);
+    worker.reply({ seq: 2, production: blue });
+    expect(shown).toEqual([{ seq: 2, marked: true }]);
+  });
+
+  test('an unlocked layout is shown at once, and replaces a waiting locked one', () => {
+    const worker = fakeWorker();
+    const { client, shown } = clientOn(worker);
+    client.request('a', template, undefined, { id: 1, facts });
+    vi.advanceTimersByTime(50);
+    client.request('ab', template);
+    vi.advanceTimersByTime(50);
+    worker.reply({ seq: 1, layout: layout(0) });
+    worker.reply({ seq: 2, layout: layout(1) });
+    expect(shown).toEqual([{ seq: 2, marked: false }]);
+    worker.reply({ seq: 1, production: blue });
+    vi.advanceTimersByTime(PRODUCTION_WAIT_MS);
+    expect(shown).toHaveLength(1);
+  });
+
+  test('marks that never come: the layout is shown without them after PRODUCTION_WAIT_MS', () => {
+    const worker = fakeWorker();
+    const { client, shown } = clientOn(worker);
+    client.request('a', template, undefined, { id: 1, facts });
+    vi.advanceTimersByTime(50);
+    worker.reply({ seq: 1, layout: layout(0) });
+    vi.advanceTimersByTime(PRODUCTION_WAIT_MS - 1);
+    expect(shown).toEqual([]);
+    vi.advanceTimersByTime(1);
+    expect(shown).toEqual([{ seq: 1, marked: false }]);
+    worker.reply({ seq: 1, production: blue });
+    expect(shown).toHaveLength(1);
   });
 });

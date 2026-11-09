@@ -62,6 +62,8 @@ function create(): ProductionSession {
         const raw = now.meta?.production;
         if (raw === undefined) return settle(null, false);
         const production = readProduction(now.meta);
+        // A block that isn't JSON at all is fountain's invalid-meta diagnostic; this is a readable
+        // block whose production key, or baseline below, is bad (Ruling 20).
         if (!production) return settle(null, true);
         if (decoded?.encoded !== production.baseline) {
           const encoded = production.baseline;
