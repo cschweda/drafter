@@ -1,3 +1,4 @@
+export { applyMarks, type Marks } from './marks';
 export { sceneNumbersFor } from './numbers';
 export { paginate } from './paginate';
 export { titleKeyPrints, titlePageFor } from './title';

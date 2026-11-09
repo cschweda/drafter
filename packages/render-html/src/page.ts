@@ -323,6 +323,7 @@ export function shiftOf(old: Page, next: Page): Shift | null {
     sameSpan(a.span, b.span);
   const sameLine = (a: LayoutLine, b: LayoutLine): boolean => {
     if (a.col !== b.col || a.role !== b.role || a.synthetic !== b.synthetic) return false;
+    if (a.mark?.set !== b.mark?.set) return false;
     if (!sameSpan(a.span, b.span) || !sameBlock(a.blockIndex, b.blockIndex)) return false;
     if (a.runs.length !== b.runs.length) return false;
     for (let i = 0; i < a.runs.length; i++) {
@@ -331,7 +332,12 @@ export function shiftOf(old: Page, next: Page): Shift | null {
     return a.right && b.right ? sameLine(a.right, b.right) : !a.right && !b.right;
   };
 
-  if (old.number !== next.number || old.header !== next.header || old.footer !== next.footer) {
+  if (
+    old.number !== next.number ||
+    old.label !== next.label ||
+    old.header !== next.header ||
+    old.footer !== next.footer
+  ) {
     return null;
   }
   const a = old.pageNumber;

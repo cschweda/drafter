@@ -644,18 +644,19 @@ class Pager {
     const { page } = this.template;
     const result: Page = {
       number,
+      label: String(number),
       lines: this.#lines,
       sceneNumbersLeft: this.#left,
       sceneNumbersRight: this.#right,
     };
     const { numbering } = page;
     if (numbering.position === 'top-right' && number >= numbering.firstNumbered) {
-      const text = numbering.format.replaceAll('{n}', String(number));
+      const text = numbering.format.replaceAll('{n}', result.label);
       const width = page.width - page.margin.left - page.margin.right;
       result.pageNumber = { text, line: numbering.line, col: Math.max(0, width - columns(text)) };
     }
-    if (page.header !== undefined) result.header = page.header.replaceAll('{n}', String(number));
-    if (page.footer !== undefined) result.footer = page.footer.replaceAll('{n}', String(number));
+    if (page.header !== undefined) result.header = page.header.replaceAll('{n}', result.label);
+    if (page.footer !== undefined) result.footer = page.footer.replaceAll('{n}', result.label);
     this.pages.push(result);
     this.#lines = [];
     this.#left = [];

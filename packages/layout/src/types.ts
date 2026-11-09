@@ -21,11 +21,15 @@ export interface LayoutLine {
   synthetic?: 'more' | 'contd' | 'blank' | 'title';
   /** The second part of a row that holds two: the right column of dual dialogue, or a draft date. */
   right?: LayoutLine;
+  /** Set by `applyMarks`: this printed line changed since a revision set. */
+  mark?: { set: string };
 }
 
 export interface Page {
   /** 1-based; the title page is 0. */
   number: number;
+  /** What prints for the page number: `String(number)` unlocked, `''` on the title page. */
+  label: string;
   /** Body lines only: exactly `height − margin.top − margin.bottom` of them, blank lines included. */
   lines: LayoutLine[];
   /** In the top margin: `line` counts from the top edge of the paper, `col` from the left margin. */
