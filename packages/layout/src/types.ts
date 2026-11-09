@@ -75,6 +75,26 @@ export interface PaginateOptions {
    * absent is the template's (enabled is `'all'`).
    */
   sceneNumbers?: boolean | SceneNumbering;
+  /** Lays a locked script out on its locked pages (production design §7.2). */
+  locked?: LockedPages;
+}
+
+/** Where a locked page starts: the source line at `at`, after `printed` printed lines from it. */
+export interface PageAnchor {
+  label: string;
+  /** Offset of the anchor source line's start in the text being laid out. */
+  at: number;
+  /** Printed lines from that line that stay on the page before; clamped to the block's lines. */
+  printed: number;
+}
+
+/**
+ * Locked pages: each anchor starts a page with its label; what overflows continues on
+ * A-pages (12A, 12B, …). A kept page whose label has `folded` labels prints as a range (`13-14`).
+ */
+export interface LockedPages {
+  anchors: readonly PageAnchor[];
+  folded: ReadonlyArray<{ into: string; label: string }>;
 }
 
 /** A template this version can't lay out: Phase 0 supports 12 pt monospace fonts only. */
