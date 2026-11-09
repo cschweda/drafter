@@ -166,6 +166,8 @@ The stage play picks its own template from the metadata block at the end of the 
 
 **Deployment.** drafter.dev deploys on Netlify from this repository, with the site's package directory set to `apps/web`. That directory's [`netlify.toml`](../apps/web/netlify.toml) sets the build command, the publish directory, and Node 22. Each build writes a `_headers` file whose content security policy allows only the inline scripts that build produced.
 
+Every production deploy costs Netlify credits, and a branch deploy or a Deploy Preview costs none, so `main` moves about once a day. Work is merged into the long-lived **`staging`** branch, which Netlify builds as a branch deploy at `staging--<site>.netlify.app` and CI checks on every push; when staging looks right, one pull request from `staging` into `main` is merged with a merge commit (never squashed), and that is the one production build. Releases are still tagged from `main`, and a fix made on `main` is merged back into `staging`.
+
 ## Clean-room implementation
 
 Drafter is written from scratch, from public specifications, without reading anyone else's implementation. A clean-room implementation keeps two things apart: *what a program has to do*, which comes from public written sources, and *how the code does it*, which comes only from the people writing it. Because nobody working on the code reads another implementation's source, nothing in it is copied from one. It describes the project's practice; it isn't legal advice.

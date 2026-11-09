@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- For contributors: work is merged into a long-lived `staging` branch, which Netlify builds as a free branch deploy and CI checks on every push, and `main` (each build of which is a paid production deploy) takes one merge from `staging` about once a day; `docs/DEVELOPMENT.md` describes it.
 - For contributors: the browser tests run on macOS 15 in CI, not macOS 14, whose runner image GitHub is retiring (its jobs were being refused with "The configuration 'macos-14-arm64-us-default' is not supported"). The desktop workflow was on macOS 15 already.
 
 ### Added

@@ -1,4 +1,4 @@
-# The checks on every pull request (Dependabot's updates and anyone else's) and every push to main. The same gates a release
+# The checks on every pull request (Dependabot's updates and anyone else's) and every push to main or staging. The same gates a release
 # runs, on Linux, minus packaging the desktop app (desktop.yml does that on main and on tags):
 # formatting and lint, the build, every package's typecheck and tests, the trap documents, the web app's
 # typecheck and unit tests, the desktop shell's unit tests, and the browser tests in Chromium on
@@ -11,9 +11,10 @@ name: checks
 on:
   pull_request:
   # Every push to main too, so the README's CI badge says how main itself stands, including a merge
-  # pushed from a computer rather than through a pull request (2026-11-04).
+  # pushed from a computer rather than through a pull request (2026-11-04). And every push to staging,
+  # where each session's work is merged straight in before the day's pull request into main (2026-11-09).
   push:
-    branches: [main]
+    branches: [main, staging]
   workflow_dispatch:
 
 permissions:
