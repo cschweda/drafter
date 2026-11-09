@@ -1,3 +1,4 @@
+export { type Anchor, rebaseAnchors, resolveAnchors } from './anchors';
 export { decodeBaseline, encodeBaseline } from './baseline';
 export { CAPS, productionMeta, readProduction } from './block';
 export { fingerprintLines } from './fingerprint';
