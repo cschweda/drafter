@@ -41,10 +41,6 @@ vi.mock('@drafter/novel', async (original) => {
   const real = await original<typeof import('@drafter/novel')>();
   return { ...real, novelStructure: vi.fn(real.novelStructure) };
 });
-vi.mock('../app/storage/script', async () => {
-  const { ref } = await import('vue');
-  return { useScript: () => ({ fileLocked: ref(false) }) };
-});
 
 const BOOK = setMarkdownMeta(
   [

@@ -441,18 +441,24 @@ test.describe('moving in the Outline', () => {
     await start(first);
     const second = await context.newPage();
     await second.goto('/');
-    await expect(second.getByText('This script is open for editing in another tab.')).toBeVisible();
+    await expect(
+      second.getByText('You can’t type here because this script is open in another Drafter tab.'),
+    ).toBeVisible();
     await showOutline(second);
     const kitchen = row(second, /^Scene 1, INT\. KITCHEN - NIGHT/);
     const before = await textOf(second);
     await kitchen.focus();
     await second.keyboard.press('Alt+ArrowDown');
-    await expect(announcer(second)).toHaveText('This script is open for editing in another tab.');
+    await expect(announcer(second)).toHaveText(
+      'You can’t type here because this script is open in another Drafter tab.',
+    );
     expect(await textOf(second)).toBe(before);
     await menuFor(second, kitchen);
     const down = rowMenu(second).getByRole('menuitem', { name: 'Move scene down' });
     await expect(down).toHaveAttribute('aria-disabled', 'true');
-    await expect(rowMenu(second)).toContainText('This script is open for editing in another tab.');
+    await expect(rowMenu(second)).toContainText(
+      'You can’t type here because this script is open in another Drafter tab.',
+    );
   });
 });
 
@@ -560,7 +566,7 @@ test.describe('Scene details', () => {
     isMobile,
   }) => {
     test.skip(!!isMobile, 'two browser tabs are the same on a phone');
-    const why = 'This script is open for editing in another tab.';
+    const why = 'You can’t type here because this script is open in another Drafter tab.';
     const first = await context.newPage();
     await start(first);
     const second = await context.newPage();
@@ -826,7 +832,7 @@ for (const theme of ['dark', 'light'] as const) {
       const second = await context.newPage();
       await second.goto('/');
       await expect(
-        second.getByText('This script is open for editing in another tab.'),
+        second.getByText('You can’t type here because this script is open in another Drafter tab.'),
       ).toBeVisible();
       await showOutline(second);
       await menuFor(second, tree(second).getByRole('treeitem').nth(1));

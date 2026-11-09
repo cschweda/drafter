@@ -42,7 +42,7 @@ function show() {
     id: TOAST,
     // A caution, in its quiet amber (main.css's tones).
     class: 'tone-warn',
-    title: 'Your recovery copy may be cleared',
+    title: 'Autosave isn’t guaranteed in this browser',
     description: brief ? undefined : advice(),
     icon: 'i-lucide-triangle-alert',
     color: 'neutral',
@@ -96,8 +96,8 @@ watch(
     <div v-if="unavailable" class="warning tone-danger" data-warning="unavailable">
       <UIcon name="i-lucide-triangle-alert" class="icon tone-icon" />
       <p>
-        Drafter can’t keep a recovery copy in this browser right now. Your changes exist only in
-        memory until you save the script to a file.
+        Autosave isn’t working in this browser right now. Your changes are only in this page
+        until you save the script to a file.
       </p>
     </div>
   </div>

@@ -23,7 +23,7 @@ const about: Record<string, string> = {
   'help-novel':
     'Writing a novel in plain Markdown: chapters, sections, and parts, the Outline and Cards, focus on one chapter, and word targets.',
   'help-saving':
-    'What Save does in each browser, keeping scripts in a synced folder, the recovery copy, and installing Drafter as an app.',
+    'What Save does in each browser, keeping scripts in a synced folder, autosave, and installing Drafter as an app.',
   'help-drafts-and-cuts':
     'Numbered drafts you can read, compare, and restore, and everything you cut, kept for ideas.',
   'help-story-map':

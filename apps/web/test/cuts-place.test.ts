@@ -217,10 +217,12 @@ describe('Put back and Insert, applied', () => {
   });
 
   test('a read-only tab changes nothing and says why', async () => {
-    const d = deps('This script is open for editing in another tab.');
+    const d = deps('You can’t type here because this script is open in another Drafter tab.');
     expect(await d.insert.insertAtCursor(row)).toBe(false);
     expect(d.text()).toBe(script(HALL, YARD));
-    expect(d.said).toEqual(['This script is open for editing in another tab.']);
+    expect(d.said).toEqual([
+      'You can’t type here because this script is open in another Drafter tab.',
+    ]);
     expect(d.marked).toEqual([]);
   });
 });

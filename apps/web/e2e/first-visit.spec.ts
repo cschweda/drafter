@@ -455,7 +455,7 @@ test.describe('a first visit on a phone, with the storage toast', () => {
     const toast = page.locator('[data-warning="not-persistent"]');
     await expect(welcome).toBeVisible();
     // The status bar says so meanwhile; the toast isn't drawn over or beside the welcome.
-    await expect(page.getByRole('button', { name: 'Recovery copy: may be cleared' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Autosave: not guaranteed' })).toBeVisible();
     await expect(toast).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(welcome).toBeHidden();
@@ -476,7 +476,7 @@ test.describe('a first visit on a phone, with the storage toast', () => {
       );
     await expect.poll(blocked).toEqual([]);
     // And the status bar's recovery item opens with a tap.
-    await page.getByRole('button', { name: 'Recovery copy: may be cleared' }).click();
+    await page.getByRole('button', { name: 'Autosave: not guaranteed' }).click();
     await expect(page.locator('#recovery-why')).toBeVisible();
   });
 });

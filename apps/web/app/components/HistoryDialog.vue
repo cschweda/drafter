@@ -64,9 +64,9 @@ const takeWhy = computed(() => why.value ?? snapshots.notKept.value);
 function readWhy() {
   why.value = historyReadOnly();
 }
-// The guard and the file check change while History is open.
+// The guard changes while History is open.
 watch(
-  () => [script.fileLocked.value, editor.locked.value],
+  () => editor.locked.value,
   () => readWhy(),
 );
 

@@ -267,7 +267,7 @@ export const DEPENDENCY_NOTES: Readonly<Record<string, string>> = {
   '@vueuse/core': 'Small helpers the guided tour needs; Drafter’s own code doesn’t use it.',
   '@vite-pwa/nuxt':
     'Writes the service worker that lets the app open offline, and the file that lets it install as an app.',
-  dexie: 'Keeps your recovery copy, scripts, and snapshots in the browser’s own database.',
+  dexie: 'Keeps your autosave, scripts, and snapshots in the browser’s own database.',
   '@codemirror/state': 'The editor’s text, selection, and undo history, held as data.',
   '@codemirror/view': 'Draws the editor and handles typing, the mouse, and touch.',
   '@codemirror/commands': 'The editor’s everyday commands: undo, redo, and moving by word or line.',
@@ -326,11 +326,11 @@ const STORAGE: Diagram = {
   kind: 'flow',
   fan: true,
   caption:
-    'Where your script is kept: the text in the editor goes three ways, each in its own time: a recovery copy as you type, your file when you save, and snapshots along the way.',
+    'Where your script is kept: the text in the editor goes three ways, each in its own time: autosave as you type, your file when you save, and snapshots along the way.',
   steps: [
     { label: 'You type', detail: 'The text in the editor' },
     {
-      label: 'The recovery copy',
+      label: 'Autosave',
       detail: 'In the browser’s IndexedDB, a moment after you stop typing',
     },
     { label: 'Save', detail: 'Writes your .fountain file, or downloads a copy, when you choose' },
@@ -450,7 +450,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     plain: [
       {
         kind: 'p',
-        text: 'While you write, your browser keeps a recovery copy of the script, updated as you type, so a crash or a closed tab loses almost nothing. When you save, Drafter writes your script to a file on your computer: a plain `.fountain` file that any text editor can open. Along the way it keeps snapshots, earlier copies you can go back to. The drafts you start and everything you cut are kept for good, and can sit as plain files next to your script.',
+        text: 'While you write, your browser keeps an autosave of the script, updated as you type, so a crash or a closed tab loses almost nothing. When you save, Drafter writes your script to a file on your computer: a plain `.fountain` file that any text editor can open. Along the way it keeps snapshots, earlier copies you can go back to. The drafts you start and everything you cut are kept for good, and can sit as plain files next to your script.',
       },
     ],
     details: [
@@ -458,8 +458,8 @@ export const TECH_SECTIONS: readonly TechSection[] = [
       {
         kind: 'list',
         items: [
-          '**The recovery copy** is in the browser’s IndexedDB, through Dexie. It is written 750 ms after you stop typing, or every 5 seconds while you keep going. The database has seven tables: `projects`, `snapshots`, `templates`, `handles`, `settings`, and, since v0.24.0, `drafts` and `cuts`.',
-          '**Only one tab edits a script.** A second tab with the same script open shows it read-only, so two tabs never write one recovery copy.',
+          '**Autosave** is in the browser’s IndexedDB, through Dexie. It is written 750 ms after you stop typing, or every 5 seconds while you keep going. The database has seven tables: `projects`, `snapshots`, `templates`, `handles`, `settings`, and, since v0.24.0, `drafts` and `cuts`.',
+          '**Only one tab edits a script.** A second tab with the same script open shows it read-only, so two tabs never write one autosave.',
           '**Save** goes through one interface, `FileAccess`. In Chrome and Edge it uses the File System Access API to save back to the file you opened; Firefox and Safari can’t, so Save downloads a complete copy. The desktop app reads and writes files by path, through its main process.',
           '**Snapshots** are copies of the whole text, in the `snapshots` table: after every 10 minutes of writing, when you save or open a file, before a change that rewrites much of it, and when you ask for one. They are compressed where the browser can, and thinned out as they age.',
           '**Version history** reads the snapshots in a worker of its own (`history.worker.ts`), newest first: `@drafter/history` parses each one, notes each scene’s heading, a hash of its text, and a sketch of its wording, and matches scenes across versions, for History of this scene; it also finds what left the text between two snapshots, for Cuts, and looks through the snapshots kept before v0.24.0 once, for the cuts made before drafts. The notes are cached in a second database, `drafter-cache`, so no snapshot is read twice, and removing a script removes them. Show changes and Compare’s Changes view are `@drafter/compare`’s line and word diff; Show changes’ marks come from the layout worker, after the pages.',

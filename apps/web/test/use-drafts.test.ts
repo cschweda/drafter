@@ -168,12 +168,16 @@ describe('the drafts session', () => {
   });
 
   test('restore says why and changes nothing in a read-only tab, or when the freeze fails', async () => {
-    const ro = await setup(ONE, { readOnly: 'This script is open for editing in another tab.' });
+    const ro = await setup(ONE, {
+      readOnly: 'You can’t type here because this script is open in another Drafter tab.',
+    });
     await freezeDraft(ro.p.id, TWO, '');
     await ro.drafts.load();
     expect(await ro.drafts.restore(1)).toBe(false);
     expect(ro.view.state.doc.toString()).toBe(ONE);
-    expect(ro.said.at(-1)).toBe('This script is open for editing in another tab.');
+    expect(ro.said.at(-1)).toBe(
+      'You can’t type here because this script is open in another Drafter tab.',
+    );
 
     const { p, view, drafts, said, events } = await setup();
     await freezeDraft(p.id, TWO, '');

@@ -33,7 +33,7 @@ const cancel = (page: Page) => update(page).getByRole('button', { name: 'Cancel'
 const updated = (page: Page) => page.getByRole('region', { name: 'Updated' });
 const GETTING = 'Getting the newest version…';
 const UNSAVED =
-  'Your unsaved changes stay in this browser’s recovery copy, but they aren’t in your file yet.';
+  'Your unsaved changes are in Drafter’s autosave in this browser, but they aren’t in your file yet.';
 
 /** The worker is active and controls the page: the first visit has been cached. */
 async function controlled(page: Page) {
@@ -700,7 +700,7 @@ test.describe('a new version', () => {
     await expect(editor(other)).toContainText('The Call');
     await controlled(other);
     // Two tabs can't both edit one script: the second takes it over from the first.
-    await other.getByRole('button', { name: 'Edit here instead' }).click();
+    await other.getByRole('button', { name: 'Type here instead' }).click();
     await typeAtEnd(other, '\n\nTyped in the second tab.');
     await mark(page);
     await mark(other);

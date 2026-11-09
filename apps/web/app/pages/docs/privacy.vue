@@ -36,7 +36,7 @@ useDocsHead({
       </li>
       <li>
         <strong>Kept on your device only.</strong> Your script is in the files you save, and in a
-        recovery copy, its history, drafts, and cuts in this browser’s own storage, or in the
+        autosave, its history, drafts, and cuts in this browser’s own storage, or in the
         desktop app’s folder on your computer (<a href="#where-your-work-lives">below</a>).
       </li>
       <li>
@@ -137,7 +137,7 @@ useDocsHead({
         say, or download one. You can open it in any program that reads Fountain or plain text.
       </li>
       <li>
-        <strong>In a recovery copy in this browser.</strong> Drafter keeps a copy of each script in
+        <strong>In Drafter’s autosave in this browser.</strong> Drafter keeps a copy of each script in
         the browser’s IndexedDB, its database for a website, so a crash doesn’t cost you your work.
         It stays on this device. See
         <a href="/docs/saving/#recovery-copy">Saving and your browser</a> for what it is and what can
@@ -153,7 +153,7 @@ useDocsHead({
         you spent editing the script and how many words and pages it grew; nothing about what you
         typed, and nothing for a sample. Removing a script removes them. The theme you chose, whether you have seen the tour, and which
         What’s new notes you have seen are in the browser’s localStorage, a small store for a website’s own notes. So, for a moment while a
-        page closes, is any text not yet written to the recovery copy; the next visit moves it there.
+        page closes, is any text not yet written to the autosave; the next visit moves it there.
         None of it is a cookie, and none of it leaves this device.
       </li>
     </ul>

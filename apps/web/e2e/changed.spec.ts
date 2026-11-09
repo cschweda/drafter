@@ -407,14 +407,14 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     await focusWindow(page);
 
     await expect(bar(page)).toContainText(
-      "Drafter can't find The Call.fountain. It may have been moved or deleted.",
+      "Drafter can't find the file The Call.fountain: it was moved, renamed, or deleted.",
     );
     // Typing still works, and nothing is lost.
     await typeAtEnd(page, 'Still here.');
     await expect(editor(page)).toContainText('Still here.');
 
     await nextFileName(page, 'Moved.fountain');
-    await bar(page).getByRole('button', { name: 'Save As' }).click();
+    await bar(page).getByRole('button', { name: 'Save to a new file…' }).click();
     await expect.poll(() => textOf(page, 'Moved.fountain')).toContain('Still here.');
     await expect(bar(page)).not.toContainText("can't find");
     await expect
@@ -429,7 +429,7 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     await focusWindow(page);
     await expect(bar(page)).toContainText("Drafter can't find");
 
-    await bar(page).getByRole('button', { name: "Edit this browser's copy" }).click();
+    await bar(page).getByRole('button', { name: 'Keep working without the file' }).click();
     await expect(bar(page)).not.toContainText("can't find");
     await expect.poll(async () => (await byTitle(page, 'The Call'))?.fsHandleId).toBeUndefined();
     // The text is still there, and a focus checks nothing more.
@@ -442,15 +442,17 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     await start(page);
     await openTheCall(page);
     await changeFile(page, [0x63, 0x61, 0x66, 0xe9, 0x0a]);
-    await expect(bar(page)).toContainText("Drafter can't read The Call.fountain as text");
+    await expect(bar(page)).toContainText(
+      'The file The Call.fountain no longer looks like a text file',
+    );
     await expect(editor(page)).toContainText('A phone rings.');
     // Fixed at the other end, the bar goes.
     await changeFile(page, V2);
     await expect(editor(page)).toContainText('Nobody answers.');
-    await expect(bar(page)).not.toContainText("can't read");
+    await expect(bar(page)).not.toContainText('no longer looks like a text file');
   });
 
-  test('opens read-only until the file can be checked', async ({ page }) => {
+  test('stays editable while the file waits to be checked', async ({ page }) => {
     await stubPermission(page);
     await start(page);
     await openTheCall(page);
@@ -458,16 +460,18 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     await setPermission(page, 'prompt');
     await putFile(page, NAME, V2);
     await page.reload();
-    await expect(bar(page)).toContainText('This script is saved in The Call.fountain.');
-    await expect(editor(page)).toHaveAttribute('contenteditable', 'false');
-    // The recovery copy is what is shown: the file was not read without permission.
+    await expect(bar(page)).toContainText('This script is linked to the file The Call.fountain.');
+    await expect(bar(page)).toContainText('You can keep typing.');
+    // Typing is never blocked by a file that can't be checked yet (2026-11-09).
+    await expect(editor(page)).toHaveAttribute('contenteditable', 'true');
+    // The autosave is what is shown: the file was not read without permission.
     await expect(editor(page)).toContainText('A phone rings.');
     await expect(editor(page)).not.toContainText('Nobody answers.');
 
-    await bar(page).getByRole('button', { name: 'Check for changes' }).click();
+    await bar(page).getByRole('button', { name: 'Check the file' }).click();
     // One click asks and checks.
     await expect(editor(page)).toContainText('Nobody answers.');
-    await expect(bar(page)).not.toContainText('This script is saved in');
+    await expect(bar(page)).not.toContainText('This script is linked to');
     await expect(editor(page)).toHaveAttribute('contenteditable', 'true');
     expect(await timesAsked(page)).toBe(1);
   });
@@ -500,14 +504,14 @@ test.describe('a file changed somewhere else (Chromium)', () => {
       // The file's version is recorded as seen, which takes a moment, before the page goes.
       await expect.poll(async () => (await byTitle(page, 'The Call'))?.savedHash).not.toBe(before);
 
-      // The "saved in" bar.
+      // The "linked to" bar.
       await setPermission(page, 'prompt');
       await page.reload();
-      await expect(bar(page)).toContainText('This script is saved in');
+      await expect(bar(page)).toContainText('This script is linked to');
       expect(await violations(page)).toEqual([]);
-      await bar(page).getByRole('button', { name: 'Check for changes' }).focus();
+      await bar(page).getByRole('button', { name: 'Check the file' }).focus();
       await page.keyboard.press('Enter');
-      await expect(bar(page)).not.toContainText('This script is saved in');
+      await expect(bar(page)).not.toContainText('This script is linked to');
 
       // The "gone" bar.
       await removeFile(page, NAME);

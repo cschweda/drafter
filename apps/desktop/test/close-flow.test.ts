@@ -433,7 +433,7 @@ describe('what the dialogs say', () => {
   test('asks to save the changes to the script, with three buttons', () => {
     const text = closeDialogText('The Call');
     expect(text.message).toBe('Save the changes to “The Call” before closing?');
-    expect(text.detail).toBe("Your unsaved changes stay in Drafter's recovery copy either way.");
+    expect(text.detail).toBe("Your unsaved changes are in Drafter's autosave either way.");
     expect(text.buttons).toEqual(['Save', "Don't Save", 'Cancel']);
     // Cancel is the default, and what Escape does.
     expect(text.buttons[text.defaultId]).toBe('Cancel');
@@ -444,12 +444,12 @@ describe('what the dialogs say', () => {
   test('promises no recovery copy when there is none', () => {
     const text = closeDialogText('The Call', false);
     expect(text.detail).toBe(
-      "These changes are in no file and no recovery copy, so Don't Save loses them.",
+      "These changes aren't in any file or in Drafter's autosave, so Don't Save loses them.",
     );
     expect(text.detail).not.toMatch(/stay/);
     expect(text.buttons).toEqual(['Save', "Don't Save", 'Cancel']);
     expect(text.buttons[text.defaultId]).toBe('Cancel');
-    expect(closeDialogText('The Call', true).detail).toMatch(/recovery copy either way/);
+    expect(closeDialogText('The Call', true).detail).toMatch(/autosave either way/);
   });
 
   test('keeps a long or odd title to one line', () => {
@@ -467,15 +467,15 @@ describe('what the dialogs say', () => {
     expect(text.buttons).toEqual(["Don't Save", 'Cancel']);
     expect(text.buttons[text.defaultId]).toBe('Cancel');
     expect(text.buttons[text.cancelId]).toBe('Cancel');
-    expect(text.detail).toMatch(/recovery copy/);
+    expect(text.detail).toMatch(/autosave/);
   });
 
-  test('without a recovery copy (or no word of one) promises none', () => {
+  test('without an autosave (or no word of one) promises none', () => {
     const text = unresponsiveDialogText(false);
     expect(text.buttons).toEqual(["Don't Save", 'Cancel']);
-    expect(text.detail).not.toMatch(/stays in Drafter's recovery copy/);
+    expect(text.detail).not.toMatch(/The rest is in Drafter's autosave/);
     expect(text.detail).toMatch(/may lose/);
-    expect(unresponsiveDialogText(true).detail).toMatch(/stays in Drafter's recovery copy/);
+    expect(unresponsiveDialogText(true).detail).toMatch(/The rest is in Drafter's autosave/);
   });
 });
 

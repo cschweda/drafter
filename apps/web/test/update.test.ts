@@ -47,7 +47,7 @@ describe('the wording', () => {
   test('is the brief’s', () => {
     expect(UPDATE_READY).toBe('A new version of Drafter is ready');
     expect(UNSAVED_MESSAGE).toBe(
-      'Your unsaved changes stay in this browser’s recovery copy, but they aren’t in your file yet.',
+      'Your unsaved changes are in Drafter’s autosave in this browser, but they aren’t in your file yet.',
     );
   });
 

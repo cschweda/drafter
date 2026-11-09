@@ -126,7 +126,7 @@ export function buildSteps(
           target: target('status'),
           title: 'The status bar',
           content:
-            'The file’s name (it opens History), the pages and running time, words, problems, and the template. A warning shows here if this browser may clear its recovery copy.',
+            'The file’s name (it opens History), the pages and running time, words, problems, and the template. A warning shows here if this browser might delete Drafter’s autosave.',
         }
       : {
           id: 'status',

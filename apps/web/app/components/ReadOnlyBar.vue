@@ -9,10 +9,10 @@ const { readOnly, failed, editHere } = useGuard();
   <div :class="{ bar: readOnly, 'tone-warn': readOnly }">
     <!-- The status region stays in the page and only its text changes, so a screen reader hears it. -->
     <p role="status">
-      <template v-if="readOnly">This script is open for editing in another tab.</template>
+      <template v-if="readOnly">You can’t type here because this script is open in another Drafter tab.</template>
       <span v-if="readOnly && failed" class="failed">The other tab didn’t let go. Try again.</span>
     </p>
-    <button v-if="readOnly" type="button" class="take" @click="editHere">Edit here instead</button>
+    <button v-if="readOnly" type="button" class="take" @click="editHere">Type here instead</button>
   </div>
 </template>
 

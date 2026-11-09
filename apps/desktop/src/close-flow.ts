@@ -243,8 +243,8 @@ export function closeDialogText(title: string, recoverable = true): DialogText {
   return {
     message: `Save the changes to “${oneLine(title)}” before closing?`,
     detail: recoverable
-      ? "Your unsaved changes stay in Drafter's recovery copy either way."
-      : "These changes are in no file and no recovery copy, so Don't Save loses them.",
+      ? "Your unsaved changes are in Drafter's autosave either way."
+      : "These changes aren't in any file or in Drafter's autosave, so Don't Save loses them.",
     buttons: CLOSE_DIALOG.buttons,
     defaultId: 2,
     cancelId: 2,
@@ -256,8 +256,8 @@ export function unresponsiveDialogText(recoverable = false): DialogText {
   return {
     message: 'Drafter isn’t responding.',
     detail: recoverable
-      ? "Closing now may lose the last few seconds of typing. The rest stays in Drafter's recovery copy."
-      : "Closing now may lose changes that are in no file: Drafter can't say whether its recovery copy has them.",
+      ? "Closing now may lose the last few seconds of typing. The rest is in Drafter's autosave."
+      : "Closing now may lose changes that are in no file: Drafter can't tell whether its autosave has them.",
     buttons: ["Don't Save", 'Cancel'],
     defaultId: 1,
     cancelId: 1,

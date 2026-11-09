@@ -23,7 +23,7 @@ export const INSTALL_FAILED =
   'Drafter couldn’t install the update, and is still the version you have. Nothing was lost.';
 
 export const UNSAVED_MESSAGE =
-  'Your unsaved changes stay in this browser’s recovery copy, but they aren’t in your file yet.';
+  'Your unsaved changes are in Drafter’s autosave in this browser, but they aren’t in your file yet.';
 
 /** The question's text. With no recovery copy to promise (the browser can't keep one), it says so. */
 export function unsavedMessage(
@@ -32,11 +32,11 @@ export function unsavedMessage(
 ): string {
   if (kind === 'restart') {
     return recovery === 'unavailable'
-      ? 'Drafter can’t keep a recovery copy right now, so your unsaved changes aren’t in your file or anywhere else yet.'
-      : 'Your unsaved changes stay in Drafter’s recovery copy, but they aren’t in your file yet.';
+      ? 'Autosave isn’t working right now, so your unsaved changes aren’t in your file or anywhere else yet.'
+      : 'Your unsaved changes are in Drafter’s autosave, but they aren’t in your file yet.';
   }
   return recovery === 'unavailable'
-    ? 'Drafter can’t keep a recovery copy in this browser right now, so your unsaved changes aren’t in your file or anywhere else yet.'
+    ? 'Autosave isn’t working in this browser right now, so your unsaved changes aren’t in your file or anywhere else yet.'
     : UNSAVED_MESSAGE;
 }
 

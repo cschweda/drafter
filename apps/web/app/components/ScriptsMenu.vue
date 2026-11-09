@@ -20,10 +20,10 @@ import { useScript } from '~/storage/script';
 const script = useScript();
 const { project, busy } = script;
 const { readOnly, taking } = useGuard();
-// Not while "Edit here instead" waits for the other tab: the lock it gets is for the script shown.
+// Not while "Type here instead" waits for the other tab: the lock it gets is for the script shown.
 const idle = computed(() => !!project.value && !busy.value && !taking.value);
 // A tab that only shows a script another tab is editing may show old text: it starts, saves, and
-// opens nothing until the writer chooses "Edit here instead". Switching to a script stays possible.
+// opens nothing until the writer chooses "Type here instead". Switching to a script stays possible.
 const canStart = computed(() => idle.value && !readOnly.value);
 
 // Read as the menu draws, as the command's own `enabled` is.
@@ -314,7 +314,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <template v-if="confirming">
         <h2 id="remove-title" class="d-dialog-title">Remove “{{ confirming.title }}” from this browser?</h2>
         <p id="remove-why">
-          Drafter forgets this script and its recovery copy. A file you saved it to isn’t touched.
+          Drafter forgets this script and its autosave. A file you saved it to isn’t touched.
           <template v-if="neverSaved">
             This script has never been saved to a file, so removing it deletes the only copy.
           </template>

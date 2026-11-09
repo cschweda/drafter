@@ -32,11 +32,11 @@ export function installKindOf(win: Features, nav: Features = {}): InstallKind {
 }
 
 const LEAD_INSTALLED =
-  'This browser may clear your recovery copy. Save the script to a file to keep it safe.';
+  'Your browser might delete Drafter’s autosave. Save the script to a file to keep a copy of your own.';
 const LEAD =
-  'This browser may clear your recovery copy. Save the script to a file to keep it safe, or install Drafter as an app';
+  'Your browser might delete Drafter’s autosave. Save the script to a file to keep a copy of your own, or install Drafter as an app';
 
-/** The warning's sentence for `kind`, from "This browser may clear your recovery copy" on. */
+/** The warning's sentence for `kind`, from "Your browser might delete Drafter’s autosave" on. */
 export function installAdvice(kind: InstallKind): string {
   if (kind === 'installed') return LEAD_INSTALLED;
   if (kind === 'chromium') {

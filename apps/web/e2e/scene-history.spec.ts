@@ -11,7 +11,7 @@ import { drafterDatabase, sampleSeenRows } from './seed';
 // strip's new block menu, and the palette; one Tab stop with History's keys; the
 // whole screen on a phone; and axe in both themes.
 
-const READ_ONLY = 'This script is open for editing in another tab.';
+const READ_ONLY = 'You can’t type here because this script is open in another Drafter tab.';
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'History of this scene' });
 const versions = (page: Page) =>
   dialog(page).getByRole('listbox', { name: 'Versions' }).getByRole('option');

@@ -519,7 +519,7 @@ test.describe('scripts and another tab', () => {
     await expect(bar(a)).toHaveCount(0);
     expect(await isEditable(a)).toBe(true);
     // And now nobody holds A's old script: B takes it.
-    await b.getByRole('button', { name: 'Edit here instead' }).click();
+    await b.getByRole('button', { name: 'Type here instead' }).click();
     await expect(bar(b)).toHaveCount(0);
     expect(await isEditable(b)).toBe(true);
     await expect(editor(b)).toContainText('HELD BY A');

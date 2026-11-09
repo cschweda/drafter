@@ -16,7 +16,7 @@ const takeButton = (page: Page) => history(page).getByRole('button', { name: 'Ta
 const statusButton = (page: Page) => page.getByRole('button', { name: /^History, / });
 const rowMenu = (page: Page) => page.getByRole('menu');
 const scriptsMenu = (page: Page) => page.getByRole('group', { name: 'Scripts', exact: true });
-const READ_ONLY = 'This script is open for editing in another tab.';
+const READ_ONLY = 'You can’t type here because this script is open in another Drafter tab.';
 
 interface SnapshotRow {
   id: string;

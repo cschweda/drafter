@@ -26,7 +26,6 @@ import {
 import { useEditor } from '../editor/session';
 import { appChange } from '../editor/typewriter';
 import { sayOutline } from '../outline/notice';
-import { useScript } from '../storage/script';
 import { factsChange, novelFacts, sameFacts, structureOf } from './carry';
 import { focusedPassage, passageOf, setPassage } from './focus';
 
@@ -74,7 +73,6 @@ let session: NovelSession | undefined;
 
 function create(): NovelSession {
   const editor = useEditor();
-  const script = useScript();
   return effectScope(true).run(() => {
     // The tree and the facts are read lazily: a read of either while the text has moved on reads
     // the book first (once for each text: `structureOf` keeps its tree), and while anything holds
@@ -178,7 +176,6 @@ function create(): NovelSession {
 
     const readOnly = () => {
       if (editor.locked.value) return 'This novel is open for editing in another tab.';
-      if (script.fileLocked.value) return 'Drafter is checking this novel’s file first.';
       if (editor.view.state.readOnly) return 'This novel can’t be changed here.';
       return null;
     };
