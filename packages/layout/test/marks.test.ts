@@ -24,7 +24,8 @@ describe('applyMarks', () => {
   });
 
   it('does not mark a line a span only abuts', () => {
-    const l = rows().find((x) => x.role === 'action' && x.span.to > x.span.from)!;
+    const l = rows().find((x) => x.role === 'action' && x.span.to > x.span.from);
+    if (!l) throw new Error('no action line');
     const out = applyMarks(layout, {
       spans: [{ from: l.span.to, to: l.span.to + 1, set: 'x' }],
       gaps: [],
@@ -55,5 +56,54 @@ describe('applyMarks', () => {
     const out = applyMarks(layout, none);
     expect(JSON.stringify(layout)).toBe(before);
     expect(out.pages[0]).toBe(layout.pages[0]);
+  });
+
+  describe('dual dialogue', () => {
+    const dual = 'INT. ROOM - DAY\n\nBOB\nHello there.\n\nAL ^\nHi back to you.\n\nBob leaves.\n';
+    const dl = paginate(parse(dual), screenplay);
+    const row = () => {
+      const found = dl.pages.flatMap((p) => p.lines).find((l) => l.right);
+      if (!found?.right) throw new Error('no dual row');
+      return found;
+    };
+    const marked = (out: typeof dl) =>
+      out.pages.flatMap((p) => p.lines).filter((l) => l.mark || l.right?.mark);
+
+    it('marks a right-column line by its own span', () => {
+      const r = row().right;
+      if (!r) throw new Error('no right');
+      const out = applyMarks(dl, {
+        spans: [{ from: r.span.from, to: r.span.from + 1, set: 'g' }],
+        gaps: [],
+      });
+      const hit = out.pages.flatMap((p) => p.lines).find((l) => l.right?.mark);
+      expect(hit?.right?.mark).toEqual({ set: 'g' });
+      expect(hit?.mark).toBeUndefined();
+      expect(row().right?.mark).toBeUndefined();
+    });
+
+    it('a gap whose next line is in the right column marks that column', () => {
+      const r = row().right;
+      if (!r) throw new Error('no right');
+      const out = applyMarks(dl, { spans: [], gaps: [{ at: r.span.from, set: 'p' }] });
+      const hit = marked(out);
+      expect(hit).toHaveLength(1);
+      expect(hit[0].right?.mark).toEqual({ set: 'p' });
+    });
+
+    it('a gap picks the least start at or after it whatever the row order', () => {
+      const at = dual.indexOf('Hello') + 1;
+      const out = applyMarks(dl, { spans: [], gaps: [{ at, set: 'p' }] });
+      const hit = marked(out);
+      expect(hit).toHaveLength(1);
+      const part = hit[0].mark ? hit[0] : hit[0].right;
+      expect(part?.span.from).toBeGreaterThanOrEqual(at);
+      const starts = dl.pages
+        .flatMap((p) => p.lines)
+        .flatMap((l) => (l.right ? [l, l.right] : [l]))
+        .filter((l) => l.span.to > l.span.from && l.span.from >= at)
+        .map((l) => l.span.from);
+      expect(part?.span.from).toBe(Math.min(...starts));
+    });
   });
 });
