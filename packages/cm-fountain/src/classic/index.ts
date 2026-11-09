@@ -103,7 +103,13 @@ export {
   tidiedSpeech,
   tidyLeft,
 } from './marks';
-export { keepMetadata, metadataHidden, onlyClearedBlock, protectedRange } from './metadata';
+export {
+  keepMetadata,
+  metadataHidden,
+  metadataKept,
+  onlyClearedBlock,
+  protectedRange,
+} from './metadata';
 export {
   acceptOffer,
   classicMoveBy,

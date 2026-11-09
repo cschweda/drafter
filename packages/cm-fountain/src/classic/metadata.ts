@@ -306,3 +306,15 @@ export const metadataHidden: StateField<DecorationSet> = StateField.define<Decor
   update: (value, tr) => (tr.docChanged ? hidden(tr.state) : value),
   provide: (field) => EditorView.decorations.from(field),
 });
+
+/** The caret steps over the hidden block as one thing, and never stands inside it. */
+const metadataAtomic: Extension = EditorView.atomicRanges.of((view) =>
+  view.state.field(metadataHidden),
+);
+
+/**
+ * The block hidden and kept in any Fountain editor, not only in Classic Mode (2026-11-09): to a
+ * writer it looked like an error, or like text to delete. The file still has it; Classic Mode's
+ * own list holds the same two extensions, which CodeMirror counts once.
+ */
+export const metadataKept: Extension = [keepMetadata, metadataHidden, metadataAtomic];

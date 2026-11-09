@@ -316,7 +316,9 @@ test('is hidden in a tab that only shows the script', async ({ page, context, is
   await expect(bar(page)).toBeVisible();
   const other = await context.newPage();
   await other.goto('/');
-  await expect(other.getByText('This script is open for editing in another tab')).toBeVisible();
+  await expect(
+    other.getByText('You can’t type here because this script is open in another Drafter tab'),
+  ).toBeVisible();
   await showSource(other);
   await expect(other.getByRole('toolbar', { name: 'Element bar' })).toHaveCount(0);
 });

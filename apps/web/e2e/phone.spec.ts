@@ -29,7 +29,15 @@ test.beforeEach(async ({ page }) => {
 });
 
 /** The text of the script, even when the Source tab is not the one showing. */
-const text = (page: Page) => editor(page).evaluate((el) => el.textContent ?? '');
+/** The whole text, from the editor's state: Drafter's settings block is hidden on screen (2026-11-09). */
+const text = (page: Page) =>
+  page.evaluate(() => {
+    type Linked = { view?: { state: { doc: { toString(): string } } } };
+    const content = document.querySelector('.cm-content') as
+      | (Element & { cmTile?: Linked; cmView?: Linked })
+      | null;
+    return (content?.cmTile ?? content?.cmView)?.view?.state.doc.toString() ?? '';
+  });
 
 async function openAppMenu(page: Page) {
   await mark(page).click();

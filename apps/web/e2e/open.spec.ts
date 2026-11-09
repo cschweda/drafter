@@ -262,7 +262,9 @@ test.describe('opening a file (Chromium, with the picker)', () => {
     const second = await context.newPage();
     await stubPickers(second);
     await start(second);
-    await expect(second.getByText('This script is open for editing in another tab')).toBeVisible();
+    await expect(
+      second.getByText('You can’t type here because this script is open in another Drafter tab'),
+    ).toBeVisible();
     await putFile(second, 'Door.fountain', SCRIPT);
     const count = (await stored(second)).length;
 

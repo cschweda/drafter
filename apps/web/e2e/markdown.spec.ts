@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { files, nextFileName, picks, putFile, removePickers, stubPickers, textOf } from './fs-stub';
-import { pasteText, showView } from './modules';
+import { pasteText, showView, wholeText } from './modules';
 
 // Markdown is a document kind beside Fountain (Plan 4 Task 6). The accessibility test the plan
 // names is in a11y.spec.ts.
@@ -772,9 +772,9 @@ test.describe('switching between Markdown and Fountain', () => {
     await expect(chipMenu(page)).toHaveCount(0);
     await editor(page).focus();
     await page.keyboard.press('ControlOrMeta+End');
-    await expect(editor(page)).toContainText('"template":"stage-play-standard"');
+    await expect.poll(() => wholeText(page)).toContain('"template":"stage-play-standard"');
     await page.keyboard.press('ControlOrMeta+z');
-    await expect(editor(page)).not.toContainText('"template":"stage-play-standard"');
+    await expect.poll(() => wholeText(page)).not.toContain('"template":"stage-play-standard"');
     // Undo took the block back; the script is still Fountain.
     await expect(chip(page)).toHaveText('Screenplay');
 

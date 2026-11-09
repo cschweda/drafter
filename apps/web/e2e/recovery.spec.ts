@@ -23,7 +23,7 @@ async function toastWithAdvice(page: Page) {
     await expect(toast).not.toContainText('might delete Drafter’s autosave');
     await why.click();
   } else await expect(why).toHaveCount(0);
-  await expect(toast).toContainText('may clear');
+  await expect(toast).toContainText('might delete');
   return toast;
 }
 
@@ -251,7 +251,7 @@ test.describe('the recovery copy', () => {
       // Its text is said in a polite live region.
       await expect
         .poll(() => page.evaluate(() => (window as unknown as { heard: string[] }).heard))
-        .toContainEqual(expect.stringMatching(/^polite: .*may be cleared/));
+        .toContainEqual(expect.stringMatching(/^polite: .*isn’t guaranteed/));
       await expect(page.locator('.top [data-warning]')).toHaveCount(0);
       // Said politely: the alert region is for a copy that can't be kept at all.
       await expect(page.locator('[role="alert"] [data-warning]')).toHaveCount(0);
@@ -289,7 +289,9 @@ test.describe('the recovery copy', () => {
       await breakIndexedDb(page);
       await page.goto('/');
       const urgent = page.locator('[role="alert"][data-warning-region]');
-      await expect(urgent.locator('[data-warning="unavailable"]')).toContainText('only in memory');
+      await expect(urgent.locator('[data-warning="unavailable"]')).toContainText(
+        'only in this page',
+      );
       await expect(page.locator('[data-warning="not-persistent"]')).toHaveCount(0);
     });
 
@@ -372,7 +374,7 @@ test.describe('the recovery copy', () => {
       await expect(warning(page)).toBeVisible();
       // It matters most, so it is announced at once.
       await expect(page.locator('[role="alert"] [data-warning]')).toBeVisible();
-      await expect(warning(page)).toContainText('only in memory');
+      await expect(warning(page)).toContainText('only in this page');
       await typeAtEnd(page, '\n\nStill typing.');
       await expect(editor(page)).toContainText('Still typing.');
       // It has no way to dismiss, and it stays.
