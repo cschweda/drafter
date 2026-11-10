@@ -2,6 +2,7 @@ import { parse } from '@drafter/fountain';
 import { type Layout, paginate } from '@drafter/layout';
 import { renderPdf } from '@drafter/render-pdf';
 import { builtins, type Template } from '@drafter/templates';
+import fontkit from '@pdf-lib/fontkit';
 import { describe, expect, it } from 'vitest';
 import { extract, fonts, itemAt, rowText, textOf } from './helpers';
 
@@ -89,6 +90,27 @@ describe('revision marks in the PDF', () => {
       const item = pdf[p]?.items.find((i) => i.str.startsWith('Blue'));
       expect(item?.x).toBeCloseTo((margin.left + textWidth - [...header].length) * 7.2, 1);
     });
+  });
+
+  it("the header's em dash and every other character draw in the embedded Courier Prime", async () => {
+    const header = 'Double Pink Revision — 12 November 2026';
+    const regular = fontkit.create(Buffer.from(fonts.regular));
+    if (!('hasGlyphForCodePoint' in regular)) throw new Error('not a single font');
+    // No character falls back to the missing glyph.
+    const lacking = [...header].filter(
+      (c) => !regular.hasGlyphForCodePoint(c.codePointAt(0) as number),
+    );
+    expect(lacking).toEqual([]);
+    const layout = paginate(parse(SOURCE), screenplay);
+    const pdf = await extract(
+      await renderPdf(layout, screenplay, { fonts, revisionHeader: header }),
+      {
+        fontNames: true,
+      },
+    );
+    const item = pdf[1]?.items.find((i) => i.str.includes('Revision'));
+    expect(item?.str).toBe(header);
+    expect(item?.fontName).toMatch(/CourierPrime-Regular$/);
   });
 
   it('an unmarked layout draws exactly as before', async () => {

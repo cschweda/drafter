@@ -131,6 +131,8 @@ export function optionsPhrase(options: ExportOptions): string {
   if (options.sceneNumbers !== 'none') parts.push(SCENE_PHRASE[options.sceneNumbers]);
   if (options.titlePage !== 'full') parts.push(TITLE_PHRASE[options.titlePage]);
   if (options.notes === 'include') parts.push('notes');
+  // The caller leaves this out of an export that prints no marks (all but a locked script's PDF and HTML).
+  if (options.revisionMarks === 'none') parts.push('no revision marks');
   if (options.reopenable) parts.push('the full script inside');
   if (parts.length === 0) return '';
   if (parts.length < 3) return `with ${parts.join(' and ')}`;

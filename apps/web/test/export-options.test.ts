@@ -338,6 +338,15 @@ describe('Revision marks (production design §8)', () => {
     });
   });
 
+  test('the toast says "no revision marks" for None', () => {
+    const base = { sceneNumbers: 'none', titlePage: 'full', notes: 'leave-out' } as const;
+    expect(optionsPhrase({ ...base, revisionMarks: 'none' })).toBe('with no revision marks');
+    expect(optionsPhrase({ ...base, revisionMarks: 'open' })).toBe('');
+    expect(optionsPhrase({ ...base, sceneNumbers: 'all', revisionMarks: 'none' })).toBe(
+      'with every scene numbered and no revision marks',
+    );
+  });
+
   test('its choices are named', async () => {
     const { EXPORT_OPTION_LABELS, REVISION_MARKS_LEGEND } = await import(
       '../app/storage/export-options'

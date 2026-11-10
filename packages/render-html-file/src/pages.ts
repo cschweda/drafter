@@ -247,6 +247,16 @@ function furnitureHtml(
 }
 
 /**
+ * What a screen reader hears for a page, as plain text (the caller escapes it; a locked script's
+ * label and header come from its block): "Title page", or "Page 12A", with the revision header
+ * after it on every body page while the header shows ("Page 12A, Blue Revision — 12 November 2026").
+ */
+function markerOf(page: Page, revisionHeader: string | undefined): string {
+  if (page.number === 0) return 'Title page';
+  return revisionHeader ? `Page ${page.label}, ${revisionHeader}` : `Page ${page.label}`;
+}
+
+/**
  * The exact pages (design §3.1 and §4.2), as the PDF prints them and the Script tab draws them:
  * `<section class="pages">` holding a `div.page` card per layout page, sized by the template's
  * grid, each starting with a visually hidden "Page N" ("Title page" for the title page), then its
@@ -284,7 +294,7 @@ export function pagesHtml(
     el(
       'div',
       { class: `page ${size}` },
-      el('span', { class: 'vh' }, page.number === 0 ? 'Title page' : `Page ${page.label}`) +
+      el('span', { class: 'vh' }, escapeHtml(printable(markerOf(page, opts.revisionHeader)))) +
         bodyHtml(page, template, grid, marks.get(page.number)) +
         furnitureHtml(page, template, grid, opts.revisionHeader),
     ),

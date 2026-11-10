@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { parse, type TextChange } from '@drafter/fountain';
 import { paginate, titlePageFor } from '@drafter/layout';
-import { lock } from '@drafter/production';
+import { lock, readProduction } from '@drafter/production';
 import { FONT_FILES, type FontSet, renderPdf } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
 import { builtins, type Template } from '@drafter/templates';
@@ -182,5 +182,17 @@ describe('a locked script’s exports', () => {
     expect(textOfReply(reply)).toBe(
       renderText(paginate(doc, template, { sceneNumbers: 'none' }), template),
     );
+  });
+
+  test('a label with markup in it makes the block unreadable: the export is unlocked and clean', async () => {
+    const source = (await lockedEdited()).replace('["2",', '["1<img src=x onerror=alert(1)>",');
+    expect(source).toContain('<img src=x');
+    expect(readProduction(parse(source).meta)).toBeNull();
+    const html = textOfReply(
+      await createExporter(realFonts)({ ...HTML, source, template, options: OPTIONS }),
+    );
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('data-furniture="mark"');
+    expect(html).not.toContain('2A.');
   });
 });

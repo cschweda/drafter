@@ -815,6 +815,37 @@ describe('exporting', () => {
     expect(t.exportNotice.value).toBe('Exported The Call Part 1.txt, with no title page.');
   });
 
+  test('names Revision marks: None in a locked script’s PDF and HTML toasts only', async () => {
+    const { parse, setMeta } = await import('@drafter/fountain');
+    const { productionMeta } = await import('@drafter/production');
+    const doc = parse(TEXT);
+    const meta = productionMeta(doc.meta, {
+      lockedAt: '2026-11-09',
+      firstScene: 1,
+      numbers: ['1'],
+      pages: [{ label: '1', line: 2, printed: 0 }],
+      sets: [{ name: 'Blue', color: '#8fb4e8', date: '2026-11-09', draft: 'd1' }],
+      baseline: 'H4sIAAAAAAAA',
+    });
+    let lockedText = TEXT;
+    for (const c of [...setMeta(doc, meta)].sort((a, b) => b.from - a.from)) {
+      lockedText = lockedText.slice(0, c.from) + c.insert + lockedText.slice(c.to);
+    }
+    const t = await load({ inPlace: true });
+    shown.project = { exportOptions: { revisionMarks: 'none' } };
+    // Unlocked, there are no marks to leave out.
+    expect(await t.exportScript('pdf')).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf.');
+    shown.text = lockedText;
+    expect(await t.exportScript('pdf')).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf, with no revision marks.');
+    expect(await t.exportScript('html')).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.html, with no revision marks.');
+    // Plain text never prints them.
+    expect(await t.exportScript('txt')).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.txt.');
+  });
+
   test('gives the same script’s export with other options its own export', async () => {
     const t = await load({ inPlace: true });
     shown.project = { exportOptions: { titlePage: 'full' } };

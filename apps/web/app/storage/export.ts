@@ -1,5 +1,6 @@
 import { savedText } from '@drafter/cm-fountain';
 import { type ManuscriptDetails, resolveDetails } from '@drafter/novel';
+import { readProduction } from '@drafter/production';
 import type { MapOptions } from '@drafter/story-map';
 import type { Template } from '@drafter/templates';
 import { ref } from 'vue';
@@ -195,7 +196,12 @@ function notFor(kind: ExportKind, markdown: boolean, novel: boolean): string | n
  * names only the title page; only a Markdown file, an HTML file, and an EPUB carry notes (Call 28;
  * HTML export design §3.3, §10a), so only their toasts say "notes".
  */
-function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions): string {
+function withOptions(
+  kind: ExportKind,
+  markdown: boolean,
+  options: ExportOptions,
+  locked: boolean,
+): string {
   // A story map has its own choices, in its dialog, and never carries the script (Call 20). A
   // Fountain file is the script's text as written: the options shape how it is drawn, not the text.
   // A manuscript's details are its dialog's, and the toast names no options for it either.
@@ -205,11 +211,17 @@ function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions
   if (markdown) {
     return inside.reopenable ? `, ${optionsPhrase({ ...DEFAULT_EXPORT_OPTIONS, ...inside })}` : '';
   }
-  const { reopenable: _, ...rest } = options;
+  const { reopenable: _, revisionMarks, ...rest } = options;
+  // Only a locked script's PDF and HTML file print revision marks, so only theirs say None.
+  const marks =
+    locked && revisionMarks === 'none' && (kind === 'pdf' || kind === 'html')
+      ? { revisionMarks }
+      : {};
   const honoured: ExportOptions = {
     ...rest,
     sceneNumbers: kind === 'fdx' ? 'none' : options.sceneNumbers,
     notes: kind === 'md' || kind === 'html' || kind === 'epub' ? options.notes : 'leave-out',
+    ...marks,
     ...inside,
   };
   const phrase = optionsPhrase(honoured);
@@ -332,6 +344,8 @@ async function run(
   const template = editor.template.value;
   const markdown = editor.kind.value === 'markdown';
   const options = exportOptionsOf(script.project.value);
+  // Whether the text is locked, for the toast's "no revision marks", read with the text.
+  const locked = !markdown && readProduction(editor.doc.value.meta) !== null;
   // A document with no title is called after its file, as the project's own title is.
   const fallback = fileBaseName(titleFileOf(script.project.value));
   const novel = markdown && isNovel(source);
@@ -453,7 +467,7 @@ async function run(
     const lacking =
       missing.length > 0 ? ` ${MISSING_GLYPHS}${missing.slice(0, MISSING_SHOWN).join(', ')}.` : '';
     await announceReady(
-      `Exported ${target?.name ?? name}${withOptions(kind, markdown, options)}.${lacking}${after}`,
+      `Exported ${target?.name ?? name}${withOptions(kind, markdown, options, locked)}.${lacking}${after}`,
     );
     return 'saved';
   } catch (error) {

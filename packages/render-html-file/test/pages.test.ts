@@ -428,6 +428,36 @@ describe('pagesHtml: a locked script (production design §8)', () => {
     expect(names[1]).toBe('Page 1A');
   });
 
+  it('a label and a header with markup in them are escaped', () => {
+    const label = '1<img src=x onerror=alert(1)>&';
+    const header = 'Blue <b>Revision</b> & co';
+    const layout = locked(
+      () => false,
+      () => label,
+    );
+    const { html } = pagesHtml(layout, screenplay, [], { revisionHeader: header });
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('<b>');
+    expect(html).toContain('Page 1&lt;img src=x onerror=alert(1)&gt;&amp;');
+    expect(html).toContain('Blue &lt;b&gt;Revision&lt;/b&gt; &amp; co');
+    const el = host(html);
+    expect(el.querySelector('img')).toBeNull();
+    expect(el.querySelectorAll('.page > .vh')[1]?.textContent).toBe(`Page ${label}, ${header}`);
+  });
+
+  it('the hidden page marker says the revision on every body page while the header shows', () => {
+    const layout = locked(
+      () => false,
+      (n) => `${n}A`,
+    );
+    const header = 'Blue Revision — 12 November 2026';
+    const el = host(pagesHtml(layout, screenplay, [], { revisionHeader: header }).html);
+    const names = [...el.querySelectorAll('.page > .vh')].map((s) => s.textContent);
+    expect(names).toEqual(
+      layout.pages.map((p) => (p.number === 0 ? 'Title page' : `Page ${p.label}, ${header}`)),
+    );
+  });
+
   it('an unmarked layout draws exactly as before', () => {
     const layout = paginate(parse(SCREENPLAY), screenplay);
     expect(pagesHtml(layout, screenplay, [], {})).toEqual(pagesHtml(layout, screenplay));

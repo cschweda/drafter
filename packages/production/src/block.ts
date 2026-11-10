@@ -30,17 +30,27 @@ const isStringArray = (v: unknown, cap: number): v is string[] =>
 
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0;
 
+/**
+ * A stored page label: a page number, perhaps with letters (`12`, `12A`). A-pages and ranges are
+ * computed, never stored. Anything else (markup, a script) makes the block unreadable, since a
+ * label prints in every paged export.
+ */
+const LABEL = /^[0-9A-Z]{1,12}$/;
+/** A set's name ("Blue", "Double Pink"): letters, digits, spaces, and a little punctuation. */
+const SET_NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
+
 function readPage(v: unknown): LockedPage | null {
   if (!Array.isArray(v) || v.length !== 3) return null;
   const [label, line, printed] = v;
-  if (typeof label !== 'string' || !isCount(line) || !isCount(printed)) return null;
+  if (typeof label !== 'string' || !LABEL.test(label)) return null;
+  if (!isCount(line) || !isCount(printed)) return null;
   return { label, line, printed };
 }
 
 function readSet(v: unknown): ProductionSet | null {
   if (!isObject(v)) return null;
   const { name, color, date, draft, lines, gaps } = v;
-  if (typeof name !== 'string' || typeof color !== 'string') return null;
+  if (typeof name !== 'string' || !SET_NAME.test(name) || typeof color !== 'string') return null;
   if (typeof date !== 'string' || typeof draft !== 'string') return null;
   const set: ProductionSet = { name, color, date, draft };
   if (lines !== undefined) {
