@@ -433,6 +433,23 @@ describe('pagesHtml: a locked script (production design §8)', () => {
     });
   });
 
+  it('a custom template with one line between the page number and the body prints one header line, cut with … (ruling F5)', () => {
+    const { margin, width, numbering } = screenplay.page;
+    const tight: Template = {
+      ...screenplay,
+      page: { ...screenplay.page, numbering: { ...numbering, line: margin.top - 2 } },
+    };
+    const layout = paginate(parse('INT. HALL - DAY\n\nThe hall.'), tight);
+    const header = `Blue Pages, the shooting draft of the long weir, for every department on the ${'x'.repeat(33)}`;
+    const el = host(pagesHtml(layout, tight, [], { revisionHeader: header }).html);
+    const items = [...el.querySelectorAll('[data-furniture="revision"]')];
+    expect(items).toHaveLength(1);
+    const text = items[0]?.textContent ?? '';
+    expect(text.endsWith('…')).toBe(true);
+    expect([...text].length).toBe(width - margin.left - margin.right);
+    expect(items[0]?.classList.contains(rowClass(margin.top - 1))).toBe(true);
+  });
+
   it('the hidden page marker names the page by its label', () => {
     const layout = locked(
       () => false,

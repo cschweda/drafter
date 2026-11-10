@@ -5,7 +5,7 @@ import { lock, productionLayout, readProduction } from '@drafter/production';
 import { FONT_FILES, type FontSet, renderPdf } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
 import { builtins, type Template } from '@drafter/templates';
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { extract } from '../../../packages/render-pdf/test/helpers';
 import {
   createExporter,
@@ -13,10 +13,27 @@ import {
   type ExportReply,
 } from '../app/workers/export-compute';
 
-// A locked script's exports (production design §8, rulings 2b, 3b, F1): the PDF, the HTML file's
-// pages, and plain text print the locked labels (12A) and a new scene's A-number; the PDF prints
-// the open set's asterisks and its revision header unless Revision marks is None. Fountain, Final
-// Draft, and Markdown are as before.
+// A locked script's exports (production design §8, rulings 2b, 3b, F1, F4): the PDF, the HTML
+// file's pages, and plain text print the locked labels (12A) and a new scene's A-number; the PDF
+// prints the open set's asterisks and its revision header unless Revision marks is None. Fountain,
+// Final Draft, and Markdown are as before. Pages that can't be placed refuse the revised pages, the
+// breakdown, and the sides.
+
+// Ruling F4: a switch that makes productionLayout report its locked pages couldn't be placed.
+const degrade = vi.hoisted(() => ({ on: false }));
+vi.mock('@drafter/production', async (original) => {
+  const real = await original<typeof import('@drafter/production')>();
+  return {
+    ...real,
+    productionLayout: async (...args: Parameters<typeof real.productionLayout>) => {
+      const result = await real.productionLayout(...args);
+      return degrade.on ? { ...result, locked: false, degraded: true } : result;
+    },
+  };
+});
+afterEach(() => {
+  degrade.on = false;
+});
 
 const template = builtins['us-screenplay'] as Template;
 const HEADER = 'Blue Revision — 9 November 2026';
@@ -201,6 +218,60 @@ describe('a locked script’s exports', () => {
     expect(html).not.toContain('<img');
     expect(html).not.toContain('data-furniture="mark"');
     expect(html).not.toContain('2A.');
+  });
+});
+
+describe('pages that can’t be placed (ruling F4)', () => {
+  const REFUSED = {
+    error: "The locked pages couldn't be placed, so nothing was exported.",
+    refused: true,
+  };
+
+  test('revised pages, the breakdown, and the sides refuse, and make no file', async () => {
+    const source = await lockedEdited();
+    degrade.on = true;
+    const exporter = createExporter(realFonts);
+    const revised = await exporter({
+      kind: 'revised-pdf',
+      source,
+      template,
+      options: OPTIONS,
+      which: { kind: 'all' },
+      marks: 'open',
+      header: HEADER,
+      tint: false,
+    });
+    expect(revised).toEqual(REFUSED);
+    for (const kind of ['breakdown-csv', 'breakdown-pdf'] as const) {
+      expect(
+        await exporter({ kind, source, template, title: 'The Hall', today: '2026-11-09' }),
+      ).toEqual(REFUSED);
+    }
+    const sides = await exporter({
+      kind: 'sides-pdf',
+      source,
+      template,
+      options: OPTIONS,
+      names: ['NOBODY'],
+      scenes: [1],
+      today: '2026-11-09',
+    });
+    expect(sides).toEqual(REFUSED);
+  });
+
+  test('the full PDF, the HTML file, and plain text still export, unlocked', async () => {
+    const source = await lockedEdited();
+    degrade.on = true;
+    const exporter = createExporter(realFonts);
+    expect(
+      bytesOf(await exporter({ kind: 'pdf', source, template, options: OPTIONS })).length,
+    ).toBeGreaterThan(0);
+    expect(textOfReply(await exporter({ ...HTML, source, template, options: OPTIONS }))).toContain(
+      '<html',
+    );
+    expect(
+      textOfReply(await exporter({ kind: 'txt', source, template, options: OPTIONS })),
+    ).toContain('Line 1 of');
   });
 });
 

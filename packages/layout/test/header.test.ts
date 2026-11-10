@@ -26,4 +26,17 @@ describe('headerLines', () => {
     expect(narrow[1]?.endsWith('…')).toBe(true);
     expect([...(narrow[1] ?? '')].length).toBe(40);
   });
+
+  it('with room for one line only, prints one, cut with … (ruling F5)', () => {
+    const header = `Blue Pages, the shooting draft of the long weir, for every department on the ${'x'.repeat(33)}`;
+    const [line, ...rest] = headerLines(header, 60, 1);
+    expect(rest).toEqual([]);
+    expect([...(line ?? '')].length).toBe(60);
+    expect(line?.endsWith('…')).toBe(true);
+    expect(header.startsWith((line ?? '').slice(0, -1))).toBe(true);
+    // A header that fits is as it was.
+    expect(headerLines('Blue Revision — 9 November 2026', 60, 1)).toEqual([
+      'Blue Revision — 9 November 2026',
+    ]);
+  });
 });

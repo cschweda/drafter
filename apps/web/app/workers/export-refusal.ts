@@ -7,3 +7,9 @@ export class ExportRefusal extends Error {}
 
 /** Said when revised pages are asked of a script that isn't locked. */
 export const NOT_LOCKED_REVISED = 'Only a locked script prints revised pages.';
+
+/**
+ * Said when a locked script's pages couldn't be placed (`ProductionLayoutResult.degraded`): revised
+ * pages, the breakdown, and the sides print nothing rather than unlocked labels.
+ */
+export const DEGRADED = "The locked pages couldn't be placed, so nothing was exported.";

@@ -20,6 +20,7 @@ import {
   breakdownRows,
   noRevisedPages,
   type ProductionSet,
+  paperTint,
   productionLayout,
   productionSceneNumbers,
   type RevisedChoice,
@@ -77,7 +78,7 @@ import {
   type StageWeights,
   WEIGHTS,
 } from './export-progress';
-import { ExportRefusal, NOT_LOCKED_REVISED } from './export-refusal';
+import { DEGRADED, ExportRefusal, NOT_LOCKED_REVISED } from './export-refusal';
 
 /**
  * How a script exports: which scene numbers print, how much of the title page, and whether a
@@ -782,11 +783,12 @@ async function breakdown(
   documentFonts: () => Promise<DocumentFontSet>,
 ): Promise<string | Uint8Array> {
   const { source, template } = request;
-  const { layout, sceneNumbers } = await productionLayout(source, template, {
+  const { layout, degraded, sceneNumbers } = await productionLayout(source, template, {
     sceneNumbers: 'none',
     titlePage: 'none',
     marks: 'none',
   });
+  if (degraded) throw new ExportRefusal(DEGRADED);
   const rows = breakdownRows(parse(source), template, layout, sceneNumbers);
   if (request.kind === 'breakdown-csv') return toCsv([[...BREAKDOWN_COLUMNS], ...rows]);
   return renderTablePdf(
@@ -815,6 +817,7 @@ async function revisedPdf(
   const { source, template, which, marks, options = DEFAULT_EXPORT_OPTIONS } = request;
   const opts = { sceneNumbers: options.sceneNumbers, titlePage: 'none' } as const;
   const printed = await productionLayout(source, template, { ...opts, marks });
+  if (printed.degraded) throw new ExportRefusal(DEGRADED);
   if (!printed.locked || !printed.open) throw new ExportRefusal(NOT_LOCKED_REVISED);
   const chooseMarks = which.kind === 'current' ? 'open' : 'all';
   const chooseBy =
@@ -861,11 +864,12 @@ async function sidesPdf(
   const known = new Set(sidesChoices(doc, template).scenes.map((scene) => scene.ordinal));
   const scenes = request.scenes.filter((ordinal) => known.has(ordinal));
   if (scenes.length === 0) throw new ExportRefusal('Tick at least one scene to print.');
-  const { layout, sceneNumbers } = await productionLayout(source, template, {
+  const { layout, degraded, sceneNumbers } = await productionLayout(source, template, {
     sceneNumbers: options.sceneNumbers,
     titlePage: 'none',
     marks: 'open',
   });
+  if (degraded) throw new ExportRefusal(DEGRADED);
   const cut = sides(layout, doc, template, scenes);
   if (cut.layout.pages.length === 0) throw new ExportRefusal('Tick at least one scene to print.');
   return renderPdf(cut.layout, template, {
@@ -881,8 +885,9 @@ async function sidesPdf(
 }
 
 /**
- * Each body page's colour, by its number: the colour of the newest of `sets` (oldest first) with a
- * mark on it; a page with none has no entry. renderPdf ignores a colour that isn't `#rrggbb`.
+ * Each body page's tint, by its number: the paper colour (`paperTint`) of the newest of `sets`
+ * (oldest first) with a mark on it; a page with none, or whose set is White or has a name with no
+ * paper colour, has no entry. renderPdf ignores a colour that isn't `#rrggbb`.
  */
 function pageColours(layout: Layout, sets: readonly ProductionSet[]): Map<number, string> {
   const rank = new Map(sets.map((set, i) => [set.name, i]));
@@ -895,8 +900,8 @@ function pageColours(layout: Layout, sets: readonly ProductionSet[]): Map<number
         if (mark) newest = Math.max(newest, rank.get(mark.set) ?? -1);
       }
     }
-    const set = sets[newest];
-    if (set) colours.set(page.number, set.color);
+    const tint = paperTint(sets[newest]?.name ?? '');
+    if (tint) colours.set(page.number, tint);
   }
   return colours;
 }

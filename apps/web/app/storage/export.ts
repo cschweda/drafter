@@ -1,6 +1,5 @@
 import { savedText } from '@drafter/cm-fountain';
 import { type ManuscriptDetails, resolveDetails } from '@drafter/novel';
-import { readProduction } from '@drafter/production';
 import type { MapOptions } from '@drafter/story-map';
 import type { Template } from '@drafter/templates';
 import { ref } from 'vue';
@@ -11,6 +10,7 @@ import { markdownTitle } from '../markdown/title';
 import { isNovel } from '../novel/kind';
 import type { RevisedPagesChoice } from '../production/revised';
 import type { SidesChoice } from '../production/sides';
+import { useProduction } from '../production/use-production';
 import { type Settings, useSettings } from '../settings/settings';
 import { ratesOf } from '../stats/timing';
 import {
@@ -408,8 +408,9 @@ async function run(
   const template = editor.template.value;
   const markdown = editor.kind.value === 'markdown';
   const options = exportOptionsOf(script.project.value);
-  // Whether the text is locked, for the toast's "no revision marks", read with the text.
-  const locked = !markdown && readProduction(editor.doc.value.meta) !== null;
+  // Whether the text is locked, for the toast's "no revision marks": as the Production tab reads
+  // it, so a damaged block (one whose baseline won't decode) is not, and exports unlocked.
+  const locked = !markdown && useProduction().locked.value;
   // A document with no title is called after its file, as the project's own title is.
   const fallback = fileBaseName(titleFileOf(script.project.value));
   const novel = markdown && isNovel(source);

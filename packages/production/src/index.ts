@@ -37,7 +37,7 @@ export {
   revisedIndexes,
   revisedPages,
 } from './revised';
-export { nextSetName, REVISION_COLORS, REVISION_NAMES } from './sets';
+export { nextSetName, paperTint, REVISION_COLORS, REVISION_NAMES } from './sets';
 export {
   type CrossOut,
   type SidesChoices,

@@ -113,6 +113,24 @@ describe('revision marks in the PDF', () => {
     expect(numbering.line + 2).toBeLessThan(margin.top);
   });
 
+  it('a custom template with one line between the page number and the body prints one header line, cut with … (ruling F5)', async () => {
+    // margin.top - numbering.line < 3: a second line would land on the body's first.
+    const tight: Template = {
+      ...screenplay,
+      page: { ...screenplay.page, numbering: { ...numbering, line: margin.top - 2 } },
+    };
+    const layout = paginate(parse(SOURCE), tight);
+    const header = `Blue Pages, the shooting draft of the long weir, for every department on the ${'x'.repeat(33)}`;
+    const pdf = await extract(await renderPdf(layout, tight, { fonts, revisionHeader: header }));
+    const first = rowText(pdf[1], yOfLine(margin.top - 1));
+    expect(first.endsWith('…')).toBe(true);
+    expect([...first].length).toBe(width - margin.left - margin.right);
+    expect(header.startsWith(first.slice(0, -1))).toBe(true);
+    // The body's first line is the body's, with no header in it.
+    expect(rowText(pdf[1], yOfLine(margin.top))).not.toContain('x');
+    expect(pdf[1]?.items.filter((i) => i.str.includes('Blue Pages'))).toHaveLength(1);
+  });
+
   it("the header's em dash and every other character draw in the embedded Courier Prime", async () => {
     const header = 'Double Pink Revision — 12 November 2026';
     const regular = fontkit.create(Buffer.from(fonts.regular));

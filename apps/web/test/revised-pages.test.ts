@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import type { TextChange } from '@drafter/fountain';
-import { lock, REVISION_COLORS, setHeader, startNextSet } from '@drafter/production';
+import { lock, setHeader, startNextSet } from '@drafter/production';
 import { FONT_FILES, type FontSet } from '@drafter/render-pdf';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
@@ -177,7 +177,7 @@ const rgbOf = (hex: string) =>
   [1, 3, 5].map((at) => Number.parseInt(hex.slice(at, at + 2), 16) / 255);
 
 describe('the tint', () => {
-  test('each page in the colour of the newest set marked on it', async () => {
+  test('each page in the paper colour of the newest set marked on it (ruling F3)', async () => {
     const blue = (await locked()).replace('Line 5 of the hall.', 'Line 5 of the great hall.');
     const pink = apply(blue, await startNextSet(blue, '2026-11-10', 'd2', template));
     const source = pink.replace('Line 110 of the hall.', 'Line 110 of the long hall.');
@@ -192,7 +192,8 @@ describe('the tint', () => {
     );
     const pages = await extract(bytes);
     expect(pages).toHaveLength(2);
-    const expected = [REVISION_COLORS.Blue, REVISION_COLORS.Pink].map((c) => rgbOf(c as string));
+    // Blue and Pink paper, not the screen's mid-tone swatches.
+    const expected = ['#9fc5f8', '#f6b8c8'].map(rgbOf);
     for (const [i, colour] of expected.entries()) {
       const got = await tintOf(bytes, i);
       expect(got, `page ${i}`).not.toBeNull();

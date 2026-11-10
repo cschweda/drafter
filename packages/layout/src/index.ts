@@ -1,4 +1,4 @@
-export { headerLines } from './header';
+export { headerLines, headerRows } from './header';
 export { applyMarks, type Marks } from './marks';
 export { sceneNumbersFor } from './numbers';
 export { paginate } from './paginate';

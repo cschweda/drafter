@@ -228,3 +228,25 @@ describe('a locked script’s new scene (ruling F1)', () => {
     expect(result.sceneNumbers).toBeNull();
   });
 });
+
+describe('degraded (ruling F4)', () => {
+  it('pages that cannot be placed are flagged degraded, and still carry the A-numbers', async () => {
+    const source = await newSceneBetween();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    fail.anchors = true;
+    const result = await productionLayout(source, template, { sceneNumbers: 'all', marks: 'open' });
+    expect(result.locked).toBe(false);
+    expect(result.degraded).toBe(true);
+    expect(printedNumbers(result.layout)).toEqual(['5', '5A', '6']);
+  });
+
+  it('a script laid out on its pages, or unlocked, is not degraded', async () => {
+    const source = await newSceneBetween();
+    expect(
+      (await productionLayout(source, template, { sceneNumbers: 'all', marks: 'open' })).degraded,
+    ).toBe(false);
+    expect(
+      (await productionLayout(UNLOCKED, template, { sceneNumbers: 'all', marks: 'open' })).degraded,
+    ).toBe(false);
+  });
+});

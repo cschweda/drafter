@@ -1,4 +1,4 @@
-import { headerLines, type Layout, type LayoutRun, type Page } from '@drafter/layout';
+import { headerLines, headerRows, type Layout, type LayoutRun, type Page } from '@drafter/layout';
 import { CHAR_WIDTH_PT, LINE_HEIGHT_PT, PAPER_POINTS, type Template } from '@drafter/templates';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, type PDFFont, type PDFPage, rgb } from 'pdf-lib';
@@ -227,9 +227,11 @@ export async function renderPdf(
       await drawText(pdfPage, plain(text), col, line);
     }
     if (opts.revisionHeader && page.number !== 0) {
-      // Right-aligned on the text width, under the page number; a long one on two lines.
+      // Right-aligned on the text width, under the page number; a long one on two lines, or on
+      // one, cut, when the body starts too soon under the page number for two (`headerRows`).
       const width = spec.width - spec.margin.left - spec.margin.right;
-      for (const [k, text] of headerLines(opts.revisionHeader, width).entries()) {
+      const rows = headerRows(spec);
+      for (const [k, text] of headerLines(opts.revisionHeader, width, rows).entries()) {
         await drawText(
           pdfPage,
           plain(text),

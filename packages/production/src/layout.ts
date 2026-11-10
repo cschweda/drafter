@@ -61,6 +61,11 @@ export interface ProductionLayoutResult {
    * the script isn't locked (its scenes keep their ordinals), or isn't a screenplay.
    */
   sceneNumbers: ReadonlyMap<number, string> | null;
+  /**
+   * The script is locked but its locked pages couldn't be placed, so `layout` is unlocked: the
+   * full PDF and HTML may print it, but revised pages, the breakdown, and the sides refuse.
+   */
+  degraded: boolean;
 }
 
 /**
@@ -127,6 +132,7 @@ export async function productionLayout(
     sets: [],
     header: null,
     sceneNumbers: null,
+    degraded: false,
   });
   const read = await readLocked(doc.meta);
   if (!read) return unlocked();
@@ -149,6 +155,7 @@ export async function productionLayout(
       ...unlocked(),
       layout: paginate(doc, template, { sceneNumbers, ...given }),
       sceneNumbers: numbers,
+      degraded: true,
     };
   }
   let layout = paginate(doc, template, { sceneNumbers, locked: lockedPages, ...given });
@@ -185,5 +192,6 @@ export async function productionLayout(
     sets,
     header: production.header ?? null,
     sceneNumbers: numbers,
+    degraded: false,
   };
 }

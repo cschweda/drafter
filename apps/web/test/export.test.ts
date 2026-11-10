@@ -55,6 +55,23 @@ vi.mock('../app/storage/script', async () => {
   };
 });
 
+// The Production tab's reading of the script: locked, unlocked, or damaged (locked is false).
+const production = vi.hoisted(() => ({ locked: false, damaged: false }));
+vi.mock('../app/production/use-production', () => ({
+  useProduction: () => ({
+    locked: {
+      get value() {
+        return production.locked;
+      },
+    },
+    damaged: {
+      get value() {
+        return production.damaged;
+      },
+    },
+  }),
+}));
+
 const preferences = vi.hoisted(() => ({
   markdownPaper: 'letter' as 'letter' | 'a4',
   spellLanguage: 'en-US' as 'en-US' | 'en-GB',
@@ -107,6 +124,8 @@ async function load(options: { inPlace: boolean }) {
   shown.text = TEXT;
   shown.kind = 'fountain';
   shown.project = null;
+  production.locked = false;
+  production.damaged = false;
   preferences.markdownPaper = 'letter';
   preferences.spellLanguage = 'en-US';
   missing.list = [];
@@ -816,9 +835,26 @@ describe('exporting', () => {
   });
 
   test('names Revision marks: None in a locked script’s PDF and HTML toasts only', async () => {
+    const t = await load({ inPlace: true });
+    shown.project = { exportOptions: { revisionMarks: 'none' } };
+    // Unlocked, there are no marks to leave out.
+    expect(await t.exportScript('pdf')).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf.');
+    production.locked = true;
+    expect(await t.exportScript('pdf')).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf, with no revision marks.');
+    expect(await t.exportScript('html')).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.html, with no revision marks.');
+    // Plain text never prints them.
+    expect(await t.exportScript('txt')).toBe('saved');
+    expect(t.exportNotice.value).toBe('Exported The Call Part 1.txt.');
+  });
+
+  test('a damaged block is not locked: its toast names no revision marks (minor 9)', async () => {
     const { parse, setMeta } = await import('@drafter/fountain');
     const { productionMeta } = await import('@drafter/production');
     const doc = parse(TEXT);
+    // A readable block whose baseline is a gzip header and nothing more: it won't decode.
     const meta = productionMeta(doc.meta, {
       lockedAt: '2026-11-09',
       firstScene: 1,
@@ -827,23 +863,17 @@ describe('exporting', () => {
       sets: [{ name: 'Blue', color: '#8fb4e8', date: '2026-11-09', draft: 'd1' }],
       baseline: 'H4sIAAAAAAAA',
     });
-    let lockedText = TEXT;
+    let damagedText = TEXT;
     for (const c of [...setMeta(doc, meta)].sort((a, b) => b.from - a.from)) {
-      lockedText = lockedText.slice(0, c.from) + c.insert + lockedText.slice(c.to);
+      damagedText = damagedText.slice(0, c.from) + c.insert + damagedText.slice(c.to);
     }
     const t = await load({ inPlace: true });
+    shown.text = damagedText;
     shown.project = { exportOptions: { revisionMarks: 'none' } };
-    // Unlocked, there are no marks to leave out.
+    // As the Production tab reads it: a baseline that won't decode is damaged, not locked.
+    production.damaged = true;
     expect(await t.exportScript('pdf')).toBe('saved');
     expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf.');
-    shown.text = lockedText;
-    expect(await t.exportScript('pdf')).toBe('saved');
-    expect(t.exportNotice.value).toBe('Exported The Call Part 1.pdf, with no revision marks.');
-    expect(await t.exportScript('html')).toBe('saved');
-    expect(t.exportNotice.value).toBe('Exported The Call Part 1.html, with no revision marks.');
-    // Plain text never prints them.
-    expect(await t.exportScript('txt')).toBe('saved');
-    expect(t.exportNotice.value).toBe('Exported The Call Part 1.txt.');
   });
 
   test('gives the same script’s export with other options its own export', async () => {
