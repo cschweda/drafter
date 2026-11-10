@@ -96,7 +96,7 @@ test.describe('Production exports', () => {
     const label = ((await marked.locator('.drafter-page-number').textContent()) ?? '').trim();
     expect(label).toMatch(/^\d+[A-Z]*\.$/);
 
-    await command(page, 'Export revised pages (PDF)…');
+    await command(page, 'Export as Revised pages (PDF)…');
     await expect(dialog(page)).toBeVisible();
     const header = dialog(page).getByRole('textbox', { name: 'Header text' });
     await expect(header).toHaveValue(/^Blue Revision — /);
@@ -129,7 +129,7 @@ test.describe('Production exports', () => {
     await expect.poll(() => wholeText(page)).toBe(LONG);
 
     const download = page.waitForEvent('download');
-    await command(page, 'Export breakdown (CSV)');
+    await command(page, 'Export as Breakdown (CSV)');
     const file = await download;
     expect(file.suggestedFilename()).toBe('The Long Weir – Breakdown.csv');
     const csv = (await readFile(await file.path(), 'utf8')).split('\r\n');
@@ -155,7 +155,7 @@ test.describe('Production exports', () => {
 
     const downloads: string[] = [];
     page.on('download', (file) => downloads.push(file.suggestedFilename()));
-    await command(page, 'Export revised pages (PDF)…');
+    await command(page, 'Export as Revised pages (PDF)…');
     const exportButton = dialog(page).getByRole('button', { name: 'Export', exact: true });
     await expect(exportButton).toBeEnabled();
     await exportButton.click();
@@ -191,7 +191,7 @@ test.describe('Production exports', () => {
     await replaceWhole(page, script);
     await expect.poll(() => wholeText(page)).toBe(script);
 
-    await command(page, 'Export sides (PDF)…');
+    await command(page, 'Export as Sides (PDF)…');
     const sides = page.getByRole('dialog', { name: 'Export sides' });
     await expect(sides).toBeVisible();
     const exportButton = sides.getByRole('button', { name: 'Export', exact: true });
@@ -229,7 +229,7 @@ test.describe('Production exports', () => {
     await replaceWhole(page, edited);
     await expect.poll(() => wholeText(page)).toBe(edited);
 
-    await command(page, 'Export revised pages (PDF)…');
+    await command(page, 'Export as Revised pages (PDF)…');
     const header = dialog(page).getByRole('textbox', { name: 'Header text' });
     await expect(header).toHaveValue(/^Blue Revision — /);
     await header.fill('Blue Pages <b>Shooting</b>');
@@ -241,7 +241,7 @@ test.describe('Production exports', () => {
       .poll(async () => (await wholeText(page)) ?? '')
       .toContain('"header":"Blue Pages <b>Shooting<\\/b>"');
     // Opened again, the dialog shows the kept header.
-    await command(page, 'Export revised pages (PDF)…');
+    await command(page, 'Export as Revised pages (PDF)…');
     await expect(header).toHaveValue('Blue Pages <b>Shooting</b>');
     await dialog(page).getByRole('button', { name: 'Cancel' }).click();
   });
@@ -259,7 +259,7 @@ test.describe('Production exports', () => {
 
     const downloads: string[] = [];
     page.on('download', (file) => downloads.push(file.suggestedFilename()));
-    await command(page, 'Export revised pages (PDF)…');
+    await command(page, 'Export as Revised pages (PDF)…');
     const exportButton = dialog(page).getByRole('button', { name: 'Export', exact: true });
     await expect(exportButton).toBeEnabled();
     await dialog(page)
@@ -292,5 +292,37 @@ test.describe('Production exports', () => {
     const pages = await pdfPages(await readFile(await (await download).path()));
     expect(pages).toHaveLength(2);
     expect(downloads).toHaveLength(1);
+  });
+
+  test('the Export menu and the tab list the exports, revised pages only once locked', async ({
+    page,
+  }) => {
+    await start(page);
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await scriptsMenu(page).getByRole('button', { name: 'New screenplay' }).click();
+    await expect(scriptsMenu(page)).toBeHidden();
+    await showSource(page);
+    await replaceWhole(page, LONG);
+    await expect.poll(() => wholeText(page)).toBe(LONG);
+    const menu = page.getByRole('group', { name: 'Export', exact: true });
+    const openMenu = async () => {
+      await page.getByRole('button', { name: 'Export', exact: true }).click();
+      await expect(menu).toBeVisible();
+    };
+    await openMenu();
+    for (const name of ['Breakdown (CSV)', 'Breakdown (PDF)', 'Sides (PDF)…']) {
+      await expect(menu.getByRole('button', { name })).toBeVisible();
+    }
+    await expect(menu.getByRole('button', { name: 'Revised pages (PDF)…' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    await command(page, 'Show Production');
+    await expect(panel(page).getByRole('button', { name: 'Breakdown (CSV)' })).toBeVisible();
+    await expect(panel(page).getByRole('button', { name: 'Revised pages (PDF)…' })).toHaveCount(0);
+    await panel(page).getByRole('button', { name: 'Lock pages and scene numbers' }).click();
+    await expect(panel(page)).toContainText('Pages and scene numbers locked on');
+    await expect(panel(page).getByRole('button', { name: 'Revised pages (PDF)…' })).toBeVisible();
+    await openMenu();
+    await expect(menu.getByRole('button', { name: 'Revised pages (PDF)…' })).toBeVisible();
   });
 });

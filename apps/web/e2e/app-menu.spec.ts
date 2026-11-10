@@ -251,7 +251,7 @@ test.describe('the app menu: exports, and the rest', () => {
       await page.keyboard.press('Enter');
       await page
         .getByRole('group', { name: 'Export' })
-        .getByRole('button', { name: 'PDF' })
+        .getByRole('button', { name: 'PDF', exact: true })
         .click();
     }
     expect((await pdf).suggestedFilename()).toBe('The Call.pdf');

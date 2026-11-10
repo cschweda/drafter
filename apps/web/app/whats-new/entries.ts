@@ -50,7 +50,7 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
     version: '0.27.0',
     kind: 'New',
     title: 'Production: locked pages and revisions',
-    text: 'For a script going into production: lock the page and scene numbers, then revise in colors, with asterisks in the margin where words changed, pages like 12A, scenes like 5A, and OMITTED scenes. It is free.',
+    text: 'For a script going into production: lock page and scene numbers and revise in colors, with asterisks where words changed. Export revised pages, a breakdown of every scene, and sides for one actor; it is free.',
     link: { href: '/docs/production/', label: 'Production' },
     banner: false,
   },

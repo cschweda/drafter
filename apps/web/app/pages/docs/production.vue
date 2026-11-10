@@ -12,7 +12,7 @@ if (!page) throw new Error('The Production page is not in the list of help pages
 useDocsHead({
   ...page,
   description:
-    'Locking pages and scene numbers, revisions in colors with marks in the margin, A-pages like 12A, A-scenes like 5A, OMITTED scenes, and the long line at the end of the file.',
+    'Locking pages and scene numbers, colored revisions with margin marks, A-pages like 12A, A-scenes like 5A, OMITTED scenes, revised pages, the breakdown report, and sides.',
 });
 </script>
 
@@ -31,6 +31,8 @@ useDocsHead({
       (<kbd>⌘K</kbd>, <kbd>Ctrl+K</kbd> elsewhere): <strong>Lock pages and scene numbers</strong>,
       <strong>Start the next revision</strong>, <strong>Write new scene numbers</strong>,
       <strong>Omit scene</strong>, <strong>Clear marks…</strong>, and <strong>Unlock…</strong>.
+      The tab’s <strong>Export</strong> section has the three reports below: revised pages, a
+      breakdown, and sides.
     </p>
 
     <h2 id="locking">Locking</h2>
@@ -176,9 +178,86 @@ useDocsHead({
       <code>.OMITTED</code> headings stay; delete them yourself if you no longer want them. Both ask
       first, and both take a snapshot before they act, so what you had is in History.
     </p>
+    <h2 id="revised-pages">Revised pages</h2>
     <p>
-      Next: revised pages, a breakdown report, and sides come in a later release. This page will
-      say so when they arrive.
+      <strong>Revised pages</strong> are only the pages that changed, printed to hand to a crew that
+      already has the last version, so they can swap them in. They are for a locked script: choose
+      <strong>Export → Revised pages (PDF)…</strong>, or use the button in the Production tab.
     </p>
+    <ul>
+      <li>
+        By default you get the pages marked in the open revision. The box can instead take every
+        revision, or a range of pages.
+      </li>
+      <li>
+        Each page keeps its locked label (12A) and its asterisks, and carries a header such as
+        “Blue Revision, 12 November 2026”. You can write your own header; Drafter keeps it in the
+        script.
+      </li>
+      <li>
+        By default only the open revision’s asterisks print; you can print every revision’s. A tint
+        of the revision’s color on the page is an option, off by default, for productions that print
+        on white paper.
+      </li>
+    </ul>
+    <p>
+      The full <strong>PDF</strong> of a locked script also prints the locked page labels and the
+      open revision’s asterisks, with its name and date in the header. In
+      <strong>Export options…</strong>, <strong>Revision marks</strong> chooses between the open
+      revision’s marks and none.
+    </p>
+
+    <h2 id="breakdown">Breakdown</h2>
+    <p>
+      A <strong>breakdown</strong> is a table with a row for each scene, in script order, that a
+      production uses to plan the shoot. <strong>Export → Breakdown (CSV)</strong> makes a
+      spreadsheet file, and <strong>Breakdown (PDF)</strong> a printable table. For a screenplay or
+      a stage play, locked or not. The columns are Scene, INT/EXT, Location, Time, Pages, Page,
+      Cast, and Synopsis.
+    </p>
+    <ul>
+      <li>
+        <strong>Pages</strong> is the scene’s length in eighths of a page, as productions count it:
+        “1 3/8” is one page and three eighths.
+      </li>
+      <li>
+        <strong>Cast</strong> lists the characters who speak in the scene, in the order they first
+        appear. A character who never speaks anywhere in the script is not listed.
+      </li>
+      <li>An OMITTED scene is a row that says OMITTED, so the numbers have no gaps.</li>
+    </ul>
+    <p>Two things to know when you open the CSV in a spreadsheet:</p>
+    <ul>
+      <li>
+        A cell that starts with <code>=</code>, <code>+</code>, <code>-</code>, or <code>@</code>
+        gets an apostrophe in front of it, so the spreadsheet shows it as text and does not run it
+        as a formula.
+      </li>
+      <li>
+        Some spreadsheets read a page count like 3/8 as a date. When you import the file, set the
+        <strong>Pages</strong> column to <strong>Text</strong>.
+      </li>
+    </ul>
+
+    <h2 id="sides">Sides</h2>
+    <p>
+      <strong>Sides</strong> are the pages one actor needs for their scenes, so they can learn them
+      without the whole script. Choose <strong>Export → Sides (PDF)…</strong>.
+    </p>
+    <ul>
+      <li>Choose a character, and their scenes are ticked.</li>
+      <li>
+        Untick any scene that is not shooting that day; a day’s shoot is often a few scenes, not
+        all of one character’s.
+      </li>
+      <li>
+        You get every page a ticked scene is on, at its locked label. Other scenes on those pages
+        are crossed out with a diagonal line, the usual mark for “not this one”.
+      </li>
+      <li>
+        The header names the character, the scenes, and the date. Sides follow the script as it
+        stands now, so the open revision’s marks show, since actors learn the current pages.
+      </li>
+    </ul>
   </article>
 </template>

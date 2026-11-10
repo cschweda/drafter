@@ -337,27 +337,27 @@ export const COMMAND_DATA: readonly CommandData[] = [
   // A locked script's revised pages (production design §8), after its dialog.
   {
     id: 'export-revised-pages',
-    title: 'Export revised pages (PDF)…',
+    title: 'Export as Revised pages (PDF)…',
     group: 'File',
     keywords: [...PRODUCTION_WORDS, 'revised pages', 'colored pages', 'Blue pages', 'Pink pages'],
   },
   // One actor's sides (production design §10), after its dialog.
   {
     id: 'export-sides',
-    title: 'Export sides (PDF)…',
+    title: 'Export as Sides (PDF)…',
     group: 'File',
     keywords: [...PRODUCTION_WORDS, 'sides', 'actor', 'audition', 'character pages', 'call sheet'],
   },
   // The breakdown report (production design §9): a row per scene, with no dialog.
   {
     id: 'export-breakdown-csv',
-    title: 'Export breakdown (CSV)',
+    title: 'Export as Breakdown (CSV)',
     group: 'File',
     keywords: [...PRODUCTION_WORDS, 'breakdown', 'scene list', 'spreadsheet', 'cast per scene'],
   },
   {
     id: 'export-breakdown-pdf',
-    title: 'Export breakdown (PDF)',
+    title: 'Export as Breakdown (PDF)',
     group: 'File',
     keywords: [...PRODUCTION_WORDS, 'breakdown', 'scene list', 'cast per scene'],
   },

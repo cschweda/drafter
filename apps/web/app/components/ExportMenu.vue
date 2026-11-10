@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { commandById } from '~/commands/registry';
 import { useEditor } from '~/editor/session';
+import { useProduction } from '~/production/use-production';
 import {
   type ExportKind,
   exportError,
@@ -12,6 +13,9 @@ import {
 // A Markdown document exports as a PDF, its Markdown file, or plain text (Markdown PDF design §10);
 // a novel as a manuscript too.
 const { kind, novel } = useEditor();
+// Revised pages need locked pages (production design §8); the rest are for any script.
+const { state: lockState } = useProduction();
+const locked = computed(() => kind.value === 'fountain' && lockState.value !== null);
 
 // The toolbar's Export menu (Phase 1 design §9.7): PDF, Fountain, plain text, Final Draft, Markdown, and the treatment (a Markdown document's are the PDF, the Markdown file, and plain text). The trigger is the toolbar's
 // Export button, drawn by the toolbar and given through the slot. Each item runs the export's
@@ -92,6 +96,12 @@ function chooseTreatment() {
 }
 
 /** A novel's manuscript asks for its title page's details first, in its own dialog. */
+/** A Production export (design §§8-10): the revised pages and the sides ask first, in a dialog. */
+function chooseProduction(id: string) {
+  close(true);
+  commandById(id)?.run();
+}
+
 function chooseManuscript(format: 'pdf' | 'docx') {
   close(true);
   commandById(`export-manuscript-${format}`)?.run();
@@ -189,6 +199,27 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
         </button>
         <button type="button" class="item" @click="chooseManuscript('docx')">
           <UIcon name="i-lucide-file-text" class="icon" />Manuscript (Word)…
+        </button>
+      </template>
+      <!-- Production: for a script. Revised pages only once its pages are locked. -->
+      <template v-if="kind !== 'markdown'">
+        <div class="rule" role="separator" />
+        <button
+          v-if="locked"
+          type="button"
+          class="item"
+          @click="chooseProduction('export-revised-pages')"
+        >
+          <UIcon name="i-lucide-file-pen" class="icon" />Revised pages (PDF)…
+        </button>
+        <button type="button" class="item" @click="chooseProduction('export-breakdown-csv')">
+          <UIcon name="i-lucide-table" class="icon" />Breakdown (CSV)
+        </button>
+        <button type="button" class="item" @click="chooseProduction('export-breakdown-pdf')">
+          <UIcon name="i-lucide-table-properties" class="icon" />Breakdown (PDF)
+        </button>
+        <button type="button" class="item" @click="chooseProduction('export-sides')">
+          <UIcon name="i-lucide-user-round" class="icon" />Sides (PDF)…
         </button>
       </template>
       <div class="rule" role="separator" />
