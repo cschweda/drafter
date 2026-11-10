@@ -188,7 +188,10 @@ test.describe('offline', () => {
     await expect(editor(page)).toContainText('The Call');
     await page.getByRole('button', { name: 'Export', exact: true }).click();
     const download = page.waitForEvent('download');
-    await page.getByRole('group', { name: 'Export' }).getByRole('button', { name: 'PDF' }).click();
+    await page
+      .getByRole('group', { name: 'Export' })
+      .getByRole('button', { name: 'PDF', exact: true })
+      .click();
     expect((await download).suggestedFilename()).toBe('The Call.pdf');
   });
 
@@ -207,7 +210,10 @@ test.describe('offline', () => {
     await expect(editor(page)).toContainText('# Untitled');
     await page.getByRole('button', { name: 'Export', exact: true }).click();
     const download = page.waitForEvent('download');
-    await page.getByRole('group', { name: 'Export' }).getByRole('button', { name: 'PDF' }).click();
+    await page
+      .getByRole('group', { name: 'Export' })
+      .getByRole('button', { name: 'PDF', exact: true })
+      .click();
     expect((await download).suggestedFilename()).toBe('Untitled.pdf');
     await expect(page.locator('.toast [role="status"]')).toHaveText('Exported Untitled.pdf.');
   });

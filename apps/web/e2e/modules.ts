@@ -99,7 +99,10 @@ export async function chooseExport(page: Page, name: string | RegExp) {
   await settled(page);
   if (await button.isVisible()) {
     await button.click();
-    await page.getByRole('group', { name: 'Export' }).getByRole('button', { name }).click();
+    await page
+      .getByRole('group', { name: 'Export' })
+      .getByRole('button', { name, exact: name === 'PDF' })
+      .click();
     return;
   }
   await more.click();

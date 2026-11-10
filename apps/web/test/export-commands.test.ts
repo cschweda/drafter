@@ -11,6 +11,7 @@ function when(novel: boolean): When {
     isFountain: () => false,
     isMarkdown: () => true,
     isNovel: () => novel,
+    isLocked: () => false,
     exportsHere: () => true,
   };
 }

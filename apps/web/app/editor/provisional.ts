@@ -2,7 +2,7 @@ import { type EditorState, type Extension, StateEffect, StateField } from '@code
 import { Decoration, type DecorationSet, EditorView, WidgetType } from '@codemirror/view';
 import { parsedDoc } from '@drafter/cm-fountain';
 import type { Block } from '@drafter/fountain';
-import { provisionalNumbers } from '@drafter/production';
+import { lockedSceneNumbers } from '@drafter/production';
 
 // A locked screenplay's new scenes (production design §7.1): a heading with no number written shows
 // the A-number it will have, dimmed, after the heading, until Write new scene numbers (or the next
@@ -46,19 +46,15 @@ type Heading = Extract<Block, { kind: 'scene_heading' }>;
 
 /** The widgets for the unnumbered headings of `state`'s text, given the issued numbers. */
 function widgetsOf(state: EditorState, issued: readonly string[]): DecorationSet {
-  const heads = state
-    .field(parsedDoc)
-    .blocks.filter((b): b is Heading => b.kind === 'scene_heading');
-  if (!heads.some((h) => h.sem.number === null)) return Decoration.none;
-  const numbers = provisionalNumbers(
-    heads.map((h) => h.sem.number),
-    new Set(issued),
-  );
+  const { blocks } = state.field(parsedDoc);
+  if (!blocks.some((b) => b.kind === 'scene_heading' && b.sem.number === null)) {
+    return Decoration.none;
+  }
+  // The numbers every export prints and the Script pane shows (`lockedSceneNumbers`).
   const ranges = [];
-  for (const [i, heading] of heads.entries()) {
+  for (const [i, number] of lockedSceneNumbers(blocks, issued)) {
+    const heading = blocks[i] as Heading;
     if (heading.sem.number !== null) continue;
-    const number = numbers[i];
-    if (!number) continue;
     const end = state.doc.lineAt(heading.span.from).to;
     ranges.push(Decoration.widget({ widget: new ProvisionalNumber(number), side: 1 }).range(end));
   }

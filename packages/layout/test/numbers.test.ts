@@ -51,3 +51,26 @@ describe('sceneNumbersFor', () => {
     );
   });
 });
+
+describe('given numbers (a locked script’s A-numbers)', () => {
+  const source = 'INT. A - DAY #5#\n\nOne.\n\nINT. B - DAY\n\nTwo.\n\nINT. C - DAY #6#\n\nThree.';
+  const given = new Map([[2, '5A']]);
+
+  it('print as a written number does, under As written and Number every scene', () => {
+    const doc = parse(source);
+    const at = (numbering: SceneNumbering) =>
+      printed(paginate(doc, screenplay, { sceneNumbers: numbering, numbers: given }));
+    expect(at('all')).toEqual(['5', '5A', '6']);
+    expect(at('written')).toEqual(['5', '5A', '6']);
+    expect(at('none')).toEqual([]);
+  });
+
+  it('never replace a number written in the script', () => {
+    const doc = parse(source);
+    const layout = paginate(doc, screenplay, {
+      sceneNumbers: 'all',
+      numbers: new Map([[0, '99']]),
+    });
+    expect(printed(layout)).toEqual(['5', '2', '6']);
+  });
+});

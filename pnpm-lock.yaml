@@ -476,6 +476,9 @@ importers:
 
   packages/production:
     dependencies:
+      '@drafter/cast':
+        specifier: workspace:*
+        version: link:../cast
       '@drafter/compare':
         specifier: workspace:*
         version: link:../compare
@@ -485,6 +488,9 @@ importers:
       '@drafter/layout':
         specifier: workspace:*
         version: link:../layout
+      '@drafter/outline':
+        specifier: workspace:*
+        version: link:../outline
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates

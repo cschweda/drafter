@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { numbersScenes } from '@drafter/production';
+import { commandById } from '~/commands/registry';
 import { useLayout } from '~/editor/layout';
 import { useEditor } from '~/editor/session';
 import {
@@ -14,7 +15,7 @@ import { DAMAGED_MESSAGE, useProduction } from '~/production/use-production';
 
 // The Production tab (production design §5): the script's state, the lock, the next revision with
 // the earlier ones under it, and Scene numbers start at. Each word is explained once, where it
-// first shows, since a writer may be meeting them here. The exports come with Plan 2.
+// first shows, since a writer may be meeting them here.
 const editor = useEditor();
 const { state, openSet, damaged } = useProduction();
 const { layout } = useLayout();
@@ -165,6 +166,24 @@ function onFirstScene(event: Event) {
             Unlock…
           </DButton>
         </div>
+
+        <!-- The exports (design §5): a table of scenes, and the pages an actor needs. -->
+        <h3>Export</h3>
+        <div class="action row tight">
+          <DButton v-if="locked" @click="commandById('export-revised-pages')?.run()">
+            Revised pages (PDF)…
+          </DButton>
+          <DButton @click="commandById('export-breakdown-csv')?.run()">Breakdown (CSV)</DButton>
+          <DButton @click="commandById('export-breakdown-pdf')?.run()">Breakdown (PDF)</DButton>
+          <DButton @click="commandById('export-sides')?.run()">Sides (PDF)…</DButton>
+        </div>
+        <p class="hint">
+          A breakdown is a table with a row for each scene: where it happens, how long it is, and who
+          speaks in it. Sides are the pages an actor needs for their scenes.<template v-if="locked">
+            Revised pages are the pages that changed since the lock, printed to be swapped into a
+            crew's scripts.</template
+          ><template v-else> Revised pages come once the script is locked.</template>
+        </p>
       </template>
     </section>
   </div>
@@ -231,6 +250,9 @@ p {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 24px;
+}
+.action.row.tight {
+  margin-top: 8px;
 }
 .hint {
   margin-top: 6px;

@@ -41,6 +41,8 @@ function lineMapper(oldText: string, newText: string): (page: LockedPage) => Map
 interface Placed extends Mapped {
   label: string;
   at: number;
+  /** The line a rebase stores: for page 1 where its own anchor line maps, not the pin at 0. */
+  stored: Mapped;
   /** False when the page collides with an earlier one (same line, no further into it) or has no text left. */
   kept: boolean;
 }
@@ -51,19 +53,26 @@ function place(pages: readonly LockedPage[], oldText: string, newText: string): 
   const out: Placed[] = [];
   let last = -1;
   let lastPrinted = 0;
+  // Where page 1's own first line landed. A page that starts there or earlier means page 1's text is all cut.
+  let own: { at: number; printed: number } | undefined;
   for (const [k, page] of pages.entries()) {
     // The first locked page starts at the top of the script, whatever was added before it, so new
     // opening material flows into page 1 and overflows as 1A, 1B: no page ever prints as 1 twice.
     const m = k === 0 ? { line: 0, printed: 0 } : map(page);
     const at = starts[m.line] ?? newText.length;
+    const o = k === 0 ? map(page) : m;
+    if (k === 0) own = { at: starts[o.line] ?? newText.length, printed: o.printed };
+    // Nothing of page 1's own text is left before this page: it folds into page 1 (1-2).
+    const emptied =
+      k > 0 && own !== undefined && (at < own.at || (at === own.at && m.printed <= own.printed));
     // A long paragraph or speech can hold several page starts, further into it each time.
     const after = at > last || (at === last && m.printed > lastPrinted);
-    const kept = after && at < newText.length;
+    const kept = after && !emptied && at < newText.length;
     if (kept) {
       last = at;
       lastPrinted = m.printed;
     }
-    out.push({ label: page.label, line: m.line, printed: m.printed, at, kept });
+    out.push({ label: page.label, line: m.line, printed: m.printed, at, stored: o, kept });
   }
   return out;
 }
@@ -102,9 +111,9 @@ export function rebaseAnchors(
   for (const p of place(pages, oldBaseline, newBaseline)) {
     if (p.kept) {
       into = p;
-      out.push({ label: p.label, line: p.line, printed: p.printed });
+      out.push({ label: p.label, line: p.stored.line, printed: p.stored.printed });
     } else {
-      out.push({ label: p.label, line: into ? into.line : p.line, printed: 0 });
+      out.push({ label: p.label, line: into ? into.stored.line : p.line, printed: 0 });
     }
   }
   return out;

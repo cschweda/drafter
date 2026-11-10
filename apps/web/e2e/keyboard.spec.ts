@@ -236,7 +236,7 @@ test.describe('the toolbar by Tab', () => {
     const menu = page.getByRole('group', { name: 'Export' });
     await expect(menu).toBeVisible();
     const exported = page.waitForEvent('download');
-    const pdf = menu.getByRole('button', { name: 'PDF' });
+    const pdf = menu.getByRole('button', { name: 'PDF', exact: true });
     for (let i = 0; i < 4 && !(await pdf.evaluate((el) => el === document.activeElement)); i++) {
       await page.keyboard.press('Tab');
     }

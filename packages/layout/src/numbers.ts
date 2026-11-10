@@ -12,12 +12,14 @@ export function rolesOf(blocks: readonly Block[], template: Template): Role[] {
 /**
  * The numbers for `blocks` whose roles are `roles`: a scene heading that prints as one (not left
  * out, and not disabled by the template) counts, and keeps a written number (`#12A#`) under
- * `'all'`, so two scenes can share one.
+ * `'all'`, so two scenes can share one. A heading with none written takes `given`'s number for its
+ * block (a locked script's A-number), which prints as a written one does.
  */
 export function numbersOf(
   blocks: readonly Block[],
   roles: readonly Role[],
   numbering: SceneNumbering,
+  given?: ReadonlyMap<number, string>,
 ): Map<number, string> {
   const numbers = new Map<number, string>();
   if (numbering === 'none') return numbers;
@@ -28,7 +30,8 @@ export function numbersOf(
     if (block.kind !== 'scene_heading') continue;
     if (role === 'omit' || role === 'page_break' || role === 'disabled') continue;
     scene++;
-    const number = numbering === 'all' ? (block.sem.number ?? String(scene)) : block.sem.number;
+    const written = block.sem.number ?? given?.get(i) ?? null;
+    const number = numbering === 'all' ? (written ?? String(scene)) : written;
     if (number !== null) numbers.set(i, number);
   }
   return numbers;

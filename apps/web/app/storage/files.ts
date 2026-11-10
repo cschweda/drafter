@@ -52,7 +52,16 @@ export class FileProblemError extends Error {
   }
 }
 
-export type FileKind = 'fountain' | 'markdown' | 'pdf' | 'html' | 'epub' | 'txt' | 'fdx' | 'docx';
+export type FileKind =
+  | 'fountain'
+  | 'markdown'
+  | 'pdf'
+  | 'html'
+  | 'epub'
+  | 'txt'
+  | 'fdx'
+  | 'docx'
+  | 'csv';
 
 export interface FileAccess {
   /** Save writes back to the file it came from (Chromium's API; a desktop version: always). */
@@ -104,6 +113,7 @@ const pickers = (): PickerWindow => window as unknown as PickerWindow;
 const handleOf = (ref: FileRef) => ref as PermissionedHandle;
 
 const TYPES: Record<FileKind, PickerOptions['types']> = {
+  csv: [{ description: 'Spreadsheet (CSV)', accept: { 'text/csv': ['.csv'] } }],
   fountain: [{ description: 'Fountain script', accept: { 'text/plain': ['.fountain'] } }],
   markdown: [
     { description: 'Markdown document', accept: { 'text/markdown': ['.md', '.markdown'] } },

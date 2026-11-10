@@ -31,7 +31,7 @@ const CLI = `${ROOT}/packages/cli/dist/index.js`;
 const editor = (page: Page) => page.locator('.cm-content');
 const exportButton = (page: Page) => page.getByRole('button', { name: 'Export', exact: true });
 const menu = (page: Page) => page.getByRole('group', { name: 'Export' });
-const pdfItem = (page: Page) => menu(page).getByRole('button', { name: 'PDF' });
+const pdfItem = (page: Page) => menu(page).getByRole('button', { name: 'PDF', exact: true });
 const txtItem = (page: Page) => menu(page).getByRole('button', { name: 'Plain text (.txt)' });
 const htmlItem = (page: Page) => menu(page).getByRole('button', { name: 'HTML (.html)' });
 const toast = (page: Page) => page.locator('.toast [role="status"]');
@@ -678,10 +678,14 @@ test.describe('export options', () => {
       'Final Draft (.fdx)',
       'Markdown (.md)',
       'Treatment (.md)…',
+      // A script's Production exports, after a line (revised pages wait for locked pages).
+      'Breakdown (CSV)',
+      'Breakdown (PDF)',
+      'Sides (PDF)…',
       'Export options…',
     ]);
-    // After a line, of its own.
-    await expect(menu(page).getByRole('separator')).toHaveCount(1);
+    // After a line each, the Production exports and Export options….
+    await expect(menu(page).getByRole('separator')).toHaveCount(2);
     await optionsItem(page).click();
     await expect(optionsDialog(page)).toBeVisible();
     // The defaults, as an export was before there were options.

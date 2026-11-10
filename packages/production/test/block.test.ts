@@ -101,6 +101,48 @@ describe('the production block', () => {
     expect(readProduction(meta({ ...block, pages: folded }))?.pages).toHaveLength(4);
   });
 
+  it('refuses a page label that is not a page number (it prints in every paged export)', () => {
+    for (const label of [
+      '',
+      '1<img src=x onerror=alert(1)>',
+      '12a',
+      '13-14',
+      '1 ',
+      '&amp;',
+      'A'.repeat(13),
+    ]) {
+      const pages = [
+        ['1', 3, 0],
+        [label, 40, 0],
+      ];
+      expect(readProduction(meta({ ...block, pages })), JSON.stringify(label)).toBeNull();
+    }
+    for (const label of ['2', '12A', '12AB', 'A'.repeat(12)]) {
+      const pages = [
+        ['1', 3, 0],
+        [label, 40, 0],
+      ];
+      expect(readProduction(meta({ ...block, pages })), label).not.toBeNull();
+    }
+  });
+
+  it('refuses a set name that is not a name', () => {
+    const named = (name: string) => ({ ...block, sets: [{ ...block.sets[1], name }] });
+    for (const name of ['', '<b>Blue</b>', 'Blue & Pink', 'Blue\nPink', 'x'.repeat(41)]) {
+      expect(readProduction(meta(named(name))), JSON.stringify(name)).toBeNull();
+    }
+    for (const name of [
+      'Blue',
+      'Double Pink',
+      'Salmon 2',
+      'Bleu clair',
+      'Lavande’s',
+      'Gelb-Grün',
+    ]) {
+      expect(readProduction(meta(named(name))), name).not.toBeNull();
+    }
+  });
+
   it('caps the stored baseline by length', () => {
     const at = { ...block, baseline: 'A'.repeat(CAPS.baselineChars) };
     expect(readProduction(meta(at))?.baseline).toHaveLength(CAPS.baselineChars);
@@ -118,5 +160,32 @@ describe('the production block', () => {
     expect('production' in gone).toBe(false);
     expect(gone.other).toBe(1);
     expect(productionMeta(null, null)).toEqual({});
+  });
+  it('reads a header of up to 120 characters, and ignores only the header when it is wrong', () => {
+    expect(readProduction(meta({ ...block, header: '  Blue Pages  ' }))?.header).toBe('Blue Pages');
+    expect(readProduction(meta(block))?.header).toBeUndefined();
+    const at = 'x'.repeat(120);
+    expect(readProduction(meta({ ...block, header: at }))?.header).toBe(at);
+    for (const header of [
+      'x'.repeat(121),
+      'Blue\u0007',
+      'Blue\nPink',
+      '\u202eBlue',
+      '   ',
+      42,
+      null,
+      ['Blue'],
+    ]) {
+      const p = readProduction(meta({ ...block, header }));
+      expect(p, JSON.stringify(header)).not.toBeNull();
+      expect(p?.header, JSON.stringify(header)).toBeUndefined();
+    }
+  });
+
+  it('writes the header back, and none when there is none', () => {
+    const p = readProduction(meta({ ...block, header: 'Blue Pages' }));
+    expect((productionMeta(null, p).production as { header?: string }).header).toBe('Blue Pages');
+    const q = readProduction(meta(block));
+    expect('header' in (productionMeta(null, q).production as object)).toBe(false);
   });
 });

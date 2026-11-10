@@ -1,4 +1,4 @@
-import type { Layout, LayoutRun, Page } from '@drafter/layout';
+import { headerLines, headerRows, type Layout, type LayoutRun, type Page } from '@drafter/layout';
 import { CHAR_WIDTH_PT, LINE_HEIGHT_PT, PAPER_POINTS, type Template } from '@drafter/templates';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, type PDFFont, type PDFPage, rgb } from 'pdf-lib';
@@ -33,6 +33,14 @@ const FONT_NAMES: Readonly<Record<Style, string>> = {
 };
 const SIZE_PT = 12;
 const BLACK = rgb(0, 0, 0);
+/**
+ * How far in from the grid's right edge a revision mark's asterisk stands, in columns: in the right
+ * margin, where Compare draws its own (`apps/web/app/compare/draw.ts`).
+ */
+const STAR_COLUMN_FROM_RIGHT = 5;
+/** A tint's opacity, and what counts as a colour for it. */
+const TINT_OPACITY = 0.12;
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 /** Underlines are half-point rules, 2 pt below the baseline. */
 const UNDERLINE = { thickness: 0.5, drop: 2 };
 
@@ -51,6 +59,11 @@ const columns = (s: string) => {
  * on the template's grid of 7.2 pt columns and 12 pt lines. Reads no files:
  * the caller passes the four font files in `opts.fonts`, and only the styles
  * the script uses are embedded.
+ *
+ * A locked script's revision marks (production design §8): each printed line with a `mark` (or a
+ * row whose right part has one) gets one `*` in the right margin, 5 columns in from the grid's
+ * right edge; `revisionHeader` ("Blue Revision — 12 November 2026") prints right-aligned on the
+ * line under the page number on every page but the title page. With neither, the PDF is as before.
  */
 export async function renderPdf(
   layout: Layout,
@@ -59,6 +72,18 @@ export async function renderPdf(
     fonts: FontSet;
     /** Told how far the render is: the pages drawn, then the file saved. */
     onProgress?: (progress: RenderProgress) => void;
+    /** The revision header, under the page number on every body page. */
+    revisionHeader?: string;
+    /**
+     * A `#rrggbb` that tints every body page (a rectangle at 12% opacity under the text), or each
+     * body page's own colour (null for none); anything that isn't `#rrggbb` is ignored.
+     */
+    tint?: string | ((page: Page) => string | null | undefined);
+    /**
+     * Blocks crossed out: for each, one straight line from the top-left of body line `from` to the
+     * bottom-right of body line `to` (0-based, inclusive) on the page numbered `page`.
+     */
+    crossOut?: ReadonlyArray<{ page: number; from: number; to: number }>;
   },
 ): Promise<Uint8Array> {
   const missing = STYLES.filter((style) => !(opts?.fonts?.[style] instanceof Uint8Array));
@@ -81,6 +106,18 @@ export async function renderPdf(
     .map((line) => line.runs.map((run) => run.text).join(''))
     .join(' ');
   if (title) doc.setTitle(title, { showInWindowTitleBar: true });
+
+  const colourOf = (tint: unknown) =>
+    typeof tint === 'string' && HEX_COLOR.test(tint)
+      ? rgb(
+          Number.parseInt(tint.slice(1, 3), 16) / 255,
+          Number.parseInt(tint.slice(3, 5), 16) / 255,
+          Number.parseInt(tint.slice(5, 7), 16) / 255,
+        )
+      : undefined;
+  const { tint } = opts;
+  const tintOf =
+    typeof tint === 'function' ? (page: Page) => colourOf(tint(page)) : () => colourOf(tint);
 
   const embedded = new Map<Style, PDFFont>();
   const fontFor = async (style: Style) => {
@@ -149,14 +186,59 @@ export async function renderPdf(
   report('draw', 0, pages.length);
   for (const [index, page] of pages.entries()) {
     const pdfPage = doc.addPage([paper.width, paper.height]);
+    const tintColor = page.number === 0 ? undefined : tintOf(page);
+    if (tintColor) {
+      pdfPage.drawRectangle({
+        x: 0,
+        y: 0,
+        width: paper.width,
+        height: paper.height,
+        color: tintColor,
+        opacity: TINT_OPACITY,
+      });
+    }
     for (const [k, row] of page.lines.entries()) {
       for (const part of row.right ? [row, row.right] : [row]) {
         await drawText(pdfPage, part.runs, part.col, spec.margin.top + k);
       }
+      if (row.mark || row.right?.mark) {
+        const col = Math.max(spec.width - STAR_COLUMN_FROM_RIGHT, 0) - spec.margin.left;
+        await drawText(pdfPage, plain('*'), col, spec.margin.top + k);
+      }
+    }
+    for (const range of opts.crossOut ?? []) {
+      if (range.page !== page.number || page.number === 0) continue;
+      if (!Number.isInteger(range.from) || !Number.isInteger(range.to)) continue;
+      const from = Math.max(0, Math.min(range.from, range.to));
+      const to = Math.min(page.lines.length - 1, Math.max(range.from, range.to));
+      if (to < from) continue;
+      pdfPage.drawLine({
+        start: { x: xOf(0), y: yOf(spec.margin.top + from) + LINE_HEIGHT_PT },
+        end: {
+          x: xOf(spec.width - spec.margin.left - spec.margin.right),
+          y: yOf(spec.margin.top + to),
+        },
+        thickness: 1,
+        color: BLACK,
+      });
     }
     if (page.pageNumber) {
       const { text, line, col } = page.pageNumber;
       await drawText(pdfPage, plain(text), col, line);
+    }
+    if (opts.revisionHeader && page.number !== 0) {
+      // Right-aligned on the text width, under the page number; a long one on two lines, or on
+      // one, cut, when the body starts too soon under the page number for two (`headerRows`).
+      const width = spec.width - spec.margin.left - spec.margin.right;
+      const rows = headerRows(spec);
+      for (const [k, text] of headerLines(opts.revisionHeader, width, rows).entries()) {
+        await drawText(
+          pdfPage,
+          plain(text),
+          Math.max(0, width - columns(text)),
+          spec.numbering.line + 1 + k,
+        );
+      }
     }
     for (const { line, text } of page.sceneNumbersLeft) {
       await drawText(pdfPage, plain(text), template.sceneNumbers.left, spec.margin.top + line);

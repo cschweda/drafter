@@ -284,7 +284,7 @@ test('exports a PDF to a chosen path', async ({ desktop, profile }) => {
   await app.page.getByRole('button', { name: 'Export', exact: true }).click();
   await app.page
     .getByRole('group', { name: 'Export' })
-    .getByRole('button', { name: 'PDF' })
+    .getByRole('button', { name: 'PDF', exact: true })
     .click();
   await expect(
     app.page.locator('.toast [role="status"]').filter({ hasText: 'Exported' }),

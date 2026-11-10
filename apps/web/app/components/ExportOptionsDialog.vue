@@ -2,6 +2,7 @@
 import type { SceneNumbering, TitlePageMode } from '@drafter/layout';
 import DDialog from '~/components/ui/DDialog.vue';
 import { useEditor } from '~/editor/session';
+import { useProduction } from '~/production/use-production';
 import {
   EXPORT_OPTION_HINTS,
   EXPORT_OPTION_LABELS,
@@ -15,6 +16,8 @@ import {
   OPTIONS_READ_ONLY,
   REOPEN_HINT,
   REOPEN_LABEL,
+  REVISION_MARKS_LEGEND,
+  REVISION_MARKS_WHERE,
   setExportOption,
 } from '~/storage/export-options';
 import { useGuard } from '~/storage/guard';
@@ -50,6 +53,12 @@ const failed = ref(false);
 const SCENE_CHOICES = Object.keys(EXPORT_OPTION_LABELS.sceneNumbers) as SceneNumbering[];
 const TITLE_CHOICES = Object.keys(EXPORT_OPTION_LABELS.titlePage) as TitlePageMode[];
 const NOTES_CHOICES = Object.keys(EXPORT_OPTION_LABELS.notes) as ExportOptions['notes'][];
+const MARK_CHOICES = Object.keys(EXPORT_OPTION_LABELS.revisionMarks) as NonNullable<
+  ExportOptions['revisionMarks']
+>[];
+// Revision marks (production design §8) shows only while the script is locked: an unlocked one
+// has none to print.
+const { locked } = useProduction();
 
 /** What had focus when the dialog opened: the Export menu's button, the palette's input, … */
 let opener: HTMLElement | null = null;
@@ -166,6 +175,32 @@ async function choose<K extends keyof ExportOptions>(
           <label :for="`export-notes-${choice}`">{{ EXPORT_OPTION_LABELS.notes[choice] }}</label>
           <span :id="`export-notes-${choice}-hint`" class="hint">{{
             EXPORT_OPTION_HINTS.notes[choice]
+          }}</span>
+        </div>
+      </div>
+    </fieldset>
+    <fieldset
+      v-if="locked && !markdown"
+      :key="`marks-${drawn}`"
+      :disabled="why.length > 0"
+      aria-describedby="export-marks-what"
+    >
+      <legend>{{ REVISION_MARKS_LEGEND }}</legend>
+      <p id="export-marks-what" class="fieldset-note">{{ REVISION_MARKS_WHERE }}</p>
+      <div v-for="choice in MARK_CHOICES" :key="choice" class="choice">
+        <input
+          :id="`export-marks-${choice}`"
+          type="radio"
+          name="export-revision-marks"
+          :value="choice"
+          :checked="(options.revisionMarks ?? 'open') === choice"
+          :aria-describedby="`export-marks-${choice}-hint`"
+          @change="choose('revisionMarks', choice)"
+        />
+        <div>
+          <label :for="`export-marks-${choice}`">{{ EXPORT_OPTION_LABELS.revisionMarks[choice] }}</label>
+          <span :id="`export-marks-${choice}-hint`" class="hint">{{
+            EXPORT_OPTION_HINTS.revisionMarks[choice]
           }}</span>
         </div>
       </div>

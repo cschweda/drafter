@@ -84,6 +84,25 @@ test('File › Export lists Story map…, and Edit the story map’s two line co
   expect(edit).toEqual(expect.arrayContaining(['story-map-use-line', 'story-map-never-line']));
 });
 
+test('File › Export lists the four Production exports, after the manuscript and before Export options', async ({
+  desktop,
+}) => {
+  const { app } = await desktop();
+  const label = async (id: string) => (await menuItems(app)).find((i) => i.id === id)?.label;
+  await expect.poll(() => label('export-sides'), { timeout: 15_000 }).toBe('Sides (PDF)…');
+  expect(await label('export-revised-pages')).toBe('Revised pages (PDF)…');
+  expect(await label('export-breakdown-csv')).toBe('Breakdown (CSV)');
+  expect(await label('export-breakdown-pdf')).toBe('Breakdown (PDF)');
+  const ids = (await menuItems(app)).map((i) => i.id);
+  const at = ids.indexOf('export-revised-pages');
+  expect(ids.slice(at, at + 4)).toEqual([
+    'export-revised-pages',
+    'export-sides',
+    'export-breakdown-csv',
+    'export-breakdown-pdf',
+  ]);
+});
+
 test('runs a command from the menu', async ({ desktop }) => {
   const { app, page } = await desktop();
   await expect

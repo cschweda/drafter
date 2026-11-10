@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProductionSet } from '../src';
-import { nextSetName, REVISION_COLORS, REVISION_NAMES } from '../src';
+import { nextSetName, paperTint, REVISION_COLORS, REVISION_NAMES } from '../src';
 
 const set = (name: string): ProductionSet => ({
   name,
@@ -48,5 +48,33 @@ describe('revision sets', () => {
       expect(contrast(color as string, '#1e1f22'), `${base} on dark`).toBeGreaterThanOrEqual(3);
       expect(contrast(color as string, '#ffffff'), `${base} on light`).toBeGreaterThanOrEqual(3);
     }
+  });
+});
+
+describe('paperTint (ruling F3)', () => {
+  it('gives each paper colour, by base name', () => {
+    expect(paperTint('Blue')).toBe('#9fc5f8');
+    expect(paperTint('Pink')).toBe('#f6b8c8');
+    expect(paperTint('Yellow')).toBe('#fff176');
+    expect(paperTint('Green')).toBe('#a5d6a7');
+    expect(paperTint('Goldenrod')).toBe('#f0c05a');
+    expect(paperTint('Buff')).toBe('#f3e2a9');
+    expect(paperTint('Salmon')).toBe('#f9a58c');
+    expect(paperTint('Cherry')).toBe('#e57373');
+    expect(paperTint('Tan')).toBe('#d7b98e');
+  });
+
+  it('a Double set uses its base name', () => {
+    expect(paperTint('Double Blue')).toBe('#9fc5f8');
+    expect(paperTint('Double Cherry')).toBe('#e57373');
+  });
+
+  it('White, and a name with no paper colour, get no tint', () => {
+    expect(paperTint('White')).toBeNull();
+    expect(paperTint('Double White')).toBeNull();
+    expect(paperTint('Gray')).toBeNull();
+    expect(paperTint('3')).toBeNull();
+    expect(paperTint('')).toBeNull();
+    expect(paperTint('constructor')).toBeNull();
   });
 });

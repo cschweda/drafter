@@ -33,6 +33,32 @@ export const REVISION_COLORS: Record<string, string> = {
 };
 
 /**
+ * The paper each set prints on, for the revised pages' tint (design §8; ruling F3), by base name
+ * in lower case. Not the screen swatches, which are mid-tones: at 12% a grey White or a khaki
+ * Yellow would not look like paper. White paper gets no tint, so it has none here.
+ */
+const PAPER_TINTS: ReadonlyMap<string, string> = new Map([
+  ['blue', '#9fc5f8'],
+  ['pink', '#f6b8c8'],
+  ['yellow', '#fff176'],
+  ['green', '#a5d6a7'],
+  ['goldenrod', '#f0c05a'],
+  ['buff', '#f3e2a9'],
+  ['salmon', '#f9a58c'],
+  ['cherry', '#e57373'],
+  ['tan', '#d7b98e'],
+]);
+
+/**
+ * The tint for a set's pages: its paper colour by base name ("Double Blue" is Blue's, the last
+ * word of the name); null for White and for a name with no paper colour.
+ */
+export function paperTint(name: string): string | null {
+  const base = name.trim().split(/\s+/).at(-1)?.toLowerCase() ?? '';
+  return PAPER_TINTS.get(base) ?? null;
+}
+
+/**
  * The default name of the next set. A set can be renamed (Tan, Gray, a number), so this counts by
  * position, not by name. `sets` is `production.sets` as stored, the locked White draft first, so
  * [White, Blue] gives Pink. After the list runs out it stays on the last name rather than

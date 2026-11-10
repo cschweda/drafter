@@ -81,6 +81,7 @@ function create(): LayoutSession {
         pages: state.pages,
         closed: state.sets.slice(0, -1),
         open: state.sets.at(-1)?.name ?? '',
+        numbers: state.numbers,
       },
     };
   };

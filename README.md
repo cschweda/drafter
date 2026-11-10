@@ -1,6 +1,6 @@
 # Drafter
 
-![Drafter: Fountain or Classic. The same scene typed both ways, on two script pages: on the Fountain page the name has its @ and the transition its >, flush left; on the Classic page there are no marks, and the name, the parenthetical, the speech, and the transition sit where a script page puts them. Fountain is a plain-text script format for screenplays and stage plays; novels and notes in Markdown. Same file, your choice of keys. Behind the two pages, a stack of colored revision pages fans out.](brand/og-image-animated.svg)
+![Drafter: the same scene on two script pages. On the Fountain page the marks show (an @ before the name, a > before the transition); on the Classic page there are none, and everything sits where a script page puts it. Same file, your choice of keys.](brand/og-image-animated.svg)
 
 **Drafter™ is a free, open-source writing app for screenplays and stage plays in plain-text [Fountain](https://fountain.io), and for novels and treatments in Markdown: you write on the left, and the formatted pages build on the right as you type.** Rather not learn Fountain's marks? **Classic Mode** types a script with Enter and Tab, the way many screenwriters expect, over a file that stays Fountain.
 
@@ -18,7 +18,23 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.26.2.** The web app and the desktop apps for Windows and Linux are ready to use, and Phase 2 is under way. **Novel**, a place to draft a book in Markdown, sends the book out as a standard manuscript, as a PDF or a Word file. v0.26.2 adds an **About** menu beside Help, where Report a problem… and Suggest an idea… can now send by email on drafter.dev, and plainer autosave warnings that never stop you typing. Classic Mode is there for writers who’d rather type the way many screenwriting apps work than learn Fountain’s marks. See the [roadmap](#roadmap).
+> **Status: v0.26.2.** The web app and the desktop apps for Windows and Linux are ready to use. v0.26.2 adds an **About** menu, where **Report a problem…** and **Suggest an idea…** can send by email on drafter.dev, and autosave warnings in plain words that never stop you typing. Next is **Production** (v0.27.0): revision colors, locked pages, a breakdown, and sides, free. See the [roadmap](#roadmap).
+
+## Contents
+
+- [Free, no login, private](#free-no-login-private)
+- [Privacy](#privacy-your-script-stays-with-you)
+- [Features](#features)
+- [Security](#security)
+- [Testing](#testing)
+- [How Drafter compares](#how-drafter-compares)
+- [Get Drafter](#get-drafter)
+- [Formats](#formats)
+- [Roadmap](#roadmap)
+- [For developers](#for-developers)
+- [Clean-room implementation](#clean-room-implementation)
+- [Acknowledgments](#acknowledgments)
+- [License](#license)
 
 ## Free, no login, private
 
@@ -26,12 +42,12 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 - **Free, with no catch.** No price, no trial, no subscription, no locked "free tier", and no ads. Drafter isn't a business: one writer makes it, for writers, and gives it away. There is no paid version, and there won't be one.
 - **No login, ever.** No sign-up, no sign-in, no licence key, no activation. Close it, open it tomorrow, and you're back in your script.
-- **Private.** No cookies, no tracking of you, no telemetry. Drafter has no server that could receive your script, so it never leaves your device. The website, drafter.dev, measures visitor traffic with [Plausible](https://plausible.io/privacy-focused-web-analytics): privacy-first analytics with no cookies, no ads, nothing that identifies you, and no tracking across sites (chosen over Google Analytics for that). It's there only to see the basic traffic and which pages people look at, as a reference for improving Drafter. **The downloaded desktop app has no analytics at all.** See [Privacy](https://drafter.dev/docs/privacy/#analytics).
+- **Private.** No cookies, no tracking of you, no telemetry. Drafter has no server that could receive your script, so it never leaves your device. The website counts page visits with cookie-free [Plausible](https://plausible.io/privacy-focused-web-analytics); **the desktop app has no analytics at all.** [Privacy](#privacy-your-script-stays-with-you), below, has the details.
 - **Open.** The code is MIT-licensed. Your script is a plain `.fountain` text file you own, which any app can open and which will still open in fifty years. A lapsed licence can never lock you out of your own work.
 - **Instant, and offline.** No installer or setup is needed to begin. Once it has loaded, Drafter runs with no connection, on a plane or a train.
 - **No forced updates.** The web app updates when you reload, or the next time you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
 - **Plays well with Final Draft.** It opens and saves Final Draft (`.fdx`) files, so you can trade scripts with anyone who uses it.
-- **Built for working writers.** The production features a greenlit script needs come to the free app in v0.27.0: colored revision sets with marks in the margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors.
+- **Production tools, free too.** What a greenlit script needs comes to the free app in v0.27.0: colored revision sets with marks in the margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors. Other apps charge for these.
 
 ## Privacy: your script stays with you
 
@@ -54,21 +70,6 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 
 **Checked, not just promised.** The [privacy audit of 3 November 2026](docs/privacy-audit-2026-11-03.md) went through every line of code that could reach the network, every place Drafter stores anything, and every dependency. It also ran a writing session on drafter.dev in Chrome, Firefox, and Safari's engine with every request recorded. A made-up phrase typed into the script appeared in none of them. It found one leak and it was fixed the same day: on drafter.dev, what a report said could reach the analytics when it was opened on GitHub. The [Privacy](https://drafter.dev/docs/privacy/) help page, in the app and on drafter.dev, says the same in more detail.
 
-## Contents
-
-- [Privacy](#privacy-your-script-stays-with-you)
-- [Features](#features)
-- [Security](#security)
-- [Testing](#testing)
-- [How Drafter compares](#how-drafter-compares)
-- [Get Drafter](#get-drafter)
-- [Formats](#formats)
-- [Roadmap](#roadmap)
-- [For developers](#for-developers)
-- [Clean-room implementation](#clean-room-implementation)
-- [Acknowledgments](#acknowledgments)
-- [License](#license)
-
 ## Features
 
 - **Write.** The editor and its live, industry-standard pages, with page counts you can trust. An element bar writes Fountain for you, with a cheat sheet. Screenplay and Stage play templates, a **Novel** for drafting a book, and Markdown documents with footnotes. A command palette, a Problems pane, offline spellcheck in US or British English, focus mode, typewriter scrolling, a daily goal, sprints, and writing stats.
@@ -90,7 +91,7 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 
 ### A look around
 
-Each shot shows "Signal Hill", a short screenplay written for these pictures, in your GitHub theme.
+Each shot shows "Signal Hill", a short screenplay written for these pictures, in light or dark to match your GitHub theme.
 
 <p>
 <picture><source media="(prefers-color-scheme: light)" srcset="docs/images/drafter-outline-light.png"><img src="docs/images/drafter-outline-dark.png" width="49%" alt="The Outline tab beside the source: three acts of numbered scenes, each with its synopsis, its color, its page, length, and running time, and the characters in it."></picture>
@@ -133,12 +134,11 @@ Drafter is built to open files from anyone without putting you at risk.
 
 - **Drafter never runs anything in a file it opens.** A script is read as text, and your words are shown as words, never as web code.
 - **A strict content security policy.** The web app tells your browser to run only Drafter's own scripts (and, on drafter.dev, Plausible's visit counter), so nothing slipped into a page or a file can run there.
-- **No accounts, no server keeping your scripts, no cookies, no tracking of you.** Your files stay on your device; drafter.dev's only analytics is Plausible, which uses no cookies.
 - **Size limits are checked before anything is unpacked.** A Highland, Fade In, or EPUB file's entries can't point outside their archive. A Final Draft file never makes Drafter fetch or read anything else: the outside references XML allows are refused.
 - **The desktop app** never loads an opened file into a window. It reads the bytes of only the files you chose, and hands them to the editor.
 - **Reopening an HTML or EPUB file** reads only the script Drafter embedded in it, as text. A browser opening an HTML file outside Drafter is outside Drafter's control, so treat one someone sent you like any downloaded page (see [Open formats](https://drafter.dev/docs/open-formats/)).
-- **Drafter for Claude only reads, and only the folders you name.** It has no code that writes, moves, or deletes a file, starts a program, or opens a connection. A path leading outside your folders, through `..` or a link, is refused, hidden files are never read, and every file is judged by what is inside it, exactly as Open judges it, with the app's size limits. Each request runs in a worker stopped at 10 seconds, answers are capped at 40,000 characters with signed cursors for the rest, and your notes are left out unless you ask. The trap documents have an entry point for it, with path, size, no-write, no-fetch, and no-run traps.
-- **The trap documents.** Drafter is tested against [294 deliberately broken and hostile files](fixtures/trap/README.md) for every format it opens: Fountain, Markdown, plain text, Final Draft, Highland, Fade In, HTML and EPUB, and the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs, or fetches anything, and that each finishes within its time limit. The readers and the command line run in a worker that is stopped at the limit, so a hang fails the test. The app's own Open runs in the test's thread, so it is timed but can't be stopped mid-hang ([what is enforced](fixtures/trap/README.md#running-it)). The suite runs with `pnpm test` once the packages are built (`pnpm -r build`), and in the desktop app's CI on every push to `main`.
+- **Drafter for Claude only reads, and only the folders you name.** It has no code that writes, moves, or deletes a file, starts a program, or opens a connection. A path leading outside your folders, through `..` or a link, is refused, hidden files are never read, and each file is judged by what's inside it, with the app's own size limits. Your notes are left out unless you ask.
+- **The trap documents.** Drafter is tested against [294 deliberately broken and hostile files](fixtures/trap/README.md) in every format it opens, plus the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs code, or fetches anything, and that each file finishes within its time limit ([what is enforced](fixtures/trap/README.md#running-it)). It runs on every pull request.
 - **Found a security problem?** Please report it privately: choose **Report a vulnerability** on the repository's [Security tab](https://github.com/cschweda/drafter/security) ([SECURITY.md](SECURITY.md) says what to include), or email cschweda@gmail.com with the details. Never in a public issue.
 
 The [Technical details](docs/technical-details.md#security) give the specifics.
@@ -179,7 +179,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.26.2, there are **8,380 unit and property tests** (in 23 packages, the web app, and the desktop app), **1,436 browser tests**, each run in five browser setups (7,180 runs), 139 end-to-end tests of the desktop app, and **287 trap documents** with 1,329 checks:
+**What runs.** As of v0.26.2, there are **8,380 unit and property tests** (in 23 packages, the web app, and the desktop app), **1,436 browser tests**, each run in five browser setups (7,180 runs), 139 end-to-end tests of the desktop app, and **294 trap documents** with 1,376 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
@@ -233,7 +233,7 @@ Sources: each maker's own pricing, features, and help pages (Final Draft, Writer
 
 **On the web:** open [drafter.dev](https://drafter.dev) and write, on a computer or a phone, offline once it has loaded. Chrome and Edge save straight back to your file; other browsers download a copy ([Storage and browsers](docs/DEVELOPMENT.md#storage-and-browsers)). Install it as an app from the address bar to keep it in your Dock or Start menu.
 
-**On the desktop:** the same editor in a window of its own, built with Electron. It always saves in place, keeps its autosave in its own folder where no browser can delete it (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`), opens a `.fountain` file with a double-click, has a menu bar and a modules folder, and asks **Save**, **Don't Save**, or **Cancel** before closing. It always works offline, and makes no network request but one update check at start, never installs by itself (the AppImage and Windows offer **Restart**, the `.deb` **Get it**), and the check can be turned off in Settings. [Drafter on the web and on the desktop](docs/web-and-desktop.md) compares the two.
+**On the desktop:** the same editor in a window of its own, built with Electron. It always saves in place, keeps its autosave in its own folder where no browser can delete it (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`), opens a `.fountain` file with a double-click, and asks **Save**, **Don't Save**, or **Cancel** before closing. It works offline. Its only network request is one update check at start, which you can turn off in Settings, and it never installs an update by itself. [Drafter on the web and on the desktop](docs/web-and-desktop.md) compares the two.
 
 ### Windows
 
@@ -312,7 +312,16 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 
 ## Roadmap
 
-**Done so far:** the engine, the web app with its accessibility pass, desktop apps for Linux and Windows and a Mac build, and most of Phase 2: Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, HTML and EPUB export, Drafts and Cuts (v0.24.0): numbered drafts, and a permanent file of everything you cut, Story map (v0.24.1): a visual page of your script to send to anyone, and Drafter for Claude (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose. You can also host the web app yourself with Docker (v0.24.3), and type a script with Enter and Tab the way many screenwriters expect, over a file that stays Fountain, in Classic Mode (v0.25.0), and draft a novel in Markdown, with its chapters and sections in the Outline and on Cards, in Novel (v0.26.0), and send it out as a standard manuscript, as a PDF or a Word file (v0.26.1).
+**Done so far:**
+
+- The engine, the web app with its accessibility pass, and desktop apps for Linux and Windows, plus a Mac build.
+- Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, and HTML and EPUB export.
+- **Drafts and Cuts** (v0.24.0): numbered drafts, and a permanent file of everything you cut.
+- **Story map** (v0.24.1): a visual page of your script to send to anyone.
+- **Drafter for Claude** (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose.
+- **Self-hosting** with Docker (v0.24.3).
+- **Classic Mode** (v0.25.0): type a script with Enter and Tab, over a file that stays Fountain.
+- **Novel** (v0.26.0): draft a book in Markdown, with its chapters and sections in the Outline and on Cards, and send it out as a standard manuscript, as a PDF or a Word file (v0.26.1).
 
 **Next:**
 
@@ -339,13 +348,13 @@ pnpm -r test
 pnpm dev              # the app, at http://localhost:3000
 ```
 
-Found a bug or have an idea? **About → Report a problem…** or **Suggest an idea…** in the app fills in a [GitHub issue](https://github.com/cschweda/drafter/issues/new/choose) for you to submit, or, on drafter.dev, sends it to me by email with **Send email**; you can also email cschweda@gmail.com; security problems go through [SECURITY.md](SECURITY.md).
+Found a bug or have an idea? **About → Report a problem…** or **Suggest an idea…** in the app fills in a [GitHub issue](https://github.com/cschweda/drafter/issues/new/choose) for you to submit, or, on drafter.dev, sends it by email with **Send email**. You can also write to cschweda@gmail.com. Security problems go through [SECURITY.md](SECURITY.md).
 
 [How Drafter works](docs/HOW-IT-WORKS.md) has four diagrams of it. [Developing Drafter](docs/DEVELOPMENT.md) has how it works, the packages, the stack, storage and browsers, every command, the samples, contributing (commits, the changelog, releasing), and the design documents. [Why Drafter](docs/WHY.md) has the idea behind it and its principles, and [`docs/DECISIONS.md`](docs/DECISIONS.md) records the choices along the way.
 
 ## Clean-room implementation
 
-Drafter is written from scratch, from public specifications, without reading anyone else's implementation. Nobody working on the code reads the source of other screenwriting apps or Fountain libraries, and none of them is a dependency. Drafter uses ordinary open-source libraries, but no code from any other screenwriting or playwriting application, and no Fountain library. That keeps the MIT license sound, and lets people trust where the engine came from.
+Drafter is written from scratch, from public specifications. Nobody working on it reads the source of other screenwriting apps or Fountain libraries, and none of them is a dependency: Drafter uses ordinary open-source libraries, but no code from another screenwriting or playwriting app. That keeps the MIT license sound, and lets people trust where the engine came from.
 
 A repository-wide audit on 27 October 2026 found no copied code, and [a second on 1 November 2026](docs/clean-room-audit-2026-11-01.md), over everything since, found none either. The rule binds every contributor, AI coding assistants included. [The clean-room rules](docs/DEVELOPMENT.md#clean-room-implementation) are in Developing Drafter, and [Clean-room implementation](docs/clean-room.md) has the whole statement.
 

@@ -18,3 +18,4 @@ export {
 export { type ManuscriptPdf, renderManuscriptPdf } from './manuscript/render';
 export type { RenderProgress } from './progress';
 export { FONT_FILES, type FontSet, renderPdf } from './render';
+export { renderTablePdf } from './table';

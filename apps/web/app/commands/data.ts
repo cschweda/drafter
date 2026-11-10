@@ -334,6 +334,33 @@ export const COMMAND_DATA: readonly CommandData[] = [
     group: 'File',
     keywords: ['submission', 'agent', 'standard manuscript format', 'docx', 'Word'],
   },
+  // A locked script's revised pages (production design §8), after its dialog.
+  {
+    id: 'export-revised-pages',
+    title: 'Export as Revised pages (PDF)…',
+    group: 'File',
+    keywords: [...PRODUCTION_WORDS, 'revised pages', 'colored pages', 'Blue pages', 'Pink pages'],
+  },
+  // One actor's sides (production design §10), after its dialog.
+  {
+    id: 'export-sides',
+    title: 'Export as Sides (PDF)…',
+    group: 'File',
+    keywords: [...PRODUCTION_WORDS, 'sides', 'actor', 'audition', 'character pages', 'call sheet'],
+  },
+  // The breakdown report (production design §9): a row per scene, with no dialog.
+  {
+    id: 'export-breakdown-csv',
+    title: 'Export as Breakdown (CSV)',
+    group: 'File',
+    keywords: [...PRODUCTION_WORDS, 'breakdown', 'scene list', 'spreadsheet', 'cast per scene'],
+  },
+  {
+    id: 'export-breakdown-pdf',
+    title: 'Export as Breakdown (PDF)',
+    group: 'File',
+    keywords: [...PRODUCTION_WORDS, 'breakdown', 'scene list', 'cast per scene'],
+  },
   { id: 'export-options', title: 'Export options…', group: 'File' },
   { id: 'screenplay-from-outline', title: 'New screenplay from this outline', group: 'File' },
   { id: 'remove', title: 'Remove from this browser', group: 'File' },

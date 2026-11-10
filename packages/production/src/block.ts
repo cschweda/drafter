@@ -22,6 +22,26 @@ export const CAPS = {
 
 const KEY = 'production';
 
+/** The longest revision header a block keeps, in characters. */
+export const MAX_HEADER = 120;
+
+/** Characters a header never holds: controls, invisible format marks (bidi overrides), line breaks. */
+const NOT_IN_HEADER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+
+/**
+ * A revision header as a block keeps it: trimmed, 1 to `MAX_HEADER` characters, with none of
+ * `NOT_IN_HEADER`; else undefined. It prints on every revised page, and in an HTML file's pages
+ * (escaped there), so a header that isn't plain text is never trusted.
+ */
+export function headerOf(v: unknown): string | undefined {
+  if (typeof v !== 'string') return undefined;
+  const header = v.trim();
+  if (header === '' || [...header].length > MAX_HEADER || NOT_IN_HEADER.test(header)) {
+    return undefined;
+  }
+  return header;
+}
+
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -30,17 +50,27 @@ const isStringArray = (v: unknown, cap: number): v is string[] =>
 
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0;
 
+/**
+ * A stored page label: a page number, perhaps with letters (`12`, `12A`). A-pages and ranges are
+ * computed, never stored. Anything else (markup, a script) makes the block unreadable, since a
+ * label prints in every paged export.
+ */
+const LABEL = /^[0-9A-Z]{1,12}$/;
+/** A set's name ("Blue", "Double Pink"): letters, digits, spaces, and a little punctuation. */
+const SET_NAME = /^[\p{L}\p{N} .'’-]{1,40}$/u;
+
 function readPage(v: unknown): LockedPage | null {
   if (!Array.isArray(v) || v.length !== 3) return null;
   const [label, line, printed] = v;
-  if (typeof label !== 'string' || !isCount(line) || !isCount(printed)) return null;
+  if (typeof label !== 'string' || !LABEL.test(label)) return null;
+  if (!isCount(line) || !isCount(printed)) return null;
   return { label, line, printed };
 }
 
 function readSet(v: unknown): ProductionSet | null {
   if (!isObject(v)) return null;
   const { name, color, date, draft, lines, gaps } = v;
-  if (typeof name !== 'string' || typeof color !== 'string') return null;
+  if (typeof name !== 'string' || !SET_NAME.test(name) || typeof color !== 'string') return null;
   if (typeof date !== 'string' || typeof draft !== 'string') return null;
   const set: ProductionSet = { name, color, date, draft };
   if (lines !== undefined) {
@@ -61,7 +91,7 @@ function readSet(v: unknown): ProductionSet | null {
 export function readProduction(meta: DrafterMeta | null): Production | null {
   const raw = meta?.[KEY];
   if (!isObject(raw)) return null;
-  const { lockedAt, firstScene, numbers, pages, sets, baseline } = raw;
+  const { lockedAt, firstScene, numbers, pages, sets, baseline, header } = raw;
   if (typeof lockedAt !== 'string' || typeof baseline !== 'string' || baseline === '') return null;
   if (baseline.length > CAPS.baselineChars) return null;
   if (typeof firstScene !== 'number' || !Number.isInteger(firstScene)) return null;
@@ -84,7 +114,18 @@ export function readProduction(meta: DrafterMeta | null): Production | null {
     if (!set) return null;
     readSets.push(set);
   }
-  return { lockedAt, firstScene, numbers, pages: readPages, sets: readSets, baseline };
+  const production: Production = {
+    lockedAt,
+    firstScene,
+    numbers,
+    pages: readPages,
+    sets: readSets,
+    baseline,
+  };
+  // A header that is wrong is ignored on its own: the lock and the marks still stand.
+  const readHeader = headerOf(header);
+  if (readHeader !== undefined) production.header = readHeader;
+  return production;
 }
 
 /**

@@ -8,6 +8,7 @@ import {
   lock,
   omitScene,
   scriptText,
+  setHeader,
   startNextSet,
   unlock,
   writeSceneNumbers,
@@ -206,8 +207,19 @@ describe('startNextSet', () => {
     const marked = marks.spans.map((s) => scriptText(next).slice(s.from, s.to));
     expect(marked).toContain('INT. HALLWAY - NIGHT #1A#');
     expect(marks.spans.every((s) => s.set === 'Blue')).toBe(true);
-    // Page 1 is pinned to the top of the script (Ruling 27).
-    expect(production?.pages[0]).toMatchObject({ label: '1', line: 0, printed: 0 });
+    // The pin (Ruling 27) applies when resolving; the stored page 1 keeps its own first line.
+    expect(production?.pages[0]).toMatchObject({ label: '1', printed: 0 });
+    expect(production?.pages[0]?.line).toBeGreaterThan(0);
+  });
+
+  it('startNextSet clears a production’s own header, so the new set’s default prints', async () => {
+    const after = await locked(SCREENPLAY, 1);
+    const own = apply(after, await setHeader(after, 'Blue Pages — Shooting Draft'));
+    expect(productionOf(own)?.header).toBe('Blue Pages — Shooting Draft');
+    const edited = own.replace('cleaner than it needs to be', 'spotless');
+    const next = apply(edited, await startNextSet(edited, '2026-11-12', 'b'.repeat(64)));
+    expect(productionOf(next)?.sets.at(-1)?.name).toBe('Pink');
+    expect(productionOf(next)?.header).toBeUndefined();
   });
 
   it('a stage play starts its next set without numbering anything', async () => {

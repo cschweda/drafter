@@ -320,3 +320,46 @@ describe('setExportOption', () => {
     expect(t.session.project.value?.exportOptions).toBeUndefined();
   });
 });
+
+describe('Revision marks (production design §8)', () => {
+  test('the open set unless None was chosen: only "none" is kept', () => {
+    expect(exportOptionsOf({}).revisionMarks).toBeUndefined();
+    for (const revisionMarks of ['open', 'all', 'None', 1, null]) {
+      expect(
+        exportOptionsOf({ exportOptions: { revisionMarks } as never }).revisionMarks,
+        String(revisionMarks),
+      ).toBeUndefined();
+    }
+    expect(exportOptionsOf({ exportOptions: { revisionMarks: 'none' } })).toEqual({
+      sceneNumbers: 'none',
+      titlePage: 'full',
+      notes: 'leave-out',
+      revisionMarks: 'none',
+    });
+  });
+
+  test('the toast says "no revision marks" for None', () => {
+    const base = { sceneNumbers: 'none', titlePage: 'full', notes: 'leave-out' } as const;
+    expect(optionsPhrase({ ...base, revisionMarks: 'none' })).toBe('with no revision marks');
+    expect(optionsPhrase({ ...base, revisionMarks: 'open' })).toBe('');
+    expect(optionsPhrase({ ...base, sceneNumbers: 'all', revisionMarks: 'none' })).toBe(
+      'with every scene numbered and no revision marks',
+    );
+  });
+
+  test('its choices are named', async () => {
+    const { EXPORT_OPTION_LABELS, REVISION_MARKS_LEGEND } = await import(
+      '../app/storage/export-options'
+    );
+    expect(REVISION_MARKS_LEGEND).toBe('Revision marks');
+    expect(EXPORT_OPTION_LABELS.revisionMarks).toEqual({ open: 'The open revision', none: 'None' });
+  });
+
+  test('setExportOption keeps it on the script, and The open revision is the default again', async () => {
+    const t = await visit();
+    await t.setExportOption('revisionMarks', 'none');
+    expect(exportOptionsOf(t.session.project.value).revisionMarks).toBe('none');
+    await t.setExportOption('revisionMarks', 'open');
+    expect(exportOptionsOf(t.session.project.value).revisionMarks).toBeUndefined();
+  });
+});

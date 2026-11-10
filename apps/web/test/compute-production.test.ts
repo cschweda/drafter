@@ -3,6 +3,7 @@ import { applyMarks, type Layout, type Marks, paginate } from '@drafter/layout';
 import {
   decodeBaseline,
   lock,
+  lockedPagesOf,
   type Production,
   readProduction,
   scriptText,
@@ -16,7 +17,7 @@ import {
   type LayoutRequest,
   PRODUCTION_WAIT_MS,
 } from '../app/editor/layout-client';
-import { computeLayout, createLayoutCompute, lockedPagesOf } from '../app/workers/compute';
+import { computeLayout, createLayoutCompute } from '../app/workers/compute';
 
 // A locked script in the layout worker (production design §6.2, §7.2): the request carries the
 // production's facts (its id, and the facts themselves only when the id changes, as Show changes'
@@ -58,6 +59,7 @@ async function locked(): Promise<{
       pages: production.pages,
       closed: production.sets.slice(0, -1),
       open: production.sets.at(-1)?.name ?? '',
+      numbers: production.numbers,
     },
   };
 }
@@ -256,7 +258,13 @@ describe("the layout client's production", () => {
     };
   }
 
-  const facts: LayoutProductionFacts = { baseline: 'A\n', pages: [], closed: [], open: 'Blue' };
+  const facts: LayoutProductionFacts = {
+    baseline: 'A\n',
+    pages: [],
+    closed: [],
+    open: 'Blue',
+    numbers: [],
+  };
 
   const layout = (n: number) =>
     ({
@@ -368,5 +376,40 @@ describe("the layout client's production", () => {
     expect(shown).toEqual([{ seq: 1, marked: false }]);
     worker.reply({ seq: 1, production: blue });
     expect(shown).toHaveLength(1);
+  });
+});
+
+describe('a locked script’s new scene in the Script pane (ruling F1)', () => {
+  test('shows the A-number it will have, as every export prints it', async () => {
+    // A template that numbers its scenes on the page (the built-in screenplay's doesn't).
+    const numbered: Template = {
+      ...template,
+      sceneNumbers: { ...template.sceneNumbers, enabled: true },
+    };
+    const two = `INT. HALL - DAY\n\n${paragraphs(1, 20)}\nINT. ATTIC - NIGHT\n\n${paragraphs(100, 20)}`;
+    const text = apply(
+      two,
+      await lock(two, template, { today: '2026-11-09', draftId: 'd1', firstScene: 5 }),
+    ).replace('INT. ATTIC', 'INT. STAIRS - DAY\n\nNew.\n\nINT. ATTIC');
+    const production = readProduction(parse(text).meta) as Production;
+    const facts: LayoutProductionFacts = {
+      baseline: (await decodeBaseline(production.baseline)) as string,
+      pages: production.pages,
+      closed: production.sets.slice(0, -1),
+      open: production.sets.at(-1)?.name ?? '',
+      numbers: production.numbers,
+    };
+    const reply = computeLayout({ seq: 1, source: text, template: numbered }, facts);
+    if (!('layout' in reply)) throw new Error(JSON.stringify(reply));
+    const numbers = reply.layout.pages.flatMap((page) => page.sceneNumbersLeft.map((n) => n.text));
+    expect(numbers).toEqual(['5', '5A', '6']);
+    // Unlocked (no facts), the same text keeps its ordinal.
+    const plain = computeLayout({ seq: 2, source: text, template: numbered });
+    if (!('layout' in plain)) throw new Error(JSON.stringify(plain));
+    expect(plain.layout.pages.flatMap((p) => p.sceneNumbersLeft.map((n) => n.text))).toEqual([
+      '5',
+      '2',
+      '6',
+    ]);
   });
 });

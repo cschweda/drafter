@@ -105,7 +105,32 @@ describe('page anchors', () => {
       { label: '2', at: starts(cur)[6], printed: 0 },
     ]);
     expect(r.dropped).toEqual([]);
-    expect(rebaseAnchors(p, base, cur)[0]).toEqual({ label: '1', line: 0, printed: 0 });
+    expect(rebaseAnchors(p, base, cur)[0]).toEqual({ label: '1', line: 4, printed: 1 });
+  });
+
+  it("folds page 2 into page 1 when page 1's text is all cut", () => {
+    // A title page (lines 0-1), then page 1's body (lines 2-3), then page 2 from line 4.
+    const old = ['Title: T', '', 'p1 a', 'p1 b', 'p2 a', 'p2 b', 'p3 a'].join('\n');
+    const p: LockedPage[] = [
+      { label: '1', line: 2, printed: 0 },
+      { label: '2', line: 4, printed: 0 },
+      { label: '3', line: 6, printed: 0 },
+    ];
+    const cur = ['Title: T', '', 'p2 a', 'p2 b', 'p3 a'].join('\n');
+    const r = resolveAnchors(p, old, cur);
+    expect(r.anchors.map((a) => a.label)).toEqual(['1', '3']);
+    expect(r.anchors[0]).toEqual({ label: '1', at: 0, printed: 0 });
+    expect(r.dropped).toEqual(['2']);
+  });
+
+  it('keeps page 2 when page 1 still has text before it', () => {
+    const old = ['Title: T', '', 'p1 a', 'p1 b', 'p2 a', 'p3 a'].join('\n');
+    const p: LockedPage[] = [
+      { label: '1', line: 2, printed: 0 },
+      { label: '2', line: 4, printed: 0 },
+    ];
+    const cur = ['Title: T', '', 'p1 b', 'p2 a', 'p3 a'].join('\n');
+    expect(resolveAnchors(p, old, cur).dropped).toEqual([]);
   });
 
   it('rebase keeps labels', () => {
