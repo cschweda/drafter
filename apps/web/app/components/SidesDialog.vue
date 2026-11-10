@@ -115,7 +115,7 @@ function exportNow() {
         </fieldset>
         <fieldset class="group">
           <legend>Scenes</legend>
-          <p class="hint">Choosing a character ticks their scenes. Tick or untick any scene.</p>
+          <p class="hint">Choosing a character ticks their scenes again, replacing any ticks you changed by hand; you can then untick any you won’t need.</p>
           <ul class="list scenes">
             <li v-for="scene in found.scenes" :key="scene.ordinal">
               <label class="check">

@@ -1,6 +1,7 @@
-import { parse } from '@drafter/fountain';
+import { parse, type TextChange } from '@drafter/fountain';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, it } from 'vitest';
+import { lock } from '../src/actions';
 import { productionLayout } from '../src/layout';
 import { scenesFor, sides, sidesChoices } from '../src/sides';
 
@@ -89,6 +90,44 @@ describe('sides', () => {
     expect(all).toContain('Stairs paragraph 1');
   });
 
+  it('crosses out exact runs: the unticked run ends just before a ticked heading, which is kept', async () => {
+    const doc = parse(SCRIPT);
+    const layout = await laidOut(SCRIPT);
+    const out = sides(layout, doc, screenplay, [1, 4]);
+    const lineText = (page: number, k: number) =>
+      out.layout.pages
+        .find((p) => p.number === page)
+        ?.lines[k]?.runs.map((r) => r.text)
+        .join('') ?? '';
+    // Where scene 4's heading is printed, on the pages kept.
+    let heading: { page: number; line: number } | undefined;
+    for (const page of out.layout.pages) {
+      page.lines.forEach((l, k) => {
+        if (l.runs.map((r) => r.text).join('') === 'INT. ATTIC - NIGHT') {
+          heading = { page: page.number, line: k };
+        }
+      });
+    }
+    expect(heading).toBeDefined();
+    const at = heading as { page: number; line: number };
+    // The heading is in no crossed range, and the range before it ends in the unticked scene's text.
+    const hit = out.crossOut.filter(
+      (r) => r.page === at.page && r.from <= at.line && at.line <= r.to,
+    );
+    expect(hit).toEqual([]);
+    const before = out.crossOut.filter((r) => r.page === at.page && r.to < at.line);
+    expect(before.length).toBeGreaterThan(0);
+    const run = before.at(-1) as CrossOut;
+    expect(lineText(run.page, run.to)).toMatch(/Stairs paragraph \d+ of the scene/);
+    // Only blank lines lie between the run and the heading.
+    for (let k = run.to + 1; k < at.line; k++) expect(lineText(at.page, k).trim()).toBe('');
+    // Every range starts and ends on a line with text, and no two on a page touch or overlap.
+    for (const r of out.crossOut) {
+      expect(lineText(r.page, r.from).trim()).not.toBe('');
+      expect(lineText(r.page, r.to).trim()).not.toBe('');
+    }
+  });
+
   it('crosses out nothing when every scene is ticked, and keeps every page', async () => {
     const doc = parse(SCRIPT);
     const layout = await laidOut(SCRIPT);
@@ -97,12 +136,42 @@ describe('sides', () => {
     expect(out.layout.pages).toHaveLength(layout.pages.length);
   });
 
-  it('keeps the locked labels of the pages it prints', async () => {
-    const doc = parse(SCRIPT);
-    const layout = await laidOut(SCRIPT);
-    const out = sides(layout, doc, screenplay, [5]);
-    const last = layout.pages.at(-1);
-    expect(out.layout.pages.at(-1)?.label).toBe(last?.label);
+  it('keeps the locked labels of the pages it prints, an A-page and a folded range too', async () => {
+    const apply = (text: string, changes: readonly TextChange[]) => {
+      let out = text;
+      for (const c of [...changes].sort((a, b) => b.from - a.from)) {
+        out = out.slice(0, c.from) + c.insert + out.slice(c.to);
+      }
+      return out;
+    };
+    const scene = (n: number, count: number) =>
+      `INT. ROOM ${n} - DAY\n\n${filler(count, `Room${n}`)}\n\n`;
+    const base = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => scene(n, 30)).join('');
+    const locked = apply(
+      base,
+      await lock(base, screenplay, { today: '2026-11-09', draftId: 'd1', firstScene: 1 }),
+    );
+    // Room 2 grows by pages (A-pages), and Rooms 4 to 7 go whole (a folded label).
+    const grown = locked.replace(
+      'INT. ROOM 3 - DAY',
+      `${filler(20, 'Extra')}\n\nINT. ROOM 3 - DAY`,
+    );
+    const lines = grown.split('\n');
+    const start = lines.findIndex((l) => l.startsWith('INT. ROOM 4'));
+    const end = lines.findIndex((l) => l.startsWith('INT. ROOM 8'));
+    const edited = [...lines.slice(0, start), ...lines.slice(end)].join('\n');
+    const layout = await laidOut(edited);
+    const labels = layout.pages.map((p) => p.label);
+    expect(labels.some((l) => /^\d+[A-Z]+$/.test(l))).toBe(true);
+    expect(labels.some((l) => l.includes('-'))).toBe(true);
+    const doc = parse(edited);
+    const out = sides(layout, doc, screenplay, [2, 3, 4]);
+    const wanted = new Map(layout.pages.map((p) => [p.number, p.label]));
+    expect(out.layout.pages.length).toBeGreaterThan(0);
+    for (const page of out.layout.pages) expect(page.label).toBe(wanted.get(page.number));
+    const kept = out.layout.pages.map((p) => p.label);
+    expect(kept.some((l) => /^\d+[A-Z]+$/.test(l))).toBe(true);
+    expect(kept.some((l) => l.includes('-'))).toBe(true);
   });
 
   it('a stage play’s sides work by ## scene', async () => {
@@ -129,6 +198,58 @@ describe('sides', () => {
     expect(out.layout.pages.length).toBeGreaterThan(0);
     expect(out.layout.pages.length).toBeLessThanOrEqual(layout.pages.length);
     expect(out.crossOut.length).toBeGreaterThan(0);
+  });
+});
+
+describe('a stage play’s act headings', () => {
+  it('go with the scene they open, not the one before', async () => {
+    const source = [
+      '# ACT ONE',
+      '',
+      '## Scene One',
+      '',
+      '@MARGARET',
+      'Good evening.',
+      '',
+      '## Scene Two',
+      '',
+      filler(6, 'Parlour'),
+      '',
+      '# ACT TWO',
+      '',
+      '## Scene Three',
+      '',
+      '@JON',
+      'Morning.',
+      '',
+    ].join('\n');
+    const doc = parse(source);
+    const layout = await laidOut(source, play);
+    // Scene Three ticked, Scene Two not: ACT TWO is kept; with Scene Two ticked instead it is crossed out.
+    const find = (out: ReturnType<typeof sides>, needle: string) => {
+      for (const page of out.layout.pages) {
+        for (const [k, l] of page.lines.entries()) {
+          if (
+            l.runs
+              .map((r) => r.text)
+              .join('')
+              .includes(needle)
+          )
+            return { page: page.number, k };
+        }
+      }
+      return undefined;
+    };
+    const crossed = (out: ReturnType<typeof sides>, at: { page: number; k: number }) =>
+      out.crossOut.some((r) => r.page === at.page && r.from <= at.k && at.k <= r.to);
+    const three = sides(layout, doc, play, [3]);
+    const act = find(three, 'ACT TWO');
+    expect(act).toBeDefined();
+    expect(crossed(three, act as { page: number; k: number })).toBe(false);
+    const two = sides(layout, doc, play, [2]);
+    const act2 = find(two, 'ACT TWO');
+    expect(act2).toBeDefined();
+    expect(crossed(two, act2 as { page: number; k: number })).toBe(true);
   });
 });
 

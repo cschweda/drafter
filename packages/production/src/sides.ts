@@ -95,14 +95,18 @@ export function sides(
   const index = sceneIndex(doc, template);
   const starts = index.scenes.map((scene) => scene.block);
   const ticked = new Set(scenes);
-  /** The scene ordinal a block belongs to; 0 before the first scene. */
+  /**
+   * The scene ordinal a block belongs to; 0 before the first scene. A section heading that opens
+   * no scene (an act's `#`), and what follows it up to the next scene, go with the scene it opens.
+   */
   const ownerOf = (block: number): number => {
-    let owner = 0;
-    for (let i = 0; i < starts.length; i++) {
-      if ((starts[i] as number) <= block) owner = (index.scenes[i] as Scene).ordinal;
-      else break;
-    }
-    return owner;
+    let at = -1;
+    for (let i = 0; i < starts.length && (starts[i] as number) <= block; i++) at = i;
+    const from = at < 0 ? 0 : (starts[at] as number) + 1;
+    let actHeading = false;
+    for (let b = from; b <= block; b++) if (doc.blocks[b]?.kind === 'section') actHeading = true;
+    const next = index.scenes[at + 1];
+    return actHeading && next ? next.ordinal : at < 0 ? 0 : (index.scenes[at] as Scene).ordinal;
   };
   const pages: Page[] = [];
   const crossOut: CrossOut[] = [];
