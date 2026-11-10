@@ -2,7 +2,7 @@ import { type Ref, watch } from 'vue';
 import type { DocumentKind } from '../markdown/kind';
 import { dropTab, type PaneTabs, PHONE_DEFAULT_TAB, type TabId } from '../utils/panes';
 
-// A Markdown document has no scenes or notes, so no Outline, Cards, Notes, or Scaffold tab (Phase 2
+// A Markdown document has no scenes or notes, so no Outline, Cards, Notes, Scaffold, or Production tab (Phase 2
 // design §5.7; seeing-the-script design §10): the pane showing one shows another. A novel keeps the
 // Outline and Cards, its own (Novel plan, Task 5).
 //
@@ -11,7 +11,7 @@ import { dropTab, type PaneTabs, PHONE_DEFAULT_TAB, type TabId } from '../utils/
 // Outline and Cards go then, and come back when it is a novel again, as long as the writer hasn't
 // chosen another tab meanwhile and the same document is open. Another document loaded forgets them.
 
-const NOT_FOR_MARKDOWN: readonly TabId[] = ['outline', 'cards', 'notes', 'scaffold'];
+const NOT_FOR_MARKDOWN: readonly TabId[] = ['outline', 'cards', 'notes', 'scaffold', 'production'];
 const NOVEL_TABS: readonly TabId[] = ['outline', 'cards'];
 
 export interface NovelTabsOptions {

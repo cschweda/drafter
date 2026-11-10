@@ -1,5 +1,7 @@
 import { manuscriptOpen } from '~/novel/manuscript';
 import { treatmentOpen } from '~/outline/treatment';
+import { revisedPagesOpen } from '~/production/revised';
+import { sidesOpen } from '~/production/sides';
 import { exportScript } from '~/storage/export';
 import { exportOptionsOpen } from '~/storage/export-options';
 import { storyMapOpen } from '~/story-map/options';
@@ -7,12 +9,14 @@ import type { Behavior, When } from './behavior';
 
 /**
  * The Export group's commands (out of `builtin.ts`, 2026-11-04): each export, the story map, the
- * treatment, and a novel's manuscript (after their dialogs), and Export options.
+ * treatment, a locked script's revised pages, and a novel's manuscript (after their dialogs), and
+ * Export options.
  */
 export function exportBehaviors({
   hasScript,
   isFountain,
   isNovel,
+  isLocked,
   exportsHere,
 }: When): Record<string, Behavior> {
   return {
@@ -38,6 +42,31 @@ export function exportBehaviors({
       run: () => {
         storyMapOpen.value = true;
       },
+    },
+    // A locked script's revised pages (production design §8): its dialog first, for which pages,
+    // which marks, the header, and the tint.
+    'export-revised-pages': {
+      enabled: () => hasScript() && isFountain() && isLocked(),
+      run: () => {
+        revisedPagesOpen.value = true;
+      },
+    },
+    // One actor's sides (production design §10): its dialog first, for the characters and scenes.
+    'export-sides': {
+      enabled: () => hasScript() && isFountain(),
+      run: () => {
+        sidesOpen.value = true;
+      },
+    },
+    // The breakdown report (production design §9): one row per scene, as a spreadsheet file or a
+    // PDF. A locked script's page labels are its locked ones; no dialog.
+    'export-breakdown-csv': {
+      enabled: () => hasScript() && isFountain(),
+      run: () => void exportScript('breakdown-csv'),
+    },
+    'export-breakdown-pdf': {
+      enabled: () => hasScript() && isFountain(),
+      run: () => void exportScript('breakdown-pdf'),
     },
     'export-treatment': {
       enabled: isFountain,

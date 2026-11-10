@@ -31,6 +31,8 @@ export interface ScriptHtmlInput {
    * reopen this file"), or absent for none. All of it goes in, notes and boneyard too.
    */
   source?: string;
+  /** A locked script's revision header for its pages ("Blue Revision — 12 November 2026"). */
+  revisionHeader?: string;
 }
 
 /** A title-page field's text, its value lines joined by a space; '' when it has none. */
@@ -74,7 +76,12 @@ export function titleLines(doc: Doc): string[] {
 export function renderScriptHtml(input: ScriptHtmlInput): string {
   const { doc, layout, template } = input;
   const band = bandHtml(doc, template, layout);
-  const pages = pagesHtml(layout, template, band.blocks);
+  const pages = pagesHtml(
+    layout,
+    template,
+    band.blocks,
+    input.revisionHeader === undefined ? {} : { revisionHeader: input.revisionHeader },
+  );
   const reading = readingHtml(doc, layout, input.notes);
   return htmlShell({
     title: input.title,

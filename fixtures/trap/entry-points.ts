@@ -12,7 +12,8 @@ export type Entry =
   | 'mcp'
   | 'classic'
   | 'novel'
-  | 'manuscript';
+  | 'manuscript'
+  | 'production';
 
 export interface EntryPoint {
   id: Entry;
@@ -86,6 +87,12 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
     id: 'manuscript',
     what: 'A novel written out as a standard manuscript: the Markdown read as a book (`manuscriptOf`, with the details the writer gave), then both files made from it, the PDF with the real fonts and the Word file. The Word file must be a zip whose every part is well-formed XML, with the page-number field once, in the header, and no other field code; the PDF must open.',
     code: 'packages/novel/src (`manuscriptOf`, `resolveDetails`) → packages/render-pdf/src (`renderManuscriptPdf`) and packages/render-docx/src (`renderManuscriptDocx`)',
+    harness: 'fixtures/trap/harness.test.ts (in the trap worker)',
+  },
+  {
+    id: 'production',
+    what: 'A script’s production block (locks and revisions) read as the app reads it: `readProduction` on the parsed block, then `decodeBaseline` on the open set’s baseline, capped as it inflates. The file’s bytes are read whole, past Open’s 5 MB check, so the block’s own caps are tried. A hostile block must leave the script unlocked: no lock, no throw, within its time and memory. Only the production traps go through it.',
+    code: 'packages/production/src (`readProduction`, `CAPS`, `decodeBaseline`), as apps/web/app/production/use-production.ts uses them',
     harness: 'fixtures/trap/harness.test.ts (in the trap worker)',
   },
   {

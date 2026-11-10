@@ -8,6 +8,9 @@ import { useEditor } from '../editor/session';
 import { previewProblem } from '../markdown/preview';
 import { markdownTitle } from '../markdown/title';
 import { isNovel } from '../novel/kind';
+import type { RevisedPagesChoice } from '../production/revised';
+import type { SidesChoice } from '../production/sides';
+import { useProduction } from '../production/use-production';
 import { type Settings, useSettings } from '../settings/settings';
 import { ratesOf } from '../stats/timing';
 import {
@@ -15,6 +18,7 @@ import {
   type ExportOptions,
   type ExportRequest,
 } from '../workers/export-compute';
+import { ExportRefusal } from '../workers/export-refusal';
 import { renderExport } from './export-client';
 import { exportOptionsOf, optionsPhrase } from './export-options';
 import { type FileKind, useFiles } from './files';
@@ -42,7 +46,8 @@ import { whenIdle } from './turn';
  * text, as a plain text file). `story-map` (story-map design) is a script's too, but made after
  * its dialog (`exportStoryMap`), so it isn't one of `EXPORTS`' files. `manuscript-pdf` and
  * `manuscript-docx` (a novel's standard manuscript, as a PDF and as a Word file) are a novel's
- * alone, made after their dialog (`exportManuscript`), so they aren't either.
+ * alone, made after their dialog (`exportManuscript`), so they aren't either; nor is
+ * `revised-pdf`, a locked script's revised pages, made after its dialog (`exportRevisedPages`).
  */
 export type ExportKind =
   | 'pdf'
@@ -54,7 +59,11 @@ export type ExportKind =
   | 'fdx'
   | 'story-map'
   | 'manuscript-pdf'
-  | 'manuscript-docx';
+  | 'manuscript-docx'
+  | 'revised-pdf'
+  | 'sides-pdf'
+  | 'breakdown-csv'
+  | 'breakdown-pdf';
 
 /**
  * What each kind of document exports, in the order the menus list them: the PDF first in both,
@@ -114,6 +123,10 @@ const MIME: Record<ExportKind, string> = {
   'story-map': 'text/html',
   'manuscript-pdf': 'application/pdf',
   'manuscript-docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'revised-pdf': 'application/pdf',
+  'sides-pdf': 'application/pdf',
+  'breakdown-csv': 'text/csv',
+  'breakdown-pdf': 'application/pdf',
 };
 const EXTENSION = {
   pdf: '.pdf',
@@ -126,6 +139,10 @@ const EXTENSION = {
   'story-map': '.html',
   'manuscript-pdf': '.pdf',
   'manuscript-docx': '.docx',
+  'revised-pdf': '.pdf',
+  'sides-pdf': '.pdf',
+  'breakdown-csv': '.csv',
+  'breakdown-pdf': '.pdf',
 } as const satisfies Record<ExportKind, string>;
 
 /** What a save picker offers each kind as, where it isn't the kind itself. */
@@ -134,6 +151,10 @@ const PICKER_KIND = {
   'story-map': 'html',
   'manuscript-pdf': 'pdf',
   'manuscript-docx': 'docx',
+  'revised-pdf': 'pdf',
+  'sides-pdf': 'pdf',
+  'breakdown-csv': 'csv',
+  'breakdown-pdf': 'pdf',
 } as const satisfies Partial<Record<ExportKind, FileKind>>;
 
 const pickerKind = (kind: ExportKind): FileKind =>
@@ -144,16 +165,21 @@ const NAME_SUFFIX: Partial<Record<ExportKind, string>> = {
   'story-map': ' – story map',
   'manuscript-pdf': ' – manuscript',
   'manuscript-docx': ' – manuscript',
+  'sides-pdf': ' – Sides',
+  'breakdown-csv': ' – Breakdown',
+  'breakdown-pdf': ' – Breakdown',
 };
 
 /**
- * "Signal Hill – story map.html" (design §1.1) and "The Salt Road – manuscript.pdf" (or `.docx`);
- * the other kinds are the title and the extension.
+ * "Signal Hill – story map.html" (design §1.1) and "The Salt Road – manuscript.pdf" (or `.docx`),
+ * and "The Hall – Blue revised pages.pdf" (`set`, the open revision's name); the other kinds are
+ * the title and the extension.
  */
-function exportName(title: string, kind: ExportKind): string {
+function exportName(title: string, kind: ExportKind, set?: string): string {
   const extension = EXTENSION[kind];
   const name = fileNameFor(title, extension);
-  const suffix = NAME_SUFFIX[kind];
+  const suffix =
+    kind === 'revised-pdf' ? ` – ${set ? `${set} ` : ''}revised pages` : NAME_SUFFIX[kind];
   return suffix ? `${name.slice(0, -extension.length)}${suffix}${extension}` : name;
 }
 
@@ -185,6 +211,15 @@ function notFor(kind: ExportKind, markdown: boolean, novel: boolean): string | n
   if (markdown && kind === 'story-map') {
     return 'Only a screenplay or a stage play makes a story map.';
   }
+  if (markdown && isBreakdown(kind)) {
+    return 'Only a screenplay or a stage play has a breakdown.';
+  }
+  if (markdown && kind === 'sides-pdf') {
+    return 'Only a screenplay or a stage play prints sides.';
+  }
+  if (markdown && kind === 'revised-pdf') {
+    return 'Only a locked screenplay or stage play prints revised pages.';
+  }
   return null;
 }
 
@@ -195,21 +230,42 @@ function notFor(kind: ExportKind, markdown: boolean, novel: boolean): string | n
  * names only the title page; only a Markdown file, an HTML file, and an EPUB carry notes (Call 28;
  * HTML export design §3.3, §10a), so only their toasts say "notes".
  */
-function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions): string {
+function withOptions(
+  kind: ExportKind,
+  markdown: boolean,
+  options: ExportOptions,
+  locked: boolean,
+): string {
   // A story map has its own choices, in its dialog, and never carries the script (Call 20). A
   // Fountain file is the script's text as written: the options shape how it is drawn, not the text.
   // A manuscript's details are its dialog's, and the toast names no options for it either.
-  if (kind === 'story-map' || kind === 'fountain' || isManuscript(kind)) return '';
+  // Revised pages have theirs in their dialog too.
+  if (
+    kind === 'story-map' ||
+    kind === 'fountain' ||
+    isManuscript(kind) ||
+    kind === 'revised-pdf' ||
+    kind === 'sides-pdf' ||
+    isBreakdown(kind)
+  ) {
+    return '';
+  }
   // Only an HTML file and an EPUB carry the script inside (reopenable exports), a document's too.
   const inside = options.reopenable && carriesSource(kind) ? { reopenable: true as const } : {};
   if (markdown) {
     return inside.reopenable ? `, ${optionsPhrase({ ...DEFAULT_EXPORT_OPTIONS, ...inside })}` : '';
   }
-  const { reopenable: _, ...rest } = options;
+  const { reopenable: _, revisionMarks, ...rest } = options;
+  // Only a locked script's PDF and HTML file print revision marks, so only theirs say None.
+  const marks =
+    locked && revisionMarks === 'none' && (kind === 'pdf' || kind === 'html')
+      ? { revisionMarks }
+      : {};
   const honoured: ExportOptions = {
     ...rest,
     sceneNumbers: kind === 'fdx' ? 'none' : options.sceneNumbers,
     notes: kind === 'md' || kind === 'html' || kind === 'epub' ? options.notes : 'leave-out',
+    ...marks,
     ...inside,
   };
   const phrase = optionsPhrase(honoured);
@@ -218,6 +274,17 @@ function withOptions(kind: ExportKind, markdown: boolean, options: ExportOptions
 
 /** The exports that can carry the script inside, for Drafter to reopen: the HTML file and the EPUB. */
 const carriesSource = (kind: ExportKind) => kind === 'html' || kind === 'epub';
+
+/** Today, as the writer's clock has it, `YYYY-MM-DD`: a breakdown's date line. */
+function today(): string {
+  const now = new Date();
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
+}
+
+/** A script's breakdown report, as a spreadsheet file or a PDF. */
+const isBreakdown = (kind: ExportKind): kind is 'breakdown-csv' | 'breakdown-pdf' =>
+  kind === 'breakdown-csv' || kind === 'breakdown-pdf';
 
 /** A novel's manuscript, as a PDF or a Word file. */
 const isManuscript = (kind: ExportKind): kind is 'manuscript-pdf' | 'manuscript-docx' =>
@@ -250,6 +317,8 @@ function requestFor(
   if (kind === 'story-map') throw new Error('A story map is made from its dialog.');
   // Made by `run` with its dialog's details.
   if (isManuscript(kind)) throw new Error('A manuscript is made from its dialog.');
+  if (kind === 'revised-pdf') throw new Error('Revised pages are made from their dialog.');
+  if (kind === 'sides-pdf') throw new Error('Sides are made from their dialog.');
   // The script's own text, written as Save writes it (`run`): never the worker's.
   if (kind === 'fountain') throw new Error('A Fountain file is the script’s own text.');
   const { source, template, options, title, markdown } = open;
@@ -293,6 +362,9 @@ function requestFor(
       ...(work.embed === undefined ? {} : { embed: work.embed }),
     };
   }
+  if (isBreakdown(kind)) {
+    return { kind, source, template, title, today: today() };
+  }
   return { kind, source, template, options };
 }
 
@@ -312,13 +384,17 @@ export interface StoryMapJob {
 interface FromDialog {
   job?: StoryMapJob;
   details?: ManuscriptDetails;
+  /** Revised pages' choices, from their dialog. */
+  revised?: RevisedPagesChoice;
+  /** Sides' choices, from their dialog. */
+  sides?: SidesChoice;
   /** The project the dialog was opened for: the export is refused if another is open by then. */
   forProject?: string;
 }
 
 async function run(
   asked: Asked,
-  { job, details, forProject }: FromDialog = {},
+  { job, details, revised, sides, forProject }: FromDialog = {},
 ): Promise<'saved' | 'cancelled'> {
   const { kind } = asked;
   const files = useFiles();
@@ -332,6 +408,9 @@ async function run(
   const template = editor.template.value;
   const markdown = editor.kind.value === 'markdown';
   const options = exportOptionsOf(script.project.value);
+  // Whether the text is locked, for the toast's "no revision marks": as the Production tab reads
+  // it, so a damaged block (one whose baseline won't decode) is not, and exports unlocked.
+  const locked = !markdown && useProduction().locked.value;
   // A document with no title is called after its file, as the project's own title is.
   const fallback = fileBaseName(titleFileOf(script.project.value));
   const novel = markdown && isNovel(source);
@@ -342,7 +421,7 @@ async function run(
     : markdown
       ? (markdownTitle(source) ?? fallback)
       : titleOf(editor.doc.value, fallback);
-  const name = exportName(title, kind);
+  const name = exportName(title, kind, revised?.set);
   exportNotice.value = '';
   exportError.value = '';
   let slow: ReturnType<typeof setTimeout> | undefined;
@@ -377,7 +456,7 @@ async function run(
     // The menu offers only what applies; a command or a stale menu can still ask for the other.
     const refusal =
       forProject !== undefined && script.project.value?.id !== forProject
-        ? 'The book changed; nothing was exported.'
+        ? `The ${revised || sides ? 'script' : 'book'} changed; nothing was exported.`
         : notFor(kind, markdown, novel);
     if (refusal) {
       await announceError(refusal);
@@ -419,24 +498,45 @@ async function run(
           : undefined;
       const request: ExportRequest = job
         ? await storyMapRequest(asked, job, source, template, title)
-        : isManuscript(kind)
+        : kind === 'sides-pdf' && sides
           ? {
               kind,
               source,
-              fileTitle: fallback,
-              details: details ?? {},
-              paper: asked.paper,
-              lang: asked.lang,
-            }
-          : requestFor(asked, {
-              source,
               template,
               options,
-              title,
-              markdown,
-              projectId,
-              embed,
-            });
+              names: sides.names,
+              scenes: sides.scenes,
+              today: today(),
+            }
+          : kind === 'revised-pdf' && revised
+            ? {
+                kind,
+                source,
+                template,
+                options,
+                which: revised.which,
+                marks: revised.marks,
+                header: revised.header,
+                tint: revised.tint,
+              }
+            : isManuscript(kind)
+              ? {
+                  kind,
+                  source,
+                  fileTitle: fallback,
+                  details: details ?? {},
+                  paper: asked.paper,
+                  lang: asked.lang,
+                }
+              : requestFor(asked, {
+                  source,
+                  template,
+                  options,
+                  title,
+                  markdown,
+                  projectId,
+                  embed,
+                });
       // A long document takes a while (some 20 ms a page): the toast says it is under way.
       slow = setTimeout(() => {
         progress = `Exporting ${target?.name ?? name}…`;
@@ -453,14 +553,16 @@ async function run(
     const lacking =
       missing.length > 0 ? ` ${MISSING_GLYPHS}${missing.slice(0, MISSING_SHOWN).join(', ')}.` : '';
     await announceReady(
-      `Exported ${target?.name ?? name}${withOptions(kind, markdown, options)}.${lacking}${after}`,
+      `Exported ${target?.name ?? name}${withOptions(kind, markdown, options, locked)}.${lacking}${after}`,
     );
     return 'saved';
   } catch (error) {
     clearTimeout(slow);
     endProgress();
     if (progress && exportNotice.value === progress) exportNotice.value = '';
-    await announceError(`Couldn’t export ${name}${reason(error)}`);
+    // Nothing to print ("There are no Blue changes to print."): said as it is, and no file.
+    if (error instanceof ExportRefusal) await announceError(error.message);
+    else await announceError(`Couldn’t export ${name}${reason(error)}`);
     return 'cancelled';
   }
 }
@@ -484,6 +586,20 @@ async function storyMapRequest(
   };
 }
 
+/**
+ * One actor's sides as a PDF, after their dialog: the characters named in the header and the
+ * scenes ticked. `forProject` is the project the dialog opened for. Never throws.
+ */
+export function exportSides(
+  choice: SidesChoice,
+  forProject?: string,
+): Promise<'saved' | 'cancelled'> {
+  return queued(askedFor('sides-pdf', undefined, undefined, undefined, choice), {
+    sides: choice,
+    forProject,
+  });
+}
+
 /** Says `message` in the Export toast, as a finished export does (an import's "Imported …"). */
 export function sayInToast(message: string): Promise<void> {
   exportError.value = '';
@@ -504,6 +620,8 @@ interface Asked {
   notes: ExportOptions['notes'];
   /** "Let Drafter reopen this file": an export with the script inside is never joined to one without. */
   reopenable: boolean;
+  /** A locked script's Revision marks: an export with them is never joined to one without. */
+  revisionMarks: NonNullable<ExportOptions['revisionMarks']>;
   paper: Settings['markdownPaper'];
   lang: Settings['spellLanguage'];
   /** The script's own page rate, for an HTML file's running time. */
@@ -512,9 +630,19 @@ interface Asked {
   storyMap: string;
   /** A manuscript's details, as JSON, so two with other details are never joined; '' otherwise. */
   manuscript: string;
+  /** Revised pages' choices, as JSON, likewise; '' otherwise. */
+  revised: string;
+  /** Sides' choices, as JSON, likewise; '' otherwise. */
+  sides: string;
 }
 
-function askedFor(kind: ExportKind, job?: StoryMapJob, details?: ManuscriptDetails): Asked {
+function askedFor(
+  kind: ExportKind,
+  job?: StoryMapJob,
+  details?: ManuscriptDetails,
+  revised?: RevisedPagesChoice,
+  sides?: SidesChoice,
+): Asked {
   const editor = useEditor();
   const project = useScript().project.value;
   const { settings } = useSettings();
@@ -528,11 +656,14 @@ function askedFor(kind: ExportKind, job?: StoryMapJob, details?: ManuscriptDetai
     titlePage: options.titlePage,
     notes: options.notes,
     reopenable: options.reopenable === true,
+    revisionMarks: options.revisionMarks ?? 'open',
     paper: settings.value.markdownPaper,
     lang: settings.value.spellLanguage,
     minutesPerPage: ratesOf(project).minutesPerPage,
     storyMap: job?.key ?? '',
     manuscript: details === undefined ? '' : JSON.stringify(details),
+    revised: revised === undefined ? '' : JSON.stringify(revised),
+    sides: sides === undefined ? '' : JSON.stringify(sides),
   };
 }
 
@@ -550,7 +681,7 @@ let last: { asked: Asked; done: Promise<'saved' | 'cancelled'> } | undefined;
  * for after the options changed is its own too).
  */
 export function exportScript(
-  kind: Exclude<ExportKind, 'story-map' | 'manuscript-pdf' | 'manuscript-docx'>,
+  kind: Exclude<ExportKind, 'story-map' | 'manuscript-pdf' | 'manuscript-docx' | 'revised-pdf'>,
 ): Promise<'saved' | 'cancelled'> {
   return queued(askedFor(kind));
 }
@@ -579,6 +710,29 @@ export function exportManuscript(
 ): Promise<'saved' | 'cancelled'> {
   const kind = format === 'pdf' ? 'manuscript-pdf' : 'manuscript-docx';
   return queued(askedFor(kind, undefined, details), { details, forProject });
+}
+
+/**
+ * Exports the open script's revised pages (production design §8) as its dialog chose them: the
+ * picker ("The Hall – Blue revised pages.pdf"), then the PDF, in the same turn as the other
+ * exports, with the same progress bar and toast. Pages to print are checked before (the dialog,
+ * `revisedRefusal`) and again as it is drawn: with none, the toast says so and no file is made.
+ * Never throws.
+ */
+export function exportRevisedPages(
+  choice: RevisedPagesChoice,
+  forProject?: string,
+): Promise<'saved' | 'cancelled'> {
+  return queued(askedFor('revised-pdf', undefined, undefined, choice), {
+    revised: choice,
+    forProject,
+  });
+}
+
+/** Says `message` in the Export toast as an export's refusal ("There are no Blue changes to print."). */
+export function refuseExport(message: string): Promise<void> {
+  exportNotice.value = '';
+  return announceError(message);
 }
 
 function queued(asked: Asked, dialog: FromDialog = {}): Promise<'saved' | 'cancelled'> {

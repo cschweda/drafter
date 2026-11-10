@@ -315,7 +315,9 @@ describe('pagesHtml', () => {
       span: { from: 0, to: 0 },
     };
     const layout: Layout = {
-      pages: [{ number: 1, lines: [line], sceneNumbersLeft: [], sceneNumbersRight: [] }],
+      pages: [
+        { number: 1, label: '1', lines: [line], sceneNumbersLeft: [], sceneNumbersRight: [] },
+      ],
       index: [],
       diagnostics: [],
     };
@@ -355,5 +357,145 @@ describe('pagesHtml', () => {
     expect(print).toContain('.page:last-child { break-after: auto; }');
     // The header is hidden only beside Pages: Reading prints it.
     expect(print.split('.head').length - 1).toBe(1);
+  });
+});
+
+describe('pagesHtml: a locked script (production design §8)', () => {
+  /** SCREENPLAY laid out, with the lines `pick` chooses marked, and its pages labelled `label`. */
+  function locked(pick: (text: string) => boolean, label = (n: number) => String(n)): Layout {
+    const layout = paginate(parse(SCREENPLAY), screenplay);
+    return {
+      ...layout,
+      pages: layout.pages.map((page) => ({
+        ...page,
+        label: page.number === 0 ? '' : label(page.number),
+        lines: page.lines.map((line) => {
+          const right =
+            line.right && pick(textOf(line.right))
+              ? { ...line.right, mark: { set: 'Blue' } }
+              : line.right;
+          const own = pick(textOf(line)) ? { mark: { set: 'Blue' } } : {};
+          return { ...line, ...own, ...(right ? { right } : {}) };
+        }),
+      })),
+    };
+  }
+  const host = (html: string) => {
+    const el = document.createElement('div');
+    el.innerHTML = html;
+    return el;
+  };
+
+  it("an asterisk on each marked row, in the PDF's column, hidden from a screen reader", () => {
+    const layout = locked((t) => t === 'Somebody has to.' || t === "No, it's mine.");
+    const el = host(pagesHtml(layout, screenplay).html);
+    const stars = [...el.querySelectorAll('[data-furniture="mark"]')];
+    expect(stars.map((s) => s.textContent)).toEqual(['*', '*']);
+    for (const star of stars) {
+      expect(star.getAttribute('aria-hidden')).toBe('true');
+      expect(star.classList.contains(colClass(screenplay.page.width - 5))).toBe(true);
+    }
+    const page = layout.pages[1] as Layout['pages'][number];
+    const row = page.lines.findIndex((l) => textOf(l) === 'Somebody has to.');
+    expect(stars[0]?.classList.contains(rowClass(screenplay.page.margin.top + row))).toBe(true);
+  });
+
+  it('the revision header under the page number, never on the title page', () => {
+    const layout = locked(() => false);
+    const header = 'Blue Revision — 12 November 2026';
+    const el = host(pagesHtml(layout, screenplay, [], { revisionHeader: header }).html);
+    const pages = [...el.querySelectorAll('.page')];
+    const found = pages.map((p) => p.querySelector('[data-furniture="revision"]')?.textContent);
+    expect(found).toEqual(layout.pages.map((p) => (p.number === 0 ? undefined : header)));
+    const { margin, width, numbering } = screenplay.page;
+    const item = pages[1]?.querySelector('[data-furniture="revision"]');
+    expect(item?.classList.contains(rowClass(numbering.line + 1))).toBe(true);
+    expect(item?.classList.contains(colClass(width - margin.right - [...header].length))).toBe(
+      true,
+    );
+  });
+
+  it('a long header wraps onto a second line, both within the page', () => {
+    const layout = locked(() => false);
+    const header = `Blue Pages, the shooting draft of the long weir, for every department on the ${'x'.repeat(33)}`;
+    const el = host(pagesHtml(layout, screenplay, [], { revisionHeader: header }).html);
+    const items = [
+      ...(el.querySelectorAll('.page')[1]?.querySelectorAll('[data-furniture="revision"]') ?? []),
+    ];
+    expect(items).toHaveLength(2);
+    expect(items.map((i) => i.textContent).join(' ')).toBe(header);
+    const { margin, width, numbering } = screenplay.page;
+    items.forEach((item, k) => {
+      const text = item.textContent ?? '';
+      expect(item.classList.contains(rowClass(numbering.line + 1 + k))).toBe(true);
+      expect(item.classList.contains(colClass(width - margin.right - [...text].length))).toBe(true);
+      expect(width - margin.right - [...text].length).toBeGreaterThanOrEqual(margin.left);
+    });
+  });
+
+  it('a custom template with one line between the page number and the body prints one header line, cut with … (ruling F5)', () => {
+    const { margin, width, numbering } = screenplay.page;
+    const tight: Template = {
+      ...screenplay,
+      page: { ...screenplay.page, numbering: { ...numbering, line: margin.top - 2 } },
+    };
+    const layout = paginate(parse('INT. HALL - DAY\n\nThe hall.'), tight);
+    const header = `Blue Pages, the shooting draft of the long weir, for every department on the ${'x'.repeat(33)}`;
+    const el = host(pagesHtml(layout, tight, [], { revisionHeader: header }).html);
+    const items = [...el.querySelectorAll('[data-furniture="revision"]')];
+    expect(items).toHaveLength(1);
+    const text = items[0]?.textContent ?? '';
+    expect(text.endsWith('…')).toBe(true);
+    expect([...text].length).toBe(width - margin.left - margin.right);
+    expect(items[0]?.classList.contains(rowClass(margin.top - 1))).toBe(true);
+  });
+
+  it('the hidden page marker names the page by its label', () => {
+    const layout = locked(
+      () => false,
+      (n) => `${n}A`,
+    );
+    const el = host(pagesHtml(layout, screenplay).html);
+    const names = [...el.querySelectorAll('.page > .vh')].map((s) => s.textContent);
+    expect(names).toEqual(
+      layout.pages.map((p) => (p.number === 0 ? 'Title page' : `Page ${p.label}`)),
+    );
+    expect(names[1]).toBe('Page 1A');
+  });
+
+  it('a label and a header with markup in them are escaped', () => {
+    const label = '1<img src=x onerror=alert(1)>&';
+    const header = 'Blue <b>Revision</b> & co';
+    const layout = locked(
+      () => false,
+      () => label,
+    );
+    const { html } = pagesHtml(layout, screenplay, [], { revisionHeader: header });
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('<b>');
+    expect(html).toContain('Page 1&lt;img src=x onerror=alert(1)&gt;&amp;');
+    expect(html).toContain('Blue &lt;b&gt;Revision&lt;/b&gt; &amp; co');
+    const el = host(html);
+    expect(el.querySelector('img')).toBeNull();
+    expect(el.querySelectorAll('.page > .vh')[1]?.textContent).toBe(`Page ${label}, ${header}`);
+  });
+
+  it('the hidden page marker says the revision on every body page while the header shows', () => {
+    const layout = locked(
+      () => false,
+      (n) => `${n}A`,
+    );
+    const header = 'Blue Revision — 12 November 2026';
+    const el = host(pagesHtml(layout, screenplay, [], { revisionHeader: header }).html);
+    const names = [...el.querySelectorAll('.page > .vh')].map((s) => s.textContent);
+    expect(names).toEqual(
+      layout.pages.map((p) => (p.number === 0 ? 'Title page' : `Page ${p.label}, ${header}`)),
+    );
+  });
+
+  it('an unmarked layout draws exactly as before', () => {
+    const layout = paginate(parse(SCREENPLAY), screenplay);
+    expect(pagesHtml(layout, screenplay, [], {})).toEqual(pagesHtml(layout, screenplay));
+    expect(pagesHtml(layout, screenplay).html).not.toContain('data-furniture="mark"');
   });
 });

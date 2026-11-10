@@ -5,8 +5,9 @@ import { basename, dirname, extname, join, resolve } from 'node:path';
 import { MAX_SCRIPT_BYTES } from '@drafter/archive';
 import { Refused, readCapped, reason } from '@drafter/archive/node';
 import { type Doc, parse, toJSON } from '@drafter/fountain';
-import { type Layout, paginate, UnsupportedTemplateError } from '@drafter/layout';
+import { type Layout, UnsupportedTemplateError } from '@drafter/layout';
 import { DEFAULT_WORDS_PER_MINUTE } from '@drafter/outline';
+import { productionLayout, revisionHeader } from '@drafter/production';
 import { type FontStyle, kindLine, renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
 import { FONT_FILES, type FontSet, renderPdf } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
@@ -211,7 +212,7 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
     }
   }
 
-  const { doc, template, layout, text, bytes } = await load(input, options, io);
+  const { doc, template, layout, header, text, bytes } = await load(input, options, io);
   // The page carries the file exactly, so a file that isn't UTF-8 (read with U+FFFD in its
   // place) can't be carried.
   if (options.reopenable) exactly(input, bytes);
@@ -223,9 +224,19 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
   for (const [kind, target] of outputs) {
     const data =
       kind === 'pdf'
-        ? await renderPdf(layout, template, { fonts: await loadFonts() })
+        ? await renderPdf(layout, template, {
+            fonts: await loadFonts(),
+            ...(header ? { revisionHeader: header } : {}),
+          })
         : kind === 'html'
-          ? await scriptHtml(input, doc, template, layout, options.reopenable ? text : undefined)
+          ? await scriptHtml(
+              input,
+              doc,
+              template,
+              layout,
+              options.reopenable ? text : undefined,
+              header,
+            )
           : kind === 'storyMap'
             ? await storyMapHtml(input, doc, template, layout, text, status, io)
             : kind === 'txt'
@@ -250,6 +261,8 @@ async function scriptHtml(
   layout: Layout,
   /** The file's exact text, to carry inside the page (`--reopenable`), or none. */
   source: string | undefined,
+  /** A locked script's revision header, printed at the top of each page, or none. */
+  header?: string,
 ): Promise<string> {
   const fonts = await loadFonts();
   const used = Object.fromEntries(
@@ -267,6 +280,7 @@ async function scriptHtml(
     generator: `Drafter ${pkg.version}`,
     kindLine: kindLine(layout, template, 1),
     ...(source === undefined ? {} : { source }),
+    ...(header ? { revisionHeader: header } : {}),
   });
 }
 
@@ -406,9 +420,18 @@ async function load(input: string, options: BuildOptions, io: IO) {
   const text = new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes);
   const doc = parse(text);
   const template = await chooseTemplate(input, options.template, doc, io);
-  const { sceneNumbers } = options;
-  const layout = paginate(doc, template, sceneNumbers === undefined ? {} : { sceneNumbers });
-  return { doc, template, layout, text, bytes };
+  // A locked script prints on its locked pages (12A, 13-14), with its new scenes' A-numbers and
+  // the open revision's marks and header, exactly as the app's PDF does; an unlocked one is laid
+  // out as `paginate` lays it out.
+  const production = await productionLayout(text, template, {
+    sceneNumbers: (options.sceneNumbers ?? template.sceneNumbers.enabled) ? 'all' : 'none',
+    marks: 'open',
+  });
+  const header =
+    production.locked && production.open
+      ? (production.header ?? revisionHeader(production.open))
+      : undefined;
+  return { doc, template, layout: production.layout, header, text, bytes };
 }
 
 const builtin = (id: string): Template | undefined =>

@@ -1,4 +1,11 @@
-import type { Layout, LayoutLine, LayoutRun, Page } from '@drafter/layout';
+import {
+  headerLines,
+  headerRows,
+  type Layout,
+  type LayoutLine,
+  type LayoutRun,
+  type Page,
+} from '@drafter/layout';
 import { PAPER_POINTS, type Template } from '@drafter/templates';
 import { el, escapeHtml } from './escape';
 import { colClass, gridRules, pageClass, pageRules, paperRule, rowClass } from './rules';
@@ -27,6 +34,12 @@ const OFF_GRID = /[\t\n\u2028\u2029]/g;
  * column in the layout. (`escapeHtml` turns the other control characters into spaces.)
  */
 const printable = (text: string) => text.replace(OFF_GRID, ' ');
+
+/**
+ * How far in from the grid's right edge a revision mark's asterisk stands, in columns: where
+ * `renderPdf` draws it, in the right margin.
+ */
+const STAR_COLUMN_FROM_RIGHT = 5;
 
 /** A line to draw, and the row of the page's body it stands on. */
 interface Part {
@@ -198,9 +211,17 @@ function bodyHtml(page: Page, template: Template, grid: Grid, marks: Marks | und
  * left margin; scene numbers on their heading's row, at the template's columns from the left
  * margin; the header on the page number's line and the footer as far from the bottom edge, both
  * at the left margin. Each is hidden from a screen reader, which has the "Page N" marker instead.
+ * A locked script's revision marks too, as `renderPdf` draws them: an asterisk on each marked
+ * row, 5 columns in from the grid's right edge, and the revision header right-aligned on the line
+ * under the page number on every page but the title page.
  */
-function furnitureHtml(page: Page, template: Template, grid: Grid): string {
-  const { height, margin, numbering } = template.page;
+function furnitureHtml(
+  page: Page,
+  template: Template,
+  grid: Grid,
+  revisionHeader: string | undefined,
+): string {
+  const { width, height, margin, numbering } = template.page;
   const add = (kind: string, row: number, col: number, text: string) =>
     el(
       'div',
@@ -220,7 +241,34 @@ function furnitureHtml(page: Page, template: Template, grid: Grid): string {
   }
   if (page.header) out += add('header', numbering.line, margin.left, page.header);
   if (page.footer) out += add('footer', height - 1 - numbering.line, margin.left, page.footer);
+  if (revisionHeader && page.number !== 0) {
+    // As renderPdf draws it: right-aligned, a long one on two lines, or one when two won't fit.
+    const lines = headerLines(
+      revisionHeader,
+      width - margin.left - margin.right,
+      headerRows(template.page),
+    );
+    for (const [k, text] of lines.entries()) {
+      const col = Math.max(0, width - margin.right - [...text].length);
+      out += add('revision', numbering.line + 1 + k, Math.max(col, margin.left), text);
+    }
+  }
+  page.lines.forEach((line, k) => {
+    if (line.mark || line.right?.mark) {
+      out += add('mark', margin.top + k, Math.max(width - STAR_COLUMN_FROM_RIGHT, 0), '*');
+    }
+  });
   return out;
+}
+
+/**
+ * What a screen reader hears for a page, as plain text (the caller escapes it; a locked script's
+ * label and header come from its block): "Title page", or "Page 12A", with the revision header
+ * after it on every body page while the header shows ("Page 12A, Blue Revision — 12 November 2026").
+ */
+function markerOf(page: Page, revisionHeader: string | undefined): string {
+  if (page.number === 0) return 'Title page';
+  return revisionHeader ? `Page ${page.label}, ${revisionHeader}` : `Page ${page.label}`;
 }
 
 /**
@@ -232,12 +280,15 @@ function furnitureHtml(page: Page, template: Template, grid: Grid): string {
  * reflowed. The rules for the classes used come back beside the markup.
  *
  * `targets` are the blocks the band links to: each gets `id="b-<block>"` at its first printed line
- * (`layout.index`), which a plain `#b-<block>` link reaches with no script.
+ * (`layout.index`), which a plain `#b-<block>` link reaches with no script. A page is named by its
+ * label, which a locked script's pages keep (`12A`). `revisionHeader` is a locked script's
+ * "Blue Revision — 12 November 2026", drawn under the page number (`furnitureHtml`).
  */
 export function pagesHtml(
   layout: Layout,
   template: Template,
   targets: Iterable<number> = [],
+  opts: { revisionHeader?: string } = {},
 ): PagesHtml {
   const { width, height } = template.page;
   const size = pageClass(width, height);
@@ -245,7 +296,7 @@ export function pagesHtml(
   const pages: readonly Page[] =
     layout.pages.length > 0
       ? layout.pages
-      : [{ number: 1, lines: [], sceneNumbersLeft: [], sceneNumbersRight: [] }];
+      : [{ number: 1, label: '1', lines: [], sceneNumbersLeft: [], sceneNumbersRight: [] }];
   const marks = new Map<number, Marks>();
   for (const block of new Set(targets)) {
     const at = layout.index[block];
@@ -258,9 +309,9 @@ export function pagesHtml(
     el(
       'div',
       { class: `page ${size}` },
-      el('span', { class: 'vh' }, page.number === 0 ? 'Title page' : `Page ${page.number}`) +
+      el('span', { class: 'vh' }, escapeHtml(printable(markerOf(page, opts.revisionHeader)))) +
         bodyHtml(page, template, grid, marks.get(page.number)) +
-        furnitureHtml(page, template, grid),
+        furnitureHtml(page, template, grid, opts.revisionHeader),
     ),
   );
   const paper = PAPER_POINTS[template.page.paper];

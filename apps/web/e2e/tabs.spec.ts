@@ -455,14 +455,18 @@ test.describe('the tab row’s slot', () => {
       'Scaffold',
     ]);
     await more.click();
-    await expect(menu.getByRole('menuitem')).toHaveText([/^Notes, \d+ open$/, /^Problems/]);
+    await expect(menu.getByRole('menuitem')).toHaveText([
+      /^Notes, \d+ open$/,
+      'Production',
+      /^Problems/,
+    ]);
     await menu.getByRole('menuitem', { name: /^Notes/ }).click();
     await expect(menu).toBeHidden();
     const notes = row.getByRole('tab', { name: /^Notes/ });
     await expect(notes).toHaveAttribute('aria-selected', 'true');
     await expect(notes).toBeFocused();
     await more.click();
-    await expect(menu.getByRole('menuitem')).toHaveText([/^Problems/]);
+    await expect(menu.getByRole('menuitem')).toHaveText(['Production', /^Problems/]);
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();
     // Another tab: Notes goes back under More.
@@ -497,6 +501,7 @@ test.describe('the tab row’s slot', () => {
       'Stats',
       'Scaffold',
       /^Notes, \d+ open$/,
+      'Production',
       /^Problems(, \d+)?$/,
       'History',
     ]);
@@ -512,6 +517,7 @@ test.describe('the tab row’s slot', () => {
       'Stats',
       'Scaffold',
       /^Notes, \d+ open$/,
+      'Production',
       /^Problems(, \d+)?$/,
       'History',
     ]);

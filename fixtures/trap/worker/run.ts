@@ -41,6 +41,7 @@ import {
   resolveDetails,
   upTarget,
 } from '@drafter/novel';
+import { decodeBaseline, readProduction } from '@drafter/production';
 import { renderManuscriptDocx } from '@drafter/render-docx';
 import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
 import { MANUSCRIPT_FONT_FILES, renderManuscriptPdf } from '@drafter/render-pdf';
@@ -71,6 +72,7 @@ export type Job =
   | { kind: 'beside'; format: string; bytes: Uint8Array }
   | { kind: 'novel'; bytes: Uint8Array }
   | { kind: 'manuscript'; bytes: Uint8Array; details?: Record<string, unknown> }
+  | { kind: 'production'; bytes: Uint8Array }
   | McpJob;
 
 /**
@@ -143,6 +145,8 @@ export interface Answer {
   novel?: NovelReport;
   /** For `manuscript`: what the two files came to. */
   manuscript?: ManuscriptReport;
+  /** For `production`: whether the block read, and whether it is a lock (its baseline decoded too). */
+  production?: { read: boolean; locked: boolean };
   ms: number;
   kept: number;
 }
@@ -677,7 +681,25 @@ async function makeManuscript(
   return { happened: { kind: 'opened', text, message: '' }, manuscript: report };
 }
 
+/**
+ * A script's production block read as the web app reads it (use-production.ts): the block, then
+ * the open set's baseline, decoded within its cap. The bytes are read whole, past Open's size check,
+ * so a block past its own caps is tried on them. Locked only when both read.
+ */
+async function readLock(
+  bytes: Uint8Array,
+): Promise<{ happened: Happened; production: { read: boolean; locked: boolean } }> {
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  const production = readProduction(parse(text).meta);
+  const baseline = production ? await decodeBaseline(production.baseline) : null;
+  return {
+    happened: { kind: 'opened', text, message: '' },
+    production: { read: production !== null, locked: baseline !== null },
+  };
+}
+
 async function work(job: Job): Promise<Omit<Answer, 'ms' | 'kept'>> {
+  if (job.kind === 'production') return readLock(job.bytes);
   if (job.kind === 'mcp') return runMcp(job);
   if (job.kind === 'novel') return readNovel(job.bytes);
   if (job.kind === 'manuscript') return makeManuscript(job.bytes, job.details);

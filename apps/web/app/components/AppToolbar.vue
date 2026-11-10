@@ -11,6 +11,7 @@ import { DOCUMENT_TYPES } from '~/editor/template';
 import { runContextFor } from '~/modules/context';
 import { useModuleButtons } from '~/modules/host';
 import { runModuleAction } from '~/modules/registry';
+import { useProduction } from '~/production/use-production';
 import { settingsOpen } from '~/settings/dialog';
 import { useSettings } from '~/settings/settings';
 import { EXPORTS } from '~/storage/export';
@@ -134,6 +135,7 @@ const saveItems = computed<DropdownMenuItem[][]>(() => [
     ...saveMenu.entry('history', 'i-lucide-history'),
   ],
 ]);
+const production = useProduction();
 const exportIds = computed(() => {
   const ids = EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].flatMap((kind) =>
     // A script's story map follows its EPUB, as in the Export menu (story-map design §1.1).
@@ -142,9 +144,17 @@ const exportIds = computed(() => {
       : [`export-${kind}`],
   );
   // A novel's manuscript, as a PDF or a Word file, ends the exports; only a novel has it.
-  return editor.kind.value === 'markdown' && editor.novel.value
-    ? [...ids, 'export-manuscript-pdf', 'export-manuscript-docx']
-    : ids;
+  if (editor.kind.value === 'markdown') {
+    return editor.novel.value ? [...ids, 'export-manuscript-pdf', 'export-manuscript-docx'] : ids;
+  }
+  // A script's Production exports (design §§8-10); revised pages only once its pages are locked.
+  return [
+    ...ids,
+    ...(production.state.value !== null ? ['export-revised-pages'] : []),
+    'export-breakdown-csv',
+    'export-breakdown-pdf',
+    'export-sides',
+  ];
 });
 /** The class on More actions' Export item, which opens the exports as a submenu. */
 const EXPORT_ITEM = 'more-export';

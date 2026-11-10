@@ -66,6 +66,7 @@ const ICONS: Record<string, string> = {
   cards: 'i-lucide-layout-grid',
   stats: 'i-lucide-chart-column',
   scaffold: 'i-lucide-users',
+  production: 'i-lucide-clapperboard',
   notes: 'i-lucide-notebook-pen',
   problems: 'i-lucide-triangle-alert',
   compare: 'i-lucide-git-compare',
@@ -828,6 +829,7 @@ function onPanelKeydown(event: KeyboardEvent) {
       <NotesPane v-else-if="props.selected === 'notes'" />
       <StatsPane v-else-if="props.selected === 'stats'" />
       <ScaffoldPane v-else-if="props.selected === 'scaffold'" />
+      <ProductionPane v-else-if="props.selected === 'production'" />
       <ComparePane v-else-if="props.selected === 'compare'" />
       <CutsPane v-else-if="props.selected === 'cuts'" />
       <DraftsPane v-else-if="props.selected === 'drafts'" />

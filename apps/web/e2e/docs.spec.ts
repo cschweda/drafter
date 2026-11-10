@@ -421,6 +421,21 @@ test.describe('without JavaScript', () => {
     }
   });
 
+  test('the Production help page teaches its words', async ({ page }) => {
+    await page.goto('/docs/production');
+    const text = await mainText(page);
+    for (const phrase of [
+      'revision',
+      'A-pages',
+      'OMITTED',
+      'revised pages',
+      'breakdown',
+      'sides',
+    ]) {
+      expect(text, phrase).toContain(phrase);
+    }
+  });
+
   test('the Novel help page has "Sending it out" and names both manuscript exports', async ({
     page,
   }) => {

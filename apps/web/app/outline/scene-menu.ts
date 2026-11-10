@@ -5,7 +5,10 @@ import {
   type SceneColor,
   upTarget,
 } from '@drafter/outline';
+import { numbersScenes } from '@drafter/production';
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { useEditor } from '../editor/session';
+import { useProductionActions } from '../production/use-commands';
 import { openSceneDetails } from './scene-details';
 import { useOutline } from './use-outline';
 
@@ -109,6 +112,36 @@ export function sceneMenuItems(
         onSelect: () => hooks.scaffold(id),
       },
     ]);
+    // Omit scene (production design §7.1): a locked screenplay's numbered scene becomes OMITTED.
+    const omit = omitItem(id, item);
+    if (omit) groups.push([omit]);
   }
   return groups;
+}
+
+/** The scene heading at `from`, as its index among the script's headings; -1 when none is there. */
+function headingIndex(from: number): number {
+  return useEditor()
+    .doc.value.blocks.filter((b) => b.kind === 'scene_heading')
+    .findIndex((b) => b.span.from === from);
+}
+
+/** Omit scene for a scene of a locked screenplay, or null where it doesn't apply. */
+function omitItem(id: string, item: OutlineItem): DropdownMenuItem | null {
+  const actions = useProductionActions();
+  const editor = useEditor();
+  if (!actions.read().production || !numbersScenes(editor.template.value)) return null;
+  const index = headingIndex(item.span.from);
+  if (index < 0) return null;
+  return {
+    label: 'Omit scene',
+    icon: 'i-lucide-square-dashed',
+    disabled: !actions.canOmit(index),
+    onSelect: () => {
+      // The scene as it is now, never offsets from when the menu opened.
+      const scene = useOutline().itemById(id);
+      const now = scene ? headingIndex(scene.span.from) : -1;
+      if (now >= 0) void actions.omit(now);
+    },
+  };
 }

@@ -13,6 +13,7 @@ import { restoreSelection } from '~/editor/restore-selection';
 import { useEditor } from '~/editor/session';
 import { startModules } from '~/modules/host';
 import { keepNovelTabs } from '~/novel/tabs';
+import { keepProvisionalNumbers } from '~/production/provisional';
 import { applySettings } from '~/settings/apply';
 import { useSettings } from '~/settings/settings';
 import { useSnapshots } from '~/snapshots/use-snapshots';
@@ -78,6 +79,8 @@ useSnapshots();
 // Cuts are recorded at each snapshot, and those from before drafts are found once (drafts-and-cuts §3.1).
 installCuts();
 installBeside();
+// A locked screenplay's new scenes show the numbers they will have (production design §7.1).
+keepProvisionalNumbers();
 // Starts the spellcheck, which makes its worker once the settings are read and the first script is
 // open (Plan D): the Source pane's spelling marks.
 useSpell();
@@ -216,6 +219,7 @@ onBeforeUnmount(() => {
     <MarkdownDialog />
     <BothChangedDialog />
     <RemoveDialog />
+    <ProductionDialog />
     <ModuleConfirmDialog />
     <!-- The desktop app's folder modules run in hidden frames of their own; drafter.dev has none. -->
     <LazyFolderModuleRunners v-if="desktopBuild" />
@@ -225,6 +229,8 @@ onBeforeUnmount(() => {
     <TreatmentDialog />
     <StoryMapDialog />
     <ManuscriptDialog />
+    <RevisedPagesDialog />
+    <SidesDialog />
     <ExportOptionsDialog />
     <SceneDetailsDialog />
     <NewNoteDialog />

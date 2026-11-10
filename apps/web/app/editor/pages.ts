@@ -6,6 +6,10 @@ export interface PagePosition {
   current: number;
   /** The last page's number. */
   last: number;
+  /** What the current page prints as its number (a locked script's `12A`); absent, the number. */
+  label?: string;
+  /** What the last page prints as its number. */
+  lastLabel?: string;
 }
 
 /**
@@ -19,14 +23,24 @@ export function pageOf(layout: Layout | null, blockIndex: number | null): PagePo
   const first = layout?.pages[0];
   const last = layout?.pages.at(-1);
   if (!layout || !first || !last) return null;
-  if (blockIndex === null || blockIndex < 0) return { current: first.number, last: last.number };
+  const at = (current: number): PagePosition => {
+    const out: PagePosition = { current, last: last.number };
+    // A page's label is what it prints (production design §7.2): "12A" on a locked script.
+    const label = layout.pages.find((page) => page.number === current)?.label;
+    if (label !== undefined) out.label = label;
+    if (last.label !== undefined) out.lastLabel = last.label;
+    return out;
+  };
+  if (blockIndex === null || blockIndex < 0) return at(first.number);
   const entry = layout.index[blockIndex] ?? layout.index.at(-1);
-  return { current: entry?.page ?? first.number, last: last.number };
+  return at(entry?.page ?? first.number);
 }
 
+/** "Page 2 of 5", or a locked script's "Page 12A of 118", or "Title page". */
 export function pageLabel(page: PagePosition | null): string {
   if (!page) return '';
-  return page.current === 0 ? 'Title page' : `Page ${page.current} of ${page.last}`;
+  if (page.current === 0) return 'Title page';
+  return `Page ${page.label ?? page.current} of ${page.lastLabel ?? page.last}`;
 }
 
 /**

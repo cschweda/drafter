@@ -45,6 +45,16 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.27.0-production',
+    date: '2026-11-09',
+    version: '0.27.0',
+    kind: 'New',
+    title: 'Production: locked pages and revisions',
+    text: 'For a script going into production: lock page and scene numbers and revise in colors, with asterisks where words changed. Export revised pages, a breakdown of every scene, and sides for one actor; it is free.',
+    link: { href: '/docs/production/', label: 'Production' },
+    banner: true,
+  },
+  {
     id: 'v0.26.2-about-menu',
     date: '2026-11-09',
     version: '0.26.2',

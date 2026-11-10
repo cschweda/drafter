@@ -251,7 +251,7 @@ test.describe('the app menu: exports, and the rest', () => {
       await page.keyboard.press('Enter');
       await page
         .getByRole('group', { name: 'Export' })
-        .getByRole('button', { name: 'PDF' })
+        .getByRole('button', { name: 'PDF', exact: true })
         .click();
     }
     expect((await pdf).suggestedFilename()).toBe('The Call.pdf');
@@ -397,6 +397,7 @@ test.describe('the Help menu', () => {
       /^Fountain cheat sheet/,
       /^Classic Mode/,
       /^Novel/,
+      /^Production/,
       /^Saving and your browser/,
       /^Drafts and cuts/,
       /^Story map/,

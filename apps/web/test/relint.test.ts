@@ -12,7 +12,17 @@ vi.mock('@drafter/cm-fountain', async (importOriginal) => ({
 const { builtins } = await import('@drafter/templates');
 const { COMPOSITION_CHECK_MS, editorExtensions, relint } = await import('../app/editor/extensions');
 
+/** Every view a test makes, destroyed after it: a live view's lint timer would otherwise fire
+ * after the file's environment is gone (an unhandled `requestAnimationFrame` error in CI). */
+const views: EditorView[] = [];
+const viewOf = (config: ConstructorParameters<typeof EditorView>[0]) => {
+  const view = new EditorView(config);
+  views.push(view);
+  return view;
+};
+
 afterEach(() => {
+  for (const view of views.splice(0)) view.destroy();
   vi.useRealTimers();
   vi.clearAllMocks();
 });
@@ -25,7 +35,7 @@ const extensions = () =>
 
 describe('relint', () => {
   test('asks cm-fountain to lint the editor again', () => {
-    const view = new EditorView({ doc: 'INT. ROOM - DAY\n', extensions: extensions() });
+    const view = viewOf({ doc: 'INT. ROOM - DAY\n', extensions: extensions() });
     relint();
     expect(fountain.relint).toHaveBeenCalledTimes(1);
     expect(fountain.relint).toHaveBeenCalledWith(view);
@@ -33,7 +43,7 @@ describe('relint', () => {
 
   test('still finds the editor after a fresh state is set (a project opened)', () => {
     const shared = extensions();
-    const view = new EditorView({ doc: 'One.\n', extensions: shared });
+    const view = viewOf({ doc: 'One.\n', extensions: shared });
     view.setState(EditorState.create({ doc: 'Another script.\n', extensions: shared }));
     relint();
     expect(fountain.relint).toHaveBeenCalledWith(view);
@@ -41,7 +51,7 @@ describe('relint', () => {
 
   /** A view whose input method composition is under the test's control. */
   function composingView() {
-    const view = new EditorView({ doc: 'One.\n', extensions: extensions() });
+    const view = viewOf({ doc: 'One.\n', extensions: extensions() });
     const state = { composing: true };
     Object.defineProperty(view, 'composing', { get: () => state.composing });
     Object.defineProperty(view, 'compositionStarted', { get: () => false });

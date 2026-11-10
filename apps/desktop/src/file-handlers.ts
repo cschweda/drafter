@@ -45,7 +45,8 @@ export type SaveExtension =
   | '.html'
   | '.epub'
   | '.fdx'
-  | '.docx';
+  | '.docx'
+  | '.csv';
 const SAVE_EXTENSIONS: readonly string[] = [
   '.fountain',
   '.md',
@@ -55,6 +56,7 @@ const SAVE_EXTENSIONS: readonly string[] = [
   '.epub',
   '.fdx',
   '.docx',
+  '.csv',
 ];
 const isExtension = (value: unknown): value is SaveExtension =>
   typeof value === 'string' && SAVE_EXTENSIONS.includes(value);

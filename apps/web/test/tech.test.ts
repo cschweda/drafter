@@ -216,8 +216,11 @@ describe('directUses', () => {
     // since the novel (it reads Markdown's metadata comment), and one more since the app's Outline
     // for a novel, and one more since Drafter for Claude reads a novel's parts, chapters, and
     // sections, and one more since the manuscript's Word file (render-docx zips with the archive's
-    // writer and reads the novel's manuscript), and one more since the app exports that Word file.
-    expect(edges).toBeLessThanOrEqual(43);
+    // writer and reads the novel's manuscript), and one more since the app exports that Word file,
+    // and two more since production (it diffs with compare; the app reads a locked script with
+    // it), and one more since the breakdown report (production reads the cast and the scene
+    // index), and one more since `drafter build` prints a locked script's pages.
+    expect(edges).toBeLessThanOrEqual(47);
   });
 });
 

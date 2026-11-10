@@ -21,6 +21,7 @@ const packages = [
   'outline',
   'novel',
   'story-map',
+  'production',
   'fdx',
   'cm-fountain',
   'cli',

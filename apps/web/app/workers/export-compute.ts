@@ -1,6 +1,13 @@
 import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
-import { paginate, type SceneNumbering, type TitlePageMode, titlePageFor } from '@drafter/layout';
+import {
+  type Layout,
+  type Page,
+  paginate,
+  type SceneNumbering,
+  type TitlePageMode,
+  titlePageFor,
+} from '@drafter/layout';
 import {
   type ManuscriptDetails,
   type ManuscriptFont,
@@ -8,6 +15,23 @@ import {
   resolveDetails,
 } from '@drafter/novel';
 import { sceneIndex, scriptMarkdown } from '@drafter/outline';
+import {
+  BREAKDOWN_COLUMNS,
+  breakdownRows,
+  noRevisedPages,
+  type ProductionSet,
+  paperTint,
+  productionLayout,
+  productionSceneNumbers,
+  type RevisedChoice,
+  revisedPages,
+  revisionHeader,
+  sceneList,
+  sides,
+  sidesChoices,
+  sidesHeader,
+  toCsv,
+} from '@drafter/production';
 import { renderManuscriptDocx } from '@drafter/render-docx';
 import {
   epubIdentifier,
@@ -34,6 +58,7 @@ import {
   renderDocumentPdf,
   renderManuscriptPdf,
   renderPdf,
+  renderTablePdf,
 } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
 import {
@@ -54,6 +79,7 @@ import {
   type StageWeights,
   WEIGHTS,
 } from './export-progress';
+import { DEGRADED, ExportRefusal, NOT_LOCKED_REVISED } from './export-refusal';
 
 /**
  * How a script exports: which scene numbers print, how much of the title page, and whether a
@@ -71,6 +97,12 @@ export interface ExportOptions {
    * often sent to someone with the notes left out.
    */
   reopenable?: true;
+  /**
+   * A locked script's revision marks in its PDF and its HTML file's pages (production design §8,
+   * Call 3b): `'open'`, the default (absent), prints the open set's asterisks and its revision
+   * header; `'none'` prints the locked labels only. An unlocked script has none to print.
+   */
+  revisionMarks?: 'open' | 'none';
 }
 
 /**
@@ -82,6 +114,14 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptions = Object.freeze({
   titlePage: 'full',
   notes: 'leave-out',
 });
+
+/** What a breakdown report is made from (see `ExportRequest`). */
+interface BreakdownRequest {
+  source: string;
+  template: Template;
+  title: string;
+  today: string;
+}
 
 /**
  * What the main thread sends the export worker: the whole text, the template to lay a script out
@@ -166,7 +206,63 @@ export type ExportRequest =
       options: MapOptions;
     }
   /** What the Make a story map dialog shows (`StoryMapPicks`, as JSON). */
-  | { kind: 'story-map-picks'; source: string; template: Template; options: MapOptions };
+  | { kind: 'story-map-picks'; source: string; template: Template; options: MapOptions }
+  /**
+   * A locked script's revised pages (production design §8): the pages `which` chooses, as they
+   * print in the full PDF (the export options' scene numbers), with the marks of the open set or of
+   * every set, `header` under each page number, and, with `tint`, behind each page the colour
+   * of the newest set with a mark on it.
+   */
+  | {
+      kind: 'revised-pdf';
+      source: string;
+      template: Template;
+      options?: ExportOptions;
+      which: RevisedChoice;
+      marks: 'open' | 'all';
+      header: string;
+      tint: boolean;
+    }
+  /**
+   * A script's breakdown report (production design §9), one row per scene: as a CSV (text) or a
+   * PDF table. `today` is `YYYY-MM-DD`, the PDF's date line.
+   */
+  | ({ kind: 'breakdown-csv' } & BreakdownRequest)
+  | ({ kind: 'breakdown-pdf' } & BreakdownRequest)
+  /** What the Export revised pages dialog shows (`RevisedInfo`, as JSON). */
+  | { kind: 'revised-info'; source: string; template: Template; options?: ExportOptions }
+  /**
+   * One actor's sides (production design §10): the pages the ticked `scenes` (ordinals) are on,
+   * with the other scenes' lines crossed out, and a header naming `names` and the scenes, dated
+   * `today` (`YYYY-MM-DD`). Printed as the full PDF is, with the open set's marks and no tint.
+   */
+  | {
+      kind: 'sides-pdf';
+      source: string;
+      template: Template;
+      options?: ExportOptions;
+      names: string[];
+      scenes: number[];
+      today: string;
+    }
+  /** What the Export sides dialog lists (`SidesChoices`, as JSON): the characters and the scenes. */
+  | { kind: 'sides-info'; source: string; template: Template };
+
+/**
+ * What the Export revised pages dialog opens with: the open set's name (null when the script isn't
+ * locked), the body pages' labels in page order (for the range's ends), the default header for the
+ * open set and the production's own (null when it has none), and whether any page carries the open
+ * set's marks (`current`) or any set's (`any`), so an export with nothing to print is refused
+ * before a picker.
+ */
+export interface RevisedInfo {
+  open: string | null;
+  labels: string[];
+  defaultHeader: string;
+  header: string | null;
+  current: boolean;
+  any: boolean;
+}
 
 /**
  * A novel's manuscript, as a PDF or a Word file (one member each, so a check of the kind narrows
@@ -200,8 +296,15 @@ export interface StoryMapPicks {
   hooks: Array<{ key: string; name: string; hook: string | null; found: string | null }>;
   gapsFound: boolean;
 }
-/** The file, and for a Markdown PDF the characters its fonts lack, printed as `?`. */
-export type ExportReply = { data: Uint8Array | string; missing?: string[] } | { error: string };
+/**
+ * The file, and for a Markdown PDF the characters its fonts lack, printed as `?`; or why not.
+ * `refused` is an export that had nothing to make (no revised pages), whose message is said as it
+ * is, not as a failure.
+ */
+export type ExportReply =
+  | { data: Uint8Array | string; missing?: string[] }
+  | { error: string; refused?: true };
+
 /**
  * Sent while an export runs, before its reply: how far it is, from 0 to 1, or null while it can't
  * say (`export-progress.ts`). The last one before a good reply is 1.
@@ -336,6 +439,24 @@ function storyMapPicks(source: string, template: Template, options: MapOptions):
     }));
   return { quotes, hooks, gapsFound: map.gaps.found };
 }
+
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+// A revision set's header lives in @drafter/production, shared with the command line.
+export { revisionHeader } from '@drafter/production';
 
 /** A render's progress as the export's: saving says nothing until it ends, so it is unknown. */
 const rendering =
@@ -472,6 +593,27 @@ export function createExporter(
       });
       return { data: bytes, missing };
     }
+    if (request.kind === 'revised-info') {
+      return {
+        data: JSON.stringify(await revisedInfo(request.source, request.template, request.options)),
+      };
+    }
+    if (request.kind === 'sides-info') {
+      const { source, template } = request;
+      const numbers = await productionSceneNumbers(source, template);
+      return { data: JSON.stringify(sidesChoices(parse(source), template, numbers)) };
+    }
+    if (request.kind === 'sides-pdf') {
+      const fonts = await fontsOnce();
+      return { data: await sidesPdf(request, fonts, rendering(report)) };
+    }
+    if (request.kind === 'revised-pdf') {
+      const fonts = await fontsOnce();
+      return { data: await revisedPdf(request, fonts, rendering(report)) };
+    }
+    if (request.kind === 'breakdown-csv' || request.kind === 'breakdown-pdf') {
+      return { data: await breakdown(request, documentFontsOnce) };
+    }
     const { kind, source, template, options = DEFAULT_EXPORT_OPTIONS } = request;
     const parsed = parse(source);
     const doc = { ...parsed, titlePage: titlePageFor(parsed.titlePage, options.titlePage) };
@@ -482,8 +624,31 @@ export function createExporter(
       const index = sceneIndex(doc, template);
       return { data: scriptMarkdown(doc, index, template, { sceneNumbers, notes }) };
     }
-    const layout = paginate(doc, template, { sceneNumbers: options.sceneNumbers });
-    if (kind === 'txt') return { data: renderText(layout, template) };
+    // Plain text prints a locked script's pages as the PDF does, at their locked labels (12A,
+    // 13-14) and with its scenes' A-numbers (ruling F1); it has no margin for revision marks.
+    if (kind === 'txt') {
+      const { layout } = await productionLayout(source, template, {
+        sceneNumbers: options.sceneNumbers,
+        titlePage: options.titlePage,
+        marks: 'none',
+      });
+      return { data: renderText(layout, template) };
+    }
+    // A locked script prints on its locked pages, with the open set's marks unless Revision marks
+    // says None; an unlocked one is laid out exactly as `paginate` lays it out. An EPUB is the
+    // Reading view, which prints no pages, so it never spends the time finding marks.
+    const marks = kind === 'epub' ? 'none' : (options.revisionMarks ?? 'open');
+    const production = await productionLayout(source, template, {
+      sceneNumbers: options.sceneNumbers,
+      titlePage: options.titlePage,
+      marks,
+    });
+    const { layout } = production;
+    // A production's own header, else the open set's (Ruling 5b: one header per script).
+    const header =
+      production.locked && marks === 'open' && production.open
+        ? { revisionHeader: production.header ?? revisionHeader(production.open) }
+        : {};
     const fonts = await fontsOnce();
     if (request.kind === 'html') {
       // Only the styles the pages draw in: the file embeds no other.
@@ -499,6 +664,7 @@ export function createExporter(
           lang: request.lang,
           generator: request.generator,
           kindLine: kindLine(layout, template, request.minutesPerPage),
+          ...header,
           ...embedded(request.embed),
         }),
       };
@@ -535,7 +701,9 @@ export function createExporter(
         }),
       };
     }
-    return { data: await renderPdf(layout, template, { fonts, onProgress: rendering(report) }) };
+    return {
+      data: await renderPdf(layout, template, { fonts, onProgress: rendering(report), ...header }),
+    };
   }
 
   return async (
@@ -557,7 +725,175 @@ export function createExporter(
       report.done();
       return reply;
     } catch (error) {
+      if (error instanceof ExportRefusal) return { error: error.message, refused: true };
       return { error: error instanceof Error ? error.message : String(error) };
     }
   };
+}
+
+/** The dialog's `RevisedInfo` for `source`, laid out as its revised pages would be. */
+async function revisedInfo(
+  source: string,
+  template: Template,
+  options: ExportOptions = DEFAULT_EXPORT_OPTIONS,
+): Promise<RevisedInfo> {
+  const opts = { sceneNumbers: options.sceneNumbers, titlePage: 'none' } as const;
+  const all = await productionLayout(source, template, { ...opts, marks: 'all' });
+  const open = all.open;
+  const body = all.layout.pages.filter((page) => page.number !== 0);
+  const any = revisedPages(all.layout, { kind: 'all' }).pages.length > 0;
+  // The open set's pages are among every set's: only then is it worth laying the script out again.
+  const current =
+    any &&
+    open !== null &&
+    revisedPages((await productionLayout(source, template, { ...opts, marks: 'open' })).layout, {
+      kind: 'current',
+    }).pages.length > 0;
+  return {
+    open: all.locked && open ? open.name : null,
+    labels: body.map((page) => page.label),
+    defaultHeader: open ? revisionHeader(open) : '',
+    header: all.header,
+    current,
+    any,
+  };
+}
+
+/** `2026-11-09` as `9 November 2026`; as it is when it can't be read. */
+export function longDate(iso: string): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  const name = MONTHS[(month ?? 0) - 1];
+  return year && day && name ? `${day} ${name} ${year}` : iso;
+}
+
+/**
+ * The breakdown report (production design §9): a CSV as text, or a table PDF in the document
+ * fonts, on the template's paper, dated `today`. The pages are the locked ones for a locked script.
+ */
+async function breakdown(
+  request: Extract<ExportRequest, { kind: 'breakdown-csv' | 'breakdown-pdf' }>,
+  documentFonts: () => Promise<DocumentFontSet>,
+): Promise<string | Uint8Array> {
+  const { source, template } = request;
+  const { layout, degraded, sceneNumbers } = await productionLayout(source, template, {
+    sceneNumbers: 'none',
+    titlePage: 'none',
+    marks: 'none',
+  });
+  if (degraded) throw new ExportRefusal(DEGRADED);
+  const rows = breakdownRows(parse(source), template, layout, sceneNumbers);
+  if (request.kind === 'breakdown-csv') return toCsv([[...BREAKDOWN_COLUMNS], ...rows]);
+  return renderTablePdf(
+    {
+      title: request.title,
+      date: longDate(request.today),
+      columns: [...BREAKDOWN_COLUMNS],
+      rows,
+    },
+    { fonts: await documentFonts(), paper: template.page.paper === 'a4' ? 'a4' : 'letter' },
+  );
+}
+
+/**
+ * A locked script's revised pages as a PDF (production design §8). The pages are chosen from a
+ * layout with the open set's marks (the current revision) or every set's (all revisions, a range),
+ * and printed from one with the marks asked for; both are laid out on the same locked pages, so
+ * their pages line up. Nothing to print, or a script that isn't locked, is refused
+ * (`ExportRefusal`), with no file.
+ */
+async function revisedPdf(
+  request: Extract<ExportRequest, { kind: 'revised-pdf' }>,
+  fonts: FontSet,
+  onProgress: (progress: RenderProgress) => void,
+): Promise<Uint8Array> {
+  const { source, template, which, marks, options = DEFAULT_EXPORT_OPTIONS } = request;
+  const opts = { sceneNumbers: options.sceneNumbers, titlePage: 'none' } as const;
+  const printed = await productionLayout(source, template, { ...opts, marks });
+  if (printed.degraded) throw new ExportRefusal(DEGRADED);
+  if (!printed.locked || !printed.open) throw new ExportRefusal(NOT_LOCKED_REVISED);
+  const chooseMarks = which.kind === 'current' ? 'open' : 'all';
+  const chooseBy =
+    which.kind === 'range' || chooseMarks === marks
+      ? printed.layout
+      : (await productionLayout(source, template, { ...opts, marks: chooseMarks })).layout;
+  const layout = revisedPages(printed.layout, which, chooseBy);
+  if (layout.pages.length === 0) throw new ExportRefusal(noRevisedPages(which, printed.open.name));
+  let tint: ((page: Page) => string | null) | undefined;
+  if (request.tint) {
+    // Each page in the colour of the newest set with a mark on it (Ruling 5d), whichever marks
+    // print: read from a layout with every set's marks. The current revision's pages all carry
+    // the open set's, the newest, so the printed layout says as much for them.
+    const tintBy =
+      marks === 'all' || which.kind === 'current'
+        ? printed.layout
+        : which.kind === 'all'
+          ? chooseBy
+          : (await productionLayout(source, template, { ...opts, marks: 'all' })).layout;
+    const colours = pageColours(tintBy, printed.sets);
+    tint = (page) => colours.get(page.number) ?? null;
+  }
+  return renderPdf(layout, template, {
+    fonts,
+    onProgress,
+    revisionHeader: request.header,
+    ...(tint ? { tint } : {}),
+  });
+}
+
+/**
+ * One actor's sides as a PDF (production design §10): laid out as the full PDF is (the export
+ * options' scene numbers, the open set's marks, no tint, no title page), cut to the pages the
+ * ticked scenes are on, with the other scenes' lines crossed out and the header under each page
+ * number. Nothing ticked is refused (`ExportRefusal`), with no file.
+ */
+async function sidesPdf(
+  request: Extract<ExportRequest, { kind: 'sides-pdf' }>,
+  fonts: FontSet,
+  onProgress: (progress: RenderProgress) => void,
+): Promise<Uint8Array> {
+  const { source, template, options = DEFAULT_EXPORT_OPTIONS } = request;
+  const doc = parse(source);
+  const known = new Set(sidesChoices(doc, template).scenes.map((scene) => scene.ordinal));
+  const scenes = request.scenes.filter((ordinal) => known.has(ordinal));
+  if (scenes.length === 0) throw new ExportRefusal('Tick at least one scene to print.');
+  const { layout, degraded, sceneNumbers } = await productionLayout(source, template, {
+    sceneNumbers: options.sceneNumbers,
+    titlePage: 'none',
+    marks: 'open',
+  });
+  if (degraded) throw new ExportRefusal(DEGRADED);
+  const cut = sides(layout, doc, template, scenes);
+  if (cut.layout.pages.length === 0) throw new ExportRefusal('Tick at least one scene to print.');
+  return renderPdf(cut.layout, template, {
+    fonts,
+    onProgress,
+    revisionHeader: sidesHeader(
+      request.names,
+      sceneList(doc, template, scenes, sceneNumbers),
+      longDate(request.today),
+    ),
+    crossOut: cut.crossOut,
+  });
+}
+
+/**
+ * Each body page's tint, by its number: the paper colour (`paperTint`) of the newest of `sets`
+ * (oldest first) with a mark on it; a page with none, or whose set is White or has a name with no
+ * paper colour, has no entry. renderPdf ignores a colour that isn't `#rrggbb`.
+ */
+function pageColours(layout: Layout, sets: readonly ProductionSet[]): Map<number, string> {
+  const rank = new Map(sets.map((set, i) => [set.name, i]));
+  const colours = new Map<number, string>();
+  for (const page of layout.pages) {
+    if (page.number === 0) continue;
+    let newest = -1;
+    for (const line of page.lines) {
+      for (const mark of [line.mark, line.right?.mark]) {
+        if (mark) newest = Math.max(newest, rank.get(mark.set) ?? -1);
+      }
+    }
+    const tint = paperTint(sets[newest]?.name ?? '');
+    if (tint) colours.set(page.number, tint);
+  }
+  return colours;
 }

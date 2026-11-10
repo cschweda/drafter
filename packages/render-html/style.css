@@ -60,3 +60,9 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* A revision mark's "changed in Blue, " is for a screen reader, not for a copy of the page's text. */
+.drafter-revision-said {
+  -webkit-user-select: none;
+  user-select: none;
+}
