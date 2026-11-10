@@ -71,6 +71,7 @@ flowchart BT
   render_text --> web
   spell --> web
   story_map --> web
+  production --> cli
   render_pdf --> cli
   render_text --> cli
   story_map --> cli

@@ -218,9 +218,9 @@ describe('directUses', () => {
     // sections, and one more since the manuscript's Word file (render-docx zips with the archive's
     // writer and reads the novel's manuscript), and one more since the app exports that Word file,
     // and two more since production (it diffs with compare; the app reads a locked script with
-    // it), and one
-    // more since the breakdown report (production reads the cast and the scene index).
-    expect(edges).toBeLessThanOrEqual(46);
+    // it), and one more since the breakdown report (production reads the cast and the scene
+    // index), and one more since `drafter build` prints a locked script's pages.
+    expect(edges).toBeLessThanOrEqual(47);
   });
 });
 
