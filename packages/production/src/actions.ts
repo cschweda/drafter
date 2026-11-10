@@ -11,7 +11,7 @@ import { paginate } from '@drafter/layout';
 import { resolveRole, type Template } from '@drafter/templates';
 import { rebaseAnchors } from './anchors';
 import { decodeBaseline, encodeBaseline } from './baseline';
-import { productionMeta, readProduction } from './block';
+import { headerOf, MAX_HEADER, productionMeta, readProduction } from './block';
 import { closeSet } from './marks';
 import { compareSceneNumbers, provisionalNumbers } from './numbers';
 import { pageMapOf } from './pages';
@@ -310,6 +310,27 @@ export async function clearMarks(
     sets: freshSets(today, await idOf(draftId, script)),
     baseline: await encodeBaseline(script),
   }));
+}
+
+/**
+ * Keeps `header` in the block as the production's own revision header (design §8), trimmed; null
+ * or blank removes it, so the default ("Blue Revision — 12 November 2026") prints again. Nothing
+ * for an unlocked script, or when the block already says so. A header the block wouldn't read
+ * back (past `MAX_HEADER` characters, or with a control character) throws, so it is never written
+ * only to be ignored.
+ */
+export async function setHeader(text: string, header: string | null): Promise<TextChange[]> {
+  const production = readProduction(parse(text).meta);
+  if (!production) return [];
+  const wanted = header === null || header.trim() === '' ? undefined : headerOf(header);
+  if (header !== null && header.trim() !== '' && wanted === undefined) {
+    throw new Error(
+      `A revision header is one line of up to ${MAX_HEADER} characters, with no control characters.`,
+    );
+  }
+  if (wanted === production.header) return [];
+  const { header: _, ...rest } = production;
+  return finish(text, [], async () => (wanted === undefined ? rest : { ...rest, header: wanted }));
 }
 
 /**

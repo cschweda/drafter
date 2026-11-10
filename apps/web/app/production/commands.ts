@@ -10,6 +10,7 @@ import {
   omitScene,
   type Production,
   readProduction,
+  setHeader,
   startNextSet,
   unlock,
   writeSceneNumbers,
@@ -80,6 +81,11 @@ export interface ProductionActions {
   omit(sceneIndex: number): Promise<boolean>;
   clearMarks(): Promise<boolean>;
   unlock(): Promise<boolean>;
+  /**
+   * Keeps `header` as the production's own revision header (design §8), or, for null, removes it
+   * so the open set's default prints again: one undo step, after the read-only check.
+   */
+  setHeader(header: string | null): Promise<boolean>;
   /** Whether Omit scene applies to scene `sceneIndex`: a locked screenplay, a numbered scene. */
   canOmit(sceneIndex: number): boolean;
   /** The scene heading holding the cursor, as its index among the headings; null before the first. */
@@ -111,6 +117,8 @@ export const NUMBERS_WRITTEN = 'The new scenes’ numbers are written into their
 export const ALL_NUMBERED = 'Every scene already has its number written.';
 export const MARKS_CLEARED = 'Every revision’s marks are cleared. The script is still locked.';
 export const UNLOCKED = 'Pages and scene numbers are unlocked. The text is as it was.';
+export const HEADER_KEPT = 'The revision header is kept in the script.';
+export const HEADER_DEFAULT = 'The revision header is back to the revision’s own.';
 export const sceneGone = (number: string) =>
   `Scene ${number} isn’t in the script any more, so nothing was omitted.`;
 
@@ -350,6 +358,20 @@ export function createProductionActions(deps: ProductionDeps): ProductionActions
     );
   }
 
+  async function doSetHeader(header: string | null): Promise<boolean> {
+    if (!fountain() || !locked()) return false;
+    try {
+      return await guarded(
+        () => apply((text) => setHeader(text, header)),
+        header === null ? HEADER_DEFAULT : HEADER_KEPT,
+      );
+    } catch (error) {
+      // A header the block wouldn't read back: said, and nothing changed.
+      say(error instanceof Error ? error.message : String(error));
+      return false;
+    }
+  }
+
   // ---- The commands -------------------------------------------------------------------------
 
   /** Why a command is off, in the order a writer would fix it; undefined when it is on. */
@@ -413,6 +435,7 @@ export function createProductionActions(deps: ProductionDeps): ProductionActions
     omit: doOmit,
     clearMarks: doClearMarks,
     unlock: doUnlock,
+    setHeader: doSetHeader,
     canOmit,
     sceneAtCursor,
     read,

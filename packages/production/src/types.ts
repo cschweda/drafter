@@ -33,4 +33,10 @@ export interface Production {
   sets: ProductionSet[];
   /** Gzip, then base64, of the open set's baseline text. */
   baseline: string;
+  /**
+   * The production's own revision header, in place of "Blue Revision — 12 November 2026" on the
+   * revised pages and the full PDF (design §8); absent, the default. Trimmed, 1 to `MAX_HEADER`
+   * characters, with no control characters.
+   */
+  header?: string;
 }

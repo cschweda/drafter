@@ -334,6 +334,13 @@ export const COMMAND_DATA: readonly CommandData[] = [
     group: 'File',
     keywords: ['submission', 'agent', 'standard manuscript format', 'docx', 'Word'],
   },
+  // A locked script's revised pages (production design §8), after its dialog.
+  {
+    id: 'export-revised-pages',
+    title: 'Export revised pages (PDF)…',
+    group: 'File',
+    keywords: [...PRODUCTION_WORDS, 'revised pages', 'colored pages', 'Blue pages', 'Pink pages'],
+  },
   { id: 'export-options', title: 'Export options…', group: 'File' },
   { id: 'screenplay-from-outline', title: 'New screenplay from this outline', group: 'File' },
   { id: 'remove', title: 'Remove from this browser', group: 'File' },

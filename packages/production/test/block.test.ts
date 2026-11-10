@@ -161,4 +161,31 @@ describe('the production block', () => {
     expect(gone.other).toBe(1);
     expect(productionMeta(null, null)).toEqual({});
   });
+  it('reads a header, and ignores only the header when it is wrong', () => {
+    expect(readProduction(meta({ ...block, header: '  Blue Pages  ' }))?.header).toBe('Blue Pages');
+    expect(readProduction(meta(block))?.header).toBeUndefined();
+    const at = 'x'.repeat(200);
+    expect(readProduction(meta({ ...block, header: at }))?.header).toBe(at);
+    for (const header of [
+      'x'.repeat(201),
+      'Blue\u0007',
+      'Blue\nPink',
+      '\u202eBlue',
+      '   ',
+      42,
+      null,
+      ['Blue'],
+    ]) {
+      const p = readProduction(meta({ ...block, header }));
+      expect(p, JSON.stringify(header)).not.toBeNull();
+      expect(p?.header, JSON.stringify(header)).toBeUndefined();
+    }
+  });
+
+  it('writes the header back, and none when there is none', () => {
+    const p = readProduction(meta({ ...block, header: 'Blue Pages' }));
+    expect((productionMeta(null, p).production as { header?: string }).header).toBe('Blue Pages');
+    const q = readProduction(meta(block));
+    expect('header' in (productionMeta(null, q).production as object)).toBe(false);
+  });
 });

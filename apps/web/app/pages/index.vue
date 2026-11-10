@@ -229,6 +229,7 @@ onBeforeUnmount(() => {
     <TreatmentDialog />
     <StoryMapDialog />
     <ManuscriptDialog />
+    <RevisedPagesDialog />
     <ExportOptionsDialog />
     <SceneDetailsDialog />
     <NewNoteDialog />

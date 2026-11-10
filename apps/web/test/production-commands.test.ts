@@ -15,6 +15,7 @@ import {
   BUSY,
   CHANGED_MEANWHILE,
   createProductionActions,
+  HEADER_KEPT,
   localDate,
   type ProductionDeps,
   productionAsking,
@@ -338,6 +339,42 @@ describe('the Production commands', () => {
     expect(view.state.doc.toString().startsWith('.OMITTED #1#\n\nEXT. PORCH')).toBe(true);
     expect(undo(view)).toBe(true);
     expect(view.state.doc.toString()).toBe(lockedText);
+  });
+});
+
+describe('the revision header', () => {
+  test('setHeader keeps a header in one undo step, and null removes it', async () => {
+    const { view, actions } = setup();
+    expect(await actions.setHeader('Blue Pages')).toBe(false);
+    await actions.lock();
+    const locked = view.state.doc.toString();
+    expect(await actions.setHeader('Blue Pages')).toBe(true);
+    expect(productionOf(view)?.header).toBe('Blue Pages');
+    expect(productionMessage.value).toBe(HEADER_KEPT);
+    undo(view);
+    expect(view.state.doc.toString()).toBe(locked);
+    expect(await actions.setHeader('Blue Pages')).toBe(true);
+    expect(await actions.setHeader(null)).toBe(true);
+    expect(productionOf(view)?.header).toBeUndefined();
+  });
+
+  test('setHeader changes nothing in a read-only script, and says why', async () => {
+    const { view, deps, actions } = setup();
+    await actions.lock();
+    const before = view.state.doc.toString();
+    deps.readOnlyWhy = () => 'Not here.';
+    expect(await actions.setHeader('Blue Pages')).toBe(false);
+    expect(view.state.doc.toString()).toBe(before);
+    expect(productionMessage.value).toBe('Not here.');
+  });
+
+  test('a header the block would not keep is said, not written', async () => {
+    const { view, actions } = setup();
+    await actions.lock();
+    const before = view.state.doc.toString();
+    expect(await actions.setHeader('x'.repeat(201))).toBe(false);
+    expect(view.state.doc.toString()).toBe(before);
+    expect(productionMessage.value).toContain('200 characters');
   });
 });
 

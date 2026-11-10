@@ -398,6 +398,7 @@ describe('Export options in the desktop menus', () => {
       'export-treatment',
       'export-manuscript-pdf',
       'export-manuscript-docx',
+      'export-revised-pages',
       'export-options',
     ]);
     expect(sent.at(-1)).toMatchObject({ title: 'Export options…', group: 'File' });

@@ -51,6 +51,8 @@ export interface ProductionLayoutResult {
   /** The open set (for headers); null when the script is not locked. */
   open: ProductionSet | null;
   sets: readonly ProductionSet[];
+  /** The production's own revision header (`Production.header`); null for the default, or unlocked. */
+  header: string | null;
 }
 
 /**
@@ -78,6 +80,7 @@ export async function productionLayout(
     locked: false,
     open: null,
     sets: [],
+    header: null,
   });
   const production = readProduction(doc.meta);
   if (!production) return unlocked();
@@ -123,5 +126,5 @@ export async function productionLayout(
       );
     }
   }
-  return { layout, locked: true, open, sets };
+  return { layout, locked: true, open, sets, header: production.header ?? null };
 }

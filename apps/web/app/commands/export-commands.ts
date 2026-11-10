@@ -1,5 +1,6 @@
 import { manuscriptOpen } from '~/novel/manuscript';
 import { treatmentOpen } from '~/outline/treatment';
+import { revisedPagesOpen } from '~/production/revised';
 import { exportScript } from '~/storage/export';
 import { exportOptionsOpen } from '~/storage/export-options';
 import { storyMapOpen } from '~/story-map/options';
@@ -7,12 +8,14 @@ import type { Behavior, When } from './behavior';
 
 /**
  * The Export group's commands (out of `builtin.ts`, 2026-11-04): each export, the story map, the
- * treatment, and a novel's manuscript (after their dialogs), and Export options.
+ * treatment, a locked script's revised pages, and a novel's manuscript (after their dialogs), and
+ * Export options.
  */
 export function exportBehaviors({
   hasScript,
   isFountain,
   isNovel,
+  isLocked,
   exportsHere,
 }: When): Record<string, Behavior> {
   return {
@@ -37,6 +40,14 @@ export function exportBehaviors({
       enabled: () => hasScript() && isFountain(),
       run: () => {
         storyMapOpen.value = true;
+      },
+    },
+    // A locked script's revised pages (production design §8): its dialog first, for which pages,
+    // which marks, the header, and the tint.
+    'export-revised-pages': {
+      enabled: () => hasScript() && isFountain() && isLocked(),
+      run: () => {
+        revisedPagesOpen.value = true;
       },
     },
     'export-treatment': {

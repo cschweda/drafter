@@ -8,7 +8,13 @@ import {
   resolveDetails,
 } from '@drafter/novel';
 import { sceneIndex, scriptMarkdown } from '@drafter/outline';
-import { type ProductionSet, productionLayout } from '@drafter/production';
+import {
+  noRevisedPages,
+  type ProductionSet,
+  productionLayout,
+  type RevisedChoice,
+  revisedPages,
+} from '@drafter/production';
 import { renderManuscriptDocx } from '@drafter/render-docx';
 import {
   epubIdentifier,
@@ -55,6 +61,7 @@ import {
   type StageWeights,
   WEIGHTS,
 } from './export-progress';
+import { ExportRefusal, NOT_LOCKED_REVISED } from './export-refusal';
 
 /**
  * How a script exports: which scene numbers print, how much of the title page, and whether a
@@ -173,7 +180,41 @@ export type ExportRequest =
       options: MapOptions;
     }
   /** What the Make a story map dialog shows (`StoryMapPicks`, as JSON). */
-  | { kind: 'story-map-picks'; source: string; template: Template; options: MapOptions };
+  | { kind: 'story-map-picks'; source: string; template: Template; options: MapOptions }
+  /**
+   * A locked script's revised pages (production design §8): the pages `which` chooses, as they
+   * print in the full PDF (the export options' scene numbers), with the marks of the open set or of
+   * every set, `header` under each page number, and, with `tint`, the open set's colour behind
+   * each page.
+   */
+  | {
+      kind: 'revised-pdf';
+      source: string;
+      template: Template;
+      options?: ExportOptions;
+      which: RevisedChoice;
+      marks: 'open' | 'all';
+      header: string;
+      tint: boolean;
+    }
+  /** What the Export revised pages dialog shows (`RevisedInfo`, as JSON). */
+  | { kind: 'revised-info'; source: string; template: Template; options?: ExportOptions };
+
+/**
+ * What the Export revised pages dialog opens with: the open set's name (null when the script isn't
+ * locked), the body pages' labels in page order (for the range's ends), the default header for the
+ * open set and the production's own (null when it has none), and whether any page carries the open
+ * set's marks (`current`) or any set's (`any`), so an export with nothing to print is refused
+ * before a picker.
+ */
+export interface RevisedInfo {
+  open: string | null;
+  labels: string[];
+  defaultHeader: string;
+  header: string | null;
+  current: boolean;
+  any: boolean;
+}
 
 /**
  * A novel's manuscript, as a PDF or a Word file (one member each, so a check of the kind narrows
@@ -207,8 +248,15 @@ export interface StoryMapPicks {
   hooks: Array<{ key: string; name: string; hook: string | null; found: string | null }>;
   gapsFound: boolean;
 }
-/** The file, and for a Markdown PDF the characters its fonts lack, printed as `?`. */
-export type ExportReply = { data: Uint8Array | string; missing?: string[] } | { error: string };
+/**
+ * The file, and for a Markdown PDF the characters its fonts lack, printed as `?`; or why not.
+ * `refused` is an export that had nothing to make (no revised pages), whose message is said as it
+ * is, not as a failure.
+ */
+export type ExportReply =
+  | { data: Uint8Array | string; missing?: string[] }
+  | { error: string; refused?: true };
+
 /**
  * Sent while an export runs, before its reply: how far it is, from 0 to 1, or null while it can't
  * say (`export-progress.ts`). The last one before a good reply is 1.
@@ -506,6 +554,15 @@ export function createExporter(
       });
       return { data: bytes, missing };
     }
+    if (request.kind === 'revised-info') {
+      return {
+        data: JSON.stringify(await revisedInfo(request.source, request.template, request.options)),
+      };
+    }
+    if (request.kind === 'revised-pdf') {
+      const fonts = await fontsOnce();
+      return { data: await revisedPdf(request, fonts, rendering(report)) };
+    }
     const { kind, source, template, options = DEFAULT_EXPORT_OPTIONS } = request;
     const parsed = parse(source);
     const doc = { ...parsed, titlePage: titlePageFor(parsed.titlePage, options.titlePage) };
@@ -532,9 +589,10 @@ export function createExporter(
       marks,
     });
     const { layout } = production;
+    // A production's own header, else the open set's (Ruling 5b: one header per script).
     const header =
       production.locked && marks === 'open' && production.open
-        ? { revisionHeader: revisionHeader(production.open) }
+        ? { revisionHeader: production.header ?? revisionHeader(production.open) }
         : {};
     const fonts = await fontsOnce();
     if (request.kind === 'html') {
@@ -612,7 +670,67 @@ export function createExporter(
       report.done();
       return reply;
     } catch (error) {
+      if (error instanceof ExportRefusal) return { error: error.message, refused: true };
       return { error: error instanceof Error ? error.message : String(error) };
     }
   };
+}
+
+/** The dialog's `RevisedInfo` for `source`, laid out as its revised pages would be. */
+async function revisedInfo(
+  source: string,
+  template: Template,
+  options: ExportOptions = DEFAULT_EXPORT_OPTIONS,
+): Promise<RevisedInfo> {
+  const opts = { sceneNumbers: options.sceneNumbers, titlePage: 'none' } as const;
+  const all = await productionLayout(source, template, { ...opts, marks: 'all' });
+  const open = all.open;
+  const body = all.layout.pages.filter((page) => page.number !== 0);
+  const any = revisedPages(all.layout, { kind: 'all' }).pages.length > 0;
+  // The open set's pages are among every set's: only then is it worth laying the script out again.
+  const current =
+    any &&
+    open !== null &&
+    revisedPages((await productionLayout(source, template, { ...opts, marks: 'open' })).layout, {
+      kind: 'current',
+    }).pages.length > 0;
+  return {
+    open: all.locked && open ? open.name : null,
+    labels: body.map((page) => page.label),
+    defaultHeader: open ? revisionHeader(open) : '',
+    header: all.header,
+    current,
+    any,
+  };
+}
+
+/**
+ * A locked script's revised pages as a PDF (production design §8). The pages are chosen from a
+ * layout with the open set's marks (the current revision) or every set's (all revisions, a range),
+ * and printed from one with the marks asked for; both are laid out on the same locked pages, so
+ * their pages line up. Nothing to print, or a script that isn't locked, is refused
+ * (`ExportRefusal`), with no file.
+ */
+async function revisedPdf(
+  request: Extract<ExportRequest, { kind: 'revised-pdf' }>,
+  fonts: FontSet,
+  onProgress: (progress: RenderProgress) => void,
+): Promise<Uint8Array> {
+  const { source, template, which, marks, options = DEFAULT_EXPORT_OPTIONS } = request;
+  const opts = { sceneNumbers: options.sceneNumbers, titlePage: 'none' } as const;
+  const printed = await productionLayout(source, template, { ...opts, marks });
+  if (!printed.locked || !printed.open) throw new ExportRefusal(NOT_LOCKED_REVISED);
+  const chooseMarks = which.kind === 'current' ? 'open' : 'all';
+  const chooseBy =
+    which.kind === 'range' || chooseMarks === marks
+      ? printed.layout
+      : (await productionLayout(source, template, { ...opts, marks: chooseMarks })).layout;
+  const layout = revisedPages(printed.layout, which, chooseBy);
+  if (layout.pages.length === 0) throw new ExportRefusal(noRevisedPages(which, printed.open.name));
+  return renderPdf(layout, template, {
+    fonts,
+    onProgress,
+    revisionHeader: request.header,
+    ...(request.tint ? { tint: printed.open.color } : {}),
+  });
 }

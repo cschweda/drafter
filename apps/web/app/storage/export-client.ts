@@ -1,4 +1,5 @@
 import type { ExportProgress, ExportReply, ExportRequest } from '../workers/export-compute';
+import { ExportRefusal } from '../workers/export-refusal';
 
 export type { ExportRequest } from '../workers/export-compute';
 
@@ -68,8 +69,11 @@ function send(
         return;
       }
       finish();
-      if ('error' in event.data) reject(new Error(event.data.error));
-      else resolve({ data: event.data.data, missing: event.data.missing ?? [] });
+      if ('error' in event.data) {
+        const { error, refused } = event.data;
+        // Nothing to make (no revised pages): said as it is, never as a failure.
+        reject(refused ? new ExportRefusal(error) : new Error(error));
+      } else resolve({ data: event.data.data, missing: event.data.missing ?? [] });
     };
     const onFailure = () => {
       finish();

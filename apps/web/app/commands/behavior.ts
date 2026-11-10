@@ -25,6 +25,8 @@ export interface When {
   isMarkdown(): boolean;
   /** A Markdown document that is a novel (`novel/kind.ts`): its manuscript exports apply. */
   isNovel(): boolean;
+  /** A Fountain script whose production block reads: it is locked, and prints revised pages. */
+  isLocked(): boolean;
   /** Whether the open document exports as `kind` (`EXPORTS`). */
   exportsHere(kind: ExportKind): boolean;
 }
