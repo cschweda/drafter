@@ -77,6 +77,11 @@ export interface PaginateOptions {
   sceneNumbers?: boolean | SceneNumbering;
   /** Lays a locked script out on its locked pages (production design §7.2). */
   locked?: LockedPages;
+  /**
+   * Numbers for scene headings with none written, by block index: a locked script's A-numbers
+   * (production design §7.1). Each prints as a written number does; a written one is never replaced.
+   */
+  numbers?: ReadonlyMap<number, string>;
 }
 
 /** Where a locked page starts: the source line at `at`, after `printed` printed lines from it. */

@@ -10,11 +10,13 @@ import {
   titlePageFor,
 } from '@drafter/layout';
 import type { Template } from '@drafter/templates';
+import { numbersScenes } from './actions';
 import { resolveAnchors } from './anchors';
 import { decodeBaseline } from './baseline';
 import { readProduction } from './block';
 import { productionMarks } from './marks';
-import type { LockedPage, ProductionSet } from './types';
+import { lockedSceneNumbers } from './numbers';
+import type { LockedPage, Production, ProductionSet } from './types';
 
 /**
  * A locked script's pages in `current` (production design §7.2): where each locked page starts now,
@@ -53,6 +55,47 @@ export interface ProductionLayoutResult {
   sets: readonly ProductionSet[];
   /** The production's own revision header (`Production.header`); null for the default, or unlocked. */
   header: string | null;
+  /**
+   * A locked screenplay's scene numbers as shown (`lockedSceneNumbers`), by block index: what the
+   * layout prints in its margins, and what the breakdown and the sides call each scene. Null when
+   * the script isn't locked (its scenes keep their ordinals), or isn't a screenplay.
+   */
+  sceneNumbers: ReadonlyMap<number, string> | null;
+}
+
+/**
+ * A locked script's production and its open set's baseline text; null when it isn't locked, its
+ * block can't be read, or its baseline won't decode (the Production tab's "damaged").
+ */
+async function readLocked(
+  meta: Parameters<typeof readProduction>[0],
+): Promise<{ production: Production; baseline: string } | null> {
+  const production = readProduction(meta);
+  if (!production) return null;
+  const baseline = await decodeBaseline(production.baseline);
+  return baseline === null ? null : { production, baseline };
+}
+
+/** `lockedSceneNumbers` for a locked screenplay; null for any other script. */
+function sceneNumbersOf(
+  blocks: Parameters<typeof lockedSceneNumbers>[0],
+  template: Template,
+  production: Production,
+): Map<number, string> | null {
+  return numbersScenes(template) ? lockedSceneNumbers(blocks, production.numbers) : null;
+}
+
+/**
+ * The scene numbers `productionLayout` gives `source`, without laying it out (the Sides dialog's
+ * scene list): a locked screenplay's written numbers and A-numbers; null otherwise.
+ */
+export async function productionSceneNumbers(
+  source: string,
+  template: Template,
+): Promise<ReadonlyMap<number, string> | null> {
+  const doc = parse(source);
+  const locked = await readLocked(doc.meta);
+  return locked && sceneNumbersOf(doc.blocks, template, locked.production);
 }
 
 /**
@@ -60,7 +103,9 @@ export interface ProductionLayoutResult {
  * pages, with its revision marks as `marks` says. Offsets are into the whole source: the marks are
  * found in the text without the `/* drafter *\/` block, which is the last thing in the source, so
  * its offsets before the block are the whole source's. An unlocked script, one whose block can't
- * be read, or one whose baseline won't decode is laid out exactly as `paginate` does, unlocked.
+ * be read, or one whose baseline won't decode is laid out exactly as `paginate` does, unlocked. A
+ * locked screenplay's scenes print their written numbers, and a new one the A-number it will have
+ * (`sceneNumbers`), as the Script pane shows them (design §7.1).
  * `titlePage` is an export's choice of how much title page prints (`titlePageFor`); absent, all
  * of it, as the screen shows.
  */
@@ -81,11 +126,13 @@ export async function productionLayout(
     open: null,
     sets: [],
     header: null,
+    sceneNumbers: null,
   });
-  const production = readProduction(doc.meta);
-  if (!production) return unlocked();
-  const baseline = await decodeBaseline(production.baseline);
-  if (baseline === null) return unlocked();
+  const read = await readLocked(doc.meta);
+  if (!read) return unlocked();
+  const { production, baseline } = read;
+  const numbers = sceneNumbersOf(doc.blocks, template, production);
+  const given = numbers ? { numbers } : {};
   const span = metadataSpan(doc);
   const current = span ? source.slice(0, span.from) + source.slice(span.to) : source;
 
@@ -95,11 +142,16 @@ export async function productionLayout(
   try {
     lockedPages = lockedPagesOf(production.pages, baseline, current);
   } catch (error) {
-    // As on the screen: pages that can't be placed are laid out unlocked.
+    // As on the screen: pages that can't be placed are laid out unlocked, with the scenes'
+    // numbers still the locked ones.
     console.error(`Locked pages failed: ${error instanceof Error ? error.message : String(error)}`);
-    return unlocked();
+    return {
+      ...unlocked(),
+      layout: paginate(doc, template, { sceneNumbers, ...given }),
+      sceneNumbers: numbers,
+    };
   }
-  let layout = paginate(doc, template, { sceneNumbers, locked: lockedPages });
+  let layout = paginate(doc, template, { sceneNumbers, locked: lockedPages, ...given });
   if (marks !== 'none' && open) {
     try {
       const found = await productionMarks({
@@ -126,5 +178,12 @@ export async function productionLayout(
       );
     }
   }
-  return { layout, locked: true, open, sets, header: production.header ?? null };
+  return {
+    layout,
+    locked: true,
+    open,
+    sets,
+    header: production.header ?? null,
+    sceneNumbers: numbers,
+  };
 }

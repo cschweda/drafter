@@ -119,7 +119,7 @@ export function paginate(doc: Doc, template: Template, opts: PaginateOptions = {
 
   const option = opts.sceneNumbers ?? template.sceneNumbers.enabled;
   const numbering: SceneNumbering = option === true ? 'all' : option === false ? 'none' : option;
-  const built = new Items(doc, template, height, diagnostics).build(numbering);
+  const built = new Items(doc, template, height, diagnostics).build(numbering, opts.numbers);
   const { scenes } = built;
   const items = opts.locked ? lockedItems(built.items, doc.blocks, opts.locked) : built.items;
   const pager = new Pager(template, height, scenes, doc.blocks.length);
@@ -175,10 +175,13 @@ class Items {
     return style ? { role: action, style } : null;
   }
 
-  build(numbering: SceneNumbering): { items: Item[]; scenes: Map<number, string> } {
+  build(
+    numbering: SceneNumbering,
+    given?: ReadonlyMap<number, string>,
+  ): { items: Item[]; scenes: Map<number, string> } {
     const entries = this.#entries();
     const items: Item[] = [];
-    const scenes = numbersOf(this.#blocks, this.#roles, numbering);
+    const scenes = numbersOf(this.#blocks, this.#roles, numbering, given);
     for (let e = 0; e < entries.length; e++) {
       const entry = entries[e] as Entry;
       if (entry.type === 'break') {

@@ -21,6 +21,7 @@ import {
   noRevisedPages,
   type ProductionSet,
   productionLayout,
+  productionSceneNumbers,
   type RevisedChoice,
   revisedPages,
   sceneList,
@@ -605,7 +606,9 @@ export function createExporter(
       };
     }
     if (request.kind === 'sides-info') {
-      return { data: JSON.stringify(sidesChoices(parse(request.source), request.template)) };
+      const { source, template } = request;
+      const numbers = await productionSceneNumbers(source, template);
+      return { data: JSON.stringify(sidesChoices(parse(source), template, numbers)) };
     }
     if (request.kind === 'sides-pdf') {
       const fonts = await fontsOnce();
@@ -775,12 +778,12 @@ async function breakdown(
   documentFonts: () => Promise<DocumentFontSet>,
 ): Promise<string | Uint8Array> {
   const { source, template } = request;
-  const { layout } = await productionLayout(source, template, {
+  const { layout, sceneNumbers } = await productionLayout(source, template, {
     sceneNumbers: 'none',
     titlePage: 'none',
     marks: 'none',
   });
-  const rows = breakdownRows(parse(source), template, layout);
+  const rows = breakdownRows(parse(source), template, layout, sceneNumbers);
   if (request.kind === 'breakdown-csv') return toCsv([[...BREAKDOWN_COLUMNS], ...rows]);
   return renderTablePdf(
     {
@@ -854,7 +857,7 @@ async function sidesPdf(
   const known = new Set(sidesChoices(doc, template).scenes.map((scene) => scene.ordinal));
   const scenes = request.scenes.filter((ordinal) => known.has(ordinal));
   if (scenes.length === 0) throw new ExportRefusal('Tick at least one scene to print.');
-  const { layout } = await productionLayout(source, template, {
+  const { layout, sceneNumbers } = await productionLayout(source, template, {
     sceneNumbers: options.sceneNumbers,
     titlePage: 'none',
     marks: 'open',
@@ -866,7 +869,7 @@ async function sidesPdf(
     onProgress,
     revisionHeader: sidesHeader(
       request.names,
-      sceneList(doc, template, scenes),
+      sceneList(doc, template, scenes, sceneNumbers),
       longDate(request.today),
     ),
     crossOut: cut.crossOut,

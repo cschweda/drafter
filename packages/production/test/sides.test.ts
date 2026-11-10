@@ -3,7 +3,7 @@ import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, it } from 'vitest';
 import { lock } from '../src/actions';
 import { productionLayout } from '../src/layout';
-import { type CrossOut, scenesFor, sides, sidesChoices } from '../src/sides';
+import { type CrossOut, sceneList, scenesFor, sides, sidesChoices } from '../src/sides';
 
 const screenplay = builtins['us-screenplay'] as Template;
 const play = builtins['stage-play-standard'] as Template;
@@ -355,5 +355,23 @@ describe('sidesChoices', () => {
     );
     const found = sidesChoices(doc, screenplay);
     expect(found.scenes.map((s) => s.label)).toEqual(['4', '12A']);
+  });
+
+  it('labels a locked script’s new scene by its A-number, in the choices and the list (ruling F1)', () => {
+    const doc = parse(
+      'INT. A - DAY #5#\n\nOne.\n\nINT. B - DAY\n\nTwo.\n\nINT. C - DAY #6#\n\nThree.',
+    );
+    const numbers = new Map([
+      [0, '5'],
+      [2, '5A'],
+      [4, '6'],
+    ]);
+    expect(sidesChoices(doc, screenplay, numbers).scenes.map((s) => s.label)).toEqual([
+      '5',
+      '5A',
+      '6',
+    ]);
+    expect(sceneList(doc, screenplay, [2, 3], numbers)).toBe('5A, 6');
+    expect(sceneList(doc, screenplay, [2, 3])).toBe('2, 6');
   });
 });

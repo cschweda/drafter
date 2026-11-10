@@ -20,9 +20,15 @@ export {
   type MarkChoice,
   type ProductionLayoutResult,
   productionLayout,
+  productionSceneNumbers,
 } from './layout';
 export { closeSet, type MarkedGap, type MarkedSpan, productionMarks } from './marks';
-export { compareSceneNumbers, numberBetween, provisionalNumbers } from './numbers';
+export {
+  compareSceneNumbers,
+  lockedSceneNumbers,
+  numberBetween,
+  provisionalNumbers,
+} from './numbers';
 export { pageMapOf } from './pages';
 export {
   labelRange,

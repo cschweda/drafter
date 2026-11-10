@@ -16,6 +16,8 @@ export type LayoutProductionFacts = {
   pages: LockedPage[];
   closed: ProductionSet[];
   open: string;
+  /** The scene numbers the lock has issued, so a new scene shows its A-number. */
+  numbers: readonly string[];
 };
 
 /** A locked script's production, as Show changes' baseline is sent: its id, and its facts when the id is new. */

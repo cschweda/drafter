@@ -1,8 +1,14 @@
 import { changesOf, markPages, type PageMarks } from '@drafter/compare';
 import { type Doc, metadataSpan, parse } from '@drafter/fountain';
-import type { Layout, LockedPages, Marks } from '@drafter/layout';
+import type { Layout, Marks, PaginateOptions } from '@drafter/layout';
 import { paginate } from '@drafter/layout';
-import { lockedPagesOf, productionMarks } from '@drafter/production';
+import {
+  lockedPagesOf,
+  lockedSceneNumbers,
+  numbersScenes,
+  productionMarks,
+} from '@drafter/production';
+import type { Template } from '@drafter/templates';
 import type { LayoutProductionFacts, LayoutReply, LayoutRequest } from '../editor/layout-client';
 
 /**
@@ -16,14 +22,25 @@ function scriptOf(doc: Doc): string {
   return span ? doc.source.slice(0, span.from) + doc.source.slice(span.to) : doc.source;
 }
 
-/** The paginate options for a locked script; none when its pages can't be placed, so it is laid out unlocked. */
-function lockedOf(doc: Doc, facts: LayoutProductionFacts | undefined): { locked?: LockedPages } {
+/**
+ * The paginate options for a locked script: its locked pages, unless they can't be placed (then it
+ * is laid out unlocked), and a screenplay's scene numbers as every export prints them, a new
+ * scene's A-number among them (`lockedSceneNumbers`, production design §7.1).
+ */
+function lockedOf(
+  doc: Doc,
+  template: Template,
+  facts: LayoutProductionFacts | undefined,
+): Pick<PaginateOptions, 'locked' | 'numbers'> {
   if (!facts) return {};
+  const numbers = numbersScenes(template)
+    ? { numbers: lockedSceneNumbers(doc.blocks, facts.numbers) }
+    : {};
   try {
-    return { locked: lockedPagesOf(facts.pages, facts.baseline, scriptOf(doc)) };
+    return { locked: lockedPagesOf(facts.pages, facts.baseline, scriptOf(doc)), ...numbers };
   } catch (error) {
     console.error(`Locked pages failed: ${error instanceof Error ? error.message : String(error)}`);
-    return {};
+    return numbers;
   }
 }
 
@@ -35,7 +52,7 @@ function layoutOf(
   let doc: Doc | null = null;
   try {
     doc = parse(source);
-    return { doc, reply: { seq, layout: paginate(doc, template, lockedOf(doc, facts)) } };
+    return { doc, reply: { seq, layout: paginate(doc, template, lockedOf(doc, template, facts)) } };
   } catch (error) {
     return { doc, reply: { seq, error: error instanceof Error ? error.message : String(error) } };
   }

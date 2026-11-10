@@ -116,6 +116,33 @@ describe('breakdownRows', () => {
     expect(rows[0]?.[5]).toBe('1');
   });
 
+  it('calls a locked script’s new scene by its A-number, from the layout’s numbers (ruling F1)', async () => {
+    const { lock } = await import('../src/actions');
+    const two = 'INT. HALL - DAY\n\nOne.\n\nINT. ATTIC - NIGHT\n\nTwo.\n';
+    const changes = await lock(two, screenplay, {
+      today: '2026-11-09',
+      draftId: 'd',
+      firstScene: 5,
+    });
+    let text = two;
+    for (const c of [...changes].sort((a, b) => b.from - a.from)) {
+      text = text.slice(0, c.from) + c.insert + text.slice(c.to);
+    }
+    text = text.replace('INT. ATTIC', 'INT. STAIRS - DAY\n\nNew.\n\nINT. ATTIC');
+    const result = await productionLayout(text, screenplay, {
+      sceneNumbers: 'none',
+      marks: 'none',
+    });
+    const rows = breakdownRows(parse(text), screenplay, result.layout, result.sceneNumbers);
+    expect(rows.map((row) => row[0])).toEqual(['5', '5A', '6']);
+    // Without them, as an unlocked script: the ordinal.
+    expect(breakdownRows(parse(text), screenplay, result.layout).map((row) => row[0])).toEqual([
+      '5',
+      '2',
+      '6',
+    ]);
+  });
+
   it('reads the sample screenplay', () => {
     const rows = rowsOf(sample('screenplay.fountain'), screenplay);
     expect(rows.length).toBeGreaterThan(1);

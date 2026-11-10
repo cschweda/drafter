@@ -1,3 +1,5 @@
+import type { Block } from '@drafter/fountain';
+
 // A-numbers: the numbers a scene gets when it is added after the script's
 // scene numbers were locked. Locked numbers never change, so a new scene
 // between 5 and 6 becomes 5A, and one before scene 1 becomes A1.
@@ -152,4 +154,25 @@ export function provisionalNumbers(
     previous = made;
   }
   return out;
+}
+
+/**
+ * A locked script's scene numbers as they are shown, on screen and in every export (design §7.1):
+ * each scene heading's, by its block index in `blocks`, its written number, else the A-number it
+ * will have (`provisionalNumbers` over every heading, never one in `issued`). Shown only: the text
+ * is not changed for them until Write new scene numbers (or the next set, or a lock) writes them.
+ */
+export function lockedSceneNumbers(
+  blocks: readonly Block[],
+  issued: Iterable<string>,
+): Map<number, string> {
+  const at: number[] = [];
+  const written: Array<string | null> = [];
+  blocks.forEach((block, i) => {
+    if (block.kind !== 'scene_heading') return;
+    at.push(i);
+    written.push(block.sem.number);
+  });
+  const filled = provisionalNumbers(written, new Set(issued));
+  return new Map(at.map((i, k) => [i, filled[k] as string]));
 }

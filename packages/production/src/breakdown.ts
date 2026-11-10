@@ -31,14 +31,21 @@ function eighthsText(eighths: number): string {
  * the script's pages (locked pages for a locked script): Pages is the scene's length, Page the
  * label of the page it starts on. Cast is who speaks, in the order of their first cue, then who is
  * only named in the action, in the order named. An `.OMITTED #n#` scene is its number and OMITTED.
+ * Scene is `numbers`' number for the heading's block (a locked script's, `productionLayout`'s
+ * `sceneNumbers`, so a new scene shows its A-number), else the written number, else the ordinal.
  */
-export function breakdownRows(doc: Doc, template: Template, layout: Layout): string[][] {
+export function breakdownRows(
+  doc: Doc,
+  template: Template,
+  layout: Layout,
+  numbers?: ReadonlyMap<number, string> | null,
+): string[][] {
   const index = sceneIndex(doc, template, layout);
   const cast = castOf(index, doc, template, linesPerPage(layout), () => undefined);
   const nameOf = new Map(cast.characters.map((c) => [c.key, c.name]));
   const labels = new Map(layout.pages.map((page) => [page.number, page.label]));
   return index.scenes.map((scene: Scene, i) => {
-    const number = scene.number ?? String(scene.ordinal);
+    const number = numbers?.get(scene.block) ?? scene.number ?? String(scene.ordinal);
     if (scene.heading.trim().toUpperCase() === 'OMITTED' && scene.number !== null) {
       return [number, 'OMITTED', '', '', '', '', '', ''];
     }

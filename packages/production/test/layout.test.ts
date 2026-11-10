@@ -182,3 +182,49 @@ describe('productionLayout', () => {
     expect(marksOf(result.layout).length).toBeGreaterThan(1);
   });
 });
+
+/** Scenes locked as 5 and 6, then a new scene with no number written between them. */
+async function newSceneBetween(): Promise<string> {
+  const text = `INT. HALL - DAY\n\n${body(1, 30)}\nINT. ATTIC - NIGHT\n\n${body(100, 30)}`;
+  const locked = apply(
+    text,
+    await lock(text, template, { today: '2026-11-09', draftId, firstScene: 5 }),
+  );
+  expect(locked).toContain('INT. HALL - DAY #5#');
+  expect(locked).toContain('INT. ATTIC - NIGHT #6#');
+  return locked.replace(
+    'INT. ATTIC - NIGHT #6#',
+    'INT. STAIRS - DAY\n\nNew.\n\nINT. ATTIC - NIGHT #6#',
+  );
+}
+
+const printedNumbers = (layout: ReturnType<typeof paginate>) =>
+  layout.pages.flatMap((page) => page.sceneNumbersLeft.map((n) => n.text));
+
+describe('a locked script’s new scene (ruling F1)', () => {
+  it('prints the A-number it will have, under Number every scene and As written', async () => {
+    const source = await newSceneBetween();
+    for (const sceneNumbers of ['all', 'written'] as const) {
+      const result = await productionLayout(source, template, { sceneNumbers, marks: 'none' });
+      expect(printedNumbers(result.layout)).toEqual(['5', '5A', '6']);
+    }
+    const result = await productionLayout(source, template, { sceneNumbers: 'all', marks: 'none' });
+    expect([...(result.sceneNumbers?.values() ?? [])]).toEqual(['5', '5A', '6']);
+    // Shown only: the text is as it was.
+    expect(source).toContain('INT. STAIRS - DAY\n');
+  });
+
+  it('an unlocked script keeps its ordinals', async () => {
+    const source = 'INT. A - DAY #5#\n\nOne.\n\nINT. B - DAY\n\nTwo.\n\nINT. C - DAY #6#\n\nThree.';
+    const result = await productionLayout(source, template, { sceneNumbers: 'all', marks: 'none' });
+    expect(result.sceneNumbers).toBeNull();
+    expect(printedNumbers(result.layout)).toEqual(['5', '2', '6']);
+  });
+
+  it('a stage play gets no A-numbers', async () => {
+    const play = builtins['stage-play-standard'] as Template;
+    const source = await newSceneBetween();
+    const result = await productionLayout(source, play, { sceneNumbers: 'all', marks: 'none' });
+    expect(result.sceneNumbers).toBeNull();
+  });
+});

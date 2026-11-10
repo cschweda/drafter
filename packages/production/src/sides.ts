@@ -11,8 +11,15 @@ import type { Template } from '@drafter/templates';
 const omitted = (scene: Scene) =>
   scene.heading.trim().toUpperCase() === 'OMITTED' && scene.number !== null;
 
-/** What a scene is called in a header and a list: its locked number, else its ordinal. */
-const labelOf = (scene: Scene) => scene.number ?? String(scene.ordinal);
+/**
+ * A locked screenplay's scene numbers by block index (`productionLayout`'s `sceneNumbers`): a new
+ * scene's A-number among them. Absent for any other script.
+ */
+type Numbers = ReadonlyMap<number, string> | null | undefined;
+
+/** What a scene is called in a header and a list: its locked number or A-number, else its ordinal. */
+const labelOf = (scene: Scene, numbers: Numbers) =>
+  numbers?.get(scene.block) ?? scene.number ?? String(scene.ordinal);
 
 /**
  * The scenes (by ordinal, in script order) any of `characters` speak in or are named in. Names are
@@ -40,7 +47,7 @@ export interface SidesChoices {
 }
 
 /** The characters (the cast's order) and the scenes (script order, omitted ones left out) to choose from. */
-export function sidesChoices(doc: Doc, template: Template): SidesChoices {
+export function sidesChoices(doc: Doc, template: Template, numbers?: Numbers): SidesChoices {
   const index = sceneIndex(doc, template);
   const cast = castOf(index, doc, template, null, () => undefined);
   return {
@@ -54,16 +61,25 @@ export function sidesChoices(doc: Doc, template: Template): SidesChoices {
     })),
     scenes: index.scenes
       .filter((scene) => !omitted(scene))
-      .map((scene) => ({ ordinal: scene.ordinal, label: labelOf(scene), heading: scene.heading })),
+      .map((scene) => ({
+        ordinal: scene.ordinal,
+        label: labelOf(scene, numbers),
+        heading: scene.heading,
+      })),
   };
 }
 
 /** The scene list for a header: `4, 12, 12A`, by number else ordinal, in script order. */
-export function sceneList(doc: Doc, template: Template, scenes: readonly number[]): string {
+export function sceneList(
+  doc: Doc,
+  template: Template,
+  scenes: readonly number[],
+  numbers?: Numbers,
+): string {
   const wanted = new Set(scenes);
   return sceneIndex(doc, template)
     .scenes.filter((scene) => wanted.has(scene.ordinal))
-    .map(labelOf)
+    .map((scene) => labelOf(scene, numbers))
     .join(', ');
 }
 

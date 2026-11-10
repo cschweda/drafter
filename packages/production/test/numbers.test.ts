@@ -1,5 +1,11 @@
+import { parse } from '@drafter/fountain';
 import { describe, expect, it } from 'vitest';
-import { compareSceneNumbers, numberBetween, provisionalNumbers } from '../src/numbers';
+import {
+  compareSceneNumbers,
+  lockedSceneNumbers,
+  numberBetween,
+  provisionalNumbers,
+} from '../src/numbers';
 
 // The brief's cases, verbatim: [before, after, expected].
 const CASES: [string | null, string | null, string][] = [
@@ -150,5 +156,34 @@ describe('issued numbers never revive', () => {
       '5D',
       '6',
     ]);
+  });
+});
+
+describe('lockedSceneNumbers', () => {
+  const blocks = (source: string) => parse(source).blocks;
+
+  it('keeps written numbers and gives a new heading its A-number, by block index', () => {
+    const source = 'INT. A - DAY #5#\n\nOne.\n\nINT. B - DAY\n\nTwo.\n\nINT. C - DAY #6#\n\nThree.';
+    expect([...lockedSceneNumbers(blocks(source), ['5', '6'])]).toEqual([
+      [0, '5'],
+      [2, '5A'],
+      [4, '6'],
+    ]);
+  });
+
+  it('never gives out an issued number again', () => {
+    const source = 'INT. A - DAY #5#\n\nINT. B - DAY\n\nINT. C - DAY #6#';
+    expect([...lockedSceneNumbers(blocks(source), ['5', '5A', '6']).values()]).toEqual([
+      '5',
+      '5B',
+      '6',
+    ]);
+  });
+
+  it('is what the Source pane draws: provisionalNumbers over the headings', () => {
+    const source = 'INT. A - DAY\n\nINT. B - DAY #1#\n\nINT. C - DAY\n\nINT. D - DAY';
+    expect([...lockedSceneNumbers(blocks(source), ['1']).values()]).toEqual(
+      provisionalNumbers([null, '1', null, null], new Set(['1'])),
+    );
   });
 });
