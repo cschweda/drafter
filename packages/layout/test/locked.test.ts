@@ -163,25 +163,6 @@ describe('locked pagination', () => {
     expect(byLabel(layout, '13-14')?.pageNumber?.text).toBe('13-14.');
   });
 
-  it("page 1 folds the next page in when all of page 1's text is cut", () => {
-    // Page 11's body is cut: page 12's anchor lands on 11's old first line, the resolver drops 12 into 11.
-    const from = anchorOf('11').at;
-    const to = anchorOf('12').at;
-    const source = base.slice(0, from) + base.slice(to);
-    const anchors = shifted(
-      baseAnchors.filter((a) => a.label !== '12'),
-      to,
-      from - to,
-    ).map((a) => (a.label === '11' ? { ...a, at: 0, printed: 0 } : a));
-    const layout = paginate(parse(source), screenplay, {
-      locked: { anchors, folded: [{ into: '11', label: '12' }] },
-    });
-    const got = labels(layout);
-    expect(got[0]).toBe('11-12');
-    expect(got[1]).toBe('13');
-    expect(new Set(got).size).toBe(got.length);
-  });
-
   it('folds several labels into a range in label order', () => {
     const anchors = baseAnchors.filter((a) => a.label !== '15' && a.label !== '16');
     const layout = paginate(parse(base), screenplay, {

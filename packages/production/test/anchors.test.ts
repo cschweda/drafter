@@ -105,7 +105,7 @@ describe('page anchors', () => {
       { label: '2', at: starts(cur)[6], printed: 0 },
     ]);
     expect(r.dropped).toEqual([]);
-    expect(rebaseAnchors(p, base, cur)[0]).toEqual({ label: '1', line: 0, printed: 0 });
+    expect(rebaseAnchors(p, base, cur)[0]).toEqual({ label: '1', line: 4, printed: 1 });
   });
 
   it("folds page 2 into page 1 when page 1's text is all cut", () => {

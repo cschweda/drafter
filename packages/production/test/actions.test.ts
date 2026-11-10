@@ -206,8 +206,9 @@ describe('startNextSet', () => {
     const marked = marks.spans.map((s) => scriptText(next).slice(s.from, s.to));
     expect(marked).toContain('INT. HALLWAY - NIGHT #1A#');
     expect(marks.spans.every((s) => s.set === 'Blue')).toBe(true);
-    // Page 1 is pinned to the top of the script (Ruling 27).
-    expect(production?.pages[0]).toMatchObject({ label: '1', line: 0, printed: 0 });
+    // The pin (Ruling 27) applies when resolving; the stored page 1 keeps its own first line.
+    expect(production?.pages[0]).toMatchObject({ label: '1', printed: 0 });
+    expect(production?.pages[0]?.line).toBeGreaterThan(0);
   });
 
   it('a stage play starts its next set without numbering anything', async () => {
