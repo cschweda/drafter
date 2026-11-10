@@ -254,7 +254,7 @@ test.describe('the Script pane on a desktop', () => {
           await expect(menu).toBeVisible({ timeout: 1000 });
         }).toPass();
         const download = page.waitForEvent('download');
-        await menu.getByRole('button', { name }).click();
+        await menu.getByRole('button', { name, exact: true }).click();
         files.push((await readFile(await (await download).path())).toString('base64'));
         await expect(menu).toBeHidden();
       }

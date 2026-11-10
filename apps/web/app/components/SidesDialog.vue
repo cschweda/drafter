@@ -90,7 +90,7 @@ function exportNow() {
         One actor’s pages: every page a ticked scene is on, at its page number, with the other
         scenes on those pages crossed out.
       </p>
-      <p v-if="info === null" class="status" role="status">Finding the characters and scenes…</p>
+      <p v-if="info === null && sidesOpen" class="status" role="status">Finding the characters and scenes…</p>
       <p v-else-if="info === 'failed'" class="status" role="alert">
         The characters and scenes couldn’t be found. Close this and try again.
       </p>

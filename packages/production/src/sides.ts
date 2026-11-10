@@ -124,7 +124,6 @@ export function sides(
   scenes: readonly number[],
 ): { layout: Layout; crossOut: CrossOut[] } {
   const index = sceneIndex(doc, template);
-  const starts = index.scenes.map((scene) => scene.block);
   const ticked = new Set(scenes);
   const owners = blockOwners(doc, index.scenes);
   const ownerOf = (block: number): number => owners[block] ?? 0;

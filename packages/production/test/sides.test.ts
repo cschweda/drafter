@@ -3,7 +3,7 @@ import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, it } from 'vitest';
 import { lock } from '../src/actions';
 import { productionLayout } from '../src/layout';
-import { scenesFor, sides, sidesChoices } from '../src/sides';
+import { type CrossOut, scenesFor, sides, sidesChoices } from '../src/sides';
 
 const screenplay = builtins['us-screenplay'] as Template;
 const play = builtins['stage-play-standard'] as Template;

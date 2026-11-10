@@ -153,7 +153,7 @@ function exportNow() {
         The changed pages as they print in the full PDF, with their locked page numbers, to hand
         out in place of the old ones.
       </p>
-      <p v-if="info === null" class="status" role="status">Finding the revised pages…</p>
+      <p v-if="info === null && revisedPagesOpen" class="status" role="status">Finding the revised pages…</p>
       <p v-else-if="info === 'failed'" class="status" role="alert">
         The revised pages couldn’t be worked out. Close this and try again.
       </p>
