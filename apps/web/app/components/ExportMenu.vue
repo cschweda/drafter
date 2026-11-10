@@ -95,13 +95,13 @@ function chooseTreatment() {
   commandById('export-treatment')?.run();
 }
 
-/** A novel's manuscript asks for its title page's details first, in its own dialog. */
 /** A Production export (design §§8-10): the revised pages and the sides ask first, in a dialog. */
 function chooseProduction(id: string) {
   close(true);
   commandById(id)?.run();
 }
 
+/** A novel's manuscript asks for its title page's details first, in its own dialog. */
 function chooseManuscript(format: 'pdf' | 'docx') {
   close(true);
   commandById(`export-manuscript-${format}`)?.run();

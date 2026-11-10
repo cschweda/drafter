@@ -220,9 +220,11 @@ useDocsHead({
         <strong>Pages</strong> is the scene’s length in eighths of a page, as productions count it:
         “1 3/8” is one page and three eighths.
       </li>
+      <li><strong>Page</strong> is the page the scene starts on, with its locked label.</li>
       <li>
-        <strong>Cast</strong> lists the characters who speak in the scene, in the order they first
-        appear. A character who never speaks anywhere in the script is not listed.
+        <strong>Cast</strong> lists the characters in the scene: first those who speak in it, then
+        those named in its action, in the order they first appear. A character who never speaks
+        anywhere in the script is not listed.
       </li>
       <li>An OMITTED scene is a row that says OMITTED, so the numbers have no gaps.</li>
     </ul>
