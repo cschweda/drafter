@@ -18,7 +18,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.26.2.** The web app and the desktop apps for Windows and Linux are ready to use. v0.26.2 adds an **About** menu, where **Report a problem…** and **Suggest an idea…** can send by email on drafter.dev, and autosave warnings in plain words that never stop you typing. Next is **Production** (v0.27.0): revision colors, locked pages, a breakdown, and sides, free. See the [roadmap](#roadmap).
+> **Status: v0.27.0.** The web app and the desktop apps for Windows and Linux are ready to use. v0.27.0 brings **Production**, free: lock pages and scene numbers, revise in colors with asterisks where words changed, mark scenes OMITTED, and send out revised pages, a breakdown of every scene, and sides for an actor. See the [roadmap](#roadmap).
 
 ## Contents
 
@@ -47,7 +47,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 - **Instant, and offline.** No installer or setup is needed to begin. Once it has loaded, Drafter runs with no connection, on a plane or a train.
 - **No forced updates.** The web app updates when you reload, or the next time you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
 - **Plays well with Final Draft.** It opens and saves Final Draft (`.fdx`) files, so you can trade scripts with anyone who uses it.
-- **Production tools, free too.** What a greenlit script needs comes to the free app in v0.27.0: colored revision sets with marks in the margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors. Other apps charge for these.
+- **Production tools, free too.** What a greenlit script needs: colored revision sets with marks in the margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors. Other apps charge for these.
 
 ## Privacy: your script stays with you
 
@@ -82,7 +82,7 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 - **Story map.** One dark page that answers "What are you writing?" in pictures, to send to anyone: the story's shape, its people, and every scene so far, with a few lines of dialogue and what is still to write. It opens on a phone, runs no code, and never includes your notes.
 - **Drafter for Claude.** Let Claude (or another AI app you use) read the scripts, drafts, and cuts in folders you choose, for storyboards, notes, and insights across a series. Drafter itself never calls an AI. [Setting it up](https://drafter.dev/docs/drafter-for-claude/).
 - **See the script.** **Scaffold** follows your cursor and shows who is in the scene, where, and for how long, with a page for each character and place. The **Stats tab** has each character's screen time and dialogue share, and a character-by-scene grid that shows who vanishes for 20 pages. Running times by scene and act, at your own minutes a page or from the dialogue.
-- **Files and formats.** Real `.fountain` files, saved straight back in Chrome and Edge, autosaved in the browser as you type. Final Draft, Highland, Fade In, and Markdown in; PDF, Final Draft, Markdown, plain text, HTML, EPUB, and a story map out. See [Formats](#formats).
+- **Files and formats.** Real `.fountain` files, saved straight back in Chrome and Edge, autosaved in the browser as you type. Final Draft, Highland, Fade In, and Markdown in; PDF, Final Draft, Markdown, plain text, HTML, EPUB, and a story map out, and for a production, revised pages, a breakdown (CSV or PDF), and sides. See [Formats](#formats).
 - **Make it yours.** A calm dark theme by default, or light, or one that follows your system. Paper pages or a dark page for night, five text sizes, and optional script modules. Below 1024 pixels, one pane at a time, made for a phone.
 - **Get started.** A guided tour on a first visit, a **guided first screenplay** and **stage play** that teach each element as you read, sample scripts under **Help**, and help pages.
 - **Desktop.** Apps for Windows and Linux, and a Mac build, that always save in place and open a `.fountain` file with a double-click.
@@ -179,7 +179,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.26.2, there are **8,380 unit and property tests** (in 23 packages, the web app, and the desktop app), **1,436 browser tests**, each run in five browser setups (7,180 runs), 139 end-to-end tests of the desktop app, and **294 trap documents** with 1,376 checks:
+**What runs.** As of v0.27.0, there are **8,738 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,463 browser tests**, each run in five browser setups (7,315 runs), 140 end-to-end tests of the desktop app, and **294 trap documents** with 1,376 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
@@ -216,9 +216,9 @@ What each app's maker says on its own site, as of October 2026, at list prices (
 | Notes | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | *paid* |
 | Version history and Compare | ✓ / ✓ | ✓ / ? | ✓ / partial | ✓ / ✓ | ? | *paid* | *paid* |
 | Character and scene stats | ✓ | ✓ reports | *paid* reports | ✓ reports | partial | ✓ reports | *paid* |
-| Revision colors and marks | v0.27.0, free | ✓ | *paid* | ✓ | ✓ | *paid* | *paid* |
-| Locked pages and scene numbers, OMITTED | v0.27.0, free | ✓ | *paid* | ✓ | ? | ✓ | ? |
-| Breakdown report and sides | v0.27.0, free | ✓ / ? | ✓ / partial | ✓ / ? | ✗ | partial | *paid* |
+| Revision colors and marks | ✓ | ✓ | *paid* | ✓ | ✓ | *paid* | *paid* |
+| Locked pages and scene numbers, OMITTED | ✓ | ✓ | *paid* | ✓ | ? | ✓ | ? |
+| Breakdown report and sides | ✓ / ✓ | ✓ / ? | ✓ / partial | ✓ / ? | ✗ | partial | *paid* |
 | Stage play | ✓ | ✓ | ✓ | ✓ | ✓ | ? | ✓ |
 | TV templates | Phase 3, free | ✓ | ✓ | ✓ | ✓ | ✓ | *paid* |
 | Spellcheck | ✓ offline | ? | ? | ✓ | ? | ✓ | ? |
@@ -295,7 +295,7 @@ The first run builds the app, which takes a few minutes. Then open `http://local
 Fountain is where you write. Everything else is a door in or a door out.
 
 - **In:** Fountain (`.fountain`, `.txt`) opens as it is. Final Draft (`.fdx`), Highland (`.highland`), and Fade In (`.fadein`) open as a new script. Markdown (`.md`) opens as a document, or as a screenplay; a **Novel** is a Markdown file that names its template in a trailing comment, so it opens in any Markdown app too. Drafter's own HTML and EPUB exports open again when saved with **Let Drafter reopen this file**. Anything else (Word, RTF, PDF, other web pages and e-books, an image) is refused, with a sentence saying what to do instead.
-- **Out:** PDF, Final Draft (`.fdx`), Markdown, plain text, Fountain, a typeset PDF of a Markdown document, a novel's standard **manuscript** as a PDF or a Word file, a self-contained web page (HTML), an e-book (EPUB), and a **story map**, one picture-first HTML page of the script or play for someone who doesn't read scripts, with no code and no notes in it. Export options per script set the scene numbers, the title page, and whether your notes go along.
+- **Out:** PDF, Final Draft (`.fdx`), Markdown, plain text, Fountain, a typeset PDF of a Markdown document, a novel's standard **manuscript** as a PDF or a Word file, a self-contained web page (HTML), an e-book (EPUB), and a **story map**, one picture-first HTML page of the script or play for someone who doesn't read scripts, with no code and no notes in it. For a locked script, the **revised pages** (PDF), a **breakdown** of every scene (CSV or PDF), and **sides** for an actor (PDF). Export options per script set the scene numbers, the title page, whether your notes go along, and which revision marks print.
 - **Beside your script:** a drafts folder (`Boca drafts/Boca – Draft 01.fountain`, each draft a complete Fountain or Markdown file) and a cuts file (`Boca.fountain.cuts.md`, plain Markdown), written by the desktop app and by Chrome and Edge once you allow the folder; elsewhere, a zip to download.
 
 The file you open is never changed, and no words go missing silently: text Fountain has no element for comes in as a note, listed in Problems.
@@ -322,14 +322,14 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 - **Self-hosting** with Docker (v0.24.3).
 - **Classic Mode** (v0.25.0): type a script with Enter and Tab, over a file that stays Fountain.
 - **Novel** (v0.26.0): draft a book in Markdown, with its chapters and sections in the Outline and on Cards, and send it out as a standard manuscript, as a PDF or a Word file (v0.26.1).
+- **Production** (v0.27.0): locked pages and scene numbers, revision colors and marks, OMITTED scenes, revised pages, a breakdown report, and sides, free.
 
 **Next:**
 
-- **Production, free (v0.27.0):** revision colors and marks, locked pages and scene numbers, OMITTED scenes, revised pages, a breakdown report, and sides.
+- Storylines, the strip's Color by, and pacing (v0.28.0).
 
 **Later:**
 
-- Storylines, the strip's Color by, and pacing (v0.28.0).
 - The **Workbook** (v0.29.0): a story bible and scene cards, with your pasted, synced, and spoken notes.
 - An optional one-file `.drafter` project (v0.30.0, open spec).
 - Reader notes with no account, and the Reference tab (v0.31.0 and v0.32.0).

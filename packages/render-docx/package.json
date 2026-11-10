@@ -1,6 +1,6 @@
 {
   "name": "@drafter/render-docx",
-  "version": "0.26.2",
+  "version": "0.27.0",
   "description": "Word output for Drafter: writes a novel's standard manuscript as a .docx, by hand.",
   "license": "MIT",
   "type": "module",
