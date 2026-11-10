@@ -36,6 +36,7 @@
     "@drafter/fountain": "workspace:*",
     "@drafter/layout": "workspace:*",
     "@drafter/outline": "workspace:*",
+    "@drafter/production": "workspace:*",
     "@drafter/render-html-file": "workspace:*",
     "@drafter/render-pdf": "workspace:*",
     "@drafter/render-text": "workspace:*",

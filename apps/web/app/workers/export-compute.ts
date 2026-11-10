@@ -25,6 +25,7 @@ import {
   productionSceneNumbers,
   type RevisedChoice,
   revisedPages,
+  revisionHeader,
   sceneList,
   sides,
   sidesChoices,
@@ -454,17 +455,8 @@ const MONTHS = [
   'December',
 ];
 
-/**
- * A revision set's header (production design §8): "Blue Revision — 12 November 2026", from its
- * name and its own date (YYYY-MM-DD), the date written as `longDate` writes one
- * (`whats-new/entries.ts`); the name alone when the date can't be read.
- */
-export function revisionHeader(set: Pick<ProductionSet, 'name' | 'date'>): string {
-  const [year, month, day] = set.date.split('-').map(Number);
-  const name = MONTHS[(month ?? 0) - 1];
-  if (!year || !day || !name) return `${set.name} Revision`;
-  return `${set.name} Revision — ${day} ${name} ${year}`;
-}
+// A revision set's header lives in @drafter/production, shared with the command line.
+export { revisionHeader } from '@drafter/production';
 
 /** A render's progress as the export's: saving says nothing until it ends, so it is unknown. */
 const rendering =

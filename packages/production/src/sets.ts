@@ -68,3 +68,30 @@ export function nextSetName(sets: readonly ProductionSet[]): string {
   const i = Math.min(sets.length, REVISION_NAMES.length - 1);
   return REVISION_NAMES[i] as string;
 }
+
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+/**
+ * A revision set's header (production design §8): "Blue Revision — 12 November 2026", from its
+ * name and its own date (YYYY-MM-DD); the name alone when the date can't be read. The app's
+ * exports and the command line print the same words.
+ */
+export function revisionHeader(set: Pick<ProductionSet, 'name' | 'date'>): string {
+  const [year, month, day] = set.date.split('-').map(Number);
+  const name = MONTHS[(month ?? 0) - 1];
+  if (!year || !day || !name) return `${set.name} Revision`;
+  return `${set.name} Revision — ${day} ${name} ${year}`;
+}
