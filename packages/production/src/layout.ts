@@ -36,7 +36,10 @@ export function lockedPagesOf(
   return { anchors, folded };
 }
 
-/** Which revision marks a layout carries: the open set's, every set's, or none. */
+/**
+ * Which revision marks a layout carries: `'open'` the open set's only (the full PDF's default,
+ * spec §8), `'all'` every set's, open and closed (what the screen shows), or `'none'`.
+ */
 export type MarkChoice = 'open' | 'all' | 'none';
 
 export interface ProductionLayoutResult {
@@ -77,26 +80,40 @@ export async function productionLayout(
 
   const sets = production.sets;
   const open = sets.at(-1) ?? null;
-  const locked = lockedPagesOf(production.pages, baseline, current);
-  let layout = paginate(doc, template, { sceneNumbers, locked });
+  let lockedPages: LockedPages;
+  try {
+    lockedPages = lockedPagesOf(production.pages, baseline, current);
+  } catch (error) {
+    // As on the screen: pages that can't be placed are laid out unlocked.
+    console.error(`Locked pages failed: ${error instanceof Error ? error.message : String(error)}`);
+    return unlocked();
+  }
+  let layout = paginate(doc, template, { sceneNumbers, locked: lockedPages });
   if (marks !== 'none' && open) {
-    const found = await productionMarks({
-      current,
-      baseline,
-      open: open.name,
-      // A closed set with no marks marks nothing; leaving it out spares fingerprinting every line.
-      closed: sets
-        .slice(0, -1)
-        .filter((set) => (set.lines?.length ?? 0) + (set.gaps?.length ?? 0) > 0),
-    });
-    const wanted: Marks =
-      marks === 'all'
-        ? found
-        : {
-            spans: found.spans.filter((s) => s.set === open.name),
-            gaps: found.gaps.filter((g) => g.set === open.name),
-          };
-    layout = applyMarks(layout, wanted);
+    try {
+      const found = await productionMarks({
+        current,
+        baseline,
+        open: open.name,
+        // A closed set with no marks marks nothing; leaving it out spares fingerprinting every line.
+        closed: sets
+          .slice(0, -1)
+          .filter((set) => (set.lines?.length ?? 0) + (set.gaps?.length ?? 0) > 0),
+      });
+      const wanted: Marks =
+        marks === 'all'
+          ? found
+          : {
+              spans: found.spans.filter((s) => s.set === open.name),
+              gaps: found.gaps.filter((g) => g.set === open.name),
+            };
+      layout = applyMarks(layout, wanted);
+    } catch (error) {
+      // As on the screen: the locked layout, without marks.
+      console.error(
+        `Revision marks failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
   return { layout, locked: true, open, sets };
 }

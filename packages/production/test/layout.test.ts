@@ -1,9 +1,39 @@
 import { parse, type TextChange } from '@drafter/fountain';
-import { paginate } from '@drafter/layout';
+import { applyMarks, paginate } from '@drafter/layout';
 import { builtins, type Template } from '@drafter/templates';
-import { describe, expect, it } from 'vitest';
-import { lock, startNextSet } from '../src/actions';
-import { productionLayout } from '../src/layout';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { lock, scriptText, startNextSet } from '../src/actions';
+import { decodeBaseline } from '../src/baseline';
+import { readProduction } from '../src/block';
+import { lockedPagesOf, productionLayout } from '../src/layout';
+import { productionMarks } from '../src/marks';
+
+const fail = vi.hoisted(() => ({ anchors: false, marks: false }));
+vi.mock('../src/anchors', async (original) => {
+  const real = await original<typeof import('../src/anchors')>();
+  return {
+    ...real,
+    resolveAnchors: (...args: Parameters<typeof real.resolveAnchors>) => {
+      if (fail.anchors) throw new Error('no anchors');
+      return real.resolveAnchors(...args);
+    },
+  };
+});
+vi.mock('../src/marks', async (original) => {
+  const real = await original<typeof import('../src/marks')>();
+  return {
+    ...real,
+    productionMarks: (...args: Parameters<typeof real.productionMarks>) => {
+      if (fail.marks) return Promise.reject(new Error('no marks'));
+      return real.productionMarks(...args);
+    },
+  };
+});
+afterEach(() => {
+  fail.anchors = false;
+  fail.marks = false;
+  vi.restoreAllMocks();
+});
 
 const template = builtins['us-screenplay'] as Template;
 const draftId = 'a'.repeat(64);
@@ -94,13 +124,61 @@ describe('productionLayout', () => {
 
   it('a baseline that will not decode lays out unlocked', async () => {
     const { locked } = await twoSets();
-    const production = /"baseline":\s*"([^"]*)"/.exec(locked);
-    expect(production).not.toBeNull();
     const damaged = locked.replace(/"baseline":\s*"[^"]*"/, '"baseline": "bm90IGd6aXA="');
     const result = await productionLayout(damaged, template, {
       sceneNumbers: 'all',
       marks: 'open',
     });
     expect(result.locked).toBe(false);
+    expect(result.layout).toEqual(paginate(parse(damaged), template, { sceneNumbers: 'all' }));
+  });
+
+  it('pages that cannot be placed lay out unlocked', async () => {
+    const { second } = await twoSets();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    fail.anchors = true;
+    const result = await productionLayout(second, template, { sceneNumbers: 'all', marks: 'all' });
+    expect(result.locked).toBe(false);
+    expect(result.layout).toEqual(paginate(parse(second), template, { sceneNumbers: 'all' }));
+  });
+
+  it('marks that fail leave the locked layout without marks', async () => {
+    const { second } = await twoSets();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const expected = await productionLayout(second, template, {
+      sceneNumbers: 'all',
+      marks: 'none',
+    });
+    fail.marks = true;
+    const result = await productionLayout(second, template, { sceneNumbers: 'all', marks: 'all' });
+    expect(result.locked).toBe(true);
+    expect(result.layout).toEqual(expected.layout);
+  });
+
+  it('marks: all is what the screen worker makes: locked pages plus every set marks', async () => {
+    const { second } = await twoSets();
+    const doc = parse(second);
+    const production = readProduction(doc.meta);
+    if (!production) throw new Error('not locked');
+    const baseline = (await decodeBaseline(production.baseline)) as string;
+    const current = scriptText(second);
+    const marks = await productionMarks({
+      current,
+      baseline,
+      open: production.sets.at(-1)?.name ?? '',
+      closed: production.sets
+        .slice(0, -1)
+        .filter((set) => (set.lines?.length ?? 0) + (set.gaps?.length ?? 0) > 0),
+    });
+    const expected = applyMarks(
+      paginate(doc, template, {
+        sceneNumbers: 'all',
+        locked: lockedPagesOf(production.pages, baseline, current),
+      }),
+      marks,
+    );
+    const result = await productionLayout(second, template, { sceneNumbers: 'all', marks: 'all' });
+    expect(result.layout).toEqual(expected);
+    expect(marksOf(result.layout).length).toBeGreaterThan(1);
   });
 });
