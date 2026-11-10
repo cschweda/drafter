@@ -51,14 +51,23 @@ function place(pages: readonly LockedPage[], oldText: string, newText: string): 
   const out: Placed[] = [];
   let last = -1;
   let lastPrinted = 0;
+  // Where page 1's own first line landed. A page that starts there or earlier means page 1's text is all cut.
+  let own: { at: number; printed: number } | undefined;
   for (const [k, page] of pages.entries()) {
     // The first locked page starts at the top of the script, whatever was added before it, so new
     // opening material flows into page 1 and overflows as 1A, 1B: no page ever prints as 1 twice.
     const m = k === 0 ? { line: 0, printed: 0 } : map(page);
     const at = starts[m.line] ?? newText.length;
+    if (k === 0) {
+      const o = map(page);
+      own = { at: starts[o.line] ?? newText.length, printed: o.printed };
+    }
+    // Nothing of page 1's own text is left before this page: it folds into page 1 (1-2).
+    const emptied =
+      k > 0 && own !== undefined && (at < own.at || (at === own.at && m.printed <= own.printed));
     // A long paragraph or speech can hold several page starts, further into it each time.
     const after = at > last || (at === last && m.printed > lastPrinted);
-    const kept = after && at < newText.length;
+    const kept = after && !emptied && at < newText.length;
     if (kept) {
       last = at;
       lastPrinted = m.printed;
