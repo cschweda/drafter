@@ -32,4 +32,13 @@ export {
   revisedPages,
 } from './revised';
 export { nextSetName, REVISION_COLORS, REVISION_NAMES } from './sets';
+export {
+  type CrossOut,
+  type SidesChoices,
+  sceneList,
+  scenesFor,
+  sides,
+  sidesChoices,
+  sidesHeader,
+} from './sides';
 export type { LockedPage, Production, ProductionSet } from './types';

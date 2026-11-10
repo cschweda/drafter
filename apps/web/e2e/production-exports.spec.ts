@@ -164,6 +164,55 @@ test.describe('Production exports', () => {
     );
     expect(downloads).toEqual([]);
   });
+  test('exports sides for MARGARET', async ({ page }) => {
+    const script = [
+      'Title: The Long Weir',
+      '',
+      'INT. HALL - DAY',
+      '',
+      'MARGARET',
+      'The weir is rising tonight.',
+      '',
+      'INT. ROOM 2 - DAY',
+      '',
+      'Jon sets the lamp down on the long table by the window.',
+      '',
+      'INT. ROOM 3 - NIGHT',
+      '',
+      'MARGARET',
+      'Then we leave at dawn.',
+      '',
+    ].join('\n');
+    await start(page);
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await scriptsMenu(page).getByRole('button', { name: 'New screenplay' }).click();
+    await expect(scriptsMenu(page)).toBeHidden();
+    await showSource(page);
+    await replaceWhole(page, script);
+    await expect.poll(() => wholeText(page)).toBe(script);
+
+    await command(page, 'Export sides (PDF)…');
+    const sides = page.getByRole('dialog', { name: 'Export sides' });
+    await expect(sides).toBeVisible();
+    const exportButton = sides.getByRole('button', { name: 'Export', exact: true });
+    await expect(sides.getByRole('checkbox', { name: 'MARGARET' })).toBeVisible();
+    await expect(exportButton).toBeDisabled();
+    await sides.getByRole('checkbox', { name: 'MARGARET' }).check();
+    await expect(sides.getByRole('checkbox', { name: /^1 INT\. HALL/ })).toBeChecked();
+    await expect(sides.getByRole('checkbox', { name: /^2 INT\. ROOM 2/ })).not.toBeChecked();
+    await expect(sides.getByRole('checkbox', { name: /^3 INT\. ROOM 3/ })).toBeChecked();
+    await expect(exportButton).toBeEnabled();
+    const download = page.waitForEvent('download');
+    await exportButton.click();
+    const file = await download;
+    expect(file.suggestedFilename()).toBe('The Long Weir – Sides.pdf');
+    const pages = await pdfPages(await readFile(await file.path()));
+    expect(pages.join(' ')).toMatch(/SIDES — MARGARET — Scenes 1, 3 — \d+ \w+ \d{4}/);
+    expect(pages.join(' ')).toContain('The weir is rising tonight.');
+    expect(pages.join(' ')).toContain('Then we leave at dawn.');
+    await expect(sides).toBeHidden();
+  });
+
   test('a changed header prints, and is kept in the script', async ({ page }) => {
     await start(page);
     await page.getByRole('button', { name: 'File', exact: true }).click();

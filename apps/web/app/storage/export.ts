@@ -10,6 +10,7 @@ import { previewProblem } from '../markdown/preview';
 import { markdownTitle } from '../markdown/title';
 import { isNovel } from '../novel/kind';
 import type { RevisedPagesChoice } from '../production/revised';
+import type { SidesChoice } from '../production/sides';
 import { type Settings, useSettings } from '../settings/settings';
 import { ratesOf } from '../stats/timing';
 import {
@@ -60,6 +61,7 @@ export type ExportKind =
   | 'manuscript-pdf'
   | 'manuscript-docx'
   | 'revised-pdf'
+  | 'sides-pdf'
   | 'breakdown-csv'
   | 'breakdown-pdf';
 
@@ -122,6 +124,7 @@ const MIME: Record<ExportKind, string> = {
   'manuscript-pdf': 'application/pdf',
   'manuscript-docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'revised-pdf': 'application/pdf',
+  'sides-pdf': 'application/pdf',
   'breakdown-csv': 'text/csv',
   'breakdown-pdf': 'application/pdf',
 };
@@ -137,6 +140,7 @@ const EXTENSION = {
   'manuscript-pdf': '.pdf',
   'manuscript-docx': '.docx',
   'revised-pdf': '.pdf',
+  'sides-pdf': '.pdf',
   'breakdown-csv': '.csv',
   'breakdown-pdf': '.pdf',
 } as const satisfies Record<ExportKind, string>;
@@ -148,6 +152,7 @@ const PICKER_KIND = {
   'manuscript-pdf': 'pdf',
   'manuscript-docx': 'docx',
   'revised-pdf': 'pdf',
+  'sides-pdf': 'pdf',
   'breakdown-csv': 'csv',
   'breakdown-pdf': 'pdf',
 } as const satisfies Partial<Record<ExportKind, FileKind>>;
@@ -160,6 +165,7 @@ const NAME_SUFFIX: Partial<Record<ExportKind, string>> = {
   'story-map': ' – story map',
   'manuscript-pdf': ' – manuscript',
   'manuscript-docx': ' – manuscript',
+  'sides-pdf': ' – Sides',
   'breakdown-csv': ' – Breakdown',
   'breakdown-pdf': ' – Breakdown',
 };
@@ -208,6 +214,9 @@ function notFor(kind: ExportKind, markdown: boolean, novel: boolean): string | n
   if (markdown && isBreakdown(kind)) {
     return 'Only a screenplay or a stage play has a breakdown.';
   }
+  if (markdown && kind === 'sides-pdf') {
+    return 'Only a screenplay or a stage play prints sides.';
+  }
   if (markdown && kind === 'revised-pdf') {
     return 'Only a locked screenplay or stage play prints revised pages.';
   }
@@ -236,6 +245,7 @@ function withOptions(
     kind === 'fountain' ||
     isManuscript(kind) ||
     kind === 'revised-pdf' ||
+    kind === 'sides-pdf' ||
     isBreakdown(kind)
   ) {
     return '';
@@ -308,6 +318,7 @@ function requestFor(
   // Made by `run` with its dialog's details.
   if (isManuscript(kind)) throw new Error('A manuscript is made from its dialog.');
   if (kind === 'revised-pdf') throw new Error('Revised pages are made from their dialog.');
+  if (kind === 'sides-pdf') throw new Error('Sides are made from their dialog.');
   // The script's own text, written as Save writes it (`run`): never the worker's.
   if (kind === 'fountain') throw new Error('A Fountain file is the script’s own text.');
   const { source, template, options, title, markdown } = open;
@@ -375,13 +386,15 @@ interface FromDialog {
   details?: ManuscriptDetails;
   /** Revised pages' choices, from their dialog. */
   revised?: RevisedPagesChoice;
+  /** Sides' choices, from their dialog. */
+  sides?: SidesChoice;
   /** The project the dialog was opened for: the export is refused if another is open by then. */
   forProject?: string;
 }
 
 async function run(
   asked: Asked,
-  { job, details, revised, forProject }: FromDialog = {},
+  { job, details, revised, sides, forProject }: FromDialog = {},
 ): Promise<'saved' | 'cancelled'> {
   const { kind } = asked;
   const files = useFiles();
@@ -442,7 +455,7 @@ async function run(
     // The menu offers only what applies; a command or a stale menu can still ask for the other.
     const refusal =
       forProject !== undefined && script.project.value?.id !== forProject
-        ? `The ${revised ? 'script' : 'book'} changed; nothing was exported.`
+        ? `The ${revised || sides ? 'script' : 'book'} changed; nothing was exported.`
         : notFor(kind, markdown, novel);
     if (refusal) {
       await announceError(refusal);
@@ -484,35 +497,45 @@ async function run(
           : undefined;
       const request: ExportRequest = job
         ? await storyMapRequest(asked, job, source, template, title)
-        : kind === 'revised-pdf' && revised
+        : kind === 'sides-pdf' && sides
           ? {
               kind,
               source,
               template,
               options,
-              which: revised.which,
-              marks: revised.marks,
-              header: revised.header,
-              tint: revised.tint,
+              names: sides.names,
+              scenes: sides.scenes,
+              today: today(),
             }
-          : isManuscript(kind)
+          : kind === 'revised-pdf' && revised
             ? {
                 kind,
                 source,
-                fileTitle: fallback,
-                details: details ?? {},
-                paper: asked.paper,
-                lang: asked.lang,
-              }
-            : requestFor(asked, {
-                source,
                 template,
                 options,
-                title,
-                markdown,
-                projectId,
-                embed,
-              });
+                which: revised.which,
+                marks: revised.marks,
+                header: revised.header,
+                tint: revised.tint,
+              }
+            : isManuscript(kind)
+              ? {
+                  kind,
+                  source,
+                  fileTitle: fallback,
+                  details: details ?? {},
+                  paper: asked.paper,
+                  lang: asked.lang,
+                }
+              : requestFor(asked, {
+                  source,
+                  template,
+                  options,
+                  title,
+                  markdown,
+                  projectId,
+                  embed,
+                });
       // A long document takes a while (some 20 ms a page): the toast says it is under way.
       slow = setTimeout(() => {
         progress = `Exporting ${target?.name ?? name}…`;
@@ -562,6 +585,20 @@ async function storyMapRequest(
   };
 }
 
+/**
+ * One actor's sides as a PDF, after their dialog: the characters named in the header and the
+ * scenes ticked. `forProject` is the project the dialog opened for. Never throws.
+ */
+export function exportSides(
+  choice: SidesChoice,
+  forProject?: string,
+): Promise<'saved' | 'cancelled'> {
+  return queued(askedFor('sides-pdf', undefined, undefined, undefined, choice), {
+    sides: choice,
+    forProject,
+  });
+}
+
 /** Says `message` in the Export toast, as a finished export does (an import's "Imported …"). */
 export function sayInToast(message: string): Promise<void> {
   exportError.value = '';
@@ -594,6 +631,8 @@ interface Asked {
   manuscript: string;
   /** Revised pages' choices, as JSON, likewise; '' otherwise. */
   revised: string;
+  /** Sides' choices, as JSON, likewise; '' otherwise. */
+  sides: string;
 }
 
 function askedFor(
@@ -601,6 +640,7 @@ function askedFor(
   job?: StoryMapJob,
   details?: ManuscriptDetails,
   revised?: RevisedPagesChoice,
+  sides?: SidesChoice,
 ): Asked {
   const editor = useEditor();
   const project = useScript().project.value;
@@ -622,6 +662,7 @@ function askedFor(
     storyMap: job?.key ?? '',
     manuscript: details === undefined ? '' : JSON.stringify(details),
     revised: revised === undefined ? '' : JSON.stringify(revised),
+    sides: sides === undefined ? '' : JSON.stringify(sides),
   };
 }
 

@@ -341,6 +341,13 @@ export const COMMAND_DATA: readonly CommandData[] = [
     group: 'File',
     keywords: [...PRODUCTION_WORDS, 'revised pages', 'colored pages', 'Blue pages', 'Pink pages'],
   },
+  // One actor's sides (production design §10), after its dialog.
+  {
+    id: 'export-sides',
+    title: 'Export sides (PDF)…',
+    group: 'File',
+    keywords: [...PRODUCTION_WORDS, 'sides', 'actor', 'audition', 'character pages', 'call sheet'],
+  },
   // The breakdown report (production design §9): a row per scene, with no dialog.
   {
     id: 'export-breakdown-csv',

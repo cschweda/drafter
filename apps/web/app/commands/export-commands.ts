@@ -1,6 +1,7 @@
 import { manuscriptOpen } from '~/novel/manuscript';
 import { treatmentOpen } from '~/outline/treatment';
 import { revisedPagesOpen } from '~/production/revised';
+import { sidesOpen } from '~/production/sides';
 import { exportScript } from '~/storage/export';
 import { exportOptionsOpen } from '~/storage/export-options';
 import { storyMapOpen } from '~/story-map/options';
@@ -48,6 +49,13 @@ export function exportBehaviors({
       enabled: () => hasScript() && isFountain() && isLocked(),
       run: () => {
         revisedPagesOpen.value = true;
+      },
+    },
+    // One actor's sides (production design §10): its dialog first, for the characters and scenes.
+    'export-sides': {
+      enabled: () => hasScript() && isFountain(),
+      run: () => {
+        sidesOpen.value = true;
       },
     },
     // The breakdown report (production design §9): one row per scene, as a spreadsheet file or a

@@ -23,6 +23,10 @@ import {
   productionLayout,
   type RevisedChoice,
   revisedPages,
+  sceneList,
+  sides,
+  sidesChoices,
+  sidesHeader,
   toCsv,
 } from '@drafter/production';
 import { renderManuscriptDocx } from '@drafter/render-docx';
@@ -223,7 +227,23 @@ export type ExportRequest =
   | ({ kind: 'breakdown-csv' } & BreakdownRequest)
   | ({ kind: 'breakdown-pdf' } & BreakdownRequest)
   /** What the Export revised pages dialog shows (`RevisedInfo`, as JSON). */
-  | { kind: 'revised-info'; source: string; template: Template; options?: ExportOptions };
+  | { kind: 'revised-info'; source: string; template: Template; options?: ExportOptions }
+  /**
+   * One actor's sides (production design §10): the pages the ticked `scenes` (ordinals) are on,
+   * with the other scenes' lines crossed out, and a header naming `names` and the scenes, dated
+   * `today` (`YYYY-MM-DD`). Printed as the full PDF is, with the open set's marks and no tint.
+   */
+  | {
+      kind: 'sides-pdf';
+      source: string;
+      template: Template;
+      options?: ExportOptions;
+      names: string[];
+      scenes: number[];
+      today: string;
+    }
+  /** What the Export sides dialog lists (`SidesChoices`, as JSON): the characters and the scenes. */
+  | { kind: 'sides-info'; source: string; template: Template };
 
 /**
  * What the Export revised pages dialog opens with: the open set's name (null when the script isn't
@@ -584,6 +604,13 @@ export function createExporter(
         data: JSON.stringify(await revisedInfo(request.source, request.template, request.options)),
       };
     }
+    if (request.kind === 'sides-info') {
+      return { data: JSON.stringify(sidesChoices(parse(request.source), request.template)) };
+    }
+    if (request.kind === 'sides-pdf') {
+      const fonts = await fontsOnce();
+      return { data: await sidesPdf(request, fonts, rendering(report)) };
+    }
     if (request.kind === 'revised-pdf') {
       const fonts = await fontsOnce();
       return { data: await revisedPdf(request, fonts, rendering(report)) };
@@ -808,6 +835,41 @@ async function revisedPdf(
     onProgress,
     revisionHeader: request.header,
     ...(tint ? { tint } : {}),
+  });
+}
+
+/**
+ * One actor's sides as a PDF (production design §10): laid out as the full PDF is (the export
+ * options' scene numbers, the open set's marks, no tint, no title page), cut to the pages the
+ * ticked scenes are on, with the other scenes' lines crossed out and the header under each page
+ * number. Nothing ticked is refused (`ExportRefusal`), with no file.
+ */
+async function sidesPdf(
+  request: Extract<ExportRequest, { kind: 'sides-pdf' }>,
+  fonts: FontSet,
+  onProgress: (progress: RenderProgress) => void,
+): Promise<Uint8Array> {
+  const { source, template, options = DEFAULT_EXPORT_OPTIONS } = request;
+  const doc = parse(source);
+  const known = new Set(sidesChoices(doc, template).scenes.map((scene) => scene.ordinal));
+  const scenes = request.scenes.filter((ordinal) => known.has(ordinal));
+  if (scenes.length === 0) throw new ExportRefusal('Tick at least one scene to print.');
+  const { layout } = await productionLayout(source, template, {
+    sceneNumbers: options.sceneNumbers,
+    titlePage: 'none',
+    marks: 'open',
+  });
+  const cut = sides(layout, doc, template, scenes);
+  if (cut.layout.pages.length === 0) throw new ExportRefusal('Tick at least one scene to print.');
+  return renderPdf(cut.layout, template, {
+    fonts,
+    onProgress,
+    revisionHeader: sidesHeader(
+      request.names,
+      sceneList(doc, template, scenes),
+      longDate(request.today),
+    ),
+    crossOut: cut.crossOut,
   });
 }
 
