@@ -28,6 +28,12 @@ const OFF_GRID = /[\t\n\u2028\u2029]/g;
  */
 const printable = (text: string) => text.replace(OFF_GRID, ' ');
 
+/**
+ * How far in from the grid's right edge a revision mark's asterisk stands, in columns: where
+ * `renderPdf` draws it, in the right margin.
+ */
+const STAR_COLUMN_FROM_RIGHT = 5;
+
 /** A line to draw, and the row of the page's body it stands on. */
 interface Part {
   line: LayoutLine;
@@ -198,9 +204,17 @@ function bodyHtml(page: Page, template: Template, grid: Grid, marks: Marks | und
  * left margin; scene numbers on their heading's row, at the template's columns from the left
  * margin; the header on the page number's line and the footer as far from the bottom edge, both
  * at the left margin. Each is hidden from a screen reader, which has the "Page N" marker instead.
+ * A locked script's revision marks too, as `renderPdf` draws them: an asterisk on each marked
+ * row, 5 columns in from the grid's right edge, and the revision header right-aligned on the line
+ * under the page number on every page but the title page.
  */
-function furnitureHtml(page: Page, template: Template, grid: Grid): string {
-  const { height, margin, numbering } = template.page;
+function furnitureHtml(
+  page: Page,
+  template: Template,
+  grid: Grid,
+  revisionHeader: string | undefined,
+): string {
+  const { width, height, margin, numbering } = template.page;
   const add = (kind: string, row: number, col: number, text: string) =>
     el(
       'div',
@@ -220,6 +234,15 @@ function furnitureHtml(page: Page, template: Template, grid: Grid): string {
   }
   if (page.header) out += add('header', numbering.line, margin.left, page.header);
   if (page.footer) out += add('footer', height - 1 - numbering.line, margin.left, page.footer);
+  if (revisionHeader && page.number !== 0) {
+    const col = Math.max(0, width - margin.right - [...revisionHeader].length);
+    out += add('revision', numbering.line + 1, Math.max(col, margin.left), revisionHeader);
+  }
+  page.lines.forEach((line, k) => {
+    if (line.mark || line.right?.mark) {
+      out += add('mark', margin.top + k, Math.max(width - STAR_COLUMN_FROM_RIGHT, 0), '*');
+    }
+  });
   return out;
 }
 
@@ -232,12 +255,15 @@ function furnitureHtml(page: Page, template: Template, grid: Grid): string {
  * reflowed. The rules for the classes used come back beside the markup.
  *
  * `targets` are the blocks the band links to: each gets `id="b-<block>"` at its first printed line
- * (`layout.index`), which a plain `#b-<block>` link reaches with no script.
+ * (`layout.index`), which a plain `#b-<block>` link reaches with no script. A page is named by its
+ * label, which a locked script's pages keep (`12A`). `revisionHeader` is a locked script's
+ * "Blue Revision — 12 November 2026", drawn under the page number (`furnitureHtml`).
  */
 export function pagesHtml(
   layout: Layout,
   template: Template,
   targets: Iterable<number> = [],
+  opts: { revisionHeader?: string } = {},
 ): PagesHtml {
   const { width, height } = template.page;
   const size = pageClass(width, height);
@@ -258,9 +284,9 @@ export function pagesHtml(
     el(
       'div',
       { class: `page ${size}` },
-      el('span', { class: 'vh' }, page.number === 0 ? 'Title page' : `Page ${page.number}`) +
+      el('span', { class: 'vh' }, page.number === 0 ? 'Title page' : `Page ${page.label}`) +
         bodyHtml(page, template, grid, marks.get(page.number)) +
-        furnitureHtml(page, template, grid),
+        furnitureHtml(page, template, grid, opts.revisionHeader),
     ),
   );
   const paper = PAPER_POINTS[template.page.paper];

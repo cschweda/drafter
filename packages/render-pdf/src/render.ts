@@ -33,6 +33,11 @@ const FONT_NAMES: Readonly<Record<Style, string>> = {
 };
 const SIZE_PT = 12;
 const BLACK = rgb(0, 0, 0);
+/**
+ * How far in from the grid's right edge a revision mark's asterisk stands, in columns: in the right
+ * margin, where Compare draws its own (`apps/web/app/compare/draw.ts`).
+ */
+const STAR_COLUMN_FROM_RIGHT = 5;
 /** Underlines are half-point rules, 2 pt below the baseline. */
 const UNDERLINE = { thickness: 0.5, drop: 2 };
 
@@ -51,6 +56,11 @@ const columns = (s: string) => {
  * on the template's grid of 7.2 pt columns and 12 pt lines. Reads no files:
  * the caller passes the four font files in `opts.fonts`, and only the styles
  * the script uses are embedded.
+ *
+ * A locked script's revision marks (production design §8): each printed line with a `mark` (or a
+ * row whose right part has one) gets one `*` in the right margin, 5 columns in from the grid's
+ * right edge; `revisionHeader` ("Blue Revision — 12 November 2026") prints right-aligned on the
+ * line under the page number on every page but the title page. With neither, the PDF is as before.
  */
 export async function renderPdf(
   layout: Layout,
@@ -59,6 +69,8 @@ export async function renderPdf(
     fonts: FontSet;
     /** Told how far the render is: the pages drawn, then the file saved. */
     onProgress?: (progress: RenderProgress) => void;
+    /** The revision header, under the page number on every body page. */
+    revisionHeader?: string;
   },
 ): Promise<Uint8Array> {
   const missing = STYLES.filter((style) => !(opts?.fonts?.[style] instanceof Uint8Array));
@@ -153,10 +165,24 @@ export async function renderPdf(
       for (const part of row.right ? [row, row.right] : [row]) {
         await drawText(pdfPage, part.runs, part.col, spec.margin.top + k);
       }
+      if (row.mark || row.right?.mark) {
+        const col = Math.max(spec.width - STAR_COLUMN_FROM_RIGHT, 0) - spec.margin.left;
+        await drawText(pdfPage, plain('*'), col, spec.margin.top + k);
+      }
     }
     if (page.pageNumber) {
       const { text, line, col } = page.pageNumber;
       await drawText(pdfPage, plain(text), col, line);
+    }
+    if (opts.revisionHeader && page.number !== 0) {
+      const text = opts.revisionHeader;
+      const width = spec.width - spec.margin.left - spec.margin.right;
+      await drawText(
+        pdfPage,
+        plain(text),
+        Math.max(0, width - columns(text)),
+        spec.numbering.line + 1,
+      );
     }
     for (const { line, text } of page.sceneNumbersLeft) {
       await drawText(pdfPage, plain(text), template.sceneNumbers.left, spec.margin.top + line);

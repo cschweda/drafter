@@ -6,6 +6,8 @@ import {
   type Marks,
   paginate,
   type SceneNumbering,
+  type TitlePageMode,
+  titlePageFor,
 } from '@drafter/layout';
 import type { Template } from '@drafter/templates';
 import { resolveAnchors } from './anchors';
@@ -57,14 +59,20 @@ export interface ProductionLayoutResult {
  * found in the text without the `/* drafter *\/` block, which is the last thing in the source, so
  * its offsets before the block are the whole source's. An unlocked script, one whose block can't
  * be read, or one whose baseline won't decode is laid out exactly as `paginate` does, unlocked.
+ * `titlePage` is an export's choice of how much title page prints (`titlePageFor`); absent, all
+ * of it, as the screen shows.
  */
 export async function productionLayout(
   source: string,
   template: Template,
-  opts: { sceneNumbers: SceneNumbering; marks: MarkChoice },
+  opts: { sceneNumbers: SceneNumbering; marks: MarkChoice; titlePage?: TitlePageMode },
 ): Promise<ProductionLayoutResult> {
   const { sceneNumbers, marks } = opts;
-  const doc = parse(source);
+  const parsed = parse(source);
+  const doc =
+    opts.titlePage === undefined
+      ? parsed
+      : { ...parsed, titlePage: titlePageFor(parsed.titlePage, opts.titlePage) };
   const unlocked = (): ProductionLayoutResult => ({
     layout: paginate(doc, template, { sceneNumbers }),
     locked: false,

@@ -37,6 +37,8 @@ export function exportOptionsOf(
       : DEFAULT_EXPORT_OPTIONS.notes,
     // Off unless the writer turned it on: anything but `true` is off.
     ...(stored?.reopenable === true ? { reopenable: true as const } : {}),
+    // The open revision unless None was chosen: only 'none' is kept, so the default is absent.
+    ...(stored?.revisionMarks === 'none' ? { revisionMarks: 'none' as const } : {}),
   };
 }
 
@@ -50,15 +52,19 @@ export const REOPEN_LABEL =
 export const REOPEN_HINT =
   'For the HTML and EPUB exports. The file carries your full script as you wrote it, notes, boneyard, and all, even when the notes option leaves them off the page, so anyone you send it to can read them. Drafter can only reopen HTML or EPUB files it saved itself, with this turned on: not files from other apps or sites, and not Drafter exports made with it off.';
 
+type RevisionMarks = NonNullable<ExportOptions['revisionMarks']>;
+
 /** What each choice is called in the dialog, in the order it lists them (the default first). */
 export const EXPORT_OPTION_LABELS: {
   sceneNumbers: Record<SceneNumbering, string>;
   titlePage: Record<TitlePageMode, string>;
   notes: Record<Notes, string>;
+  revisionMarks: Record<RevisionMarks, string>;
 } = {
   sceneNumbers: { none: 'None', written: 'As written', all: 'Number every scene' },
   titlePage: { full: 'Full', 'title-author': 'Title and author only', none: 'None' },
   notes: { 'leave-out': 'Leave out', include: 'Include' },
+  revisionMarks: { open: 'The open revision', none: 'None' },
 };
 
 /** The line under each choice in the dialog: what it prints. */
@@ -66,6 +72,7 @@ export const EXPORT_OPTION_HINTS: {
   sceneNumbers: Record<SceneNumbering, string>;
   titlePage: Record<TitlePageMode, string>;
   notes: Record<Notes, string>;
+  revisionMarks: Record<RevisionMarks, string>;
 } = {
   sceneNumbers: {
     none: 'No scene numbers print.',
@@ -82,7 +89,17 @@ export const EXPORT_OPTION_HINTS: {
     include:
       'In Markdown, each note and synopsis as a quote, where it stands, Drafter’s own scene notes (colour, goal, setups and payoffs) included; in HTML and EPUB, only your own notes, beside their place in the Reading view and never on the pages. The boneyard is always left out.',
   },
+  revisionMarks: {
+    open: 'An asterisk in the right margin beside each line the open revision changed, and its name and date under the page number.',
+    none: 'The locked page numbers only: no asterisks and no revision line.',
+  },
 };
+
+/** The Revision marks choice's name: shown only while the script is locked (production design §8). */
+export const REVISION_MARKS_LEGEND = 'Revision marks';
+/** Under the Revision marks choices: the exports that print them. */
+export const REVISION_MARKS_WHERE =
+  'For the PDF and the HTML file’s pages, which print the locked page numbers (like 12A) either way.';
 
 /**
  * The notes choice's name (HTML export design §3.3): the stored setting keeps its key (`notes`),

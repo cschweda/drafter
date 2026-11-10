@@ -8,6 +8,7 @@ import {
   resolveDetails,
 } from '@drafter/novel';
 import { sceneIndex, scriptMarkdown } from '@drafter/outline';
+import { type ProductionSet, productionLayout } from '@drafter/production';
 import { renderManuscriptDocx } from '@drafter/render-docx';
 import {
   epubIdentifier,
@@ -71,6 +72,12 @@ export interface ExportOptions {
    * often sent to someone with the notes left out.
    */
   reopenable?: true;
+  /**
+   * A locked script's revision marks in its PDF and its HTML file's pages (production design §8,
+   * Call 3b): `'open'`, the default (absent), prints the open set's asterisks and its revision
+   * header; `'none'` prints the locked labels only. An unlocked script has none to print.
+   */
+  revisionMarks?: 'open' | 'none';
 }
 
 /**
@@ -337,6 +344,33 @@ function storyMapPicks(source: string, template: Template, options: MapOptions):
   return { quotes, hooks, gapsFound: map.gaps.found };
 }
 
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+/**
+ * A revision set's header (production design §8): "Blue Revision — 12 November 2026", from its
+ * name and its own date (YYYY-MM-DD), the date written as `longDate` writes one
+ * (`whats-new/entries.ts`); the name alone when the date can't be read.
+ */
+export function revisionHeader(set: Pick<ProductionSet, 'name' | 'date'>): string {
+  const [year, month, day] = set.date.split('-').map(Number);
+  const name = MONTHS[(month ?? 0) - 1];
+  if (!year || !day || !name) return `${set.name} Revision`;
+  return `${set.name} Revision — ${day} ${name} ${year}`;
+}
+
 /** A render's progress as the export's: saving says nothing until it ends, so it is unknown. */
 const rendering =
   (report: ProgressReporter) =>
@@ -482,8 +516,26 @@ export function createExporter(
       const index = sceneIndex(doc, template);
       return { data: scriptMarkdown(doc, index, template, { sceneNumbers, notes }) };
     }
-    const layout = paginate(doc, template, { sceneNumbers: options.sceneNumbers });
-    if (kind === 'txt') return { data: renderText(layout, template) };
+    // Plain text is as it always was, whatever the production (Call 2b): it is laid out unlocked.
+    if (kind === 'txt') {
+      return {
+        data: renderText(paginate(doc, template, { sceneNumbers: options.sceneNumbers }), template),
+      };
+    }
+    // A locked script prints on its locked pages, with the open set's marks unless Revision marks
+    // says None; an unlocked one is laid out exactly as `paginate` lays it out. An EPUB is the
+    // Reading view, which prints no pages, so it never spends the time finding marks.
+    const marks = kind === 'epub' ? 'none' : (options.revisionMarks ?? 'open');
+    const production = await productionLayout(source, template, {
+      sceneNumbers: options.sceneNumbers,
+      titlePage: options.titlePage,
+      marks,
+    });
+    const { layout } = production;
+    const header =
+      production.locked && marks === 'open' && production.open
+        ? { revisionHeader: revisionHeader(production.open) }
+        : {};
     const fonts = await fontsOnce();
     if (request.kind === 'html') {
       // Only the styles the pages draw in: the file embeds no other.
@@ -499,6 +551,7 @@ export function createExporter(
           lang: request.lang,
           generator: request.generator,
           kindLine: kindLine(layout, template, request.minutesPerPage),
+          ...header,
           ...embedded(request.embed),
         }),
       };
@@ -535,7 +588,9 @@ export function createExporter(
         }),
       };
     }
-    return { data: await renderPdf(layout, template, { fonts, onProgress: rendering(report) }) };
+    return {
+      data: await renderPdf(layout, template, { fonts, onProgress: rendering(report), ...header }),
+    };
   }
 
   return async (

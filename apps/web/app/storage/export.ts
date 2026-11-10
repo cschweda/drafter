@@ -504,6 +504,8 @@ interface Asked {
   notes: ExportOptions['notes'];
   /** "Let Drafter reopen this file": an export with the script inside is never joined to one without. */
   reopenable: boolean;
+  /** A locked script's Revision marks: an export with them is never joined to one without. */
+  revisionMarks: NonNullable<ExportOptions['revisionMarks']>;
   paper: Settings['markdownPaper'];
   lang: Settings['spellLanguage'];
   /** The script's own page rate, for an HTML file's running time. */
@@ -528,6 +530,7 @@ function askedFor(kind: ExportKind, job?: StoryMapJob, details?: ManuscriptDetai
     titlePage: options.titlePage,
     notes: options.notes,
     reopenable: options.reopenable === true,
+    revisionMarks: options.revisionMarks ?? 'open',
     paper: settings.value.markdownPaper,
     lang: settings.value.spellLanguage,
     minutesPerPage: ratesOf(project).minutesPerPage,
