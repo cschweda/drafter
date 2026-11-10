@@ -191,18 +191,21 @@ useDocsHead({
       </li>
       <li>
         Each page keeps its locked label (12A) and its asterisks, and carries a header such as
-        “Blue Revision, 12 November 2026”. You can write your own header; Drafter keeps it in the
+        “Blue Revision — 12 November 2026”. You can write your own header; Drafter keeps it in the
         script.
       </li>
       <li>
         By default only the open revision’s asterisks print; you can print every revision’s. A tint
-        of the revision’s color on the page is an option, off by default, for productions that print
-        on white paper.
+        of the revision’s paper color on the page is an option, off by default, for productions that
+        print on white paper. White revisions get no tint.
       </li>
     </ul>
     <p>
       The full <strong>PDF</strong> of a locked script also prints the locked page labels and the
-      open revision’s asterisks, with its name and date in the header. In
+      open revision’s asterisks, with its name and date in the header. <strong>Plain text</strong>
+      prints the locked page labels too, without asterisks. Every export shows a new scene with the
+      A-number it will have (5A), as the Script pane does, though it isn’t written into your text
+      until you choose <strong>Write new scene numbers</strong>. In
       <strong>Export options…</strong>, <strong>Revision marks</strong> chooses between the open
       revision’s marks and none.
     </p>
