@@ -38,6 +38,9 @@ const BLACK = rgb(0, 0, 0);
  * margin, where Compare draws its own (`apps/web/app/compare/draw.ts`).
  */
 const STAR_COLUMN_FROM_RIGHT = 5;
+/** A tint's opacity, and what counts as a colour for it. */
+const TINT_OPACITY = 0.12;
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 /** Underlines are half-point rules, 2 pt below the baseline. */
 const UNDERLINE = { thickness: 0.5, drop: 2 };
 
@@ -71,6 +74,13 @@ export async function renderPdf(
     onProgress?: (progress: RenderProgress) => void;
     /** The revision header, under the page number on every body page. */
     revisionHeader?: string;
+    /** A `#rrggbb` that tints every body page (a rectangle at 12% opacity under the text); anything else is ignored. */
+    tint?: string;
+    /**
+     * Blocks crossed out: for each, one straight line from the top-left of body line `from` to the
+     * bottom-right of body line `to` (0-based, inclusive) on the page numbered `page`.
+     */
+    crossOut?: ReadonlyArray<{ page: number; from: number; to: number }>;
   },
 ): Promise<Uint8Array> {
   const missing = STYLES.filter((style) => !(opts?.fonts?.[style] instanceof Uint8Array));
@@ -93,6 +103,15 @@ export async function renderPdf(
     .map((line) => line.runs.map((run) => run.text).join(''))
     .join(' ');
   if (title) doc.setTitle(title, { showInWindowTitleBar: true });
+
+  const tintColor =
+    typeof opts.tint === 'string' && HEX_COLOR.test(opts.tint)
+      ? rgb(
+          Number.parseInt(opts.tint.slice(1, 3), 16) / 255,
+          Number.parseInt(opts.tint.slice(3, 5), 16) / 255,
+          Number.parseInt(opts.tint.slice(5, 7), 16) / 255,
+        )
+      : undefined;
 
   const embedded = new Map<Style, PDFFont>();
   const fontFor = async (style: Style) => {
@@ -161,6 +180,16 @@ export async function renderPdf(
   report('draw', 0, pages.length);
   for (const [index, page] of pages.entries()) {
     const pdfPage = doc.addPage([paper.width, paper.height]);
+    if (tintColor && page.number !== 0) {
+      pdfPage.drawRectangle({
+        x: 0,
+        y: 0,
+        width: paper.width,
+        height: paper.height,
+        color: tintColor,
+        opacity: TINT_OPACITY,
+      });
+    }
     for (const [k, row] of page.lines.entries()) {
       for (const part of row.right ? [row, row.right] : [row]) {
         await drawText(pdfPage, part.runs, part.col, spec.margin.top + k);
@@ -169,6 +198,21 @@ export async function renderPdf(
         const col = Math.max(spec.width - STAR_COLUMN_FROM_RIGHT, 0) - spec.margin.left;
         await drawText(pdfPage, plain('*'), col, spec.margin.top + k);
       }
+    }
+    for (const range of opts.crossOut ?? []) {
+      if (range.page !== page.number || page.number === 0) continue;
+      const from = Math.max(0, Math.min(range.from, range.to));
+      const to = Math.min(page.lines.length - 1, Math.max(range.from, range.to));
+      if (to < from) continue;
+      pdfPage.drawLine({
+        start: { x: xOf(0), y: yOf(spec.margin.top + from) + LINE_HEIGHT_PT },
+        end: {
+          x: xOf(spec.width - spec.margin.left - spec.margin.right),
+          y: yOf(spec.margin.top + to),
+        },
+        thickness: 1,
+        color: BLACK,
+      });
     }
     if (page.pageNumber) {
       const { text, line, col } = page.pageNumber;
