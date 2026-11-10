@@ -161,13 +161,13 @@ describe('the production block', () => {
     expect(gone.other).toBe(1);
     expect(productionMeta(null, null)).toEqual({});
   });
-  it('reads a header, and ignores only the header when it is wrong', () => {
+  it('reads a header of up to 120 characters, and ignores only the header when it is wrong', () => {
     expect(readProduction(meta({ ...block, header: '  Blue Pages  ' }))?.header).toBe('Blue Pages');
     expect(readProduction(meta(block))?.header).toBeUndefined();
-    const at = 'x'.repeat(200);
+    const at = 'x'.repeat(120);
     expect(readProduction(meta({ ...block, header: at }))?.header).toBe(at);
     for (const header of [
-      'x'.repeat(201),
+      'x'.repeat(121),
       'Blue\u0007',
       'Blue\nPink',
       '\u202eBlue',

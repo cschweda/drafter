@@ -1,6 +1,13 @@
 import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
-import { paginate, type SceneNumbering, type TitlePageMode, titlePageFor } from '@drafter/layout';
+import {
+  type Layout,
+  type Page,
+  paginate,
+  type SceneNumbering,
+  type TitlePageMode,
+  titlePageFor,
+} from '@drafter/layout';
 import {
   type ManuscriptDetails,
   type ManuscriptFont,
@@ -184,8 +191,8 @@ export type ExportRequest =
   /**
    * A locked script's revised pages (production design §8): the pages `which` chooses, as they
    * print in the full PDF (the export options' scene numbers), with the marks of the open set or of
-   * every set, `header` under each page number, and, with `tint`, the open set's colour behind
-   * each page.
+   * every set, `header` under each page number, and, with `tint`, behind each page the colour
+   * of the newest set with a mark on it.
    */
   | {
       kind: 'revised-pdf';
@@ -727,10 +734,45 @@ async function revisedPdf(
       : (await productionLayout(source, template, { ...opts, marks: chooseMarks })).layout;
   const layout = revisedPages(printed.layout, which, chooseBy);
   if (layout.pages.length === 0) throw new ExportRefusal(noRevisedPages(which, printed.open.name));
+  let tint: ((page: Page) => string | null) | undefined;
+  if (request.tint) {
+    // Each page in the colour of the newest set with a mark on it (Ruling 5d), whichever marks
+    // print: read from a layout with every set's marks. The current revision's pages all carry
+    // the open set's, the newest, so the printed layout says as much for them.
+    const tintBy =
+      marks === 'all' || which.kind === 'current'
+        ? printed.layout
+        : which.kind === 'all'
+          ? chooseBy
+          : (await productionLayout(source, template, { ...opts, marks: 'all' })).layout;
+    const colours = pageColours(tintBy, printed.sets);
+    tint = (page) => colours.get(page.number) ?? null;
+  }
   return renderPdf(layout, template, {
     fonts,
     onProgress,
     revisionHeader: request.header,
-    ...(request.tint ? { tint: printed.open.color } : {}),
+    ...(tint ? { tint } : {}),
   });
+}
+
+/**
+ * Each body page's colour, by its number: the colour of the newest of `sets` (oldest first) with a
+ * mark on it; a page with none has no entry. renderPdf ignores a colour that isn't `#rrggbb`.
+ */
+function pageColours(layout: Layout, sets: readonly ProductionSet[]): Map<number, string> {
+  const rank = new Map(sets.map((set, i) => [set.name, i]));
+  const colours = new Map<number, string>();
+  for (const page of layout.pages) {
+    if (page.number === 0) continue;
+    let newest = -1;
+    for (const line of page.lines) {
+      for (const mark of [line.mark, line.right?.mark]) {
+        if (mark) newest = Math.max(newest, rank.get(mark.set) ?? -1);
+      }
+    }
+    const set = sets[newest];
+    if (set) colours.set(page.number, set.color);
+  }
+  return colours;
 }

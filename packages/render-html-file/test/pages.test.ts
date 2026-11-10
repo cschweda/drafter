@@ -415,6 +415,24 @@ describe('pagesHtml: a locked script (production design §8)', () => {
     );
   });
 
+  it('a long header wraps onto a second line, both within the page', () => {
+    const layout = locked(() => false);
+    const header = `Blue Pages, the shooting draft of the long weir, for every department on the ${'x'.repeat(33)}`;
+    const el = host(pagesHtml(layout, screenplay, [], { revisionHeader: header }).html);
+    const items = [
+      ...(el.querySelectorAll('.page')[1]?.querySelectorAll('[data-furniture="revision"]') ?? []),
+    ];
+    expect(items).toHaveLength(2);
+    expect(items.map((i) => i.textContent).join(' ')).toBe(header);
+    const { margin, width, numbering } = screenplay.page;
+    items.forEach((item, k) => {
+      const text = item.textContent ?? '';
+      expect(item.classList.contains(rowClass(numbering.line + 1 + k))).toBe(true);
+      expect(item.classList.contains(colClass(width - margin.right - [...text].length))).toBe(true);
+      expect(width - margin.right - [...text].length).toBeGreaterThanOrEqual(margin.left);
+    });
+  });
+
   it('the hidden page marker names the page by its label', () => {
     const layout = locked(
       () => false,

@@ -372,9 +372,9 @@ describe('the revision header', () => {
     const { view, actions } = setup();
     await actions.lock();
     const before = view.state.doc.toString();
-    expect(await actions.setHeader('x'.repeat(201))).toBe(false);
+    expect(await actions.setHeader('x'.repeat(121))).toBe(false);
     expect(view.state.doc.toString()).toBe(before);
-    expect(productionMessage.value).toContain('200 characters');
+    expect(productionMessage.value).toContain('120 characters');
   });
 });
 

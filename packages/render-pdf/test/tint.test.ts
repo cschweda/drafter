@@ -32,4 +32,22 @@ describe('tint', () => {
       expect(bytes).toEqual(plain);
     }
   });
+  it('tints each page in its own colour when given one per page', async () => {
+    const long = paginate(
+      parse(`INT. HALL - DAY\n\n${'Margaret waits.\n\n'.repeat(80)}`),
+      template,
+    );
+    expect(long.pages.length).toBeGreaterThan(1);
+    const colours: Record<number, string | null> = { 1: '#3366ff', 2: '#ff6699' };
+    const bytes = await renderPdf(long, template, {
+      fonts,
+      tint: (page) => colours[page.number] ?? null,
+    });
+    expect(await operators(bytes, 0)).toContain('0.2 0.4 1 rg');
+    expect(await operators(bytes, 1)).toContain('1 0.4 0.6 rg');
+    if (long.pages.length > 2) expect(await operators(bytes, 2)).not.toContain('612 792 l');
+    // A colour that isn't #rrggbb tints nothing.
+    const bad = await renderPdf(long, template, { fonts, tint: () => 'blue' });
+    expect(bad).toEqual(await renderPdf(long, template, { fonts }));
+  });
 });

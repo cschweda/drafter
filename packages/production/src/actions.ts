@@ -213,7 +213,8 @@ const writesNumbers = (production: Production, template?: Template) =>
   template ? numbersScenes(template) : production.numbers.length > 0;
 
 /**
- * Closes the open set, keeping its marks as fingerprints, and opens the next (design §6.4). In a
+ * Closes the open set, keeping its marks as fingerprints, and opens the next (design §6.4), clearing
+ * a production's own header so the new set's default prints. In a
  * screenplay, new scenes get their A-numbers first, so the closed set's marks and the new
  * baseline both see them. The pages are re-based onto the new baseline. No changes when the
  * script isn't locked or its baseline can't be read.
@@ -239,8 +240,10 @@ export async function startNextSet(
     const closed = open ? [await closeSet(oldBaseline, script, open)] : [];
     const earlier = production.sets.slice(0, -1);
     const name = nextSetName(production.sets);
+    // A production's own header was the closed set's (Ruling 5c): the new set's default follows.
+    const { header: _, ...kept } = production;
     return {
-      ...production,
+      ...kept,
       numbers,
       pages: rebaseAnchors(production.pages, oldBaseline, script),
       sets: [...earlier, ...closed, setOf(name, today, await idOf(draftId, script))],

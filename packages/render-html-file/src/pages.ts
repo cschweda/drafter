@@ -1,4 +1,10 @@
-import type { Layout, LayoutLine, LayoutRun, Page } from '@drafter/layout';
+import {
+  headerLines,
+  type Layout,
+  type LayoutLine,
+  type LayoutRun,
+  type Page,
+} from '@drafter/layout';
 import { PAPER_POINTS, type Template } from '@drafter/templates';
 import { el, escapeHtml } from './escape';
 import { colClass, gridRules, pageClass, pageRules, paperRule, rowClass } from './rules';
@@ -235,8 +241,12 @@ function furnitureHtml(
   if (page.header) out += add('header', numbering.line, margin.left, page.header);
   if (page.footer) out += add('footer', height - 1 - numbering.line, margin.left, page.footer);
   if (revisionHeader && page.number !== 0) {
-    const col = Math.max(0, width - margin.right - [...revisionHeader].length);
-    out += add('revision', numbering.line + 1, Math.max(col, margin.left), revisionHeader);
+    // As renderPdf draws it: right-aligned, a long one on two lines (`headerLines`).
+    const lines = headerLines(revisionHeader, width - margin.left - margin.right);
+    for (const [k, text] of lines.entries()) {
+      const col = Math.max(0, width - margin.right - [...text].length);
+      out += add('revision', numbering.line + 1 + k, Math.max(col, margin.left), text);
+    }
   }
   page.lines.forEach((line, k) => {
     if (line.mark || line.right?.mark) {

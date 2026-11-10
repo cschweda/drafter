@@ -1,4 +1,4 @@
-import type { Layout, LayoutRun, Page } from '@drafter/layout';
+import { headerLines, type Layout, type LayoutRun, type Page } from '@drafter/layout';
 import { CHAR_WIDTH_PT, LINE_HEIGHT_PT, PAPER_POINTS, type Template } from '@drafter/templates';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, type PDFFont, type PDFPage, rgb } from 'pdf-lib';
@@ -74,8 +74,11 @@ export async function renderPdf(
     onProgress?: (progress: RenderProgress) => void;
     /** The revision header, under the page number on every body page. */
     revisionHeader?: string;
-    /** A `#rrggbb` that tints every body page (a rectangle at 12% opacity under the text); anything else is ignored. */
-    tint?: string;
+    /**
+     * A `#rrggbb` that tints every body page (a rectangle at 12% opacity under the text), or each
+     * body page's own colour (null for none); anything that isn't `#rrggbb` is ignored.
+     */
+    tint?: string | ((page: Page) => string | null | undefined);
     /**
      * Blocks crossed out: for each, one straight line from the top-left of body line `from` to the
      * bottom-right of body line `to` (0-based, inclusive) on the page numbered `page`.
@@ -104,14 +107,17 @@ export async function renderPdf(
     .join(' ');
   if (title) doc.setTitle(title, { showInWindowTitleBar: true });
 
-  const tintColor =
-    typeof opts.tint === 'string' && HEX_COLOR.test(opts.tint)
+  const colourOf = (tint: unknown) =>
+    typeof tint === 'string' && HEX_COLOR.test(tint)
       ? rgb(
-          Number.parseInt(opts.tint.slice(1, 3), 16) / 255,
-          Number.parseInt(opts.tint.slice(3, 5), 16) / 255,
-          Number.parseInt(opts.tint.slice(5, 7), 16) / 255,
+          Number.parseInt(tint.slice(1, 3), 16) / 255,
+          Number.parseInt(tint.slice(3, 5), 16) / 255,
+          Number.parseInt(tint.slice(5, 7), 16) / 255,
         )
       : undefined;
+  const { tint } = opts;
+  const tintOf =
+    typeof tint === 'function' ? (page: Page) => colourOf(tint(page)) : () => colourOf(tint);
 
   const embedded = new Map<Style, PDFFont>();
   const fontFor = async (style: Style) => {
@@ -180,7 +186,8 @@ export async function renderPdf(
   report('draw', 0, pages.length);
   for (const [index, page] of pages.entries()) {
     const pdfPage = doc.addPage([paper.width, paper.height]);
-    if (tintColor && page.number !== 0) {
+    const tintColor = page.number === 0 ? undefined : tintOf(page);
+    if (tintColor) {
       pdfPage.drawRectangle({
         x: 0,
         y: 0,
@@ -220,14 +227,16 @@ export async function renderPdf(
       await drawText(pdfPage, plain(text), col, line);
     }
     if (opts.revisionHeader && page.number !== 0) {
-      const text = opts.revisionHeader;
+      // Right-aligned on the text width, under the page number; a long one on two lines.
       const width = spec.width - spec.margin.left - spec.margin.right;
-      await drawText(
-        pdfPage,
-        plain(text),
-        Math.max(0, width - columns(text)),
-        spec.numbering.line + 1,
-      );
+      for (const [k, text] of headerLines(opts.revisionHeader, width).entries()) {
+        await drawText(
+          pdfPage,
+          plain(text),
+          Math.max(0, width - columns(text)),
+          spec.numbering.line + 1 + k,
+        );
+      }
     }
     for (const { line, text } of page.sceneNumbersLeft) {
       await drawText(pdfPage, plain(text), template.sceneNumbers.left, spec.margin.top + line);

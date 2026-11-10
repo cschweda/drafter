@@ -1,4 +1,10 @@
-import { labelRange, noRevisedPages, type RevisedChoice } from '@drafter/production';
+import {
+  headerOf,
+  labelRange,
+  MAX_HEADER,
+  noRevisedPages,
+  type RevisedChoice,
+} from '@drafter/production';
 import { ref } from 'vue';
 import { useEditor } from '../editor/session';
 import { renderExport } from '../storage/export-client';
@@ -74,4 +80,16 @@ export function revisedRefusal(info: RevisedInfo, which: RevisedChoice): string 
         ? info.any
         : labelRange(info.labels, which.from, which.to).length > 0;
   return some ? null : noRevisedPages(which, info.open);
+}
+
+/**
+ * What is wrong with the typed header, by the block's own rule (`headerOf`), or null: blank is
+ * fine (the revision's own header prints). The dialog shows it and won't export until it's fixed,
+ * so no header the block wouldn't keep ever reaches the PDF.
+ */
+export function headerProblem(typed: string): string | null {
+  const text = typed.trim();
+  if (text === '' || headerOf(text) !== undefined) return null;
+  if ([...text].length > MAX_HEADER) return `The header can be up to ${MAX_HEADER} characters.`;
+  return 'The header can’t hold control or invisible formatting characters.';
 }

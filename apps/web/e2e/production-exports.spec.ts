@@ -176,4 +176,52 @@ test.describe('Production exports', () => {
     await expect(header).toHaveValue('Blue Pages <b>Shooting</b>');
     await dialog(page).getByRole('button', { name: 'Cancel' }).click();
   });
+  test('a range with no pages says so in the dialog, which stays open', async ({ page }) => {
+    await start(page);
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await scriptsMenu(page).getByRole('button', { name: 'New screenplay' }).click();
+    await expect(scriptsMenu(page)).toBeHidden();
+    await showSource(page);
+    await replaceWhole(page, LONG);
+    await expect.poll(() => wholeText(page)).toBe(LONG);
+    await command(page, 'Show Production');
+    await panel(page).getByRole('button', { name: 'Lock pages and scene numbers' }).click();
+    await expect(panel(page)).toContainText('Pages and scene numbers locked on');
+
+    const downloads: string[] = [];
+    page.on('download', (file) => downloads.push(file.suggestedFilename()));
+    await command(page, 'Export revised pages (PDF)…');
+    const exportButton = dialog(page).getByRole('button', { name: 'Export', exact: true });
+    await expect(exportButton).toBeEnabled();
+    await dialog(page)
+      .getByRole('group', { name: 'Which pages' })
+      .getByRole('button', { name: 'Page range' })
+      .click();
+    const fromField = dialog(page).getByRole('textbox', { name: 'From page' });
+    const toField = dialog(page).getByRole('textbox', { name: 'To page' });
+    await expect(fromField).toHaveValue('1');
+    await toField.fill('99');
+    await exportButton.click();
+    await expect(dialog(page)).toBeVisible();
+    await expect(dialog(page).getByRole('alert')).toHaveText(
+      'There are no revised pages to print.',
+    );
+    await expect(fromField).toHaveAttribute('aria-invalid', 'true');
+    await expect(toField).toHaveAttribute('aria-invalid', 'true');
+    await expect(fromField).toBeFocused();
+    // A bad header is said under it, and Export waits.
+    await toField.fill('2');
+    await expect(dialog(page).getByRole('alert')).toHaveCount(0);
+    const header = dialog(page).getByRole('textbox', { name: 'Header text' });
+    await header.fill('Blue\u202ePages');
+    await expect(dialog(page).getByRole('alert')).toContainText('invisible formatting');
+    await expect(exportButton).toBeDisabled();
+    await header.fill('Blue Pages');
+    await expect(exportButton).toBeEnabled();
+    const download = page.waitForEvent('download');
+    await exportButton.click();
+    const pages = await pdfPages(await readFile(await (await download).path()));
+    expect(pages).toHaveLength(2);
+    expect(downloads).toHaveLength(1);
+  });
 });

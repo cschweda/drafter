@@ -175,7 +175,8 @@ describe('the header', () => {
 
   it('setHeader refuses a header the block wouldn’t read back', async () => {
     const text = await locked();
-    await expect(setHeader(text, 'x'.repeat(201))).rejects.toThrow();
+    await expect(setHeader(text, 'x'.repeat(121))).rejects.toThrow();
+    expect(await setHeader(text, 'x'.repeat(120))).not.toEqual([]);
     await expect(setHeader(text, 'Blue\u0007')).rejects.toThrow();
   });
 });

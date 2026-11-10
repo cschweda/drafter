@@ -92,6 +92,27 @@ describe('revision marks in the PDF', () => {
     });
   });
 
+  it('a long header wraps onto a second line, both within the page', async () => {
+    const layout = paginate(parse(SOURCE), screenplay);
+    const header = `Blue Pages, the shooting draft of the long weir, for every department on the ${'x'.repeat(33)}`;
+    expect([...header].length).toBe(110);
+    const pdf = await extract(
+      await renderPdf(layout, screenplay, { fonts, revisionHeader: header }),
+    );
+    const first = rowText(pdf[1], yOfLine(numbering.line + 1));
+    const second = rowText(pdf[1], yOfLine(numbering.line + 2));
+    expect(first).not.toBe('');
+    expect(second).not.toBe('');
+    expect(`${first} ${second}`).toBe(header);
+    const right = (width - margin.right) * 7.2;
+    for (const y of [yOfLine(numbering.line + 1), yOfLine(numbering.line + 2)]) {
+      const item = pdf[1]?.items.find((i) => Math.abs(i.y - y) < 0.5 && i.str !== '');
+      expect(item?.x).toBeGreaterThanOrEqual(margin.left * 7.2 - 0.01);
+      expect((item?.x ?? 0) + [...(item?.str ?? '')].length * 7.2).toBeCloseTo(right, 1);
+    }
+    expect(numbering.line + 2).toBeLessThan(margin.top);
+  });
+
   it("the header's em dash and every other character draw in the embedded Courier Prime", async () => {
     const header = 'Double Pink Revision — 12 November 2026';
     const regular = fontkit.create(Buffer.from(fonts.regular));

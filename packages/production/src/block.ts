@@ -23,7 +23,7 @@ export const CAPS = {
 const KEY = 'production';
 
 /** The longest revision header a block keeps, in characters. */
-export const MAX_HEADER = 200;
+export const MAX_HEADER = 120;
 
 /** Characters a header never holds: controls, invisible format marks (bidi overrides), line breaks. */
 const NOT_IN_HEADER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;

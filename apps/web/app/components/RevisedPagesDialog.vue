@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { RevisedChoice } from '@drafter/production';
+import { MAX_HEADER } from '@drafter/production';
 import DDialog from '~/components/ui/DDialog.vue';
 import DSegmented from '~/components/ui/DSegmented.vue';
 import { useEditor } from '~/editor/session';
 import {
+  headerProblem,
   type RevisedInfo,
   revisedDefaults,
   revisedHeaderChoice,
@@ -44,6 +46,14 @@ const tint = ref(false);
 /** The script's pages and marks, from the export worker; null while it works them out. */
 const info = ref<RevisedInfo | null | 'failed'>(null);
 const ready = computed(() => info.value !== null && info.value !== 'failed');
+/** What is wrong with the typed header (`headerProblem`): shown under it, and Export waits. */
+const headerError = computed(() => headerProblem(header.value));
+/** Why the typed range prints nothing, shown under its fields until they change. */
+const rangeError = ref<string | null>(null);
+const fromField = ref<HTMLInputElement>();
+watch([from, to, which], () => {
+  rangeError.value = null;
+});
 
 let opener: HTMLElement | null = null;
 let opening = 0;
@@ -76,6 +86,7 @@ watch(revisedPagesOpen, async (open) => {
     from.value = '';
     to.value = '';
     info.value = null;
+    rangeError.value = null;
     openedFor = script.project.value?.id;
     dialog.value.showModal();
     void load();
@@ -100,10 +111,19 @@ function choice(): RevisedChoice {
 function exportNow() {
   const found = info.value;
   if (found === null || found === 'failed') return;
+  // Never a header the block wouldn't keep: the field says what is wrong.
+  if (headerError.value) return;
   const chosen = choice();
   const refusal = revisedRefusal(found, chosen);
+  if (refusal && chosen.kind === 'range') {
+    // The writer can fix a range: the dialog stays, and says so under it.
+    rangeError.value = refusal;
+    fromField.value?.focus();
+    return;
+  }
   dialog.value?.close();
   if (refusal) {
+    // No field fixes these (no changes in the revision): said in the export toast.
     void refuseExport(refusal);
     return;
   }
@@ -145,13 +165,33 @@ function exportNow() {
       <div v-if="which === 'range'" class="range">
         <div class="field">
           <label for="revised-from">From page</label>
-          <input id="revised-from" v-model="from" type="text" autocomplete="off" maxlength="12" />
+          <input
+            id="revised-from"
+            ref="fromField"
+            v-model="from"
+            type="text"
+            autocomplete="off"
+            maxlength="12"
+            :aria-invalid="rangeError ? 'true' : undefined"
+            :aria-describedby="rangeError ? 'revised-range-error' : undefined"
+          />
         </div>
         <div class="field">
           <label for="revised-to">To page</label>
-          <input id="revised-to" v-model="to" type="text" autocomplete="off" maxlength="12" />
+          <input
+            id="revised-to"
+            v-model="to"
+            type="text"
+            autocomplete="off"
+            maxlength="12"
+            :aria-invalid="rangeError ? 'true' : undefined"
+            :aria-describedby="rangeError ? 'revised-range-error' : undefined"
+          />
         </div>
       </div>
+      <p v-if="which === 'range' && rangeError" id="revised-range-error" class="error" role="alert">
+        {{ rangeError }}
+      </p>
       <div class="field">
         <span class="label">Which marks print</span>
         <DSegmented v-model="marks" label="Which marks print" :options="MARK_CHOICES" />
@@ -163,21 +203,27 @@ function exportNow() {
           v-model="header"
           type="text"
           autocomplete="off"
-          maxlength="200"
-          aria-describedby="revised-header-hint"
+          :maxlength="MAX_HEADER"
+          :aria-invalid="headerError ? 'true' : undefined"
+          :aria-describedby="headerError ? 'revised-header-error revised-header-hint' : 'revised-header-hint'"
         />
+        <span v-if="headerError" id="revised-header-error" class="error" role="alert">
+          {{ headerError }}
+        </span>
         <span id="revised-header-hint" class="hint">
           Under the page number on every page. Kept in the script; clear it for the revision’s own.
         </span>
       </div>
       <label class="check">
         <input v-model="tint" type="checkbox" />
-        Tint pages in the revision’s colour
+        Tint each page in its revision’s colour
       </label>
 
       <div class="d-dialog-footer">
         <DButton @click="dialog?.close()">Cancel</DButton>
-        <DButton variant="primary" type="submit" :disabled="!ready">Export</DButton>
+        <DButton variant="primary" type="submit" :disabled="!ready || !!headerError">
+          Export
+        </DButton>
       </div>
     </form>
   </DDialog>
@@ -235,6 +281,15 @@ input[type='text'] {
   width: 16px;
   height: 16px;
   margin: 1px 0 0;
+}
+.error {
+  margin: 0 0 12px;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 600;
+}
+.field .error {
+  margin: 0;
 }
 .hint {
   display: block;

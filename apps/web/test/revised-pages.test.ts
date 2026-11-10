@@ -1,13 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import type { TextChange } from '@drafter/fountain';
-import { lock, setHeader } from '@drafter/production';
+import { lock, REVISION_COLORS, setHeader, startNextSet } from '@drafter/production';
 import { FONT_FILES, type FontSet } from '@drafter/render-pdf';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
-import { extract } from '../../../packages/render-pdf/test/helpers';
+import { extract, operators } from '../../../packages/render-pdf/test/helpers';
 import type { When } from '../app/commands/behavior';
 import { exportBehaviors } from '../app/commands/export-commands';
 import {
+  headerProblem,
   type RevisedInfo,
   revisedDefaults,
   revisedHeaderChoice,
@@ -165,6 +166,47 @@ describe('a production’s own header in the HTML file', () => {
   });
 });
 
+/** The page's tint, as the 0–1 fill colour of its full-page rectangle, or null. */
+async function tintOf(bytes: Uint8Array, index: number): Promise<number[] | null> {
+  const ops = await operators(bytes, index);
+  if (!ops.includes('612 792 l') && !/0 0 612 792 re/.test(ops)) return null;
+  const fill = /([\d.]+) ([\d.]+) ([\d.]+) rg/.exec(ops);
+  return fill ? fill.slice(1, 4).map(Number) : null;
+}
+const rgbOf = (hex: string) =>
+  [1, 3, 5].map((at) => Number.parseInt(hex.slice(at, at + 2), 16) / 255);
+
+describe('the tint', () => {
+  test('each page in the colour of the newest set marked on it', async () => {
+    const blue = (await locked()).replace('Line 5 of the hall.', 'Line 5 of the great hall.');
+    const pink = apply(blue, await startNextSet(blue, '2026-11-10', 'd2', template));
+    const source = pink.replace('Line 110 of the hall.', 'Line 110 of the long hall.');
+    const bytes = bytesOf(
+      await createExporter(realFonts)({
+        ...REVISED,
+        source,
+        which: { kind: 'all' },
+        marks: 'all',
+        tint: true,
+      }),
+    );
+    const pages = await extract(bytes);
+    expect(pages).toHaveLength(2);
+    const expected = [REVISION_COLORS.Blue, REVISION_COLORS.Pink].map((c) => rgbOf(c as string));
+    for (const [i, colour] of expected.entries()) {
+      const got = await tintOf(bytes, i);
+      expect(got, `page ${i}`).not.toBeNull();
+      for (const [k, v] of (got ?? []).entries()) expect(v).toBeCloseTo(colour[k] as number, 2);
+    }
+  });
+
+  test('no tint unless asked', async () => {
+    const source = await lockedEdited();
+    const bytes = bytesOf(await createExporter(realFonts)({ ...REVISED, source }));
+    expect(await tintOf(bytes, 0)).toBeNull();
+  });
+});
+
 describe('the dialog', () => {
   test('its info: the body pages’ labels, the open set, and the header’s default', async () => {
     const info = infoOf(
@@ -218,6 +260,19 @@ describe('the dialog', () => {
     });
     expect(revisedHeaderChoice('', own)).toEqual({ header: HEADER, save: null });
     expect(revisedHeaderChoice(HEADER, own)).toEqual({ header: HEADER, save: null });
+  });
+
+  test('a header the block wouldn’t keep is a problem the dialog shows', () => {
+    expect(headerProblem('Blue Pages')).toBeNull();
+    expect(headerProblem('')).toBeNull();
+    expect(headerProblem('   ')).toBeNull();
+    expect(headerProblem('x'.repeat(120))).toBeNull();
+    expect(headerProblem('x'.repeat(121))).toBe('The header can be up to 120 characters.');
+    for (const bad of ['Blue\u0007', 'Blue\u202ePink', 'Blue\u2028Pink']) {
+      expect(headerProblem(bad), bad).toBe(
+        'The header can’t hold control or invisible formatting characters.',
+      );
+    }
   });
 
   test('says what is empty before any picker', () => {
