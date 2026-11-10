@@ -1,6 +1,6 @@
 {
   "name": "@drafter/novel",
-  "version": "0.26.2",
+  "version": "0.27.0",
   "description": "Drafter's Novel: reads the parts, chapters, and sections of a novel written in Markdown.",
   "license": "MIT",
   "type": "module",

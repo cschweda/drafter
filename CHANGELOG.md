@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-09
+
+**Production, free.** For a script going into production: **lock pages and scene numbers**, so a page that grows becomes 12A and a new scene between 5 and 6 becomes 5A; revise in the industry's colors, with an asterisk in the margin wherever words changed; and mark a cut scene **OMITTED** so the numbers never shift. Then send out what a production needs: the **revised pages** with their colored header, a **breakdown** of every scene (CSV for a spreadsheet, or PDF), and **sides**, an actor's pages with the other scenes crossed out. Every paged export, and `drafter build` on the command line, prints the locked pages. All of it is free, like the rest of Drafter.
+
 ### Added
 
 - **Production: locked pages and revisions (v0.27.0, free).** For a script going into production. **Lock pages and scene numbers** writes a number into every scene (`#12#`) and remembers where every page starts, so later edits never move them: new pages are 12A, a page left empty folds into its neighbour (13-14), and a scene added later is 5A. **Start the next revision** opens the next color (White, Blue, Pink, Yellow, Green, Goldenrod, Buff, Salmon, Cherry, then Double), and an asterisk in the right margin marks only the words that changed. **Omit scene** leaves `.OMITTED #12#` in its place, after a snapshot. **Clear marks…** and **Unlock…** undo it, each after a snapshot. A Production tab in the Inspector, a revision chip in the status bar, three Problems warnings (a scene number out of order, on more than one scene, or gone, with **Put back as OMITTED**), a Production help page, and a note in the cheat sheet. The open revision's "before" text is kept compressed in the settings block at the end of the file, so marks look the same on any computer. Revised pages, the breakdown, and sides are below.
@@ -1402,7 +1406,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.26.2...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.27.0...HEAD
+[0.27.0]: https://github.com/cschweda/drafter/compare/v0.26.2...v0.27.0
 [0.26.2]: https://github.com/cschweda/drafter/compare/v0.26.1...v0.26.2
 [0.26.1]: https://github.com/cschweda/drafter/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/cschweda/drafter/compare/v0.25.1...v0.26.0
