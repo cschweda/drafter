@@ -3,6 +3,7 @@ import { paginate } from '@drafter/layout';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, it } from 'vitest';
 import { rebaseAnchors, resolveAnchors } from '../src/anchors';
+import { lockedPagesOf } from '../src/layout';
 import { pageMapOf } from '../src/pages';
 
 const screenplay = builtins['us-screenplay'] as Template;
@@ -23,13 +24,6 @@ const cut = (text: string, from: number, to: number) => {
   l.splice(from, to - from);
   return l.join('\n');
 };
-/** Each dropped label folds into the nearest kept label before it. */
-function foldedOf(all: string[], dropped: string[], kept: string[]) {
-  return dropped.map((label) => {
-    const before = kept.filter((k) => all.indexOf(k) < all.indexOf(label));
-    return { into: before[before.length - 1] as string, label };
-  });
-}
 const bodyLabels = (layout: ReturnType<typeof paginate>) =>
   layout.pages.filter((p) => p.number > 0).map((p) => p.label);
 
@@ -41,13 +35,10 @@ function lockAndCut(title: boolean) {
 }
 
 function laidOut(pages: ReturnType<typeof pageMapOf>, base: string, cur: string) {
-  const { anchors, dropped } = resolveAnchors(pages, base, cur);
-  const all = pages.map((p) => p.label);
-  const kept = anchors.map((a) => a.label);
-  const folded = foldedOf(all, dropped, kept);
+  const { dropped } = resolveAnchors(pages, base, cur);
   return {
     dropped,
-    layout: paginate(parse(cur), screenplay, { locked: { anchors, folded } }),
+    layout: paginate(parse(cur), screenplay, { locked: lockedPagesOf(pages, base, cur) }),
   };
 }
 

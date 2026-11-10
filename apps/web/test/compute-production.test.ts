@@ -3,6 +3,7 @@ import { applyMarks, type Layout, type Marks, paginate } from '@drafter/layout';
 import {
   decodeBaseline,
   lock,
+  lockedPagesOf,
   type Production,
   readProduction,
   scriptText,
@@ -16,7 +17,7 @@ import {
   type LayoutRequest,
   PRODUCTION_WAIT_MS,
 } from '../app/editor/layout-client';
-import { computeLayout, createLayoutCompute, lockedPagesOf } from '../app/workers/compute';
+import { computeLayout, createLayoutCompute } from '../app/workers/compute';
 
 // A locked script in the layout worker (production design §6.2, §7.2): the request carries the
 // production's facts (its id, and the facts themselves only when the id changes, as Show changes'

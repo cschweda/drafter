@@ -2,30 +2,8 @@ import { changesOf, markPages, type PageMarks } from '@drafter/compare';
 import { type Doc, metadataSpan, parse } from '@drafter/fountain';
 import type { Layout, LockedPages, Marks } from '@drafter/layout';
 import { paginate } from '@drafter/layout';
-import { type LockedPage, productionMarks, resolveAnchors } from '@drafter/production';
+import { lockedPagesOf, productionMarks } from '@drafter/production';
 import type { LayoutProductionFacts, LayoutReply, LayoutRequest } from '../editor/layout-client';
-
-/**
- * A locked script's pages in `current` (production design §7.2): where each locked page starts now,
- * and each page with no place left folded into the kept page before it, whose label then prints as
- * a range (`13-14`). A page is dropped when its start falls on or before a kept page's start, so
- * the kept page before it in the page map is the one whose start it shares.
- */
-export function lockedPagesOf(
-  pages: readonly LockedPage[],
-  baseline: string,
-  current: string,
-): LockedPages {
-  const { anchors, dropped } = resolveAnchors(pages, baseline, current);
-  const gone = new Set(dropped);
-  const folded: Array<{ into: string; label: string }> = [];
-  let into: string | null = null;
-  for (const { label } of pages) {
-    if (!gone.has(label)) into = label;
-    else if (into !== null) folded.push({ into, label });
-  }
-  return { anchors, folded };
-}
 
 /**
  * The script's text without its `/* drafter *\/` block, as `scriptText` makes it, from a parse
