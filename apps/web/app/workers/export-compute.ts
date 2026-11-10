@@ -16,11 +16,14 @@ import {
 } from '@drafter/novel';
 import { sceneIndex, scriptMarkdown } from '@drafter/outline';
 import {
+  BREAKDOWN_COLUMNS,
+  breakdownRows,
   noRevisedPages,
   type ProductionSet,
   productionLayout,
   type RevisedChoice,
   revisedPages,
+  toCsv,
 } from '@drafter/production';
 import { renderManuscriptDocx } from '@drafter/render-docx';
 import {
@@ -48,6 +51,7 @@ import {
   renderDocumentPdf,
   renderManuscriptPdf,
   renderPdf,
+  renderTablePdf,
 } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
 import {
@@ -103,6 +107,14 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptions = Object.freeze({
   titlePage: 'full',
   notes: 'leave-out',
 });
+
+/** What a breakdown report is made from (see `ExportRequest`). */
+interface BreakdownRequest {
+  source: string;
+  template: Template;
+  title: string;
+  today: string;
+}
 
 /**
  * What the main thread sends the export worker: the whole text, the template to lay a script out
@@ -204,6 +216,12 @@ export type ExportRequest =
       header: string;
       tint: boolean;
     }
+  /**
+   * A script's breakdown report (production design §9), one row per scene: as a CSV (text) or a
+   * PDF table. `today` is `YYYY-MM-DD`, the PDF's date line.
+   */
+  | ({ kind: 'breakdown-csv' } & BreakdownRequest)
+  | ({ kind: 'breakdown-pdf' } & BreakdownRequest)
   /** What the Export revised pages dialog shows (`RevisedInfo`, as JSON). */
   | { kind: 'revised-info'; source: string; template: Template; options?: ExportOptions };
 
@@ -570,6 +588,9 @@ export function createExporter(
       const fonts = await fontsOnce();
       return { data: await revisedPdf(request, fonts, rendering(report)) };
     }
+    if (request.kind === 'breakdown-csv' || request.kind === 'breakdown-pdf') {
+      return { data: await breakdown(request, documentFontsOnce) };
+    }
     const { kind, source, template, options = DEFAULT_EXPORT_OPTIONS } = request;
     const parsed = parse(source);
     const doc = { ...parsed, titlePage: titlePageFor(parsed.titlePage, options.titlePage) };
@@ -709,6 +730,40 @@ async function revisedInfo(
     current,
     any,
   };
+}
+
+/** `2026-11-09` as `9 November 2026`; as it is when it can't be read. */
+export function longDate(iso: string): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  const name = MONTHS[(month ?? 0) - 1];
+  return year && day && name ? `${day} ${name} ${year}` : iso;
+}
+
+/**
+ * The breakdown report (production design §9): a CSV as text, or a table PDF in the document
+ * fonts, on the template's paper, dated `today`. The pages are the locked ones for a locked script.
+ */
+async function breakdown(
+  request: Extract<ExportRequest, { kind: 'breakdown-csv' | 'breakdown-pdf' }>,
+  documentFonts: () => Promise<DocumentFontSet>,
+): Promise<string | Uint8Array> {
+  const { source, template } = request;
+  const { layout } = await productionLayout(source, template, {
+    sceneNumbers: 'none',
+    titlePage: 'none',
+    marks: 'none',
+  });
+  const rows = breakdownRows(parse(source), template, layout);
+  if (request.kind === 'breakdown-csv') return toCsv([[...BREAKDOWN_COLUMNS], ...rows]);
+  return renderTablePdf(
+    {
+      title: request.title,
+      date: longDate(request.today),
+      columns: [...BREAKDOWN_COLUMNS],
+      rows,
+    },
+    { fonts: await documentFonts(), paper: template.page.paper === 'a4' ? 'a4' : 'letter' },
+  );
 }
 
 /**

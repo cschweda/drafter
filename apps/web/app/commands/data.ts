@@ -341,6 +341,19 @@ export const COMMAND_DATA: readonly CommandData[] = [
     group: 'File',
     keywords: [...PRODUCTION_WORDS, 'revised pages', 'colored pages', 'Blue pages', 'Pink pages'],
   },
+  // The breakdown report (production design §9): a row per scene, with no dialog.
+  {
+    id: 'export-breakdown-csv',
+    title: 'Export breakdown (CSV)',
+    group: 'File',
+    keywords: [...PRODUCTION_WORDS, 'breakdown', 'scene list', 'spreadsheet', 'cast per scene'],
+  },
+  {
+    id: 'export-breakdown-pdf',
+    title: 'Export breakdown (PDF)',
+    group: 'File',
+    keywords: [...PRODUCTION_WORDS, 'breakdown', 'scene list', 'cast per scene'],
+  },
   { id: 'export-options', title: 'Export options…', group: 'File' },
   { id: 'screenplay-from-outline', title: 'New screenplay from this outline', group: 'File' },
   { id: 'remove', title: 'Remove from this browser', group: 'File' },

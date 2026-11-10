@@ -104,7 +104,7 @@ const MAX_NAME = 120;
  */
 export function fileNameFor(
   title: string,
-  extension: '.fountain' | '.md' | '.pdf' | '.html' | '.epub' | '.txt' | '.fdx' | '.docx',
+  extension: '.fountain' | '.md' | '.pdf' | '.html' | '.epub' | '.txt' | '.fdx' | '.docx' | '.csv',
 ): string {
   const cleaned = title.replace(UNSAFE, '').replace(/\s+/g, ' ').trim();
   // Cut by code point, so an emoji is never split.

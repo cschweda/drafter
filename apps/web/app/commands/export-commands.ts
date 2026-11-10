@@ -50,6 +50,16 @@ export function exportBehaviors({
         revisedPagesOpen.value = true;
       },
     },
+    // The breakdown report (production design §9): one row per scene, as a spreadsheet file or a
+    // PDF. A locked script's page labels are its locked ones; no dialog.
+    'export-breakdown-csv': {
+      enabled: () => hasScript() && isFountain(),
+      run: () => void exportScript('breakdown-csv'),
+    },
+    'export-breakdown-pdf': {
+      enabled: () => hasScript() && isFountain(),
+      run: () => void exportScript('breakdown-pdf'),
+    },
     'export-treatment': {
       enabled: isFountain,
       run: () => {

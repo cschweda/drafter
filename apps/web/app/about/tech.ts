@@ -134,8 +134,15 @@ export const PACKAGES: readonly PackageNote[] = [
   },
   {
     name: '@drafter/production',
-    does: 'A locked script: its scene numbers and pages, the revision sets (Blue, Pink, …) and their marks, kept in the script’s own block so the file alone shows them.',
-    uses: ['@drafter/compare', '@drafter/fountain', '@drafter/layout', '@drafter/templates'],
+    does: 'A locked script: its scene numbers and pages, the revision sets (Blue, Pink, …) and their marks, kept in the script’s own block so the file alone shows them; and the breakdown report, a row per scene.',
+    uses: [
+      '@drafter/cast',
+      '@drafter/compare',
+      '@drafter/fountain',
+      '@drafter/layout',
+      '@drafter/outline',
+      '@drafter/templates',
+    ],
   },
   {
     name: '@drafter/compare',

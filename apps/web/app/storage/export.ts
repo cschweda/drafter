@@ -59,7 +59,9 @@ export type ExportKind =
   | 'story-map'
   | 'manuscript-pdf'
   | 'manuscript-docx'
-  | 'revised-pdf';
+  | 'revised-pdf'
+  | 'breakdown-csv'
+  | 'breakdown-pdf';
 
 /**
  * What each kind of document exports, in the order the menus list them: the PDF first in both,
@@ -120,6 +122,8 @@ const MIME: Record<ExportKind, string> = {
   'manuscript-pdf': 'application/pdf',
   'manuscript-docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'revised-pdf': 'application/pdf',
+  'breakdown-csv': 'text/csv',
+  'breakdown-pdf': 'application/pdf',
 };
 const EXTENSION = {
   pdf: '.pdf',
@@ -133,6 +137,8 @@ const EXTENSION = {
   'manuscript-pdf': '.pdf',
   'manuscript-docx': '.docx',
   'revised-pdf': '.pdf',
+  'breakdown-csv': '.csv',
+  'breakdown-pdf': '.pdf',
 } as const satisfies Record<ExportKind, string>;
 
 /** What a save picker offers each kind as, where it isn't the kind itself. */
@@ -142,6 +148,8 @@ const PICKER_KIND = {
   'manuscript-pdf': 'pdf',
   'manuscript-docx': 'docx',
   'revised-pdf': 'pdf',
+  'breakdown-csv': 'csv',
+  'breakdown-pdf': 'pdf',
 } as const satisfies Partial<Record<ExportKind, FileKind>>;
 
 const pickerKind = (kind: ExportKind): FileKind =>
@@ -152,6 +160,8 @@ const NAME_SUFFIX: Partial<Record<ExportKind, string>> = {
   'story-map': ' – story map',
   'manuscript-pdf': ' – manuscript',
   'manuscript-docx': ' – manuscript',
+  'breakdown-csv': ' – Breakdown',
+  'breakdown-pdf': ' – Breakdown',
 };
 
 /**
@@ -195,6 +205,9 @@ function notFor(kind: ExportKind, markdown: boolean, novel: boolean): string | n
   if (markdown && kind === 'story-map') {
     return 'Only a screenplay or a stage play makes a story map.';
   }
+  if (markdown && isBreakdown(kind)) {
+    return 'Only a screenplay or a stage play has a breakdown.';
+  }
   if (markdown && kind === 'revised-pdf') {
     return 'Only a locked screenplay or stage play prints revised pages.';
   }
@@ -218,7 +231,13 @@ function withOptions(
   // Fountain file is the script's text as written: the options shape how it is drawn, not the text.
   // A manuscript's details are its dialog's, and the toast names no options for it either.
   // Revised pages have theirs in their dialog too.
-  if (kind === 'story-map' || kind === 'fountain' || isManuscript(kind) || kind === 'revised-pdf') {
+  if (
+    kind === 'story-map' ||
+    kind === 'fountain' ||
+    isManuscript(kind) ||
+    kind === 'revised-pdf' ||
+    isBreakdown(kind)
+  ) {
     return '';
   }
   // Only an HTML file and an EPUB carry the script inside (reopenable exports), a document's too.
@@ -245,6 +264,17 @@ function withOptions(
 
 /** The exports that can carry the script inside, for Drafter to reopen: the HTML file and the EPUB. */
 const carriesSource = (kind: ExportKind) => kind === 'html' || kind === 'epub';
+
+/** Today, as the writer's clock has it, `YYYY-MM-DD`: a breakdown's date line. */
+function today(): string {
+  const now = new Date();
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
+}
+
+/** A script's breakdown report, as a spreadsheet file or a PDF. */
+const isBreakdown = (kind: ExportKind): kind is 'breakdown-csv' | 'breakdown-pdf' =>
+  kind === 'breakdown-csv' || kind === 'breakdown-pdf';
 
 /** A novel's manuscript, as a PDF or a Word file. */
 const isManuscript = (kind: ExportKind): kind is 'manuscript-pdf' | 'manuscript-docx' =>
@@ -320,6 +350,9 @@ function requestFor(
       minutesPerPage: asked.minutesPerPage,
       ...(work.embed === undefined ? {} : { embed: work.embed }),
     };
+  }
+  if (isBreakdown(kind)) {
+    return { kind, source, template, title, today: today() };
   }
   return { kind, source, template, options };
 }

@@ -30,6 +30,7 @@ const EXTENSION: Record<FileKind, DesktopSaveExtension> = {
   epub: '.epub',
   fdx: '.fdx',
   docx: '.docx',
+  csv: '.csv',
 };
 
 /**

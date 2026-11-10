@@ -119,6 +119,26 @@ test.describe('Production exports', () => {
     await expect(dialog(page)).toBeHidden();
   });
 
+  test('exports the breakdown as a CSV, with its header and a row per scene', async ({ page }) => {
+    await start(page);
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await scriptsMenu(page).getByRole('button', { name: 'New screenplay' }).click();
+    await expect(scriptsMenu(page)).toBeHidden();
+    await showSource(page);
+    await replaceWhole(page, LONG);
+    await expect.poll(() => wholeText(page)).toBe(LONG);
+
+    const download = page.waitForEvent('download');
+    await command(page, 'Export breakdown (CSV)');
+    const file = await download;
+    expect(file.suggestedFilename()).toBe('The Long Weir – Breakdown.csv');
+    const csv = (await readFile(await file.path(), 'utf8')).split('\r\n');
+    expect(csv[0]).toBe('Scene,INT/EXT,Location,Time,Pages,Page,Cast,Synopsis');
+    expect(csv[1]).toMatch(/^1,INT,ROOM 1,DAY,[\d /]+,1,,$/);
+    expect(csv).toHaveLength(14);
+    expect(csv[13]).toBe('');
+  });
+
   test('says there is nothing to print before a Blue change, and makes no file', async ({
     page,
   }) => {

@@ -157,7 +157,13 @@ export const IMPORT_EXTENSIONS: readonly string[] = ['.fdx', '.highland', '.fade
  * dialog for one: a Final Draft file, an HTML page, an EPUB, and a manuscript's Word file. One that
  * was opened (an import, or a page, a book, or a Word file picked with All files) is never written.
  */
-export const EXPORT_ONLY_EXTENSIONS: readonly string[] = ['.fdx', '.html', '.epub', '.docx'];
+export const EXPORT_ONLY_EXTENSIONS: readonly string[] = [
+  '.fdx',
+  '.html',
+  '.epub',
+  '.docx',
+  '.csv',
+];
 /**
  * The extensions of Drafter's own exports that Open can read back (reopenable exports): an HTML
  * page or an EPUB made with "Let Drafter reopen this file". The page reads the script inside as
@@ -178,6 +184,7 @@ export const WRITE_EXTENSIONS: readonly string[] = [
   '.epub',
   '.fdx',
   '.docx',
+  '.csv',
 ];
 
 /** Whether `path`'s extension is one of `extensions` (in any case). */

@@ -13,6 +13,7 @@ export {
 export { type Anchor, rebaseAnchors, resolveAnchors } from './anchors';
 export { decodeBaseline, encodeBaseline } from './baseline';
 export { CAPS, headerOf, MAX_HEADER, productionMeta, readProduction } from './block';
+export { BREAKDOWN_COLUMNS, breakdownRows, toCsv } from './breakdown';
 export { fingerprintLines } from './fingerprint';
 export {
   lockedPagesOf,

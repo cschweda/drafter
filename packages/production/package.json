@@ -29,9 +29,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@drafter/cast": "workspace:*",
     "@drafter/compare": "workspace:*",
     "@drafter/fountain": "workspace:*",
     "@drafter/layout": "workspace:*",
+    "@drafter/outline": "workspace:*",
     "@drafter/templates": "workspace:*"
   }
 }
