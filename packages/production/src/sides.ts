@@ -74,6 +74,37 @@ export interface CrossOut {
   to: number;
 }
 
+/** Block kinds that print nothing of a scene: a section heading may follow them into the next scene. */
+const NOT_PRINTED = new Set(['section', 'synopsis', 'note', 'page_break']);
+
+/**
+ * The scene ordinal each block belongs to (one pass; 0 before the first scene). A block belongs to
+ * the scene that starts at or before it, except that a section heading (an act's `#`) in a scene's
+ * tail, and everything after it up to the next scene, go with the scene it opens: the tail is the
+ * run of blocks at the end of the scene that are all section, synopsis, note, or page break, so
+ * nothing printable of the scene follows the heading. A section between two speeches stays put.
+ */
+function blockOwners(doc: Doc, scenes: readonly Scene[]): number[] {
+  const owners: number[] = new Array(doc.blocks.length).fill(0);
+  for (let i = -1; i < scenes.length; i++) {
+    const start = i < 0 ? 0 : (scenes[i] as Scene).block;
+    const end = scenes[i + 1]?.block ?? doc.blocks.length;
+    const mine = i < 0 ? 0 : (scenes[i] as Scene).ordinal;
+    const next = scenes[i + 1]?.ordinal;
+    // The tail's first section heading, scanning back over the unprinted blocks at the end.
+    let moves = end;
+    for (let b = end - 1; b > start || (i < 0 && b >= start); b--) {
+      const kind = doc.blocks[b]?.kind;
+      if (!kind || !NOT_PRINTED.has(kind)) break;
+      if (kind === 'section') moves = b;
+    }
+    for (let b = start; b < end; b++) {
+      owners[b] = next !== undefined && b >= moves ? next : mine;
+    }
+  }
+  return owners;
+}
+
 const rowBlock = (line: LayoutLine) =>
   line.blockIndex >= 0 ? line.blockIndex : (line.right?.blockIndex ?? -1);
 const isBlank = (line: LayoutLine) =>
@@ -95,19 +126,8 @@ export function sides(
   const index = sceneIndex(doc, template);
   const starts = index.scenes.map((scene) => scene.block);
   const ticked = new Set(scenes);
-  /**
-   * The scene ordinal a block belongs to; 0 before the first scene. A section heading that opens
-   * no scene (an act's `#`), and what follows it up to the next scene, go with the scene it opens.
-   */
-  const ownerOf = (block: number): number => {
-    let at = -1;
-    for (let i = 0; i < starts.length && (starts[i] as number) <= block; i++) at = i;
-    const from = at < 0 ? 0 : (starts[at] as number) + 1;
-    let actHeading = false;
-    for (let b = from; b <= block; b++) if (doc.blocks[b]?.kind === 'section') actHeading = true;
-    const next = index.scenes[at + 1];
-    return actHeading && next ? next.ordinal : at < 0 ? 0 : (index.scenes[at] as Scene).ordinal;
-  };
+  const owners = blockOwners(doc, index.scenes);
+  const ownerOf = (block: number): number => owners[block] ?? 0;
   const pages: Page[] = [];
   const crossOut: CrossOut[] = [];
   for (const page of layout.pages) {

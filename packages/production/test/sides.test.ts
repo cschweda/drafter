@@ -253,6 +253,83 @@ describe('a stage play’s act headings', () => {
   });
 });
 
+describe('a section heading inside a scene', () => {
+  const find = (out: ReturnType<typeof sides>, needle: string) => {
+    for (const page of out.layout.pages) {
+      for (const [k, l] of page.lines.entries()) {
+        if (
+          l.runs
+            .map((r) => r.text)
+            .join('')
+            .includes(needle)
+        )
+          return { page: page.number, k };
+      }
+    }
+    return undefined;
+  };
+  const crossed = (out: ReturnType<typeof sides>, needle: string) => {
+    const at = find(out, needle);
+    expect(at).toBeDefined();
+    const { page, k } = at as { page: number; k: number };
+    return out.crossOut.some((r) => r.page === page && r.from <= k && k <= r.to);
+  };
+
+  it('a screenplay’s outline note between two speeches keeps both with their scene', async () => {
+    const source = [
+      'INT. HALL - DAY',
+      '',
+      'Nothing here.',
+      '',
+      'INT. KITCHEN - DAY',
+      '',
+      '@MARGARET',
+      'First speech stays.',
+      '',
+      '# Midpoint',
+      '',
+      '@MARGARET',
+      'Second speech stays too.',
+      '',
+      'INT. ATTIC - NIGHT',
+      '',
+      'Dust.',
+      '',
+    ].join('\n');
+    const doc = parse(source);
+    const layout = await laidOut(source);
+    const out = sides(layout, doc, screenplay, [2]);
+    expect(crossed(out, 'First speech stays.')).toBe(false);
+    expect(crossed(out, 'Second speech stays too.')).toBe(false);
+    expect(crossed(out, 'Dust.')).toBe(true);
+  });
+
+  it('a stage play’s ### beat inside an unticked scene leaves the dialogue after it crossed out', async () => {
+    const source = [
+      '## Scene One',
+      '',
+      '@MARGARET',
+      'Good evening.',
+      '',
+      '## Scene Two',
+      '',
+      '@JON',
+      'Before the beat.',
+      '',
+      '### The beat',
+      '',
+      '@JON',
+      'After the beat.',
+      '',
+    ].join('\n');
+    const doc = parse(source);
+    const layout = await laidOut(source, play);
+    const out = sides(layout, doc, play, [1]);
+    expect(crossed(out, 'Before the beat.')).toBe(true);
+    expect(crossed(out, 'After the beat.')).toBe(true);
+  });
+});
+
 describe('sidesChoices', () => {
   it('lists the characters with their scenes, and each scene by number or ordinal', () => {
     const doc = parse(SCRIPT);
