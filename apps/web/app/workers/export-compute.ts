@@ -631,11 +631,15 @@ export function createExporter(
       const index = sceneIndex(doc, template);
       return { data: scriptMarkdown(doc, index, template, { sceneNumbers, notes }) };
     }
-    // Plain text is as it always was, whatever the production (Call 2b): it is laid out unlocked.
+    // Plain text prints a locked script's pages as the PDF does, at their locked labels (12A,
+    // 13-14) and with its scenes' A-numbers (ruling F1); it has no margin for revision marks.
     if (kind === 'txt') {
-      return {
-        data: renderText(paginate(doc, template, { sceneNumbers: options.sceneNumbers }), template),
-      };
+      const { layout } = await productionLayout(source, template, {
+        sceneNumbers: options.sceneNumbers,
+        titlePage: options.titlePage,
+        marks: 'none',
+      });
+      return { data: renderText(layout, template) };
     }
     // A locked script prints on its locked pages, with the open set's marks unless Revision marks
     // says None; an unlocked one is laid out exactly as `paginate` lays it out. An EPUB is the

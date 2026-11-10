@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { parse, type TextChange } from '@drafter/fountain';
 import { paginate, titlePageFor } from '@drafter/layout';
-import { lock, readProduction } from '@drafter/production';
+import { lock, productionLayout, readProduction } from '@drafter/production';
 import { FONT_FILES, type FontSet, renderPdf } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
 import { builtins, type Template } from '@drafter/templates';
@@ -13,10 +13,10 @@ import {
   type ExportReply,
 } from '../app/workers/export-compute';
 
-// A locked script's exports (production design §8, rulings 2b and 3b): the PDF and the HTML file's
-// pages print the locked labels (12A); the PDF prints the open set's asterisks and its revision
-// header unless Revision marks is None. Plain text, Fountain, Final Draft, and Markdown are as
-// before.
+// A locked script's exports (production design §8, rulings 2b, 3b, F1): the PDF, the HTML file's
+// pages, and plain text print the locked labels (12A) and a new scene's A-number; the PDF prints
+// the open set's asterisks and its revision header unless Revision marks is None. Fountain, Final
+// Draft, and Markdown are as before.
 
 const template = builtins['us-screenplay'] as Template;
 const HEADER = 'Blue Revision — 9 November 2026';
@@ -169,7 +169,7 @@ describe('a locked script’s exports', () => {
     expect(none).not.toContain('data-furniture="revision"');
   });
 
-  test('plain text is as before (ruling 2b)', async () => {
+  test('plain text prints the locked pages, at their labels (ruling F1)', async () => {
     const source = await lockedEdited();
     const reply = await createExporter(realFonts)({
       kind: 'txt',
@@ -177,11 +177,18 @@ describe('a locked script’s exports', () => {
       template,
       options: OPTIONS,
     });
-    const parsed = parse(source);
-    const doc = { ...parsed, titlePage: titlePageFor(parsed.titlePage, 'full') };
-    expect(textOfReply(reply)).toBe(
-      renderText(paginate(doc, template, { sceneNumbers: 'none' }), template),
-    );
+    const { layout } = await productionLayout(source, template, {
+      sceneNumbers: 'none',
+      titlePage: 'full',
+      marks: 'none',
+    });
+    const text = textOfReply(reply);
+    expect(text).toBe(renderText(layout, template));
+    // Page 1 prints no number; then 2., 2A., 3., as the PDF; no asterisk, no header.
+    const numbers = text.split('\f').map((page) => /\S+\.$/m.exec(page.split('\n')[3] ?? '')?.[0]);
+    expect(numbers.slice(2, 5)).toEqual(['2.', '2A.', '3.']);
+    expect(text).not.toContain('*');
+    expect(text).not.toContain('Revision');
   });
 
   test('a label with markup in it makes the block unreadable: the export is unlocked and clean', async () => {
@@ -194,5 +201,150 @@ describe('a locked script’s exports', () => {
     expect(html).not.toContain('<img');
     expect(html).not.toContain('data-furniture="mark"');
     expect(html).not.toContain('2A.');
+  });
+});
+
+/**
+ * A locked script with every kind of locked page and number (ruling F1): rooms 1 to 8 locked as
+ * scenes 1 to 8; room 2 grows by pages (A-pages); rooms 4 to 7 go whole, so their pages fold into
+ * the one before (a range); and a new scene with no number written goes in before room 8 (3A).
+ */
+async function everyKind(): Promise<string> {
+  const filler = (n: number, word: string) =>
+    Array.from({ length: n }, (_, i) => `${word} paragraph ${i + 1} of the scene goes on.`).join(
+      '\n\n',
+    );
+  const scene = (n: number) => `INT. ROOM ${n} - DAY\n\n${filler(30, `Room${n}`)}\n\n`;
+  const base = `Title: The Hall\nAuthor: Wren Okafor\n\n${[1, 2, 3, 4, 5, 6, 7, 8].map(scene).join('')}`;
+  const locked = apply(
+    base,
+    await lock(base, template, { today: '2026-11-09', draftId: 'd1', firstScene: 1 }),
+  );
+  const grown = locked.replace('INT. ROOM 3 - DAY', `${filler(20, 'Extra')}\n\nINT. ROOM 3 - DAY`);
+  const lines = grown.split('\n');
+  const start = lines.findIndex((l) => l.startsWith('INT. ROOM 4'));
+  const end = lines.findIndex((l) => l.startsWith('INT. ROOM 8'));
+  return [
+    ...lines.slice(0, start),
+    'INT. STAIRS - NIGHT',
+    '',
+    'MARGARET',
+    'New.',
+    '',
+    ...lines.slice(end),
+  ].join('\n');
+}
+
+describe('every export of a locked script agrees (ruling F1)', () => {
+  const ALL: ExportOptions = { ...OPTIONS, sceneNumbers: 'all' };
+  const strip = (label: string) => label.replace(/\.$/, '');
+
+  test('page labels and scene numbers match across PDF, HTML, text, revised pages, breakdown, and sides', async () => {
+    const source = await everyKind();
+    const exporter = createExporter(realFonts);
+    const SCENES = ['1', '2', '3', '3A', '8'];
+
+    // The PDF: each body page's label, and the scene numbers in its margins.
+    const pdf = await extract(
+      bytesOf(await exporter({ kind: 'pdf', source, template, options: ALL })),
+    );
+    const pdfPages = pdf.slice(1).map((page) => page.items.map((i) => i.str));
+    const labelOf = (strs: string[]) => strs.find((s) => /^\d+[A-Z]*(-\d+[A-Z]*)?\.$/.test(s));
+    const pdfLabels = pdfPages.map((strs, i) => (i === 0 ? '1' : strip(labelOf(strs) ?? '?')));
+    expect(pdfLabels.some((l) => /^\d+[A-Z]+$/.test(l))).toBe(true);
+    expect(pdfLabels.some((l) => l.includes('-'))).toBe(true);
+    const marginNumbers = pdf.flatMap((page) =>
+      page.items.filter((i) => i.x < 72 && /^[A-Z]*\d+[A-Z]*$/.test(i.str)).map((i) => i.str),
+    );
+    expect(marginNumbers).toEqual(SCENES);
+
+    // The HTML file's pages.
+    const html = textOfReply(await exporter({ ...HTML, source, template, options: ALL }));
+    const furniture = (kind: string) =>
+      [...html.matchAll(new RegExp(`data-furniture="${kind}"[^>]*>([^<]*)<`, 'g'))].map(
+        (m) => m[1] as string,
+      );
+    expect(['1', ...furniture('number').map(strip)]).toEqual(pdfLabels);
+    expect(furniture('scene').filter((_, i) => i % 2 === 0)).toEqual(SCENES);
+
+    // Plain text: the same pages, labels, and numbers.
+    const txt = textOfReply(await exporter({ kind: 'txt', source, template, options: ALL }));
+    const txtPages = txt.split('\f').slice(1);
+    expect(txtPages).toHaveLength(pdfLabels.length);
+    const txtLabels = txtPages.map((page, i) =>
+      i === 0 ? '1' : strip((page.split('\n')[template.page.numbering.line] ?? '').trim()),
+    );
+    expect(txtLabels).toEqual(pdfLabels);
+    const txtNumbers = txtPages.flatMap((page) =>
+      page
+        .split('\n')
+        .map((line) => /^\s*([A-Z]*\d+[A-Z]*)\s{2,}/.exec(line)?.[1])
+        .filter((n): n is string => n !== undefined),
+    );
+    expect(txtNumbers).toEqual(SCENES);
+
+    // Revised pages, a range from the A-page to the folded page: the same labels, in order.
+    const a = pdfLabels.findIndex((l) => /^\d+[A-Z]+$/.test(l));
+    const folded = pdfLabels.findIndex((l) => l.includes('-'));
+    const revised = await extract(
+      bytesOf(
+        await exporter({
+          kind: 'revised-pdf',
+          source,
+          template,
+          options: ALL,
+          which: { kind: 'range', from: pdfLabels[a] as string, to: pdfLabels[folded] as string },
+          marks: 'open',
+          header: HEADER,
+          tint: false,
+        }),
+      ),
+    );
+    expect(revised.map((page) => strip(labelOf(page.items.map((i) => i.str)) ?? '?'))).toEqual(
+      pdfLabels.slice(a, folded + 1),
+    );
+
+    // The breakdown: each scene's number, and the label of the page it starts on.
+    const csv = textOfReply(
+      await exporter({
+        kind: 'breakdown-csv',
+        source,
+        template,
+        title: 'The Hall',
+        today: '2026-11-09',
+      }),
+    );
+    const rows = csv
+      .trim()
+      .split('\r\n')
+      .slice(1)
+      .map((row) => row.split(','));
+    expect(rows.map((row) => row[0])).toEqual(SCENES);
+    const startsOn = SCENES.map((n) => pdfLabels[pdfPages.findIndex((strs) => strs.includes(n))]);
+    expect(rows.map((row) => row[5])).toEqual(startsOn);
+
+    // The sides: the dialog's scene list, the header, and the labels of the pages printed.
+    const info = JSON.parse(
+      textOfReply(await exporter({ kind: 'sides-info', source, template })),
+    ) as { scenes: Array<{ ordinal: number; label: string }> };
+    expect(info.scenes.map((s) => s.label)).toEqual(SCENES);
+    const sides = await extract(
+      bytesOf(
+        await exporter({
+          kind: 'sides-pdf',
+          source,
+          template,
+          options: ALL,
+          names: ['MARGARET'],
+          scenes: [4],
+          today: '2026-11-09',
+        }),
+      ),
+    );
+    const sidesText = sides.map((page) => page.items.map((i) => i.str));
+    for (const page of sidesText)
+      expect(page).toContain('SIDES — MARGARET — Scene 3A — 9 November 2026');
+    const newScenePage = pdfLabels[pdfPages.findIndex((strs) => strs.includes('3A'))];
+    expect(sidesText.map((strs) => strip(labelOf(strs) ?? '?'))).toContain(newScenePage);
   });
 });
