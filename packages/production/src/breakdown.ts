@@ -73,17 +73,19 @@ export function breakdownRows(doc: Doc, template: Template, layout: Layout): str
 }
 
 const needsQuotes = /[",\r\n]/;
+/** A field a spreadsheet would run as a formula (OWASP): it starts with = + - @ tab or CR. */
+const formulaStart = /^[=+\-@\t\r]/;
 
 /**
  * Rows as CSV (RFC 4180): a field with a comma, a quote (doubled), or a line break is quoted;
- * lines end `\r\n`, the last too. Text, UTF-8 without a byte order mark.
+ * lines end `\r\n`, the last too. Text, UTF-8 without a byte order mark. A field that starts with
+ * `=`, `+`, `-`, `@`, a tab, or a carriage return gets a `'` in front first, so a spreadsheet shows
+ * it as text and never runs a formula a script planted in a heading, a cue, or a synopsis.
  */
 export function toCsv(rows: readonly (readonly string[])[]): string {
-  return rows
-    .map(
-      (row) =>
-        row.map((f) => (needsQuotes.test(f) ? `"${f.replaceAll('"', '""')}"` : f)).join(',') +
-        '\r\n',
-    )
-    .join('');
+  const field = (raw: string) => {
+    const f = formulaStart.test(raw) ? `'${raw}` : raw;
+    return needsQuotes.test(f) ? `"${f.replaceAll('"', '""')}"` : f;
+  };
+  return rows.map((row) => `${row.map(field).join(',')}\r\n`).join('');
 }

