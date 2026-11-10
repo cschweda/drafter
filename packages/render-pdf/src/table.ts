@@ -12,6 +12,9 @@ const HEAD_SIZE = 11;
 const MIN_COLUMN = 40;
 /** Space left and right of a cell's text, so columns don't touch. */
 const PAD = 3;
+/** The width a cell's text has: its column less the padding, never under a point. */
+const inner = (width: number) => Math.max(width - 2 * PAD, 1);
+const HEAD_LEADING = 13;
 const BLACK = rgb(0, 0, 0);
 
 type Measure = ReturnType<typeof faceMeasure<'text' | 'textBold'>>;
@@ -83,7 +86,8 @@ export async function renderTablePdf(
   );
   const natural = widest.map((w) => Math.max(w + 2 * PAD, MIN_COLUMN));
   const sum = natural.reduce((a, b) => a + b, 0);
-  // Scale to the page; a column never goes under its minimum, so the scaled rest gives way for it.
+  // Scale to the page; a column keeps its minimum while the others give way, and if the minimums
+  // alone are wider than the page they give way too, so the columns always sum to the page width.
   let widths = natural.map((w) => (w * total) / sum);
   if (widths.some((w) => w < MIN_COLUMN)) {
     const fixed = widths.map((w) => w < MIN_COLUMN);
@@ -93,11 +97,15 @@ export async function renderTablePdf(
       fixed[c] ? MIN_COLUMN : Math.max((w * room) / free, MIN_COLUMN),
     );
   }
+  const fitted = widths.reduce((a, b) => a + b, 0);
+  if (fitted > total) widths = widths.map((w) => (w * total) / fitted);
   const xs = widths.map((_, c) => MARGIN + widths.slice(0, c).reduce((a, b) => a + b, 0));
 
-  const headLines = table.columns.map((name, c) =>
-    wrap(name, (widths[c] as number) - 2 * PAD, fitBold),
+  const headLines = table.columns.map((name, c) => wrap(name, inner(widths[c] as number), fitBold));
+  const titleLines = wrap(`${table.title} — ${table.date}`, total, (t) =>
+    measure.width(t, 'textBold', HEAD_SIZE),
   );
+  const titleHeight = titleLines.length * HEAD_LEADING + 8 - (HEAD_LEADING - HEAD_SIZE);
   const headHeight = Math.max(...headLines.map((l) => l.length), 1) * LEADING + 3;
   const top = page.height - MARGIN;
   const bottom = MARGIN;
@@ -110,14 +118,16 @@ export async function renderTablePdf(
     drawHeader();
   };
   const drawHeader = () => {
-    pdfPage.drawText(`${table.title} — ${table.date}`, {
-      x: MARGIN,
-      y: y - HEAD_SIZE,
-      size: HEAD_SIZE,
-      font: bold,
-      color: BLACK,
-    });
-    y -= HEAD_SIZE + 8;
+    for (const [k, line] of titleLines.entries()) {
+      pdfPage.drawText(line, {
+        x: MARGIN,
+        y: y - HEAD_SIZE - k * HEAD_LEADING,
+        size: HEAD_SIZE,
+        font: bold,
+        color: BLACK,
+      });
+    }
+    y -= titleHeight;
     for (const [c, lines] of headLines.entries()) {
       for (const [k, line] of lines.entries()) {
         pdfPage.drawText(line, {
@@ -157,13 +167,13 @@ export async function renderTablePdf(
 
   for (const row of table.rows) {
     const cells = table.columns.map((_, c) =>
-      wrap(row[c] ?? '', (widths[c] as number) - 2 * PAD, fitRegular),
+      wrap(row[c] ?? '', inner(widths[c] as number), fitRegular),
     );
     const height = Math.max(...cells.map((l) => l.length), 1);
     const fits = (rows: number) => y - rows * LEADING >= bottom;
-    if (!fits(height) && y < top - HEAD_SIZE - 8 - headHeight - 0.5) {
+    if (!fits(height) && y < top - titleHeight - headHeight - 0.5) {
       // A row that fits on a fresh page goes there whole.
-      const fresh = top - (HEAD_SIZE + 8 + headHeight);
+      const fresh = top - (titleHeight + headHeight);
       if (height * LEADING <= fresh - bottom) startPage();
     }
     let done = 0;

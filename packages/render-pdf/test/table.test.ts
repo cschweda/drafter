@@ -59,4 +59,43 @@ describe('renderTablePdf', () => {
     const xs = (page?.items ?? []).map((i) => i.str).join('');
     expect(xs.replace(/\s/g, '')).toContain('x'.repeat(300));
   });
+
+  it('fits 25 columns inside the page', async () => {
+    const columns = Array.from({ length: 25 }, (_, i) => `C${i}`);
+    const rows = [columns.map((_, i) => `cell${i}`)];
+    const [page] = await extract(
+      await renderTablePdf({ ...head, columns, rows }, { fonts: documentFonts, paper: 'letter' }),
+    );
+    const text = page?.items.map((i) => i.str).join('') ?? '';
+    expect(text).toContain('cell24');
+    for (const item of page?.items ?? []) {
+      expect(item.x).toBeGreaterThanOrEqual(35);
+      expect(item.x + item.width).toBeLessThanOrEqual(792 - 35);
+    }
+  });
+
+  it('wraps a long title onto more lines within the page', async () => {
+    const title = 'A very long production report title '.repeat(8).trim();
+    const [page] = await extract(
+      await renderTablePdf(
+        { ...head, title, rows: [['a', '1', 'b']] },
+        { fonts: documentFonts, paper: 'letter' },
+      ),
+    );
+    const top = (page?.items ?? []).filter((i) => i.y > 612 - 36 - 13 * 6);
+    expect(new Set(top.map((i) => i.y)).size).toBeGreaterThan(1);
+    expect(
+      top
+        .map((i) => i.str)
+        .join(' ')
+        .replace(/\s+/g, ' '),
+    ).toContain('title A very');
+    expect(
+      top
+        .map((i) => i.str)
+        .join(' ')
+        .replace(/\s+/g, ' '),
+    ).toContain('9 November 2026');
+    for (const i of page?.items ?? []) expect(i.x + i.width).toBeLessThanOrEqual(792 - 35);
+  });
 });

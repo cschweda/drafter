@@ -21,7 +21,7 @@ describe('crossOut', () => {
     });
     const ops = await operators(bytes, index);
     expect(count(ops)).toBe(base + 1);
-    // left margin 15 cols = 108 pt; right edge (85 - 15 - ... ) from the template; top of line 0, bottom of line 2.
+    // From the left margin at the top of line 0 to the right edge of the text at the bottom of line 2.
     const { margin, width } = template.page;
     const x0 = margin.left * 7.2;
     const x1 = (width - margin.right) * 7.2;
@@ -37,6 +37,19 @@ describe('crossOut', () => {
     const bytes = await renderPdf(layout, template, {
       fonts,
       crossOut: [{ page: 99, from: 0, to: 1 }],
+    });
+    expect(bytes).toEqual(plain);
+  });
+
+  it('ignores a range whose ends are not whole numbers', async () => {
+    const plain = await renderPdf(layout, template, { fonts });
+    const bytes = await renderPdf(layout, template, {
+      fonts,
+      crossOut: [
+        { page: 1, from: Number.NaN, to: 1 },
+        { page: 1, from: 0.5, to: 1 },
+        { page: 1, from: 0, to: Number.POSITIVE_INFINITY },
+      ],
     });
     expect(bytes).toEqual(plain);
   });

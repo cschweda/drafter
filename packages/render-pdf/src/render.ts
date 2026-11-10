@@ -201,6 +201,7 @@ export async function renderPdf(
     }
     for (const range of opts.crossOut ?? []) {
       if (range.page !== page.number || page.number === 0) continue;
+      if (!Number.isInteger(range.from) || !Number.isInteger(range.to)) continue;
       const from = Math.max(0, Math.min(range.from, range.to));
       const to = Math.min(page.lines.length - 1, Math.max(range.from, range.to));
       if (to < from) continue;
