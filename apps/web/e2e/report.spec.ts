@@ -60,7 +60,10 @@ async function fillProblem(page: Page) {
 }
 
 test.describe('Report a problem', () => {
-  test('opens from About, and says what it needs and what it never sends', async ({ page }) => {
+  test('opens from About, and says what it needs and what it never sends', async ({
+    page,
+    isMobile,
+  }) => {
     await start(page);
     await openAbout(page);
     await page.getByRole('menuitem', { name: /^Report a problem…/ }).click();
@@ -85,7 +88,9 @@ test.describe('Report a problem', () => {
     // The email, for a writer with no GitHub account.
     await expect(dialog.locator('[data-report-email]')).toHaveText('cschweda@gmail.com');
     await expect(dialog).toContainText('No GitHub account? Email cschweda@gmail.com.');
-    await page.keyboard.press('Escape');
+    // A phone has no Escape key (an emulated one isn't a close request there): Close closes it.
+    if (isMobile) await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+    else await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
   });
 

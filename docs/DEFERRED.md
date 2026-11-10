@@ -403,3 +403,11 @@ From the [red/blue team audit](redblue-audit-2026-11-03.md); everything else it 
 - **Undoing a move while a passage is focused ends the focus**: the undo deletes the heading where the move put it, and focus ends when its heading is gone. Defensible, but untested; focus could follow the undo back instead.
 - **A draft's and a snapshot's word counts** use `wordsIn` on the raw prose, so a heading's `#` or a link's address counts as a word, and they can differ from the status bar (`countWords(tree)`) by a few. Older than Novel.
 - **The long-task gate step rebuilds the site**: `pnpm --filter @drafter/web e2e` rebuilds before Playwright; calling `playwright test` directly would skip the second build.
+
+## Production (v0.27.0)
+
+- **The More menu moves on a phone in WebKit while "may be cleared" shows** (found at the v0.27.0 release gates; the same at v0.26.2). Playwright never finds the menu stable, so its theme item can't be pressed; a forced tap misses too. It may be a real jitter on an iPhone. `recovery.spec.ts`'s "may be cleared" accessibility test is `fixme` on phone-webkit until it is looked into.
+- **The breakdown PDF doesn't report missing glyphs** the way the Markdown PDF does (`MISSING_GLYPHS`); a name in a script Inter Tight can't draw prints as boxes.
+- **`marks: 'open'` still resolves every closed set**, then keeps the open one's marks; skipping the closed sets needs proof that none claims a line the open set would otherwise take.
+- **One hand-edited set name outside the pattern rejects the whole production block** (the script reads as unlocked and damaged), while a bad header is only ignored. Strict on purpose for a file someone sends; a default name would be gentler.
+- **A long sides header loses its date**: the header wraps to two lines at most and ends with "…". And with a custom template whose `margin.top - numbering.line` is 1, even one header line meets the body.

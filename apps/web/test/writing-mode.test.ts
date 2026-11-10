@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { nextTick } from 'vue';
 import { classicNotice } from '../app/editor/element-notice';
 import { classicIsOn } from '../app/editor/extensions';
@@ -42,6 +42,9 @@ afterEach(async () => {
   setWritingMode('fountain');
   await nextTick();
 });
+// The editor's lint timer would otherwise fire after this file's environment is gone (an
+// unhandled `requestAnimationFrame` error in CI).
+afterAll(() => useEditor().view.destroy());
 
 describe('setWritingMode', () => {
   test('a switch sets the setting and the editor', () => {

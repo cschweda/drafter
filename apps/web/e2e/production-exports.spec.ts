@@ -296,7 +296,11 @@ test.describe('Production exports', () => {
 
   test('the Export menu and the tab list the exports, revised pages only once locked', async ({
     page,
+    isMobile,
   }) => {
+    // The top bar's Export menu is a desktop control; on a phone the exports are in the folded
+    // menu, which `chooseExport` uses throughout.
+    test.skip(!!isMobile, 'the top bar’s Export menu is checked on the desktop');
     await start(page);
     await page.getByRole('button', { name: 'File', exact: true }).click();
     await scriptsMenu(page).getByRole('button', { name: 'New screenplay' }).click();
