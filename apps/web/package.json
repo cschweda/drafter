@@ -46,21 +46,21 @@
     "@drafter/story-map": "workspace:*",
     "@drafter/templates": "workspace:*",
     "@iconify-json/heroicons": "^1.2.3",
-    "@iconify-json/lucide": "^1.2.150",
+    "@iconify-json/lucide": "^1.2.152",
     "@nuxt/ui": "^4.12.0",
     "@vite-pwa/nuxt": "1.1.1",
     "@vueuse/core": "^14.4.0",
     "dexie": "^4.4.7",
-    "nuxt": "^4.6.3",
+    "nuxt": "^4.6.4",
     "nuxt-guided-tour": "0.5.1",
-    "tailwindcss": "^4.3.3",
-    "vue": "^3.5.44",
+    "tailwindcss": "^4.3.5",
+    "vue": "^3.5.45",
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
-    "@playwright/test": "^1.64.1",
-    "fake-indexeddb": "^6.2.7",
+    "@playwright/test": "^1.65.0",
+    "fake-indexeddb": "^6.2.8",
     "vue-tsc": "^3.3.14"
   }
 }
