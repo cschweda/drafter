@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **A line that starts with `#` or `=` inside a speech or a paragraph.** Fountain reads it as a section or a synopsis, which doesn't print, so `#1 is the best.` under a character's name vanished and cut the speech in two. Drafter warns, and its fix puts a backslash first.
   - **A title-page key that doesn't print.** The title page prints Title, Credit, Author, Source, Contact, and Draft date. Copyright, Notes, Revision, and any key of your own stay in the file and print nowhere; each is now listed, as advice.
   - **`CUT TO:` with a space after it.** That space makes the line action, which is Fountain's rule and easy to do by accident. Drafter points it out, and its fix removes the space.
+- **A name you force with `@` prints as you typed it.** `@McCLANE` now prints McCLANE on the page and in the PDF, as Fountain intends; it used to print MCCLANE. Every other name still prints in capitals. A script opened from Final Draft keeps its names in capitals, as Final Draft printed them.
 - **`\#` and `\=` at the start of a line print the mark.** Until now nothing could make a line of dialogue start with `#` or `=`.
 - **`drafter check` lists everything the Problems pane does.** It used to run none of the pane's rules, so it could say "no problems" about a script the app had warnings for.
 

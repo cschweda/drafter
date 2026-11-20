@@ -214,6 +214,28 @@ describe('fromFdx: the elements', () => {
 });
 
 describe('fromFdx: speeches', () => {
+  // As Final Draft 13 writes it: the settings come after the Content, one per element.
+  const settings = (type: string, style: string) =>
+    `<ElementSettings Type="${type}"><FontSpec AdornmentStyle="0" Font="Courier Final Draft" RevisionID="0" Size="12" Style="${style}"/><ParagraphSpec Alignment="Left"/></ElementSettings>`;
+  const speech = P('Character', 'McCall (V.O.)') + P('Dialogue', 'Hi.');
+
+  it('writes a name in capitals when the file sets its Character element in capitals', () => {
+    for (const style of ['AllCaps', 'Bold+AllCaps']) {
+      const text = fromFdx(fdx(speech, settings('Action', '') + settings('Character', style))).text;
+      expect(text).toBe('MCCALL (V.O.)\nHi.\n');
+      expect(kinds(parse(text))).toEqual(['character', 'dialogue']);
+    }
+  });
+
+  it('keeps a name as it is, forced, when the file doesn’t say so', () => {
+    expect(fromFdx(fdx(speech)).text).toBe('@McCall (V.O.)\nHi.\n');
+    expect(fromFdx(fdx(speech, settings('Character', 'Bold'))).text).toBe('@McCall (V.O.)\nHi.\n');
+    // Another element's capitals are not the Character's.
+    expect(fromFdx(fdx(speech, settings('Scene Heading', 'AllCaps'))).text).toBe(
+      '@McCall (V.O.)\nHi.\n',
+    );
+  });
+
   it('writes a lyric that follows another on its own, so the two stay apart', () => {
     const lyric = (text: string) =>
       `<Paragraph Type="Dialogue" DrafterLyric="Yes"><Text Style="Italic">${text}</Text></Paragraph>`;

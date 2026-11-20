@@ -223,6 +223,17 @@ describe('dialogue', () => {
     const layout = lay('MARGARET\nOne.\n\nShe waits.\n\nMARGARET (CONT’D)\nTwo.');
     expect(text(firstPart(layout, 3))).toBe('MARGARET (CONT’D)');
   });
+
+  it('prints a forced cue as typed, and any other in capitals', () => {
+    const layout = lay('@McCLANE\nYippee.\n\nShe waits.\n\nHANS (on the radio)\nWho is this?');
+    expect(text(firstPart(layout, 0))).toBe('McCLANE');
+    expect(text(firstPart(layout, 3))).toBe('HANS (ON THE RADIO)');
+  });
+
+  it("prints a forced cue as typed where it gets (CONT'D)", () => {
+    const layout = lay('@McCLANE\nOne.\n\nShe waits.\n\n@McCLANE\nTwo.');
+    expect(text(firstPart(layout, 3))).toBe("McCLANE (CONT'D)");
+  });
 });
 
 describe('dual dialogue', () => {
