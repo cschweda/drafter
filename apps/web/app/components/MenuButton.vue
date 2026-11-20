@@ -24,8 +24,37 @@ type Content = {
   onCloseAutoFocus?: (event: Event) => void;
   onInteractOutside?: (event: Event) => void;
 };
-/** The button that opened the menu: what had focus then (a click or a key puts it there). */
+/**
+ * The button that opened the menu. What had focus then, where a click or a key puts focus on the
+ * button; Safari doesn't focus a button that is clicked, so there it is the button the open menu
+ * names (`aria-labelledby`), read once the menu is drawn (`findOpener`).
+ */
 let opener: HTMLElement | null = null;
+
+/** The button an element names as its label, or null. */
+function labelOf(el: Element | null | undefined): HTMLElement | null {
+  const id = el?.getAttribute('aria-labelledby');
+  return id ? document.getElementById(id) : null;
+}
+
+/** The open menu's button, from the menu as drawn; kept as `opener` when nothing had focus. */
+function findOpener() {
+  opener ??= labelOf(document.querySelector('[data-reka-menu-content][data-state="open"]'));
+}
+
+/**
+ * The button of the menu that is closing. The close event comes from a wrapper around the menu in
+ * some browsers and from the menu in others, so the menu is looked for at it, in it, and around it.
+ */
+function buttonOf(target: EventTarget | null): HTMLElement | null {
+  const el = target instanceof Element ? target : null;
+  return (
+    opener ??
+    labelOf(el) ??
+    labelOf(el?.querySelector('[aria-labelledby]')) ??
+    labelOf(el?.closest('[aria-labelledby]'))
+  );
+}
 /** The menu closed because of a click or a focus outside it. */
 let outside = false;
 
@@ -36,7 +65,7 @@ function onCloseAutoFocus(event: Event) {
   if (event.defaultPrevented) return;
   event.preventDefault();
   if (wasOutside) return;
-  const button = opener;
+  const button = buttonOf(event.target);
   setTimeout(() => {
     if (button?.isConnected && focusIsFree(button)) button.focus();
   }, 0);
@@ -67,6 +96,11 @@ watch(open, (now) => {
     const active = document.activeElement;
     opener = active instanceof HTMLElement && active !== document.body ? active : null;
     outside = false;
+    // Once the menu is drawn (it is a tick, and a frame at most, after `open`).
+    void nextTick(() => {
+      findOpener();
+      requestAnimationFrame(findOpener);
+    });
     document.addEventListener('keydown', onKeydown, true);
   } else document.removeEventListener('keydown', onKeydown, true);
 });
