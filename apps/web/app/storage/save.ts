@@ -15,6 +15,40 @@ import { useScript } from './script';
 import { encodeFile, fileBaseName, fileNameFor, titleFileOf, titleOf } from './text';
 import { inTurn, whenIdle } from './turn';
 
+/**
+ * Save As's question in a browser that saves by downloading (Firefox, Safari): what to call the
+ * file. `SaveAsDialog` shows it; `answer(null)` is Cancel or Escape. Null while nothing is asked.
+ */
+export const saveAsQuestion = ref<{
+  /** The name suggested: the script's file, or its title's. */
+  name: string;
+  answer(name: string | null): void;
+} | null>(null);
+
+function askFileName(name: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    saveAsQuestion.value = {
+      name,
+      answer: (typed) => {
+        saveAsQuestion.value = null;
+        resolve(typed);
+      },
+    };
+  });
+}
+
+/**
+ * The name typed into Save As, as a file's: cleaned as a title is (`fileNameFor`), and ending in
+ * the script's own extension once, whether or not it was typed.
+ */
+export function downloadName(typed: string, extension: '.fountain' | '.md'): string {
+  const trimmed = typed.trim();
+  const base = trimmed.toLowerCase().endsWith(extension)
+    ? trimmed.slice(0, -extension.length)
+    : trimmed;
+  return fileNameFor(base, extension);
+}
+
 /** What went wrong with the last save, for the status bar; empty after a save that worked. */
 export const saveError = ref('');
 
@@ -113,9 +147,17 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
   };
 
   if (!files.canSaveInPlace) {
+    // A browser that saves by downloading has no picker to type a name into, so Save As asks for
+    // one itself: a version kept under a name of its own, beside the one saved before.
+    let fileName = name;
+    if (ask) {
+      const typed = await askFileName(name);
+      if (typed === null) return 'cancelled';
+      fileName = downloadName(typed, markdown ? '.md' : '.fountain');
+    }
     const text = shown();
-    files.download(name, encodeFile(text, lineBreak, bom), 'text/plain');
-    await script.saved({ text, fileName: name, ref: null, ...(id ? { id } : {}) });
+    files.download(fileName, encodeFile(text, lineBreak, bom), 'text/plain');
+    await script.saved({ text, fileName, ref: null, ...(id ? { id } : {}) });
     return 'saved';
   }
 
