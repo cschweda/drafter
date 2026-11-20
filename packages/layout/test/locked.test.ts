@@ -58,13 +58,23 @@ describe('locked pagination', () => {
     expect(body(unlocked).length).toBeGreaterThanOrEqual(6);
   });
 
+  it('keeps a page that starts partway into a paragraph or a speech', () => {
+    // A paragraph of short sentences and a speech of them, each across a page's end: both split
+    // where a sentence ends, so a page starts inside a block and `printed` is exercised.
+    const sentences = Array.from(
+      { length: 12 },
+      (_, i) => `Sentence ${i + 1} of the long one runs to about here.`,
+    );
+    const source = `${filler(50)}\n\n${sentences.join(' ')}\n\n${filler(40, 'G')}\n\nMARGARET\n${sentences.join(' ')}\n\n${filler(6, 'H')}\n`;
+    const free = paginate(parse(source), screenplay);
+    const anchors = anchorsOf(free, source);
+    expect(anchors.some((a) => a.printed > 0)).toBe(true);
+    expect(body(free).some((p) => p.lines[0]?.synthetic === 'contd')).toBe(true);
+    expect(paginate(parse(source), screenplay, { locked: { anchors, folded: [] } })).toEqual(free);
+  });
+
   it('keeps every label when nothing changed', () => {
     const anchors = anchorsOf(unlocked, base);
-    // Some page starts partway into a block, so `printed` is exercised.
-    expect(
-      anchors.some((a) => a.printed > 0) ||
-        body(unlocked).some((p) => p.lines[0]?.synthetic === 'contd'),
-    ).toBe(true);
     const locked = paginate(parse(base), screenplay, { locked: { anchors, folded: [] } });
     expect(locked).toEqual(unlocked);
     const relabelled = paginate(parse(base), screenplay, {

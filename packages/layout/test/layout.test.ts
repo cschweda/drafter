@@ -236,6 +236,67 @@ describe('dialogue', () => {
   });
 });
 
+describe('a paragraph across a page', () => {
+  const para = (m: number) =>
+    Array.from({ length: m }, (_, i) => `P line ${i + 1} runs on`).join('\n');
+  /** How many of the paragraph's lines each page has. */
+  const split = (n: number, m: number) =>
+    lay(`${filler(n)}\n\n${para(m)}\n`).pages.map(
+      (p) => p.lines.filter((line) => text(line).startsWith('P line')).length,
+    );
+
+  it('never leaves its last line alone at the top of the next page', () => {
+    // Five lines of room for six: four stay, and two go over.
+    expect(split(48, 6)).toEqual([4, 2]);
+    expect(split(51, 4)).toEqual([2, 2]);
+  });
+
+  it('never leaves its first line alone at the foot of a page', () => {
+    // One line of room: the paragraph starts the next page.
+    expect(split(52, 5)).toEqual([0, 5]);
+  });
+
+  it('moves whole when it is too short to leave two lines on each side', () => {
+    expect(split(51, 3)).toEqual([0, 3]);
+    expect(split(50, 3)).toEqual([3]);
+  });
+
+  it('fills the page when more than two lines are left over', () => {
+    expect(split(48, 12)).toEqual([5, 7]);
+  });
+
+  it('takes a heading with it when it moves', () => {
+    const layout = lay(`${filler(49)}\n\nINT. HALL - DAY\n\n${para(3)}\n`);
+    expect(texts(layout, 2, 1)).toEqual(['INT. HALL - DAY']);
+  });
+
+  it('splits one taller than a page, a page at a time', () => {
+    expect(split(10, 120)).toEqual([43, 54, 23]);
+  });
+});
+
+describe('a speech across a page', () => {
+  const run = 'wwwwwwwwww xxxxxxxxxx yyyyyyyyyy';
+  /** Six lines of dialogue: the second is `end`, and each of the others is one run of words. */
+  const speech = (end: string) => `MARGARET\n${run} ${end} ${run} ${run} ${run} ${run}`;
+  const foot = (layout: Layout) =>
+    page(layout, 1)
+      .lines.map((line) => text(line))
+      .filter((t) => t.trim() !== '')
+      .slice(-2);
+
+  it('stops where a sentence ends, when that is within two lines of a full page', () => {
+    const layout = lay(`${filler(47)}\n\n${speech('aaaaaaaaaa bbbbbbbbbb cccccccccc d.')}\n`);
+    expect(foot(layout)).toEqual(['aaaaaaaaaa bbbbbbbbbb cccccccccc d.', '(MORE)']);
+  });
+
+  it('fills the page when no sentence ends that near', () => {
+    const layout = lay(`${filler(47)}\n\n${speech('aaaaaaaaaa bbbbbbbbbb cccccccccc dd')}\n`);
+    expect(foot(layout)).toEqual([run, '(MORE)']);
+    expect(page(layout, 1).lines.filter((line) => text(line) === run)).toHaveLength(3);
+  });
+});
+
 describe('dual dialogue', () => {
   it('lays out a ^ with no partner normally, with a diagnostic', () => {
     const layout = lay('MARGARET ^\nHello.');
