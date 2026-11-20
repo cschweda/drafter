@@ -10,6 +10,17 @@ import { tempFolder } from './temp';
 const PACKAGE = join(import.meta.dirname, '..');
 const BUNDLE = join(PACKAGE, 'dist', 'drafter-mcp.js');
 
+/**
+ * The environment without the settings pnpm hands every script it runs (npm_config_*). Some are
+ * pnpm's alone, and npm 11 (Node 24's) warns about each one it doesn't know, which would hide a
+ * warning about the package itself.
+ */
+function withoutPnpmConfig(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return Object.fromEntries(
+    Object.entries(env).filter(([name]) => !name.toLowerCase().startsWith('npm_config_')),
+  );
+}
+
 // `npm pack` and `npm publish --dry-run` take seconds on a shared CI runner (5.5 s once on the
 // v0.24.2 tag's Linux job, past Vitest's 5-second default).
 vi.setConfig({ testTimeout: 60_000 });
@@ -63,6 +74,7 @@ describe('the staged npm package', () => {
     const run = spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts', dir], {
       cwd: tempFolder(),
       encoding: 'utf8',
+      env: withoutPnpmConfig(process.env),
     });
     expect(run.status, run.stderr).toBe(0);
     // Nothing npm would "correct" in the manifest on publish.

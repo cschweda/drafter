@@ -5,10 +5,10 @@
   command = "pnpm --filter @drafter/web... run build"
   publish = "apps/web/.output/public"
 
-# Node 22, the latest 22.x: the workspace needs 22.13 or later. This
+# Node 24, the latest 24.x, as .nvmrc says: the workspace needs 22.13 or later. This
 # overrides the Node version chosen in Netlify's site settings.
 [build.environment]
-  NODE_VERSION = "22"
+  NODE_VERSION = "24"
   # drafter.dev counts visits with Plausible (no cookies, nothing about the
   # visitor or their script). Only this build sets it: nuxt.config.ts.
   DRAFTER_ANALYTICS = "plausible"
