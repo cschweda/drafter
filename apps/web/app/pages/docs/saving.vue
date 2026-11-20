@@ -49,6 +49,14 @@ useDocsHead({
       aren’t saved, your browser asks first. That question is the browser’s own and doesn’t always
       appear on phones and tablets; autosave, below, is there for those times.
     </p>
+    <p id="save-as">
+      <strong>Save As</strong> keeps this version under a name of its own, beside the one you saved
+      before, never on top of it. It is in the <strong>File</strong> menu, under the arrow beside
+      <strong>Save</strong>, and on Ctrl+Shift+S (⌘⇧S on a Mac). In Chrome, Edge, and the desktop
+      app, the system’s Save dialog asks where and under what name. In Firefox, Safari, and Brave,
+      Drafter asks for the name and downloads the file under it. Either way the script follows the
+      new file: the next Save goes to that one, and the earlier file stays as it was.
+    </p>
 
     <h2 id="browsers">Browsers compared</h2>
     <div class="docs-scroll" role="region" aria-label="Browsers compared (scrolls sideways)" tabindex="0">

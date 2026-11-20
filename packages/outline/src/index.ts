@@ -8,7 +8,14 @@ export {
   type SceneColor,
 } from '@drafter/notes';
 export { expandOutline, STAGE_STUB, STUB_HEADING, scriptFromMarkdown } from './expand';
-export { type SceneDetails, setColor, setSceneDetails, setSynopsis } from './header';
+export {
+  type Headed,
+  type SceneDetails,
+  sectionHeader,
+  setColor,
+  setSceneDetails,
+  setSynopsis,
+} from './header';
 export { type ScriptMarkdownOptions, scriptMarkdown } from './markdown';
 export {
   downTarget,
@@ -19,7 +26,7 @@ export {
   targetBefore,
   upTarget,
 } from './move';
-export { sceneIndex, startsScene } from './scene-index';
+export { sceneIndex, startsScene, unwritten } from './scene-index';
 export {
   linesPerPage,
   type RulerMark,

@@ -8,7 +8,7 @@ There is no Drafter download for the Mac yet. A Mac app that comes from the inte
 
 - A Mac with Apple silicon (M1 or later) or an Intel processor, on macOS 13 (Ventura) or later. Drafter is built for the processor of the Mac you build it on.
 - Apple's command-line tools, for `git`. If `git --version` asks you to install them, say yes, or run `xcode-select --install`.
-- **Node 22.13 or later.** From [nodejs.org](https://nodejs.org) (the LTS installer), with Homebrew (`brew install node@22`), or with nvm (`nvm install 22`; the repository's `.nvmrc` says 22). Check with `node --version`.
+- **Node 22.13 or later.** From [nodejs.org](https://nodejs.org) (the LTS installer), with Homebrew (`brew install node@24`), or with nvm (`nvm install 24`; the repository's `.nvmrc` says 24). Check with `node --version`.
 - **pnpm 10.** Node comes with Corepack, which provides the exact pnpm the repository asks for: run `corepack enable` once. (Or `npm install -g pnpm@10`.) Check with `pnpm --version`.
 - About 2 GB of free space, and an internet connection for the first build (it downloads Drafter's dependencies and Electron for the Mac, together a few hundred megabytes).
 

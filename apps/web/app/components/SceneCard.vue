@@ -4,18 +4,20 @@ export type DropSide = 'left' | 'right' | 'above' | 'below';
 </script>
 
 <script setup lang="ts">
-import type { Scene } from '@drafter/outline';
+import type { Scene, Section } from '@drafter/outline';
 import type { DropdownMenuItem } from '@nuxt/ui';
-import { cardName } from '~/cards/labels';
+import { cardName, sectionCardName } from '~/cards/labels';
 import { colorName, lengthLabel, sceneNumber, swatchOf } from '~/outline/labels';
 import { goalLine } from '~/outline/scene-details';
 
 // One index card in the Cards tab (Phase 2 design §7): a listbox option named by `cardName` and
-// described by its synopses. What's drawn is hidden from screen readers, which read the name once.
+// described by its synopses. A section still to write (no scenes in it yet) has a card too, with
+// its title, its own synopsis, and its color, and "To write" where a scene has its number. What's drawn is hidden from screen readers, which read the name once.
 // The card's ⋯ button is a pointer's (`tabindex="-1"`); the keys and the menu are the Cards tab's.
 
 const props = defineProps<{
-  scene: Scene;
+  /** The scene, or the section still to write, the card is for. */
+  scene: Scene | Section;
   /** With no synopsis: the scene's first line, shown in --muted (CardsPane's `cardPreview`). */
   preview?: string | null;
   /** The element id; the synopsis field and the description hang off it. */
@@ -34,7 +36,16 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:menuOpen': [open: boolean]; edited: [save: boolean] }>();
 const draft = defineModel<string>('draft', { default: '' });
 
-const goal = computed(() => goalLine(props.scene));
+const scene = computed(() => (props.scene.kind === 'scene' ? props.scene : null));
+const heading = computed(() =>
+  props.scene.kind === 'scene'
+    ? props.scene.heading || 'Untitled scene'
+    : props.scene.title || 'Untitled section',
+);
+const name = computed(() =>
+  props.scene.kind === 'scene' ? cardName(props.scene) : sectionCardName(props.scene),
+);
+const goal = computed(() => (scene.value ? goalLine(scene.value) : null));
 const swatch = computed(() =>
   props.scene.color ? (swatchOf(props.scene.color.value) ?? 'transparent') : 'transparent',
 );
@@ -72,13 +83,13 @@ function onEditKeydown(event: KeyboardEvent) {
           : undefined
     "
   >
-    <span class="sr-only">{{ cardName(props.scene) }}</span>
+    <span class="sr-only">{{ name }}</span>
     <div class="stripe" aria-hidden="true">
       <span v-if="props.scene.color" class="color">{{ colorName(props.scene.color.value) }}</span>
     </div>
     <div class="top" aria-hidden="true">
-      <span class="num">{{ sceneNumber(props.scene) }}</span>
-      <span class="heading">{{ props.scene.heading || 'Untitled scene' }}</span>
+      <span v-if="scene" class="num">{{ sceneNumber(scene) }}</span>
+      <span class="heading">{{ heading }}</span>
       <MenuButton
         :open="props.menuOpen"
         :items="props.menuItems"
@@ -89,7 +100,7 @@ function onEditKeydown(event: KeyboardEvent) {
           type="button"
           class="more"
           tabindex="-1"
-          :aria-label="`Actions for ${props.scene.heading || 'this scene'}`"
+          :aria-label="`Actions for ${heading}`"
           @click.stop
         >
           <UIcon name="i-lucide-ellipsis" aria-hidden="true" />
@@ -101,7 +112,7 @@ function onEditKeydown(event: KeyboardEvent) {
       :id="`${props.domId}-field`"
       v-model="draft"
       class="synopsis-field"
-      :aria-label="`Synopsis of ${props.scene.heading}`"
+      :aria-label="`Synopsis of ${heading}`"
       @keydown="onEditKeydown"
       @blur="emit('edited', false)"
     />
@@ -128,9 +139,10 @@ function onEditKeydown(event: KeyboardEvent) {
       </p>
       <p v-if="goal" class="goal">Goal: {{ goal }}</p>
     </div>
-    <div v-if="props.scene.pages" class="foot" aria-hidden="true">
-      {{ lengthLabel(props.scene.pages.eighths) }}
+    <div v-if="scene?.pages" class="foot" aria-hidden="true">
+      {{ lengthLabel(scene.pages.eighths) }}
     </div>
+    <div v-else-if="!scene" class="foot" aria-hidden="true" data-to-write>To write</div>
   </div>
 </template>
 

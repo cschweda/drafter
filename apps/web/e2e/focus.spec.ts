@@ -259,6 +259,68 @@ test.describe('focus mode', () => {
     await expect(state(page)).toHaveText('Unsaved changes');
   });
 
+  // The first save of a sample makes a script of the writer's own, after the file is written and
+  // "Saved" is showing. Typing must go on through that: a slow disk or a busy lock made the moment
+  // long enough to lose a word (and made the test above fail now and then on a slow runner).
+  test('keeps what is typed while the first save makes the script the writer’s own', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'the File System Access API');
+    await stubPickers(page);
+    // Taking a script's lock is slow from here on, as on a machine that is busy.
+    await page.addInitScript(
+      (SLOW) => {
+        const locks = navigator.locks;
+        const request = locks.request.bind(locks) as (...args: unknown[]) => Promise<unknown>;
+        (window as unknown as { __slowLocks: boolean }).__slowLocks = false;
+        locks.request = (async (...args: unknown[]) => {
+          if ((window as unknown as { __slowLocks: boolean }).__slowLocks) {
+            await new Promise((done) => setTimeout(done, SLOW));
+          }
+          return request(...args);
+        }) as typeof locks.request;
+      },
+      Number(process.env.SLOW_LOCK_MS ?? 1200),
+    );
+    await start(page);
+    await page.keyboard.press('ControlOrMeta+Shift+Enter');
+    await on(page);
+    await page.keyboard.type('QQMARK');
+    await expect(state(page)).toHaveText('Unsaved changes');
+    await nextFileName(page, 'own.fountain');
+    await page.evaluate(() => {
+      (window as unknown as { __slowLocks: boolean }).__slowLocks = true;
+    });
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(state(page)).toHaveText('Saved');
+    // Well inside the moment the script is being made the writer's own.
+    await page.waitForTimeout(300);
+    await page.keyboard.type(' more');
+    await expect(page.locator('.cm-content')).toContainText('QQMARK more');
+    await expect(state(page)).toHaveText('Unsaved changes');
+    // And it is the new script's text, kept in this browser, not only on the screen.
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            new Promise<string[]>((resolve) => {
+              const open = indexedDB.open('drafter');
+              open.onsuccess = () => {
+                const all = open.result.transaction('projects').objectStore('projects').getAll();
+                all.onsuccess = () =>
+                  resolve(
+                    (all.result as Array<{ sample?: string; source: string }>)
+                      .filter((p) => !p.sample)
+                      .map((p) => /QQMARK[ a-z]*/.exec(p.source)?.[0] ?? ''),
+                  );
+              };
+            }),
+        ),
+      )
+      .toEqual(['QQMARK more']);
+  });
+
   test('says a failed save in the corner, where the status bar would have', async ({
     page,
     browserName,

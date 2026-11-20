@@ -193,10 +193,6 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
       <h3 id="not-yet">What Final Draft has that Drafter doesn’t, yet</h3>
       <p>Each of these is planned, and each will be free.</p>
       <ul>
-        <li>
-          <strong>Production features</strong>: revision colors and marks, locked pages and scene
-          numbers, OMITTED scenes, and a breakdown report. Coming in v0.27.0, with sides.
-        </li>
         <li><strong>PDF import</strong>: planned, in Phase 3.</li>
         <li><strong>TV templates</strong>: Phase 3.</li>
         <li><strong>Read aloud</strong>, for a table read: Phase 4.</li>
@@ -249,12 +245,13 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <a :href="help('help-story-map')">Story map</a>
         </li>
       </ul>
-      <h3 id="coming-soon">Coming soon</h3>
+      <h3 id="production">For a script going into production</h3>
       <ul>
         <li>
-          <strong>Production, free</strong> (v0.27.0): colored revision sets with marks in the
-          margin, locked pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send
-          out, a breakdown report, and sides for actors.
+          <strong>Production, free.</strong> Colored revision sets with marks in the margin, locked
+          pages (12A) and scene numbers (5A), OMITTED scenes, revised pages to send out, a breakdown
+          report, and sides for actors.
+          <a :href="help('help-production')">Production</a>
         </li>
       </ul>
       <p>There is no paid version, and there won’t be one. The production features are free too.</p>

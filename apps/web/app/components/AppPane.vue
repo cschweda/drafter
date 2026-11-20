@@ -299,6 +299,16 @@ function applyFold() {
  */
 let compactWidth = -1;
 /**
+ * What the header held when the tools' labels last didn't fit: its room, how many tools, their
+ * words, and the tabs' width. Icon-only with nothing folded, and none of that the same any more,
+ * the labels are tried again: what crowded the header may have gone. A tool that was only there
+ * for a moment (one script's tools while another's are drawn) could turn the header icon-only and
+ * be gone before the icon-only width was noted (`compactWidth`), so nothing was ever seen to get
+ * narrower, and the header stayed icon-only with room to spare. Tried once for each state, so a
+ * header whose labels still don't fit isn't started over frame after frame.
+ */
+let labelsFailedAt = '';
+/**
  * Marks the tools box `data-fitting` while a fitting is under way: it takes a frame or more (the
  * labels back, then icon-only, then folds), and a tool drawn in between may yet fold. The browser
  * tests wait for it to go before they look for a tool.
@@ -336,12 +346,16 @@ function measure() {
       : rest.reduce((sum, w) => sum + w, 0) + (rest.length - 1) * TOOL_GAP + gap + SPARE;
   };
   const base = tabsWidth + gap + more;
+  // The same whether the tools are icon-only or not: a label hidden is still the tool's words.
+  const words = items.reduce((sum, el) => sum + (el.textContent?.length ?? 0), 0);
+  const state = `${Math.round(room)}|${items.length}|${words}|${Math.round(tabsWidth + more)}`;
   if (
     !toolsCompact.value &&
     base + toolsFrom(0) > room &&
     toolsBox.value?.querySelector('[data-tool-icon]')
   ) {
     // Icon-only first, measured again once drawn so.
+    labelsFailedAt = state;
     toolsCompact.value = true;
     foldedTools.value = 0;
     fit.value = Number.POSITIVE_INFINITY;
@@ -352,6 +366,12 @@ function measure() {
   }
   let k = 0;
   while (k < tools.length && base + toolsFrom(k) + (k > 0 ? FOLD_BUTTON : 0) > room) k++;
+  if (toolsCompact.value && k === 0 && state !== labelsFailedAt) {
+    // Icon-only, everything fits, and the header isn't what it was when the labels didn't.
+    labelsFailedAt = state;
+    refit();
+    return;
+  }
   foldedTools.value = k;
   fit.value = Number.POSITIVE_INFINITY;
   if (base + toolsFrom(k) + (k > 0 ? FOLD_BUTTON : 0) > room) {

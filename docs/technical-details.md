@@ -71,6 +71,7 @@ flowchart BT
   render_text --> web
   spell --> web
   story_map --> web
+  lint --> cli
   production --> cli
   render_pdf --> cli
   render_text --> cli
@@ -101,8 +102,8 @@ flowchart BT
   archive --> render_docx
   novel --> render_docx
   templates --> layout
+  layout --> lint
   notes --> lint
-  templates --> lint
   templates --> fdx
   fdx --> archive
   fountain --> templates

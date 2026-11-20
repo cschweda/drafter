@@ -1,5 +1,5 @@
 import type { Block, Doc } from '@drafter/fountain';
-import type { Scene } from '@drafter/outline';
+import type { Scene, Section } from '@drafter/outline';
 import { colorName, lengthWords, sceneNumber } from '../outline/labels';
 
 // What a card is called, on screen and to a screen reader (Phase 2 design §7).
@@ -9,6 +9,16 @@ export function cardName(scene: Scene): string {
   const parts = [`Scene ${sceneNumber(scene)}`, scene.heading || 'Untitled scene'];
   if (scene.color) parts.push(colorName(scene.color.value));
   if (scene.pages) parts.push(lengthWords(scene.pages.eighths));
+  return parts.join(', ');
+}
+
+/**
+ * A card for a section still to write (one with no scenes and no sections under it): "The key, to
+ * write, orange". It has no scene number and no length yet.
+ */
+export function sectionCardName(section: Section): string {
+  const parts = [section.title || 'Untitled section', 'to write'];
+  if (section.color) parts.push(colorName(section.color.value));
   return parts.join(', ');
 }
 

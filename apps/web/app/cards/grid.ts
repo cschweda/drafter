@@ -112,22 +112,27 @@ export function groupSizes(scenes: readonly Scene[]): number[] {
  * Alt+Up: before the card one row up in the same column; Alt+Down: after the card one row down
  * (rows as drawn, in rows of `columns`, by `cardsKey`). In one column (a phone) a row is one
  * place, so they are `upTarget` and `downTarget`, crossing a section's edge as the Outline does.
- * Null at an edge, or for a block that is no scene.
+ * `drawn` is the cards as the tab draws them, when sections still to write have cards among the
+ * scenes; without it, the scenes alone. Null at an edge, or for a block that has no card.
  */
 export function rowMoveTarget(
   index: SceneIndex,
   block: number,
   columns: number,
   direction: 'up' | 'down',
+  drawn: { blocks: readonly number[]; groups: readonly number[] } = {
+    blocks: index.scenes.map((s) => s.block),
+    groups: groupSizes(index.scenes),
+  },
 ): MoveTarget | null {
-  const at = index.scenes.findIndex((s) => s.block === block);
+  const at = drawn.blocks.indexOf(block);
   if (at < 0) return null;
   if (Math.floor(columns) <= 1) {
     return direction === 'up' ? upTarget(index, block) : downTarget(index, block);
   }
   const key = direction === 'up' ? 'ArrowUp' : 'ArrowDown';
-  const to = cardsKey(groupSizes(index.scenes), columns, at, key);
-  const other = to === null ? undefined : index.scenes[to];
-  if (!other) return null;
-  return direction === 'up' ? targetBefore(index, other.block) : { after: other.block };
+  const to = cardsKey(drawn.groups, columns, at, key);
+  const other = to === null ? undefined : drawn.blocks[to];
+  if (other === undefined) return null;
+  return direction === 'up' ? targetBefore(index, other) : { after: other };
 }

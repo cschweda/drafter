@@ -123,7 +123,7 @@ export function paginate(doc: Doc, template: Template, opts: PaginateOptions = {
   const { scenes } = built;
   const items = opts.locked ? lockedItems(built.items, doc.blocks, opts.locked) : built.items;
   const pager = new Pager(template, height, scenes, doc.blocks.length);
-  new Filler(template, height, pager).fill(items);
+  new Filler(template, height, pager, doc.source).fill(items);
   for (const body of pager.pages) pages.push(body);
 
   // A block that prints nothing maps to the next printed line, or to the last.
@@ -301,7 +301,9 @@ class Items {
         .filter((line) => !line.transparent)
         .map((line) => joined(line.inline))
         .join(' ');
-      const already = printed.trimEnd().toUpperCase().endsWith(marker.trim().toUpperCase());
+      // A curly apostrophe is the same mark: (CONT’D), as a word processor or an import writes it.
+      const plain = (s: string) => s.trim().toUpperCase().replaceAll('’', "'");
+      const already = plain(printed).endsWith(plain(marker));
       const added = speech.contd && !already;
       cue = this.#lines(speech.cue, cueP, undefined, added ? ` ${marker}` : undefined);
       // On a split, the cue prints again on the next page, ending in (CONT'D).
@@ -395,12 +397,38 @@ class Items {
   }
 }
 
+/** A line's end that ends a sentence: its mark, then any closing quotes or brackets. */
+const SENTENCE_END = /[.!?…]["'”’»)\]]*$/;
+
+/** The fewest lines of a paragraph a page break may leave at the top of the next page. */
+const MIN_LINES_AFTER = 2;
+
+/** How many lines short of full a speech may stop, to break where a sentence ends. */
+const SENTENCE_REACH = 2;
+
+/**
+ * Whether a page may break after this line without cutting a sentence in two: the line ends one
+ * (`.`, `!`, `?`, `…`, with any closing quote or bracket), or it is the last of the line the
+ * writer typed, where they broke it themselves.
+ */
+function endsSentence(line: LayoutLine, source: string): boolean {
+  if (SENTENCE_END.test(joined(line.runs).trimEnd())) return true;
+  let at = line.span.to;
+  // Past the spaces and emphasis marks that close the line, to what the writer typed next.
+  for (;;) {
+    const c = source.charCodeAt(at);
+    if (c === 32 || c === 9 || c === 42 || c === 95) at++;
+    else return Number.isNaN(c) || c === 10 || c === 13;
+  }
+}
+
 /** Fills pages with items, line by line (§5.3–§5.5). */
 class Filler {
   constructor(
     private readonly template: Template,
     private readonly height: number,
     private readonly pager: Pager,
+    private readonly source: string,
   ) {}
 
   fill(items: readonly Item[]) {
@@ -462,15 +490,9 @@ class Filler {
    */
   #canStart(item: Printed, room: number, space: number): boolean {
     if (item.type === 'block') {
-      // Opening two-space lines print nothing, so a heading can't be kept with them alone.
-      const lead = Math.max(
-        0,
-        item.lines.findIndex((line) => !isBlank(line)),
-      );
-      const lines = item.keepTogether
-        ? item.lines.length
-        : Math.min(item.lines.length, lead + this.template.keepWithNextLines);
-      return space + lines <= room;
+      if (space + item.lines.length <= room) return true;
+      if (item.keepTogether) return false;
+      return this.#blockSplit(item.lines, 0, room - space) !== null;
     }
     if (item.type === 'dual') return space + item.rows.length <= room;
     return (
@@ -497,10 +519,37 @@ class Filler {
     const { tags, spoken } = item;
     const start = spoken[from] as number;
     const total = (spoken[tags.length] as number) - start;
-    for (let k = Math.min(room - cue - 1, tags.length - from - 1); k >= 1; k--) {
-      if (tags[from + k - 1] !== 'text') continue;
+    const allowed = (k: number) => {
+      if (tags[from + k - 1] !== 'text') return false;
       const kept = (spoken[from + k] as number) - start;
-      if (strict && (kept < minLinesBefore || total - kept < minLinesAfter)) continue;
+      return !strict || (kept >= minLinesBefore && total - kept >= minLinesAfter);
+    };
+    for (let k = Math.min(room - cue - 1, tags.length - from - 1); k >= 1; k--) {
+      if (!allowed(k)) continue;
+      // The most that fits; or up to two lines fewer, to stop where a sentence ends.
+      for (let j = k; j >= Math.max(1, k - SENTENCE_REACH); j--) {
+        if (allowed(j) && endsSentence(item.body[from + j - 1] as LayoutLine, this.source)) {
+          return j;
+        }
+      }
+      return k;
+    }
+    return null;
+  }
+
+  /**
+   * How many of a paragraph's lines, from `from`, can stay on a page with `room` lines: at least
+   * `keepWithNextLines` of them after any blank lines it opens with, leaving at least two for the
+   * next page, and never ending on a blank line (§5.3): no line of a paragraph is left alone
+   * at the foot of a page or the head of the next. Null when there's no such split.
+   */
+  #blockSplit(lines: readonly LayoutLine[], from: number, room: number): number | null {
+    let lead = 0;
+    while (from + lead < lines.length && isBlank(lines[from + lead] as LayoutLine)) lead++;
+    const least = lead + this.template.keepWithNextLines;
+    for (let k = Math.min(room, lines.length - from - MIN_LINES_AFTER); k >= least; k--) {
+      const last = lines[from + k - 1] as LayoutLine;
+      if (isBlank(last)) continue;
       return k;
     }
     return null;
@@ -508,18 +557,43 @@ class Filler {
 
   #placeBlock(item: BlockItem, space: number) {
     const { pager } = this;
-    const at = item.lines[0]?.span.from ?? pager.flow;
-    if (space + item.lines.length <= pager.room) {
-      pager.space(space, at);
-    } else if (item.keepTogether && item.lines.length <= this.height) {
-      pager.newPage();
-    } else if (pager.room - space <= 0) {
-      pager.newPage();
-    } else {
-      pager.space(space, at);
+    const { lines } = item;
+    const at = lines[0]?.span.from ?? pager.flow;
+    let from = 0; // the first line not yet placed
+    let s = space;
+    for (;;) {
+      const left = lines.length - from;
+      if (s + left <= pager.room) {
+        pager.space(s, at);
+        pager.putAll(lines, from);
+        return;
+      }
+      const fitsAPage = left <= this.height;
+      if (item.keepTogether && fitsAPage && !pager.empty) {
+        pager.newPage();
+        s = 0;
+        continue;
+      }
+      const room = pager.room - s;
+      const k = this.#blockSplit(lines, from, room);
+      if (k !== null) {
+        pager.space(s, at);
+        pager.putAll(lines, from, from + k);
+        pager.newPage();
+        from += k;
+        s = 0;
+        continue;
+      }
+      // Too little room to split: the rest moves to the next page whole.
+      if (!pager.empty) {
+        pager.newPage();
+        s = 0;
+        continue;
+      }
+      // A page to itself and still no split, such as one line left over: it runs on.
+      pager.putAll(lines, from);
+      return;
     }
-    // What doesn't fit continues on the next page.
-    pager.putAll(item.lines);
   }
 
   #placeSpeech(item: SpeechItem, space: number) {

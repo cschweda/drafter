@@ -63,7 +63,16 @@ const query = computed(() => filter.value.trim().toLowerCase());
 function matches(node: OutlineNode): boolean {
   const q = query.value;
   if (!q) return true;
-  if ('children' in node) return node.children.some(matches);
+  if ('children' in node) {
+    // A section with no scenes is found by its own words: an outline has nothing else to find.
+    const section = node.item;
+    return (
+      node.children.some(matches) ||
+      (section.scenes === 0 &&
+        (section.title.toLowerCase().includes(q) ||
+          section.synopses.some((s) => s.text.toLowerCase().includes(q))))
+    );
+  }
   const scene = node.item;
   return (
     scene.heading.toLowerCase().includes(q) ||
@@ -94,7 +103,14 @@ const rows = computed<Row[]>(() => {
               item.speakers,
               item.pages,
             ]
-          : [sectionName(item, rates.value), item.title, item.scenes, item.eighths],
+          : [
+              sectionName(item, rates.value),
+              item.title,
+              item.scenes,
+              item.eighths,
+              item.color?.value,
+              item.synopses[0]?.text,
+            ],
         level,
         expandable,
         open,
@@ -276,7 +292,7 @@ function onMenuCloseAutoFocus(event: Event) {
   requestAnimationFrame(() => {
     if (act) act();
     // Not when another row's menu has opened since: focus is that menu's now.
-    else if (menuFor.value === null && id) void focusRow(id);
+    else if (menuFor.value === null && id && focusIsFree()) void focusRow(id);
   });
 }
 
@@ -449,6 +465,8 @@ const sceneLength = (row: Row) =>
 const sectionSummary = (row: Row) => {
   if (row.item.kind !== 'section') return '';
   const { scenes, eighths } = row.item;
+  // No count for a section with no scenes yet: an outline's rows would all say "0 scenes".
+  if (scenes === 0) return '';
   const count = `${scenes} ${scenes === 1 ? 'scene' : 'scenes'}`;
   return eighths === null
     ? count
@@ -456,8 +474,9 @@ const sectionSummary = (row: Row) => {
 };
 /** A scene row's synopsis, goal, or speakers, shown under it and read as its description. */
 const hasDetails = (row: Row) =>
-  row.item.kind === 'scene' &&
-  (row.item.synopses.length > 0 || goalLine(row.item) !== null || row.item.speakers.length > 0);
+  row.item.kind === 'scene'
+    ? row.item.synopses.length > 0 || goalLine(row.item) !== null || row.item.speakers.length > 0
+    : row.item.synopses.length > 0;
 const nameOfRow = (row: Row) =>
   row.item.kind === 'scene' ? sceneName(row.item, rates.value) : sectionName(row.item, rates.value);
 </script>
@@ -551,7 +570,14 @@ const nameOfRow = (row: Row) =>
             </template>
             <template v-else>
               <span class="heading">{{ row.item.title || 'Untitled section' }}</span>
-              <span class="length">{{ sectionSummary(row) }}</span>
+              <span v-if="row.item.color" class="chip">
+                <span
+                  class="swatch"
+                  :style="{ background: swatchOf(row.item.color.value) ?? 'transparent' }"
+                  aria-hidden="true"
+                />{{ colorName(row.item.color.value) }}
+              </span>
+              <span v-if="sectionSummary(row)" class="length">{{ sectionSummary(row) }}</span>
             </template>
             <MenuButton
               :open="menuFor === row.id"
@@ -592,6 +618,15 @@ const nameOfRow = (row: Row) =>
             <span v-if="row.item.speakers.length > 0" class="who"
               ><span class="sr-only">Speaking: </span>{{ row.item.speakers.join(', ') }}</span
             >
+          </div>
+          <!-- A section's own synopsis: what the act or the sequence is, under its title. -->
+          <div
+            v-else-if="row.item.kind === 'section' && hasDetails(row)"
+            :id="`${domId(row.id)}-more`"
+            class="details"
+            aria-hidden="true"
+          >
+            <span class="synopsis">{{ row.item.synopses[0]?.text }}</span>
           </div>
         </li>
       </ul>

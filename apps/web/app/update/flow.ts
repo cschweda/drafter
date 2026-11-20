@@ -22,6 +22,15 @@ export function actionLabel(kind: UpdateKind): string {
 export const INSTALL_FAILED =
   'Drafter couldn’t install the update, and is still the version you have. Nothing was lost.';
 
+/** What the toast says when Reload didn't reload: the new version never took the page over. */
+export const RELOAD_FAILED =
+  'Drafter couldn’t switch to the new version just now, and is still the version you have. Nothing was lost. It will be there the next time you open Drafter, or you can try Reload again.';
+
+/** What the toast says when the update didn't go through: an install on the desktop, a reload on the web. */
+export function failedMessage(kind: UpdateKind): string {
+  return kind === 'restart' ? INSTALL_FAILED : RELOAD_FAILED;
+}
+
 export const UNSAVED_MESSAGE =
   'Your unsaved changes are in Drafter’s autosave in this browser, but they aren’t in your file yet.';
 

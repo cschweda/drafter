@@ -326,6 +326,7 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 
 **Next:**
 
+- **Fixes before features** (v0.27.x): Drafter says so when words won't print as written, a page break never leaves one line of a paragraph behind, and Final Draft files are checked on a real round trip. New features wait until then.
 - Storylines, the strip's Color by, and pacing (v0.28.0).
 
 **Later:**

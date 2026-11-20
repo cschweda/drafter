@@ -179,7 +179,8 @@ const cases: Array<[string, () => string, number]> = [
     'twenty thousand names that differ in one letter, all of them one series',
     () =>
       cues(Array.from({ length: 20_000 }, (_, i) => `ABCDE${String.fromCodePoint(0x4e00 + i)}`)),
-    0,
+    // not-in-font, once for the whole script: each name ends in a Chinese character.
+    1,
   ],
   // The longest names that are compared: each takes thirty-three keys of thirty-one letters.
   [

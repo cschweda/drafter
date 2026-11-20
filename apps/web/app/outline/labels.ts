@@ -63,10 +63,13 @@ export function sceneName(scene: Scene, rates: Rates = DEFAULT_RATES): string {
   return parts.join(', ');
 }
 
-/** A section row's name: "Act One, 5 scenes, 12 pages, about 12 minutes". */
+/** A section row's name: "Act One, 5 scenes, teal, 12 pages, about 12 minutes". */
 export function sectionName(section: Section, rates: Rates = DEFAULT_RATES): string {
   const parts = [section.title || 'Untitled section'];
-  parts.push(`${section.scenes} ${section.scenes === 1 ? 'scene' : 'scenes'}`);
+  // A section with no scenes yet says nothing of them: "0 scenes" on every row of an outline.
+  if (section.scenes > 0)
+    parts.push(`${section.scenes} ${section.scenes === 1 ? 'scene' : 'scenes'}`);
+  if (section.color) parts.push(colorName(section.color.value));
   if (section.eighths !== null) {
     parts.push(lengthWords(section.eighths), rowTimeWords(section.eighths, rates));
   }

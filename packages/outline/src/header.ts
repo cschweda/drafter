@@ -16,14 +16,14 @@ import {
   safeLine,
 } from '@drafter/notes';
 import { sceneNotes } from './scene-index';
-import type { Scene } from './types';
+import type { Scene, Section } from './types';
 
 // A scene's header (Phase 2 design §5.4): the synopsis and note lines right under the heading's
 // blank line, synopses first, then one note per field, each on its own line. Every line of it is
 // transparent or a synopsis, so the pages don't change (§1, item 2).
 
 /** The blocks of the scene's header: synopses and notes right after the heading, one line apart. */
-function headerOf(doc: Doc, scene: Scene): number[] {
+function headerOf(doc: Doc, scene: Headed): number[] {
   const out: number[] = [];
   for (let i = scene.block + 1; i < doc.blocks.length; i++) {
     const block = doc.blocks[i] as Block;
@@ -86,13 +86,26 @@ function regionsOnLine(doc: Doc, from: number) {
 }
 
 /**
+ * What a synopsis edit reads of a scene: its heading's block, its span, and its synopses. A
+ * section's own stretch has the same (`sectionHeader`), so its synopsis is set the same way.
+ */
+export type Headed = Pick<Scene, 'block' | 'span' | 'synopses'>;
+
+/** A section as `setSynopsis` reads one: its heading, its own stretch, and its own synopses. */
+export const sectionHeader = (section: Section): Headed => ({
+  block: section.block,
+  span: { from: section.span.from, to: section.introEnd },
+  synopses: section.synopses,
+});
+
+/**
  * The changes that make `text` the scene's first synopsis: its text replaced in place, or a new
  * `= text` line at the top of the header. Empty text removes the first synopsis's line, or, when it
  * holds notes or boneyards, only the `=` and its words, so they stay on the line (or nothing, where
  * that line would print differently among the lines it joins). The text is
  * written on one line, and can't open a note or a boneyard.
  */
-export function setSynopsis(doc: Doc, scene: Scene, text: string): TextChange[] {
+export function setSynopsis(doc: Doc, scene: Headed, text: string): TextChange[] {
   if (hasStrayBoneyard(doc)) return [];
   const words = safeLine(text);
   const nl = lineBreakOf(doc.source);

@@ -351,6 +351,9 @@ function create(): ScriptSession {
     baseline.value = from;
     project.value = next;
     const id = next.id;
+    // What was typed while the editor's text was being kept is the new script's: the old script's
+    // writer writes nothing more, and the new one takes the text as it stands (below).
+    if (fromEditor) writer?.discard();
     writer = writable ? createWriter((source) => persist(id, source)) : undefined;
     // Text typed while the script was being read.
     const source = savedText(view.state).toString();
@@ -475,6 +478,13 @@ function create(): ScriptSession {
    */
   const switches = ref(0);
   const switching = computed(() => switches.value > 0);
+  /**
+   * A switch that keeps the editor's own text is under way (the first save of a sample, which
+   * makes the script the writer's own). The words on the screen go on being the script's, so
+   * typing goes on too: the editor is not made read-only for it, and what is typed meanwhile is
+   * the new script's (`attach`).
+   */
+  const keeping = ref(0);
 
   let running: Promise<unknown> = Promise.resolve();
 
@@ -497,6 +507,7 @@ function create(): ScriptSession {
     }
     const run = (async () => {
       switches.value++;
+      if (options.keep) keeping.value++;
       try {
         // A failed flush stops here: the text it couldn't keep must not be replaced.
         await writer?.flush();
@@ -537,6 +548,7 @@ function create(): ScriptSession {
         return true;
       } finally {
         switches.value--;
+        if (options.keep) keeping.value--;
       }
     })();
     running = run.catch(() => {});
@@ -1036,8 +1048,11 @@ function create(): ScriptSession {
   // The editor follows the guard: read-only while another tab holds the script (and while a new
   // version is fetched and takes over, so nothing typed then is lost to the reload).
   effectScope(true).run(() => {
+    // A switch that keeps the editor's text leaves it editable: read-only there dropped what the
+    // writer typed in the moment after a sample's first save.
     watch(
-      () => guard.readOnly.value || switching.value || applyingUpdate.value,
+      () =>
+        guard.readOnly.value || (switching.value && keeping.value === 0) || applyingUpdate.value,
       (on) => editor.setReadOnly(on),
       { immediate: true, flush: 'sync' },
     );

@@ -347,12 +347,39 @@ test.describe('saving where the browser can’t save in place', () => {
     await expectSaved(page);
     expect((await mine(page))?.fileName).toBe('Untitled Screenplay.fountain');
 
-    // Save As downloads again, under the same name.
+    // Save As asks what to call this version, with the name it has selected to type over, and
+    // downloads under the new one: the first file is not written again.
     await page.keyboard.insertText(' MORE');
-    const again = page.waitForEvent('download');
     await openButton(page).click();
     await menu(page).getByRole('button', { name: 'Save As…' }).click();
-    expect((await again).suggestedFilename()).toBe('Untitled Screenplay.fountain');
+    const ask = page.getByRole('dialog', { name: 'Save As' });
+    const name = ask.getByRole('textbox', { name: 'File name' });
+    await expect(name).toBeFocused();
+    await expect(name).toHaveValue('Untitled Screenplay.fountain');
+    const again = page.waitForEvent('download');
+    await page.keyboard.insertText('Second draft: for Ana');
+    await page.keyboard.press('Enter');
+    expect((await again).suggestedFilename()).toBe('Second draft for Ana.fountain');
+    await expect(ask).toBeHidden();
+    await expectSaved(page);
+    // The script follows the new name, so the next Save goes there too. "Saved" shows once the
+    // file is written; the script's record gets the name a moment after, so it is waited for.
+    await expect
+      .poll(async () => (await mine(page))?.fileName)
+      .toBe('Second draft for Ana.fountain');
+
+    // Escape saves nothing, and the script keeps its name.
+    await page.keyboard.insertText(' AGAIN');
+    await openButton(page).click();
+    await menu(page).getByRole('button', { name: 'Save As…' }).click();
+    await expect(name).toHaveValue('Second draft for Ana.fountain');
+    let downloads = 0;
+    page.on('download', () => downloads++);
+    await page.keyboard.press('Escape');
+    await expect(ask).toBeHidden();
+    await expectUnsaved(page);
+    expect(downloads).toBe(0);
+    expect((await mine(page))?.fileName).toBe('Second draft for Ana.fountain');
   });
 
   test('announces every save to a screen reader, and not a reload', async ({ page, isMobile }) => {
@@ -461,10 +488,14 @@ test.describe('saving where the browser can’t save in place', () => {
     download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
     await download;
-    // From the status bar's button, and as Save As.
+    // From the status bar's button, and as Save As, which asks for the name first.
     await status(page).locator('.history-button').focus();
-    download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+Shift+s');
+    await expect(
+      page.getByRole('dialog', { name: 'Save As' }).getByRole('textbox', { name: 'File name' }),
+    ).toBeFocused();
+    download = page.waitForEvent('download');
+    await page.keyboard.press('Enter');
     await download;
     expect(await prevented()).toEqual([true, true, true]);
   });

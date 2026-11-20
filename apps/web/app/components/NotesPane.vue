@@ -444,7 +444,7 @@ function onMenuCloseAutoFocus(event: Event) {
   afterMenu = null;
   requestAnimationFrame(() => {
     if (act) act();
-    else if (menuFor.value === null && item) void focusAfter(item, lastAt);
+    else if (menuFor.value === null && item && focusIsFree()) void focusAfter(item, lastAt);
   });
 }
 

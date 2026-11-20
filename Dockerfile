@@ -3,7 +3,7 @@
 # set only by drafter.dev's own build, in apps/web/netlify.toml).
 #
 # Base images are pinned by digest; Dependabot proposes updates.
-FROM node:22.23.4-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS build
+FROM node:24.22.3-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS build
 WORKDIR /app
 # The packages first, from the lockfile alone, so a change to the code doesn't download them again.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -15,7 +15,7 @@ RUN pnpm install --offline --frozen-lockfile --filter "@drafter/web..." --filter
   && pnpm --filter "@drafter/web..." run build \
   && node apps/web/scripts/caddyfile.mjs apps/web/.output/public /tmp/Caddyfile
 
-FROM caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
+FROM caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
 COPY --from=build /app/apps/web/.output/public /srv
 COPY --from=build /tmp/Caddyfile /etc/caddy/Caddyfile
 # `_headers` is Netlify's file, turned into the Caddyfile above; it isn't a page to serve. Caddy

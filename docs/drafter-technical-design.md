@@ -426,14 +426,17 @@ for each printed block B (in order):
   if B.keepWithNext:
     N     = the first following block without keepWithNext
     chain = need + (need of each keepWithNext block between B and N)
-                 + spaceBefore(N) + min(N's lines, keepWithNextLines)
+                 + spaceBefore(N) + the lines of N that would stay (all of them, or its split's)
                  + 1 if N is dialogue that would split there, for its (MORE)
     if chain doesn't fit in the rest of the page but fits on an empty page:  newPage
   if need fits in the rest of the page:                  place
   else if B is a dialogue block:                         splitDialogue(B)      // §5.4; by kind, whatever its role
   else if B.keepTogether and need fits on an empty page: newPage; place
-  else:                                                  place as many lines as fit; newPage; continue with the rest
+  else if B can split here:                              place those lines; newPage; continue with the rest
+  else:                                                  newPage; place
 ```
+
+A block that isn't dialogue **can split** when at least `keepWithNextLines` of its lines stay (after any blank lines it opens with), at least two go to the next page, and the last line to stay isn't blank; it keeps as many lines as that allows. So no line of a paragraph stands alone at the foot of a page or the head of the next, and a paragraph too short for that (three lines, with room for two) moves whole. A block taller than a page splits the same way, a page at a time.
 
 A chain too tall for an empty page is placed normally, so the loop always advances. `spaceBefore` is suppressed at the top of a page, and the first line on a page is never blank. A `page_break` ends the current page unless that page is still empty, so forced breaks never create blank pages and consecutive `===` lines act as one.
 
@@ -441,7 +444,7 @@ A chain too tall for an empty page is placed normally, so the loop always advanc
 
 When a dialogue block of `n` wrapped lines doesn't fit in the `remaining` lines of a page, let `p = min(remaining − 1, n − minLinesAfter)`: the most lines that can stay while leaving one line for `(MORE)` and at least `minLinesAfter` lines for the next page. If `p ≥ minLinesBefore`:
 
-1. Place `p` dialogue lines, never splitting inside a parenthetical and never ending on one.
+1. Place `p` dialogue lines, never splitting inside a parenthetical and never ending on one. If one of the two lines before the `p`th ends a sentence (`.`, `!`, `?`, or `…`, with any closing quote or bracket, or the end of a line the writer typed) and the `p`th doesn't, stop there instead, within the same limits.
 2. Emit a synthetic `(MORE)` line at `dialogueSplit.moreIndent`.
 3. New page. Emit a synthetic character line `NAME (CONT'D)`. If the cue already has an extension, append to it — `NAME (V.O.) (CONT'D)` — unless it already ends in `(CONT'D)`.
 4. Continue with the remaining lines, splitting again if they still don't fit.

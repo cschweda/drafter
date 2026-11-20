@@ -232,7 +232,10 @@ function onCloseAutoFocus(event: Event) {
   if (!chosen) return;
   chosen = false;
   event.preventDefault();
-  requestAnimationFrame(() => editor.view.focus());
+  // Unless the writer has gone on to something else meanwhile: More opened again, say.
+  requestAnimationFrame(() => {
+    if (focusIsFree()) editor.view.focus();
+  });
 }
 
 // ---- The phone's Next button (Classic Mode design §10) --------------------------------------

@@ -112,6 +112,26 @@ describe('document structure', () => {
   });
 });
 
+describe('transitions', () => {
+  const kinds = (source: string) => parse(source).blocks.map((block) => block.kind);
+
+  it('reads a line in capitals ending in TO: as a transition', () => {
+    expect(kinds('He leaves.\n\nCUT TO:\n\nINT. HALL - DAY\n')).toEqual([
+      'action',
+      'transition',
+      'scene_heading',
+    ]);
+  });
+
+  it('reads it as action with a space after the colon, as the spec has it', () => {
+    expect(kinds('He leaves.\n\nCUT TO: \n\nINT. HALL - DAY\n')).toEqual([
+      'action',
+      'action',
+      'scene_heading',
+    ]);
+  });
+});
+
 describe('inline emphasis', () => {
   it('splits a line into styled runs and keeps escaped markers literal', () => {
     expect(runsOf('Margaret is *very* **tired** and _alone_. \\*Not\\* bold.')).toEqual([
@@ -154,6 +174,49 @@ describe('inline emphasis', () => {
     const source = 'She is *very\ntired* today.';
     expect(runsOf(source, 0)).toEqual([['She is *very', '']]);
     expect(runsOf(source, 1)).toEqual([['tired* today.', '']]);
+  });
+
+  it('reads an underscore inside a word as an underscore', () => {
+    expect(runsOf('Write to jane_q_doe@example.com today.')).toEqual([
+      ['Write to jane_q_doe@example.com today.', ''],
+    ]);
+    expect(runsOf('Open my_script_v2 now.')).toEqual([['Open my_script_v2 now.', '']]);
+  });
+
+  it('still underlines between underscores at the edges of words', () => {
+    expect(runsOf('A _very long_ day.')).toEqual([
+      ['A ', ''],
+      ['very long', 'u'],
+      [' day.', ''],
+    ]);
+    expect(runsOf('_Underlined._')).toEqual([['Underlined.', 'u']]);
+    expect(runsOf('*_Both_*, and (_this_).')).toEqual([
+      ['Both', 'iu'],
+      [', and (', ''],
+      ['this', 'u'],
+      [').', ''],
+    ]);
+  });
+
+  it('keeps an underscore in a title page value', () => {
+    const doc = parse('Title: My_Script_v2\nContact: jane_q_doe@example.com\n\nINT. ROOM - DAY\n');
+    expect(doc.titlePage?.fields.map((f) => f.runs.map((runs) => runs.map((r) => r.text)))).toEqual(
+      [[['My_Script_v2']], [['jane_q_doe@example.com']]],
+    );
+  });
+
+  it('prints a line that starts with \\# or \\= as text, without the backslash', () => {
+    const doc = parse('BOB\n\\#1 is the best.\nReally.\n\n\\= that is math.\n');
+    expect(doc.blocks.map((block) => block.kind)).toEqual(['character', 'dialogue', 'action']);
+    expect(doc.blocks[1]?.lines.map((l) => l.inline.map((r) => r.text).join(''))).toEqual([
+      '#1 is the best.',
+      'Really.',
+    ]);
+    expect(runsOf('  \\#1 DAD mug.')).toEqual([['  #1 DAD mug.', '']]);
+  });
+
+  it('leaves a backslash before # or = alone anywhere else on a line', () => {
+    expect(runsOf('Tag it \\#one, or x \\= y.')).toEqual([['Tag it \\#one, or x \\= y.', '']]);
   });
 
   it('maps each run back to its place in the source', () => {
