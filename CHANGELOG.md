@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- For contributors: Drafter is now built on **Node 24**. `.nvmrc` says 24 (so do GitHub's checks, which read it), drafter.dev's build on Netlify uses Node 24, and the self-hosting image builds on `node:24.22.3-slim`. Node 22.13 or later still works: every package's `engines` and the desktop and `drafter-mcp` build targets are unchanged. The desktop app's own Node was already 24, inside Electron 45.
+- Dependencies: Nuxt 4.6.4 and node-forge 1.4.3, both security releases in build-time tools (neither ships to a writer), and a newer build of the self-hosting image's Caddy 2.11.9.
+
+### Fixed
+
+- For contributors: the test of what `npm pack` would publish for Drafter for Claude failed under Node 24. npm 11 warns about two settings that are pnpm's alone, which pnpm hands to every script it runs, and the test allows no warnings. It now calls npm without pnpm's settings.
+
 ## [0.27.0] - 2026-11-09
 
 **Production, free.** For a script going into production: **lock pages and scene numbers**, so a page that grows becomes 12A and a new scene between 5 and 6 becomes 5A; revise in the industry's colors, with an asterisk in the margin wherever words changed; and mark a cut scene **OMITTED** so the numbers never shift. Then send out what a production needs: the **revised pages** with their colored header, a **breakdown** of every scene (CSV for a spreadsheet, or PDF), and **sides**, an actor's pages with the other scenes crossed out. Every paged export, and `drafter build` on the command line, prints the locked pages. All of it is free, like the rest of Drafter.

@@ -136,10 +136,10 @@ The full policy is in the [architecture document, §6](drafter-architecture.md#6
 
 ## Development
 
-You need Node 22.13 or later (`.nvmrc` pins Node 22) and pnpm 10.
+You need Node 22.13 or later (`.nvmrc` pins Node 24) and pnpm 10.
 
 ```sh
-nvm use               # Node 22, from .nvmrc
+nvm use               # Node 24, from .nvmrc
 pnpm install          # also enables the repository's Git hooks
 pnpm -r build
 pnpm -r test          # every package's tests
