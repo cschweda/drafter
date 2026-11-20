@@ -25,6 +25,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - For contributors: in `@drafter/outline`, a `Section` has `synopses` and `color` (its own stretch's, as a scene's are the scene's), `unwritten(index)` lists the sections still to write, and `setSynopsis` takes a section through `sectionHeader`. `@drafter/fdx` has `sceneColorOf`, which reads `#RRGGBB` and Final Draft's `#RRRRGGGGBBBB`.
+- For contributors: the browser tests of saving where there is no file picker (`e2e/save.spec.ts`) now go through Save As's name box: a name typed, the default taken with Enter, and Escape.
 - For contributors: `@drafter/lint` now depends on `@drafter/layout`, for which title keys print and which characters the script font has (`courierPrimeHas`, `COURIER_PRIME_RANGES`); `@drafter/cli` depends on `@drafter/lint`.
 - For contributors: Drafter is now built on **Node 24**. `.nvmrc` says 24 (so do GitHub's checks, which read it), drafter.dev's build on Netlify uses Node 24, and the self-hosting image builds on `node:24.22.3-slim`. Node 22.13 or later still works: every package's `engines` and the desktop and `drafter-mcp` build targets are unchanged. The desktop app's own Node was already 24, inside Electron 45.
 - Dependencies: Nuxt 4.6.4 and node-forge 1.4.3, both security releases in build-time tools (neither ships to a writer), and a newer build of the self-hosting image's Caddy 2.11.9.
