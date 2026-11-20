@@ -3,7 +3,7 @@
 # set only by drafter.dev's own build, in apps/web/netlify.toml).
 #
 # Base images are pinned by digest; Dependabot proposes updates.
-FROM node:24.22.3-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS build
+FROM node:26.13.1-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS build
 WORKDIR /app
 # The packages first, from the lockfile alone, so a change to the code doesn't download them again.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
