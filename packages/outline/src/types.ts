@@ -87,6 +87,13 @@ export interface Section {
   introEnd: number;
   /** The enclosing section's block, or null at the top. */
   parent: number | null;
+  /**
+   * Its own synopses: the `=` lines in its own stretch, from its heading up to its first child (a
+   * scene or a subsection) or the next section. A scene's synopses are the scene's.
+   */
+  synopses: Synopsis[];
+  /** The first `[[Color: …]]` note in its own stretch: its value, lowercased, and the note's span. */
+  color: { value: string; span: Span } | null;
   /** The scenes inside it, at any depth. */
   scenes: number;
   /** The scenes' total length in eighths, or null without pages. */
