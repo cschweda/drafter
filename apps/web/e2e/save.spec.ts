@@ -362,8 +362,11 @@ test.describe('saving where the browser can’t save in place', () => {
     expect((await again).suggestedFilename()).toBe('Second draft for Ana.fountain');
     await expect(ask).toBeHidden();
     await expectSaved(page);
-    // The script follows the new name, so the next Save goes there too.
-    expect((await mine(page))?.fileName).toBe('Second draft for Ana.fountain');
+    // The script follows the new name, so the next Save goes there too. "Saved" shows once the
+    // file is written; the script's record gets the name a moment after, so it is waited for.
+    await expect
+      .poll(async () => (await mine(page))?.fileName)
+      .toBe('Second draft for Ana.fountain');
 
     // Escape saves nothing, and the script keeps its name.
     await page.keyboard.insertText(' AGAIN');
