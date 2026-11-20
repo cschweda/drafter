@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **`CUT TO:` with a space after it.** That space makes the line action, which is Fountain's rule and easy to do by accident. Drafter points it out, and its fix removes the space.
 - **A name you force with `@` prints as you typed it.** `@McCLANE` now prints McCLANE on the page and in the PDF, as Fountain intends; it used to print MCCLANE. Every other name still prints in capitals. A script opened from Final Draft keeps its names in capitals, as Final Draft printed them.
 - **`\#` and `\=` at the start of a line print the mark.** Until now nothing could make a line of dialogue start with `#` or `=`.
+- **No line of a paragraph is left alone at a page break.** A paragraph of action that crosses a page now keeps at least two lines at the foot of one page and two at the head of the next; one too short for that moves to the next page whole, with its scene heading if it has one. A line of action used to be left behind by itself. A speech that splits with (MORE) now stops on a line that ends a sentence when there is one within two lines of where it would have stopped. A script with locked pages keeps its pages as they are.
 - **`drafter check` lists everything the Problems pane does.** It used to run none of the pane's rules, so it could say "no problems" about a script the app had warnings for.
 
 ### Changed

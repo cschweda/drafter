@@ -28,7 +28,7 @@ Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. La
 
 Next, in order:
 
-1. **Fixes before features** (v0.27.x). New features wait while what is here is made right, after a review of the whole app in November 2026: Drafter says so when words won't print as written (characters the script font lacks, a `#` line inside a speech, title-page keys that don't print); pages break at the end of a sentence, never leaving one line of a paragraph behind; and a script that has been to Final Draft and back is checked against real files.
+1. **Fixes before features** (v0.27.x). New features wait while what is here is made right, after a review of the whole app in November 2026: Drafter says so when words won't print as written (characters the script font lacks, a `#` line inside a speech, title-page keys that don't print); a page break never leaves one line of a paragraph behind (breaking at the end of a sentence, inside a line, follows with a design of its own); and a script that has been to Final Draft and back is checked against real files.
 2. Storylines and pacing (v0.28.0).
 3. The **Workbook**, a story bible with your pasted, synced, and spoken notes (v0.29.0).
 4. An optional one-file `.drafter` project (v0.30.0, open spec).
