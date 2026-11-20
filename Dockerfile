@@ -15,7 +15,7 @@ RUN pnpm install --offline --frozen-lockfile --filter "@drafter/web..." --filter
   && pnpm --filter "@drafter/web..." run build \
   && node apps/web/scripts/caddyfile.mjs apps/web/.output/public /tmp/Caddyfile
 
-FROM caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
+FROM caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
 COPY --from=build /app/apps/web/.output/public /srv
 COPY --from=build /tmp/Caddyfile /etc/caddy/Caddyfile
 # `_headers` is Netlify's file, turned into the Caddyfile above; it isn't a page to serve. Caddy
