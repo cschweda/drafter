@@ -51,14 +51,9 @@ test.describe('keys in a tab other than the Source', () => {
   }
 });
 
-/** With the cursor at the end of the script, `move` takes focus elsewhere; then "xyz" is typed. */
-async function expectTypingAfterLeavesScript(page: Page, move: () => Promise<void>) {
-  await start(page);
-  await showSource(page);
-  await editor(page).click();
-  await page.keyboard.press('ControlOrMeta+End');
-  // The cursor is at the end before focus goes: on a slow runner the key can still be on its way.
-  await expect
+/** Waits until the browser's cursor is in the script's last line. */
+const cursorAtEnd = (page: Page) =>
+  expect
     .poll(() =>
       page.evaluate(() => {
         const sel = document.getSelection();
@@ -68,12 +63,25 @@ async function expectTypingAfterLeavesScript(page: Page, move: () => Promise<voi
       }),
     )
     .toBe(true);
+
+/** With the cursor at the end of the script, `move` takes focus elsewhere; then "xyz" is typed. */
+async function expectTypingAfterLeavesScript(page: Page, move: () => Promise<void>) {
+  await start(page);
+  await showSource(page);
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+End');
+  // The cursor is at the end before focus goes: on a slow runner the key can still be on its way.
+  await cursorAtEnd(page);
   const before = await wholeText(page);
   await move();
   await page.keyboard.type('xyz');
   expect(await wholeText(page)).toBe(before);
-  // Back in the editor, the cursor is where it was: at the end.
+  // Back in the editor, the cursor is where it was: at the end. A plain `focus()` puts the
+  // browser's own cursor at the start of the editor first, and CodeMirror puts its cursor back a
+  // moment later; a key sent in between would land at the top of the script (as it did, now and
+  // then, on a slow runner), so the cursor is waited for, as a writer's hands would.
   await editor(page).focus();
+  await cursorAtEnd(page);
   await page.keyboard.type('Q');
   await expect.poll(() => wholeText(page)).toBe(`${before}Q`);
 }

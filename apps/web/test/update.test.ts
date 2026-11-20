@@ -372,3 +372,59 @@ describe('while the new version is applied', () => {
     expect(applyingMessage('restart')).toBe('Restarting Drafter…');
   });
 });
+
+// A reload the writer chose that never happens: the new version didn't finish taking over, and the
+// browser holds the reload until it does. Seen on GitHub's Linux runners (the page still showed
+// "Getting the newest version…" fifteen seconds on, with a request for the page that never came
+// back), and a writer left there can't type.
+describe('a reload that never happens', () => {
+  test('nothing is done while the reload may still be on its way', async () => {
+    vi.useFakeTimers();
+    try {
+      const { reloadOrGiveUp, RELOAD_STUCK_MS } = await import('../app/update/state');
+      const calls: string[] = [];
+      reloadOrGiveUp({
+        reload: () => calls.push('reload'),
+        stop: () => calls.push('stop'),
+        stuck: () => calls.push('stuck'),
+      });
+      expect(calls).toEqual(['reload']);
+      vi.advanceTimersByTime(RELOAD_STUCK_MS - 1);
+      expect(calls).toEqual(['reload']);
+      // Still here: the waiting reload is cancelled first, then the page is given back.
+      vi.advanceTimersByTime(1);
+      expect(calls).toEqual(['reload', 'stop', 'stuck']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('the updater coming back gives the editor back, and the toast its offer', async () => {
+    let comeBack: () => void = () => {};
+    const stages: string[] = [];
+    const flow = createUpdateFlow({
+      unsaved: () => false,
+      kept: () => true,
+      save: async () => 'saved',
+      savedByDownload: () => false,
+      flush: async () => {},
+      apply: () =>
+        new Promise<void>((resolve) => {
+          comeBack = resolve;
+        }),
+    });
+    const reloading = flow.reload();
+    stages.push(flow.stage.value);
+    comeBack();
+    await reloading;
+    stages.push(flow.stage.value);
+    expect(stages).toEqual(['applying', 'toast']);
+  });
+
+  test('the toast says which it was: an install on the desktop, a reload on the web', async () => {
+    const { failedMessage, INSTALL_FAILED, RELOAD_FAILED } = await import('../app/update/flow');
+    expect(failedMessage('restart')).toBe(INSTALL_FAILED);
+    expect(failedMessage('reload')).toBe(RELOAD_FAILED);
+    expect(RELOAD_FAILED).toMatch(/still the version you have\. Nothing was lost\./);
+  });
+});

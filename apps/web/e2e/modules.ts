@@ -426,16 +426,32 @@ export async function viewTool(
   // The header is measured a frame after a view shows, and fitting it can take a few frames more
   // (labels back, icon-only, then folds), while a tool drawn in between may yet fold: the tools box
   // is `data-fitting` until it is done.
-  await page.evaluate(
-    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
-  );
-  await expect(page.locator('#inspector-tools[data-fitting]')).toHaveCount(0);
-  if (await tool.isVisible()) return tool;
+  const settle = async () => {
+    await page.evaluate(
+      () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+    );
+    await expect(page.locator('#inspector-tools[data-fitting]')).toHaveCount(0);
+  };
   const fold = page.getByRole('button', { name: 'More tools' });
-  if ((await fold.isVisible()) && (await fold.getAttribute('aria-expanded')) !== 'true') {
-    await fold.click();
+  const reach = async () => {
+    await settle();
+    if (await tool.isVisible()) return true;
+    if ((await fold.isVisible()) && (await fold.getAttribute('aria-expanded')) !== 'true') {
+      await fold.click();
+    }
+    return tool.isVisible();
+  };
+  if (optional) {
+    await reach();
+    return tool;
   }
-  if (!optional) await expect(tool).toBeVisible();
+  // A view's own tools can be drawn after the header was last fitted (Compare's, once its changes
+  // are worked out, on a slow runner): the header then fits again and may fold the tool behind
+  // "⋯", which wasn't there to open a moment ago. So it is looked for until it is reached, not
+  // looked for once and then waited on where it can no longer appear.
+  await expect(async () => {
+    expect(await reach()).toBe(true);
+  }).toPass({ timeout: 10_000 });
   return tool;
 }
 

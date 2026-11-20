@@ -179,6 +179,41 @@ test('Payoff offers the setup’s label', async ({ page }) => {
   );
 });
 
+// Choosing from More puts focus back in the editor on the next frame, once the menu has closed.
+// On a slow machine More could be opened again before that frame came: the editor then took focus
+// from the open menu, which closed under the pointer. Here the frame is made slow.
+test('More stays open when it is opened again straight after a choice', async ({ page }) => {
+  await write(page, 'One.\n\nTwo.');
+  // The page is open already, so the frame is slowed in it as it stands.
+  await page.evaluate(() => {
+    const real = window.requestAnimationFrame.bind(window);
+    (window as unknown as { __slowFrames: boolean }).__slowFrames = false;
+    window.requestAnimationFrame = (callback: FrameRequestCallback) =>
+      (window as unknown as { __slowFrames: boolean }).__slowFrames
+        ? (window.setTimeout(() => real(callback), 500) as unknown as number)
+        : real(callback);
+  });
+  await button(page, 'More elements').click();
+  await expect(page.getByRole('menuitem', { name: 'Setup' })).toBeVisible();
+  await page.evaluate(() => {
+    (window as unknown as { __slowFrames: boolean }).__slowFrames = true;
+  });
+  await page.getByRole('menuitem', { name: 'Setup' }).click();
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await button(page, 'More elements').click();
+  const payoff = page.getByRole('menuitem', { name: 'Payoff' });
+  await expect(payoff).toBeVisible();
+  // Long enough for the first choice's frame to have come.
+  await page.waitForTimeout(1200);
+  await expect(payoff).toBeVisible();
+  await page.evaluate(() => {
+    (window as unknown as { __slowFrames: boolean }).__slowFrames = false;
+  });
+  await payoff.click();
+  await expect(editor(page)).toBeFocused();
+  expect(await textOf(page)).toContain('[[Payoff: ]]');
+});
+
 test('Setup and Payoff are one undo each', async ({ page }) => {
   await write(page, 'One.\n\nTwo.');
   await chooseMore(page, 'Setup');

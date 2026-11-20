@@ -6,7 +6,7 @@ import {
   anywayLabel,
   applyingMessage,
   DOWNLOADING_MESSAGE,
-  INSTALL_FAILED,
+  failedMessage,
   offerText,
   unsavedMessage,
 } from '~/update/flow';
@@ -121,7 +121,7 @@ function onKeydown(event: KeyboardEvent) {
         @keydown="onKeydown"
       >
         <template v-if="installError">
-          <p>{{ INSTALL_FAILED }}</p>
+          <p>{{ failedMessage(updateKind) }}</p>
           <div class="actions">
             <button ref="reloadButton" type="button" class="action quiet" @click="putOff">
               Later

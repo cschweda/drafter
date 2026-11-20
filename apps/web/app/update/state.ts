@@ -70,6 +70,30 @@ export function leavingRequested(): boolean {
   return leaving;
 }
 
+/** How long a reload that was asked for may take before the page says it didn't happen. */
+export const RELOAD_STUCK_MS = 10_000;
+
+/**
+ * Reloads, and notices when it didn't. A reload that happens takes the page, and this timer,
+ * with it; if the timer comes due the page is still here. That happens when the new version never
+ * finishes taking over: the browser holds the reload until it does, for as long as that takes,
+ * and the writer was left looking at "Getting the newest version…" with an editor that took no
+ * typing. `stop` cancels the reload that is still waiting (the browser's `window.stop`), and
+ * `stuck` puts the page back in the writer's hands.
+ */
+export function reloadOrGiveUp(deps: {
+  reload(): void;
+  stop(): void;
+  stuck(): void;
+  ms?: number;
+}): ReturnType<typeof setTimeout> {
+  deps.reload();
+  return setTimeout(() => {
+    deps.stop();
+    deps.stuck();
+  }, deps.ms ?? RELOAD_STUCK_MS);
+}
+
 /**
  * Tells a change of the page's controlling worker apart (the browser's `controllerchange`):
  * - In the tab whose writer asked for the update (`apply`), it is the cue to reload.
