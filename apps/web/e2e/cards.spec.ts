@@ -314,8 +314,12 @@ test.describe('moving cards', () => {
     // From Act Two's first row, before the card in Act One's last row in the same column; in one
     // column (a phone), one place: to the end of Act One.
     if (cols === 1) await expect.poll(() => order(page)).toEqual([HALL, YARD, SHED, CAR]);
-    else if (cols === 2) await expect.poll(() => order(page)).toEqual([HALL, YARD, CAR, SHED]);
-    else await expect.poll(() => order(page)).toEqual([CAR, HALL, YARD, SHED]);
+    // In two columns that takes Act Two's last scene, and an act with nothing in it yet has a
+    // card of its own, "To write", where a scene can be moved back.
+    else if (cols === 2) {
+      await expect.poll(() => order(page)).toEqual([HALL, YARD, CAR, SHED, 'Act Two']);
+      await expect(cards(page).getByRole('option', { name: 'Act Two, to write' })).toBeVisible();
+    } else await expect.poll(() => order(page)).toEqual([CAR, HALL, YARD, SHED]);
     await expect(
       cards(page).getByRole('group', { name: 'Act One' }).getByRole('option'),
     ).toHaveCount(4);
@@ -455,5 +459,85 @@ test.describe('a card without a synopsis', () => {
     expect(colors.preview).toBe(colors.muted);
     await expect(shed(page)).toHaveAccessibleDescription('Opens with: Tools.');
     await expect(yard(page)).toHaveAccessibleDescription('Opens with: BOB: Hi.');
+  });
+});
+
+// An outline made of sections alone (one typed, or one brought in from Final Draft) is a board of
+// cards from the start: a section with no scenes in it, and no sections under it, has a card.
+test.describe('an outline with no scenes', () => {
+  const OUTLINE = [
+    '# Act One',
+    '',
+    '[[Color: teal]]',
+    '',
+    '= The setup.',
+    '',
+    '## Arrival',
+    '',
+    '### The key',
+    '',
+    '[[Color: orange]]',
+    '',
+    '= She finds a key.',
+    '',
+    '### The maids',
+    '',
+    '# Act Two',
+    '',
+    '= Nothing here yet.',
+    '',
+  ].join('\n');
+
+  test('gives each section still to write a card, under the sections it sits in', async ({
+    page,
+  }) => {
+    await openWith(page, OUTLINE);
+    await expect(order(page)).resolves.toEqual(['The key', 'The maids', 'Act Two']);
+    const key = card(page, 'The key, to write, orange');
+    await expect(key).toBeVisible();
+    await expect(key).toHaveAccessibleDescription('She finds a key.');
+    await expect(key.locator('[data-to-write]')).toHaveText('To write');
+    await expect(
+      cards(page).getByRole('group', { name: 'Act One, Arrival' }).getByRole('option'),
+    ).toHaveCount(2);
+    // The count says what is there: sections to write, not "0 scenes" (it folds away in a narrow
+    // pane, so it is looked for, not looked at).
+    await expect(page.getByText('3 sections to write')).toBeAttached();
+    await expect(page.getByText('0 scenes')).toHaveCount(0);
+  });
+
+  test('edits a section’s synopsis on Enter', async ({ page }) => {
+    await openWith(page, OUTLINE);
+    const maids = card(page, 'The maids, to write');
+    await maids.focus();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('They threaten her.');
+    await page.keyboard.press('Enter');
+    await expect.poll(() => textOf(page)).toContain('### The maids\n\n= They threaten her.');
+    await expect(maids).toHaveAccessibleDescription('They threaten her.');
+    await expect(maids).toBeFocused();
+  });
+
+  test('a scene written under a section takes its place, and the rest keep their cards', async ({
+    page,
+  }) => {
+    await openWith(
+      page,
+      OUTLINE.replace('### The maids\n', '### The maids\n\nINT. HALL - DAY\n\nThey wait.\n'),
+    );
+    await expect(order(page)).resolves.toEqual(['The key', 'INT. HALL - DAY', 'Act Two']);
+    await expect(card(page, /^Scene 1, INT\. HALL - DAY/)).toBeVisible();
+  });
+
+  test('the Outline shows a section’s color and synopsis, and no count of scenes it doesn’t have', async ({
+    page,
+  }) => {
+    await openWith(page, OUTLINE);
+    await runCommand(page, 'Show Outline');
+    const tree = page.getByRole('tree', { name: 'Outline' });
+    const act = tree.getByRole('treeitem', { name: 'Act One, teal' });
+    await expect(act).toBeVisible();
+    await expect(act).toHaveAccessibleDescription('The setup.');
+    await expect(tree).not.toContainText('0 scenes');
   });
 });

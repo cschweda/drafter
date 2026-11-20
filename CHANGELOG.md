@@ -8,6 +8,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **An outline is a board of cards from the start.** A section with no scenes in it yet, and no sections under it, now has a card in the Cards tab: its title, its own synopsis (the `=` line under its heading), its color, and "To write" where a scene has its number. So a script that is only an outline so far, typed in `#` sections or brought in from Final Draft, fills the Cards tab, where it used to say "No scenes yet". Enter edits a card's synopsis, and the keys, the menu, and a drag move it, as they move a scene. Once a scene is written under a section, that scene is the card. An act you have emptied keeps a "To write" card, to move scenes back to.
+- **The Outline shows what a section is.** A section's row has its own synopsis under its title and its color beside it, and no longer says "0 scenes" when it has none. An outline with no scenes says "35 sections to write" where it said "0 scenes", and its filter finds a section by its title or its synopsis.
+- **Final Draft's outline colors come in.** A color on one of Final Draft's outline paragraphs (an act, a sequence, a scene) comes in as the nearest of Drafter's nine colors, in a `[[Color: …]]` note under the section. They were dropped.
 - **Drafter now says so when words won't print as you wrote them.** Four new entries in the Problems pane, each found by a review that went looking for text lost without a word:
   - **Characters the script font can't draw.** A script page is set in Courier Prime, which has Latin letters with their accents and little else. Cyrillic, Greek, Hebrew, Arabic, Chinese, Japanese, Korean, and emoji show on screen but print as empty boxes in the PDF. Drafter now warns once, at the first one, with how many there are and a few of them.
   - **A line that starts with `#` or `=` inside a speech or a paragraph.** Fountain reads it as a section or a synopsis, which doesn't print, so `#1 is the best.` under a character's name vanished and cut the speech in two. Drafter warns, and its fix puts a backslash first.
@@ -20,6 +23,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- For contributors: in `@drafter/outline`, a `Section` has `synopses` and `color` (its own stretch's, as a scene's are the scene's), `unwritten(index)` lists the sections still to write, and `setSynopsis` takes a section through `sectionHeader`. `@drafter/fdx` has `sceneColorOf`, which reads `#RRGGBB` and Final Draft's `#RRRRGGGGBBBB`.
 - For contributors: `@drafter/lint` now depends on `@drafter/layout`, for which title keys print and which characters the script font has (`courierPrimeHas`, `COURIER_PRIME_RANGES`); `@drafter/cli` depends on `@drafter/lint`.
 - For contributors: Drafter is now built on **Node 24**. `.nvmrc` says 24 (so do GitHub's checks, which read it), drafter.dev's build on Netlify uses Node 24, and the self-hosting image builds on `node:24.22.3-slim`. Node 22.13 or later still works: every package's `engines` and the desktop and `drafter-mcp` build targets are unchanged. The desktop app's own Node was already 24, inside Electron 45.
 - Dependencies: Nuxt 4.6.4 and node-forge 1.4.3, both security releases in build-time tools (neither ships to a writer), and a newer build of the self-hosting image's Caddy 2.11.9.

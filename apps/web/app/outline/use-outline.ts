@@ -8,6 +8,7 @@ import {
   type SceneDetails,
   type SceneIndex,
   sceneIndex,
+  sectionHeader,
   setColor,
   setSceneDetails,
   setSynopsis,
@@ -42,7 +43,8 @@ export interface OutlineSession {
   locked: ComputedRef<string | null>;
   /** Applies a view's changes as one transaction (one undo). False when nothing could change. */
   apply(changes: readonly TextChange[], options?: ApplyOptions): boolean;
-  setSynopsis(scene: Scene, text: string): boolean;
+  /** A scene's first synopsis, or a section's own (the `=` line under its heading). */
+  setSynopsis(item: OutlineItem, text: string): boolean;
   setColor(scene: Scene, color: SceneColor | null): boolean;
   /** Scene details: writes the header's changed fields in one undo, and says so. */
   setDetails(scene: Scene, details: SceneDetails): boolean;
@@ -87,7 +89,10 @@ function create(): OutlineSession {
       readOnly,
       locked,
       apply,
-      setSynopsis: (scene, text) => apply(setSynopsis(editor.doc.value, scene, text)),
+      setSynopsis: (item, text) =>
+        apply(
+          setSynopsis(editor.doc.value, item.kind === 'scene' ? item : sectionHeader(item), text),
+        ),
       setColor: (scene, color) => {
         const done = apply(setColor(editor.doc.value, scene, color));
         if (done) {

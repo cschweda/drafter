@@ -5,7 +5,9 @@ import {
   type MoveTarget,
   type OutlineItem,
   type Scene,
+  type Section,
   targetBefore,
+  unwritten,
   upTarget,
 } from '@drafter/outline';
 import type { DropdownMenuItem } from '@nuxt/ui';
@@ -22,7 +24,9 @@ import { showScaffold } from '~/scaffold/show';
 import { useSettings } from '~/settings/settings';
 
 // The Cards tab (Phase 2 design §7): every scene as an index card, in script order, under its
-// section's title. The cards are one listbox with a group per section and one tab stop; the arrow
+// section's title. A section still to write (no scenes in it, and no sections under it) has a card
+// too, so an outline made of sections alone, such as one brought in from Final Draft, is a board of
+// cards from the start; once a scene is written under it, that scene is the card. The cards are one listbox with a group per section and one tab stop; the arrow
 // keys move by where a card is drawn, Home and End go to the first and last. Enter edits the
 // card's first synopsis in place; its menu (the ⋯ button, the context-menu key, or Shift+F10) is
 // the Outline row's (`scene-menu.ts`). Alt+Left and Alt+Right move a card one place, Alt+Up and
@@ -41,7 +45,8 @@ const isPlay = computed(() => editor.template.value.id === 'stage-play-standard'
 
 interface Card {
   id: string;
-  scene: Scene;
+  /** The scene, or the section still to write. */
+  item: Scene | Section;
   /** A card with no synopsis: its scene's first line, so it is never an empty box. */
   preview: string | null;
   /**
@@ -62,32 +67,52 @@ interface Group {
 const titleOf = (block: number) =>
   index.value.sections.find((s) => s.block === block)?.title || 'Untitled section';
 
-/** The scenes in script order, a group for each run of scenes in the same innermost section. */
+/**
+ * The cards in script order: every scene, and every section still to write. A group is each run
+ * of cards under the same section: a scene's innermost one, a section's parent.
+ */
 const groups = computed<Group[]>(() => {
   const out: Group[] = [];
   const doc = editor.doc.value;
-  for (const scene of index.value.scenes) {
-    const preview = scene.synopses.length > 0 ? null : cardPreview(doc, scene);
-    const inner = scene.sections.at(-1);
+  const toWrite = new Set(unwritten(index.value).map((section) => section.block));
+  const byBlock = new Map(index.value.sections.map((section) => [section.block, section]));
+  /** The sections a section sits in, outermost first. */
+  const over = (section: Section): number[] => {
+    const chain: number[] = [];
+    for (let up = section.parent; up !== null; up = byBlock.get(up)?.parent ?? null) {
+      chain.unshift(up);
+    }
+    return chain;
+  };
+  for (const item of index.value.items) {
+    if (item.kind === 'section' && !toWrite.has(item.block)) continue;
+    const scene = item.kind === 'scene' ? item : null;
+    const preview = scene && scene.synopses.length === 0 ? cardPreview(doc, scene) : null;
+    const within = scene ? scene.sections : over(item as Section);
+    const inner = within.at(-1);
     const section = inner === undefined ? 'none' : String(inner);
-    const sig = JSON.stringify([
-      scene.ordinal,
-      scene.number,
-      scene.heading,
-      scene.color?.value,
-      scene.synopses.map((s) => s.text),
-      scene.fields.goal?.body,
-      scene.pages?.eighths,
-      preview,
-    ]);
-    const card = { id: idOf(scene), scene, preview, sig };
+    const sig = JSON.stringify(
+      scene
+        ? [
+            scene.ordinal,
+            scene.number,
+            scene.heading,
+            scene.color?.value,
+            scene.synopses.map((s) => s.text),
+            scene.fields.goal?.body,
+            scene.pages?.eighths,
+            preview,
+          ]
+        : ['section', (item as Section).title, item.color?.value, item.synopses.map((s) => s.text)],
+    );
+    const card = { id: idOf(item), item, preview, sig };
     const last = out.at(-1);
     if (last?.section === section) last.cards.push(card);
     else {
       out.push({
         key: `${section}:${out.length}`,
         section,
-        label: scene.sections.map(titleOf).join(', '),
+        label: within.map(titleOf).join(', '),
         cards: [card],
       });
     }
@@ -147,7 +172,14 @@ const moveUp = (item: OutlineItem) => move(item, upTarget(index.value, item.bloc
 const moveDown = (item: OutlineItem) => move(item, downTarget(index.value, item.block), 'down');
 /** Alt+Up and Alt+Down: a row of the grid as drawn (one place in one column). */
 const moveRow = (item: OutlineItem, id: string, direction: 'up' | 'down') =>
-  move(item, rowMoveTarget(index.value, item.block, columnsAt(id), direction), direction);
+  move(
+    item,
+    rowMoveTarget(index.value, item.block, columnsAt(id), direction, {
+      blocks: cards.value.map((c) => c.item.block),
+      groups: groups.value.map((g) => g.cards.length),
+    }),
+    direction,
+  );
 
 const movingToId = ref<string | null>(null);
 const movingTo = computed(() => (movingToId.value ? (now(movingToId.value) ?? null) : null));
@@ -178,7 +210,10 @@ function onDragstart(event: DragEvent, id: string) {
     return;
   }
   dragging.value = id;
-  event.dataTransfer?.setData('text/plain', card.scene.heading);
+  event.dataTransfer?.setData(
+    'text/plain',
+    card.item.kind === 'scene' ? card.item.heading : card.item.title,
+  );
   if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
 }
 
@@ -253,7 +288,7 @@ function menuItems(card: Card): DropdownMenuItem[][] {
       const item = now(id);
       if (item) act(item);
     });
-  return sceneMenuItems(card.id, card.scene, {
+  return sceneMenuItems(card.id, card.item, {
     go: withItem(go),
     edit: (id) => afterClosing(() => void startEditing(id)),
     moveUp: withItem((item) => void moveUp(item)),
@@ -291,7 +326,7 @@ async function startEditing(id: string) {
     void sayOutline(readOnly.value);
     return;
   }
-  draft.value = card.scene.synopses[0]?.text ?? '';
+  draft.value = card.item.synopses[0]?.text ?? '';
   editing.value = id;
   await nextTick();
   const input = document.getElementById(`${domId(id)}-field`) as HTMLInputElement | null;
@@ -304,7 +339,7 @@ function finishEditing(save: boolean) {
   if (!id) return;
   editing.value = null;
   const item = now(id);
-  if (save && item?.kind === 'scene') outline.setSynopsis(item, draft.value);
+  if (save && item) outline.setSynopsis(item, draft.value);
   void focusCard(id);
 }
 
@@ -382,7 +417,10 @@ watch(cards, async () => {
     <DEmpty v-else-if="cards.length === 0" icon="i-lucide-layout-grid">
       No scenes yet.
       <template v-if="isPlay">A scene starts with <code>##</code> and its title.</template>
-      <template v-else>A scene starts with a heading such as <code>INT. KITCHEN - NIGHT</code>.</template>
+      <template v-else>
+        A scene starts with a heading such as <code>INT. KITCHEN - NIGHT</code>, and a section to
+        outline with starts with <code>#</code>.
+      </template>
     </DEmpty>
     <div
       v-else
@@ -414,7 +452,7 @@ watch(cards, async () => {
               dropAt(card.id),
             ]"
             v-model:draft="draft"
-            :scene="card.scene"
+            :scene="card.item"
             :preview="card.preview"
             :dom-id="domId(card.id)"
             :current="card.id === current"
