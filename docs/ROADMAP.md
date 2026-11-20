@@ -4,7 +4,7 @@ The [README](../README.md#roadmap) has the short list: what's next, and what com
 
 ## Where things stand
 
-Drafter is at **v0.27.0**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
+Drafter is at **v0.27.1**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
 
 Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. Lately it brought:
 
@@ -25,10 +25,11 @@ Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. La
 - **The manuscript exports** (v0.26.1): a novel's standard manuscript, the format agents, editors, and contests ask for, as a PDF and a Word file, after a Manuscript details box whose answers stay in the book ([help](https://drafter.dev/docs/novel/#sending-it-out), [design](drafter-manuscript-design.md)).
 - **An About menu, and reports by email** (v0.26.2): Help for learning Drafter and About for Drafter itself; Report a problem… and Suggest an idea… can send by email on drafter.dev, through the site's own function and Resend; plain autosave warnings, typing never blocked by a script's file, and Drafter's settings block hidden in the editor.
 - **Production**, free (v0.27.0): lock pages and scene numbers (12A, 5A), revise in the industry's colors with marks where words changed, mark scenes OMITTED, and send out revised pages, a breakdown of every scene, and sides for an actor ([help](https://drafter.dev/docs/production/), [design](drafter-production-design.md)).
+- **Fixes before features** (v0.27.1), after a review of the whole app in November 2026: four faults a writer could meet are fixed (words typed just after a sample's first save were lost; a menu could close by itself; Reload for a new version could wait for ever; the Inspector's header could lose its labels), Drafter says so when words won't print as written, a page break never leaves one line of a paragraph behind, an outline is a board of cards with Final Draft's outline colors, and Save As asks for a name in every browser.
 
 Next, in order:
 
-1. **Fixes before features** (v0.27.x). New features wait while what is here is made right, after a review of the whole app in November 2026: Drafter says so when words won't print as written (characters the script font lacks, a `#` line inside a speech, title-page keys that don't print); a page break never leaves one line of a paragraph behind (breaking at the end of a sentence, inside a line, follows with a design of its own); and a script that has been to Final Draft and back is checked against real files.
+1. **More fixes before features** (v0.27.x). New features still wait: a page that, rarely, stops answering; why a new version sometimes doesn't take over on Reload; page breaks at the end of a sentence, inside a line, with a design of its own; and Final Draft's locked pages, revisions, and omitted scenes, checked against real files that have been to Final Draft and back.
 2. Storylines and pacing (v0.28.0).
 3. The **Workbook**, a story bible with your pasted, synced, and spoken notes (v0.29.0).
 4. An optional one-file `.drafter` project (v0.30.0, open spec).

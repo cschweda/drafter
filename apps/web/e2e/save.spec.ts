@@ -348,8 +348,11 @@ test.describe('saving where the browser can’t save in place', () => {
     expect((await mine(page))?.fileName).toBe('Untitled Screenplay.fountain');
 
     // Save As asks what to call this version, with the name it has selected to type over, and
-    // downloads under the new one: the first file is not written again.
+    // downloads under the new one: the first file is not written again. (Back in the editor
+    // first: a click on a button leaves focus on the button, or in Safari on nothing.)
+    await editor(page).click();
     await page.keyboard.insertText(' MORE');
+    await expectUnsaved(page);
     await openButton(page).click();
     await menu(page).getByRole('button', { name: 'Save As…' }).click();
     const ask = page.getByRole('dialog', { name: 'Save As' });
@@ -369,7 +372,9 @@ test.describe('saving where the browser can’t save in place', () => {
       .toBe('Second draft for Ana.fountain');
 
     // Escape saves nothing, and the script keeps its name.
+    await editor(page).click();
     await page.keyboard.insertText(' AGAIN');
+    await expectUnsaved(page);
     await openButton(page).click();
     await menu(page).getByRole('button', { name: 'Save As…' }).click();
     await expect(name).toHaveValue('Second draft for Ana.fountain');

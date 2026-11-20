@@ -313,10 +313,11 @@ test.describe('moving cards', () => {
     await page.keyboard.press('Alt+ArrowUp');
     // From Act Two's first row, before the card in Act One's last row in the same column; in one
     // column (a phone), one place: to the end of Act One.
-    if (cols === 1) await expect.poll(() => order(page)).toEqual([HALL, YARD, SHED, CAR]);
-    // In two columns that takes Act Two's last scene, and an act with nothing in it yet has a
-    // card of its own, "To write", where a scene can be moved back.
-    else if (cols === 2) {
+    // Either way that takes Act Two's last scene, and an act with nothing in it yet has a card of
+    // its own, "To write", where a scene can be moved back.
+    if (cols === 1) {
+      await expect.poll(() => order(page)).toEqual([HALL, YARD, SHED, CAR, 'Act Two']);
+    } else if (cols === 2) {
       await expect.poll(() => order(page)).toEqual([HALL, YARD, CAR, SHED, 'Act Two']);
       await expect(cards(page).getByRole('option', { name: 'Act Two, to write' })).toBeVisible();
     } else await expect.poll(() => order(page)).toEqual([CAR, HALL, YARD, SHED]);
