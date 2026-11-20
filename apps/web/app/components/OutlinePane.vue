@@ -292,7 +292,7 @@ function onMenuCloseAutoFocus(event: Event) {
   requestAnimationFrame(() => {
     if (act) act();
     // Not when another row's menu has opened since: focus is that menu's now.
-    else if (menuFor.value === null && id) void focusRow(id);
+    else if (menuFor.value === null && id && focusIsFree()) void focusRow(id);
   });
 }
 

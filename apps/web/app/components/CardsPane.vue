@@ -272,7 +272,7 @@ function onMenuCloseAutoFocus(event: Event) {
   afterMenu = null;
   requestAnimationFrame(() => {
     if (act) act();
-    else if (menuFor.value === null && id) void focusCard(id);
+    else if (menuFor.value === null && id && focusIsFree()) void focusCard(id);
   });
 }
 

@@ -225,7 +225,7 @@ function onMenuCloseAutoFocus(event: Event) {
   afterMenu = null;
   requestAnimationFrame(() => {
     if (act) act();
-    else if (menuFor.value === null && id) blockEl(id)?.focus();
+    else if (menuFor.value === null && id && focusIsFree()) blockEl(id)?.focus();
   });
 }
 const MENU_CONTENT = { align: 'start' as const, onCloseAutoFocus: onMenuCloseAutoFocus };

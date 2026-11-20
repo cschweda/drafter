@@ -201,6 +201,61 @@ test.describe("Save's arrow", () => {
     await expect(saveOptions(page)).toBeFocused();
   });
 
+  // A menu that closes gives focus back to its button "in a moment" (a zero-millisecond timer).
+  // On a slow machine a click on another button gets in first: that button's menu opened, the
+  // timer then took focus to the first button, and the new menu, having lost focus, closed. Here
+  // the moment is made long, so the click always gets in first.
+  test('a menu that is closing never takes focus back from the button clicked next', async ({
+    page,
+  }) => {
+    test.skip(!wide(page), 'the top bar’s File button');
+    await page.addInitScript(() => {
+      const real = window.setTimeout.bind(window);
+      (window as unknown as { __slowTimers: boolean }).__slowTimers = false;
+      window.setTimeout = ((handler: TimerHandler, ms?: number, ...rest: unknown[]) =>
+        real(
+          handler,
+          (window as unknown as { __slowTimers: boolean }).__slowTimers && !ms ? 400 : ms,
+          ...rest,
+        )) as typeof window.setTimeout;
+    });
+    await start(page);
+    const file = page.getByRole('button', { name: 'File', exact: true });
+    const scripts = page.getByRole('group', { name: 'Scripts', exact: true });
+    for (const first of [mark(page), saveOptions(page), helpButton(page)]) {
+      await first.click();
+      await expect(page.getByRole('menu')).toBeVisible();
+      await page.evaluate(() => {
+        (window as unknown as { __slowTimers: boolean }).__slowTimers = true;
+      });
+      await page.keyboard.press('Escape');
+      // Once the menu is gone from the page, with its moment still to come: a click while it is
+      // still fading counts as a click outside it, and it gives focus to nothing then.
+      await expect(page.getByRole('menu')).toHaveCount(0);
+      await file.click();
+      await expect(scripts.getByRole('button', { name: 'New screenplay' })).toBeVisible();
+      // Long enough for the closed menu's moment to have come (one timer starts another).
+      await page.waitForTimeout(1300);
+      await expect(scripts.getByRole('button', { name: 'New screenplay' })).toBeVisible();
+      await expect(first).not.toBeFocused();
+      await page.evaluate(() => {
+        (window as unknown as { __slowTimers: boolean }).__slowTimers = false;
+      });
+      await page.keyboard.press('Escape');
+      await expect(scripts).toBeHidden();
+    }
+  });
+
+  // With nothing clicked meanwhile, focus still goes back to the button that opened the menu.
+  test('a menu closed with Escape gives focus back to its button', async ({ page }) => {
+    await start(page);
+    await mark(page).click();
+    await expect(menu(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toBeHidden();
+    await expect(mark(page)).toBeFocused();
+  });
+
   test('Save and Save As… ask where, through the same commands the keys run', async ({
     page,
     browserName,

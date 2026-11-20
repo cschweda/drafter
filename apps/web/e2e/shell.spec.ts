@@ -559,6 +559,41 @@ test.describe("the Inspector's header", () => {
     await expect(changes.locator('.tool-label')).toBeVisible();
   });
 
+  // The header goes icon-only when its tools don't fit, and gets its labels back when it sees them
+  // get narrower. A tool that was there for a moment (one script's tools while another's are
+  // drawn) could make it go icon-only and be gone again before the header had noted how wide the
+  // icon-only tools were: it then saw nothing get narrower, and stayed icon-only with room to
+  // spare (the test below, now and then, on a slow runner). Here the moment is made to order.
+  test('the labels come back when what crowded the header is gone at once', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await start(page);
+    await newScreenplay(page);
+    const tools = page.locator('#inspector-tools');
+    const changes = tools.getByRole('button', { name: 'Changes', exact: true });
+    await expect(changes.locator('.tool-label')).toBeVisible();
+    await page.evaluate(() => {
+      const box = document.querySelector('#inspector-tools') as HTMLElement;
+      const extra = document.createElement('span');
+      extra.style.cssText = 'display:inline-block;flex:none;width:900px;height:1px';
+      (window as unknown as { __wentCompact: boolean }).__wentCompact = false;
+      // Gone the moment the header goes icon-only, before it measures itself that way.
+      new MutationObserver((_, observer) => {
+        if (!box.classList.contains('compact')) return;
+        (window as unknown as { __wentCompact: boolean }).__wentCompact = true;
+        extra.remove();
+        observer.disconnect();
+      }).observe(box, { attributes: true, attributeFilter: ['class'] });
+      box.append(extra);
+    });
+    await expect
+      .poll(() =>
+        page.evaluate(() => (window as unknown as { __wentCompact: boolean }).__wentCompact),
+      )
+      .toBe(true);
+    await expect(tools).not.toHaveClass(/\bcompact\b/);
+    await expect(changes.locator('.tool-label')).toBeVisible();
+  });
+
   test('at 1440, the labels come back after a screenplay, then New stage play', async ({
     page,
   }) => {

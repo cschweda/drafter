@@ -64,6 +64,19 @@ function restoreWorker() {
  * tests that do this run one at a time (they share the file) and put it back afterward.
  */
 async function deployNewVersion(page: Page) {
+  // Not before the version that is there has finished taking over: a deploy is never thirty
+  // milliseconds behind a first visit's worker, as it can be here. (A hedge, not a proven cause:
+  // in the runs where Reload then never reloaded, the new version had been deployed and chosen
+  // within 30 ms of the first one's files being fetched; docs/DECISIONS.md, 2026-11-20.)
+  await page.evaluate(async () => {
+    const { active } = await navigator.serviceWorker.ready;
+    if (!active || active.state === 'activated') return;
+    await new Promise<void>((done) => {
+      active.addEventListener('statechange', () => {
+        if (active.state === 'activated') done();
+      });
+    });
+  });
   writeFileSync(SW_FILE, `${SW_ORIGINAL}\n// a new version, ${Date.now()}\n`);
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.getRegistration();
@@ -235,6 +248,9 @@ test.describe('offline', () => {
     page,
     context,
   }) => {
+    // Forty page loads: 29.7 of the usual 30 seconds on a shared macOS runner, where it then ran
+    // out of time on its last click.
+    test.slow();
     await start(page);
     await context.setOffline(true);
     // The page asks for nothing the worker can't answer (Nuxt fetches a prerendered page's payload).

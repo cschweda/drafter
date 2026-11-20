@@ -4,8 +4,10 @@ import { fetchNewest } from '~/update/check';
 import {
   createControllerWatch,
   flushBeforeReload,
+  installError,
   leavingRequested,
   needRefresh,
+  reloadOrGiveUp,
   replaced,
   setUpdater,
 } from '~/update/state';
@@ -46,10 +48,31 @@ export default defineNuxtPlugin(() => {
     await flushBeforeReload();
     if (leavingRequested()) allowLeaving();
     if (updated) markUpdating(sessionStore());
-    window.location.reload();
+    reloadOrGiveUp({
+      reload: () => window.location.reload(),
+      stop: () => window.stop(),
+      // The page is still here: it is the version it was, so no "up to date" on the next load,
+      // the toast says the switch didn't happen, and the updater comes back, which gives the
+      // editor back (flow.ts). Reload can be chosen again.
+      stuck: () => {
+        takeUpdated(sessionStore());
+        reloading = false;
+        installError.value = true;
+        const settle = comeBack;
+        comeBack = undefined;
+        settle?.();
+      },
+    });
   };
-  /** What the updater returns once a reload is under way: it never settles (flow.ts says why). */
-  const away = () => new Promise<never>(() => {});
+  /**
+   * What the updater returns once a reload is under way: it settles only if the reload never
+   * happens (flow.ts says why it otherwise never does).
+   */
+  let comeBack: (() => void) | undefined;
+  const away = () =>
+    new Promise<void>((resolve) => {
+      comeBack = resolve;
+    });
 
   // On a first visit the worker takes over a moment after it installs (`clientsClaim`): that first
   // change of controller is not an update (state.ts says how the rest are told apart).
