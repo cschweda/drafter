@@ -18,7 +18,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.27.0.** The web app and the desktop apps for Windows and Linux are ready to use. v0.27.0 brings **Production**, free: lock pages and scene numbers, revise in colors with asterisks where words changed, mark scenes OMITTED, and send out revised pages, a breakdown of every scene, and sides for an actor. See the [roadmap](#roadmap).
+> **Status: v0.27.1.** The web app and the desktop apps for Windows and Linux are ready to use. v0.27.1 is **fixes before features**: four faults a writer could meet are fixed (typing lost after a first save, a menu closing by itself, Reload waiting for ever, the Inspector's labels lost), Drafter says so when words won't print as written, and an outline is a board of cards from the start. v0.27.0 brought **Production**, free. See the [roadmap](#roadmap).
 
 ## Contents
 
@@ -179,7 +179,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.27.0, there are **8,738 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,463 browser tests**, each run in five browser setups (7,315 runs), 140 end-to-end tests of the desktop app, and **294 trap documents** with 1,376 checks:
+**What runs.** As of v0.27.1, there are **8,790 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,472 browser tests**, each run in five browser setups (7,360 runs), 140 end-to-end tests of the desktop app, and **294 trap documents** with 1,376 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
@@ -323,10 +323,11 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 - **Classic Mode** (v0.25.0): type a script with Enter and Tab, over a file that stays Fountain.
 - **Novel** (v0.26.0): draft a book in Markdown, with its chapters and sections in the Outline and on Cards, and send it out as a standard manuscript, as a PDF or a Word file (v0.26.1).
 - **Production** (v0.27.0): locked pages and scene numbers, revision colors and marks, OMITTED scenes, revised pages, a breakdown report, and sides, free.
+- **Fixes before features** (v0.27.1): four faults a writer could meet fixed, warnings when words won't print as written, page breaks that never leave one line of a paragraph behind, an outline as a board of cards, and Save As with a name in every browser.
 
 **Next:**
 
-- **Fixes before features** (v0.27.x): Drafter says so when words won't print as written, a page break never leaves one line of a paragraph behind, and Final Draft files are checked on a real round trip. New features wait until then.
+- **More fixes before features** (v0.27.x): a page that, rarely, stops answering; page breaks at the end of a sentence; and Final Draft files checked on a real round trip, with locked pages and revisions. New features wait until then.
 - Storylines, the strip's Color by, and pacing (v0.28.0).
 
 **Later:**
