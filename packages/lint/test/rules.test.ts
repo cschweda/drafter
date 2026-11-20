@@ -1029,3 +1029,134 @@ describe('the rules on the fixtures', () => {
     expect(starts('15-int-sentence', 'heading-no-time')).toEqual([0]);
   });
 });
+
+describe('marker-in-paragraph', () => {
+  const { found, hit, miss, fixed } = forRule('marker-in-paragraph');
+
+  it('reports a # line right under a line of a speech', () => {
+    const d = hit('BOB\n#1 is the best.\nReally.\n');
+    expect(d.severity).toBe('warning');
+    expect(d.span).toEqual({ from: 4, to: 19 });
+    expect(d.message).toBe(
+      'This line starts with "#", so it is read as a section and doesn\'t print. To print it, put a backslash first: \\#',
+    );
+  });
+
+  it('reports an = line right under dialogue or action', () => {
+    expect(hit('BOB\nTwo and two\n= four.\n').message).toContain('read as a synopsis');
+    hit('She writes on the board:\n= 4\n');
+  });
+
+  it('reports a # with a number straight after it, wherever it is', () => {
+    hit('INT. OFFICE - DAY\n\n#1 DAD mug sits on the desk.\n');
+    miss('INT. OFFICE - DAY\n\n# 1 The Office\n');
+  });
+
+  it('leaves sections and synopses alone where they belong', () => {
+    miss('# Act One\n\n## Sequence\n\nINT. HALL - DAY\n= She finds the letter.\n\nShe waits.\n');
+    miss('She waits.\n\n# Act Two\n\n= The reversal.\n');
+    miss('# Act One\n= What happens in it.\n## Sequence\n');
+    miss('===\n# Act Two\n');
+  });
+
+  it('puts a backslash before the mark, which makes the line print', () => {
+    const source = fixed('BOB\n#1 is the best.\nReally.\n');
+    expect(source).toBe('BOB\n\\#1 is the best.\nReally.\n');
+    expect(parse(source).blocks.map((block) => block.kind)).toEqual(['character', 'dialogue']);
+    expect(found(source)).toEqual([]);
+    expect(fixed('She writes:\n  = 4\n')).toBe('She writes:\n  \\= 4\n');
+  });
+
+  it('keeps a CRLF file CRLF', () => {
+    expect(fixed('BOB\r\n#1 is the best.\r\n')).toBe('BOB\r\n\\#1 is the best.\r\n');
+  });
+});
+
+describe('transition-trailing-space', () => {
+  const { hit, miss, fixed } = forRule('transition-trailing-space');
+
+  it('reports a transition that a space after the colon turned into action', () => {
+    const d = hit('He leaves.\n\nCUT TO: \n\nINT. HALL - DAY\n');
+    expect(d.severity).toBe('info');
+    expect(d.message).toBe(
+      '"CUT TO:" has a space after it, so it prints as action. Take the space away to make it a transition.',
+    );
+  });
+
+  it('takes the space away, and the line is a transition', () => {
+    const source = fixed('He leaves.\n\nSMASH CUT TO:  \t\n\nINT. HALL - DAY\n');
+    expect(source).toBe('He leaves.\n\nSMASH CUT TO:\n\nINT. HALL - DAY\n');
+    expect(parse(source).blocks[1]?.kind).toBe('transition');
+    expect(fixed('CUT TO: \r\n\r\nINT. HALL - DAY\r\n')).toBe('CUT TO:\r\n\r\nINT. HALL - DAY\r\n');
+  });
+
+  it('leaves a transition, a forced action, and a line in small letters alone', () => {
+    miss('He leaves.\n\nCUT TO:\n\nINT. HALL - DAY\n');
+    miss('He leaves.\n\n!CUT TO: \n\nINT. HALL - DAY\n');
+    miss('He leaves.\n\nShe says to cut TO: \n\nINT. HALL - DAY\n');
+    miss('He leaves.\n\nCUT TO: \nthe chase.\n');
+    miss('CUT TO:\r\r\n');
+  });
+});
+
+describe('title-key-not-printed', () => {
+  const { found, miss } = forRule('title-key-not-printed');
+
+  it('reports each key the title page never prints', () => {
+    const all = found(
+      'Title: Signal Hill\nCopyright: 2026 June Park\nWGA: 12345\n\nINT. ROOM - DAY\n',
+    );
+    expect(all.map((d) => [d.severity, d.span, d.message])).toEqual([
+      [
+        'info',
+        { from: 19, to: 44 },
+        '"Copyright" doesn\'t print on the title page. Title, Credit, Author, Source, Contact, and Draft date do.',
+      ],
+      [
+        'info',
+        { from: 45, to: 55 },
+        '"WGA" doesn\'t print on the title page. Title, Credit, Author, Source, Contact, and Draft date do.',
+      ],
+    ]);
+  });
+
+  it('leaves the keys that print, Logline, and a key with no value alone', () => {
+    miss(
+      'Title: Signal Hill\nCredit: by\nAuthors: June Park\nSource: a story\nContact: june@example.com\nDraft date: 1 May\nDate: 1 May\nLogline: A radio operator hears a voice.\nNotes:\n\nINT. ROOM - DAY\n',
+    );
+    miss('INT. ROOM - DAY\n\nShe waits.\n');
+  });
+});
+
+describe('not-in-font', () => {
+  const { hit, miss, missIn } = forRule('not-in-font');
+
+  it('reports once, at the first character Courier Prime cannot draw', () => {
+    const d = hit('ИВАН\nДа.\n\nShe smiles 😀.\n');
+    expect(d.severity).toBe('warning');
+    expect(d.span).toEqual({ from: 0, to: 1 });
+    expect(d.message).toBe(
+      "Drafter's script font, Courier Prime, has no shape for 7 characters in this script (И В А Н Д …). They show on screen, but print as empty boxes in the PDF.",
+    );
+  });
+
+  it('counts a character outside the first plane once, and names it whole', () => {
+    const d = hit('She smiles 😀.\n');
+    expect(d.span).toEqual({ from: 11, to: 13 });
+    expect(d.message).toContain('1 character in this script (😀)');
+  });
+
+  it('reads the title page’s printed values', () => {
+    expect(hit('Title: 東京\n\nShe waits.\n').span).toEqual({ from: 7, to: 8 });
+    miss('Title: Tokyo\nCopyright: 東京\n\nShe waits.\n');
+  });
+
+  it('leaves Latin with accents, curly quotes, dashes, tabs, and odd spaces alone', () => {
+    miss('JOSÉ\n“Żółć” — it’s naïve… café au lait.\tDone. \n');
+  });
+
+  it('leaves notes, boneyard, and what the template doesn’t print alone', () => {
+    miss('She waits. [[Да]]\n\n/* 東京 */\n\n= 東京\n');
+    missIn(stagePlay, 'She waits. [[Да]]\n');
+  });
+});

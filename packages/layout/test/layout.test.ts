@@ -218,6 +218,11 @@ describe('dialogue', () => {
     const layout = lay("MARGARET\nOne.\n\nShe waits.\n\nMARGARET (cont'd)\nTwo.");
     expect(text(firstPart(layout, 3))).toBe("MARGARET (CONT'D)");
   });
+
+  it("doesn't add it to a cue that has it with a curly apostrophe", () => {
+    const layout = lay('MARGARET\nOne.\n\nShe waits.\n\nMARGARET (CONT’D)\nTwo.');
+    expect(text(firstPart(layout, 3))).toBe('MARGARET (CONT’D)');
+  });
 });
 
 describe('dual dialogue', () => {

@@ -301,7 +301,9 @@ class Items {
         .filter((line) => !line.transparent)
         .map((line) => joined(line.inline))
         .join(' ');
-      const already = printed.trimEnd().toUpperCase().endsWith(marker.trim().toUpperCase());
+      // A curly apostrophe is the same mark: (CONT’D), as a word processor or an import writes it.
+      const plain = (s: string) => s.trim().toUpperCase().replaceAll('’', "'");
+      const already = plain(printed).endsWith(plain(marker));
       const added = speech.contd && !already;
       cue = this.#lines(speech.cue, cueP, undefined, added ? ` ${marker}` : undefined);
       // On a split, the cue prints again on the next page, ending in (CONT'D).

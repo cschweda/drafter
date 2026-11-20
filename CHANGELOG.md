@@ -6,13 +6,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Drafter now says so when words won't print as you wrote them.** Four new entries in the Problems pane, each found by a review that went looking for text lost without a word:
+  - **Characters the script font can't draw.** A script page is set in Courier Prime, which has Latin letters with their accents and little else. Cyrillic, Greek, Hebrew, Arabic, Chinese, Japanese, Korean, and emoji show on screen but print as empty boxes in the PDF. Drafter now warns once, at the first one, with how many there are and a few of them.
+  - **A line that starts with `#` or `=` inside a speech or a paragraph.** Fountain reads it as a section or a synopsis, which doesn't print, so `#1 is the best.` under a character's name vanished and cut the speech in two. Drafter warns, and its fix puts a backslash first.
+  - **A title-page key that doesn't print.** The title page prints Title, Credit, Author, Source, Contact, and Draft date. Copyright, Notes, Revision, and any key of your own stay in the file and print nowhere; each is now listed, as advice.
+  - **`CUT TO:` with a space after it.** That space makes the line action, which is Fountain's rule and easy to do by accident. Drafter points it out, and its fix removes the space.
+- **`\#` and `\=` at the start of a line print the mark.** Until now nothing could make a line of dialogue start with `#` or `=`.
+- **`drafter check` lists everything the Problems pane does.** It used to run none of the pane's rules, so it could say "no problems" about a script the app had warnings for.
+
 ### Changed
 
+- For contributors: `@drafter/lint` now depends on `@drafter/layout`, for which title keys print and which characters the script font has (`courierPrimeHas`, `COURIER_PRIME_RANGES`); `@drafter/cli` depends on `@drafter/lint`.
 - For contributors: Drafter is now built on **Node 24**. `.nvmrc` says 24 (so do GitHub's checks, which read it), drafter.dev's build on Netlify uses Node 24, and the self-hosting image builds on `node:24.22.3-slim`. Node 22.13 or later still works: every package's `engines` and the desktop and `drafter-mcp` build targets are unchanged. The desktop app's own Node was already 24, inside Electron 45.
 - Dependencies: Nuxt 4.6.4 and node-forge 1.4.3, both security releases in build-time tools (neither ships to a writer), and a newer build of the self-hosting image's Caddy 2.11.9.
 
 ### Fixed
 
+- **An underscore inside a word is an underscore.** `jane_q_doe@example.com` printed as `janeqdoe@example.com`, underlined, and `Title: My_Script_v2` as `MyScriptv2`, on the title page and in the PDF's own title. Underscores now underline only around whole words (`_like this_`).
+- **`(CONT’D)` was printed twice** after a cue that already had it with a curly apostrophe, as a word processor or an imported script writes it: `STEEL (CONT’D) (CONT'D)`.
+- **The help pages said Production was still coming.** Why Drafter and What is Drafter? listed it as "coming in v0.27.0" inside v0.27.0, and the comparison table showed a version where a ✓ belonged. They now say it is here, with a link to its help page. `docs/ROADMAP.md` said v0.26.2 and listed Production as next; it and the README's roadmap now put fixes before new features.
 - For contributors: the test of what `npm pack` would publish for Drafter for Claude failed under Node 24. npm 11 warns about two settings that are pnpm's alone, which pnpm hands to every script it runs, and the test allows no warnings. It now calls npm without pnpm's settings.
 
 ## [0.27.0] - 2026-11-09
