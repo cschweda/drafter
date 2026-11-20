@@ -4,7 +4,7 @@ import { lint } from '@drafter/lint';
 import { fieldNote, insertNote } from '@drafter/notes';
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { type Section, sceneIndex } from '../src';
+import { type Section, sceneIndex, sectionHeader, setSynopsis, unwritten } from '../src';
 import { anyScript } from './arbitraries';
 import {
   apply,
@@ -108,6 +108,89 @@ describe('sceneIndex', () => {
     expect(arrival?.parent).toBe(actOne?.block);
     expect(actOne?.scenes).toBe(3);
     expect(index.scenes[2]?.sections).toEqual([actOne?.block, index.sections[2]?.block]);
+  });
+
+  test('a section has its own synopses and color, and a scene keeps its own', () => {
+    const source = [
+      '# Act One',
+      '',
+      '[[Color: Teal]]',
+      '',
+      '= The setup.',
+      '',
+      '= And a second line of it.',
+      '',
+      '## Arrival',
+      '',
+      'INT. A - DAY',
+      '',
+      '= She arrives.',
+      '',
+      '[[Color: red]]',
+      '',
+      'One.',
+      '',
+      '## Trouble [[Color: ]]',
+      '',
+      '### Still to write',
+      '',
+      '= Nothing here yet.',
+    ].join('\n');
+    const doc = parse(source);
+    const index = sceneIndex(doc, screenplay);
+    const [actOne, arrival, trouble, toWrite] = index.sections;
+    expect(actOne?.synopses.map((s) => s.text)).toEqual(['The setup.', 'And a second line of it.']);
+    expect(actOne?.color?.value).toBe('teal');
+    expect(source.slice(actOne?.color?.span.from, actOne?.color?.span.to)).toBe('[[Color: Teal]]');
+    // The scene's synopsis and color are the scene's, not the section's it is in.
+    expect(arrival?.synopses).toEqual([]);
+    expect(arrival?.color).toBeNull();
+    expect(index.scenes[0]?.synopses.map((s) => s.text)).toEqual(['She arrives.']);
+    expect(index.scenes[0]?.color?.value).toBe('red');
+    // An empty color is no color; a section with nothing under it but its synopsis has it.
+    expect(trouble?.color).toBeNull();
+    expect(toWrite?.synopses.map((s) => s.text)).toEqual(['Nothing here yet.']);
+    expect(toWrite?.scenes).toBe(0);
+  });
+
+  test('the sections still to write are those with no scene and no section under them', () => {
+    const titles = (source: string) =>
+      unwritten(sceneIndex(parse(source), screenplay)).map((s) => s.title);
+    // An outline of sections alone: every innermost one.
+    expect(
+      titles('# Act One\n\n## Arrival\n\n### The key\n\n### The maids\n\n## Trouble\n\n# Act Two'),
+    ).toEqual(['The key', 'The maids', 'Trouble', 'Act Two']);
+    // One with a scene in it is written, and so is every section over it.
+    expect(
+      titles(
+        '# Act One\n\n## Arrival\n\nINT. A - DAY\n\nOne.\n\n## Trouble\n\n# Act Two\n\nINT. B - DAY',
+      ),
+    ).toEqual(['Trouble']);
+    expect(titles('INT. A - DAY\n\nOne.')).toEqual([]);
+    // A play's scenes are its `##` sections: an act with none is still to write.
+    expect(
+      unwritten(sceneIndex(parse('# Act One\n\n## Scene 1\n\nHello.\n\n# Act Two'), stagePlay)).map(
+        (s) => s.title,
+      ),
+    ).toEqual(['Act Two']);
+  });
+
+  test('a section’s synopsis is set as a scene’s is', () => {
+    const edit = (source: string, text: string) => {
+      const doc = parse(source);
+      const [section] = sceneIndex(doc, screenplay).sections;
+      return apply(source, setSynopsis(doc, sectionHeader(section as Section), text));
+    };
+    expect(edit('# Act One\n\n= The setup.\n\n## Arrival', 'A new setup.')).toBe(
+      '# Act One\n\n= A new setup.\n\n## Arrival',
+    );
+    expect(edit('# Act One\n\n## Arrival', 'The setup.')).toBe(
+      '# Act One\n\n= The setup.\n\n## Arrival',
+    );
+    expect(edit('# Act One\n\n[[Color: teal]]\n\n## Arrival', 'The setup.')).toBe(
+      '# Act One\n\n= The setup.\n[[Color: teal]]\n\n## Arrival',
+    );
+    expect(edit('# Act One\n\n= The setup.\n\n## Arrival', '')).toBe('# Act One\n\n## Arrival');
   });
 
   test('keeps the title page and an opening note in the preamble', () => {

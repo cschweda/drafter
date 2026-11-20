@@ -1,4 +1,5 @@
 import { type BlockKind, type Doc, parse } from '@drafter/fountain';
+import { sceneColorOf } from './color';
 import { readXml, type XmlElement, XmlError } from './xml';
 
 // Final Draft import (technical design §6.3): the inverse of `toFdx`, written as Fountain text,
@@ -930,8 +931,12 @@ class Importer {
     if (sectionType && sectionMark !== undefined && !(section > 0)) {
       this.action(lines, type);
     } else if (isSection) {
-      if (outlineDepth === 0 || lines.length > 0)
+      if (outlineDepth === 0 || lines.length > 0) {
         this.push(`${'#'.repeat(depth)} ${lines.map(plainLine).join(' ').trim()}`.trimEnd());
+        // Final Draft's color on an outline paragraph, as the nearest of Drafter's colors.
+        const color = outline ? sceneColorOf(attrs.Color) : null;
+        if (color) this.push(`[[Color: ${color}]]`);
+      }
     } else if (summaryType) {
       // Final Draft's summary of the item before it: a synopsis in its place, which keeps the order
       // (after the speech, inside one).

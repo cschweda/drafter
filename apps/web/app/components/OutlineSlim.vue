@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { unwritten } from '@drafter/outline';
 import { useEditor } from '~/editor/session';
 import { novelSummary } from '~/novel/labels';
 import { useLiveNovel } from '~/novel/use-novel';
@@ -15,6 +16,9 @@ const summary = computed(() => {
     return novelSummary(novel.tree.value, novel.facts.value.bookTarget ?? null);
   }
   const { scenes } = index.value;
+  // An outline of sections alone: how many are still to write, not "0 scenes".
+  const toWrite = scenes.length === 0 ? unwritten(index.value).length : 0;
+  if (toWrite > 0) return `${toWrite} ${toWrite === 1 ? 'section' : 'sections'} to write`;
   const count = `${scenes.length} ${scenes.length === 1 ? 'scene' : 'scenes'}`;
   if (scenes.length === 0 || scenes.some((s) => s.pages === null)) return count;
   return `${count} · ${lengthLabel(scenes.reduce((sum, s) => sum + (s.pages?.eighths ?? 0), 0))}`;

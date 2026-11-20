@@ -47,6 +47,18 @@ function headingText(block: Block): string {
   return block.lines[0]?.raw.trim() ?? '';
 }
 
+/** The first `[[Color: …]]` note among `regions` with a value: the value, lowercased, and the note's span. */
+function colorIn(source: string, regions: readonly Region[]): Scene['color'] {
+  for (const found of regions) {
+    if (found.kind !== 'note' || !found.closed) continue;
+    const keyed = readKeyedNote(source.slice(found.span.from + 2, found.span.to - 2));
+    if (keyed?.key === 'color' && keyed.body !== '') {
+      return { value: keyed.body.toLowerCase(), span: { ...found.span } };
+    }
+  }
+  return null;
+}
+
 /** What a scene's notes say (`regions` are the ones inside it, in order): its fields, storylines, and marks. */
 export function sceneNotes(
   source: string,
@@ -202,14 +214,7 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
       let past = region;
       while (past < regions.length && (regions[past]?.span.from ?? 0) < span.to) past++;
       const inside = regions.slice(region, past);
-      let color: Scene['color'] = null;
-      for (const found of inside) {
-        if (found.kind !== 'note' || !found.closed || color) continue;
-        const keyed = readKeyedNote(source.slice(found.span.from + 2, found.span.to - 2));
-        if (keyed?.key === 'color' && keyed.body !== '') {
-          color = { value: keyed.body.toLowerCase(), span: { ...found.span } };
-        }
-      }
+      const color = colorIn(source, inside);
       let scenePages: Scene['pages'] = null;
       if (pages) {
         const from = pages.at(index);
@@ -262,11 +267,17 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
     // Its own stretch: the heading and the blocks before its first child (or the next section).
     const names: Names = new Map();
     const tally = new TimingTally(template);
+    const synopses: Synopsis[] = [];
     for (let i = index; i < next; i++) {
       const b = blocks[i] as Block;
+      if (b.kind === 'synopsis') synopses.push({ text: b.sem.text, block: i, span: { ...b.span } });
       noteSpeaker(names, b);
       tally.add(b, i);
     }
+    // The notes in its own stretch. Regions are in source order, as sections and scenes are.
+    while (region < regions.length && (regions[region]?.span.from ?? 0) < block.span.from) region++;
+    let past = region;
+    while (past < regions.length && (regions[past]?.span.from ?? 0) < unitEnd) past++;
     const section: Section = {
       kind: 'section',
       block: index,
@@ -275,6 +286,8 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
       span: { from: block.span.from, to: unitEnd },
       introEnd: unitEnd,
       parent: open[open.length - 1]?.section.block ?? null,
+      synopses,
+      color: colorIn(source, regions.slice(region, past)),
       scenes: 0,
       eighths: pages ? 0 : null,
       timing: { spoken: 0, actionLines: 0 },
@@ -293,6 +306,16 @@ export function sceneIndex(doc: Doc, template: Template, layout?: Layout | null)
   for (const section of sections) if (section.scenes === 0) section.eighths = null;
 
   return { preamble, items, scenes, sections, tree, opening };
+}
+
+/**
+ * The sections still to write: each one with no scene in it and no section under it, in order. An
+ * outline made of sections alone (one brought in from Final Draft, or typed) is all of these, and
+ * the Cards tab gives each a card until it has scenes of its own.
+ */
+export function unwritten(index: SceneIndex): Section[] {
+  const parents = new Set(index.sections.map((section) => section.parent));
+  return index.sections.filter((section) => section.scenes === 0 && !parents.has(section.block));
 }
 
 /** The opening from its tally, or null when no one speaks in it. */
