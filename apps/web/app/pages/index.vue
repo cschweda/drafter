@@ -218,6 +218,7 @@ onBeforeUnmount(() => {
     <SameTitleDialog />
     <MarkdownDialog />
     <BothChangedDialog />
+    <SaveAsDialog />
     <RemoveDialog />
     <ProductionDialog />
     <ModuleConfirmDialog />

@@ -471,6 +471,55 @@ describe('saving through a FileAccess', () => {
     expect(parse(String(t.log.downloads[1]?.data)).titlePage).toBeTruthy();
   });
 
+  test('Save As asks for a name when the browser can’t save in place, and downloads under it', async () => {
+    const t = await fresh({ inPlace: false });
+    const { saveAsQuestion } = await import('../app/storage/save');
+    await t.script.newScript('screenplay');
+    t.type('A\n');
+    await t.save();
+    // Save never asks: the same name again.
+    expect(saveAsQuestion.value).toBeNull();
+
+    const saving = t.saveAs();
+    await vi.waitFor(() => expect(saveAsQuestion.value?.name).toBe('Untitled Screenplay.fountain'));
+    saveAsQuestion.value?.answer('  The Call: draft 2 for Ana  ');
+    expect(await saving).toBe('saved');
+    expect(saveAsQuestion.value).toBeNull();
+    expect(t.log.downloads.map((d) => d.name)).toEqual([
+      'Untitled Screenplay.fountain',
+      'The Call draft 2 for Ana.fountain',
+    ]);
+    // The script follows the new name, as it follows a file picked in Save As.
+    expect(t.script.project.value?.fileName).toBe('The Call draft 2 for Ana.fountain');
+    t.type('B\n');
+    await t.save();
+    expect(t.log.downloads[2]?.name).toBe('The Call draft 2 for Ana.fountain');
+  });
+
+  test('Save As that is cancelled downloads nothing and leaves the script as it was', async () => {
+    const t = await fresh({ inPlace: false });
+    const { saveAsQuestion } = await import('../app/storage/save');
+    await t.script.newScript('screenplay');
+    t.type('A\n');
+    const saving = t.saveAs();
+    await vi.waitFor(() => expect(saveAsQuestion.value).not.toBeNull());
+    saveAsQuestion.value?.answer(null);
+    expect(await saving).toBe('cancelled');
+    expect(t.log.downloads).toEqual([]);
+    expect(t.script.dirty.value).toBe(true);
+  });
+
+  test('a name typed into Save As ends in the script’s extension once, and is a safe file name', async () => {
+    const { downloadName } = await import('../app/storage/save');
+    expect(downloadName('Second', '.fountain')).toBe('Second.fountain');
+    expect(downloadName('Second.fountain', '.fountain')).toBe('Second.fountain');
+    expect(downloadName('Second.FOUNTAIN', '.fountain')).toBe('Second.fountain');
+    expect(downloadName('notes.fountain', '.md')).toBe('notes.fountain.md');
+    expect(downloadName('a/b\\c:d*?"<>|', '.md')).toBe('abcd.md');
+    expect(downloadName('   ', '.fountain')).toBe('Untitled.fountain');
+    expect(downloadName('../../etc/passwd', '.fountain')).toBe('etcpasswd.fountain');
+  });
+
   test('suggests .md for a Markdown document, and asks the picker for Markdown', async () => {
     const t = await fresh({ inPlace: false });
     await t.script.newScript('markdown');
