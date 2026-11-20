@@ -99,9 +99,11 @@ describe('the column of each problem', () => {
     const script = join(dir(), 'many.fountain');
     writeFileSync(script, `INT. HALL - DAY\n\n${line}\n\nINT. YARD - DAY\n\n𝒜 [[ four\n`);
     const result = await drafter('check', script);
-    const columns = [...result.out.matchAll(/many\.fountain:(\d+):(\d+): warning:/g)].map(
-      ([, l, c]) => `${l}:${c}`,
-    );
+    // The unclosed notes; the script's emoji also get one not-in-font warning, at 3:1.
+    const columns = [
+      ...result.out.matchAll(/many\.fountain:(\d+):(\d+): warning: (?!.*\[not-in-font\])/g),
+    ].map(([, l, c]) => `${l}:${c}`);
+    expect(result.out).toMatch(/many\.fountain:3:1: warning: .*\[not-in-font\]/);
     // As `[...text]` counts them, from the start of each line.
     const expected = (text: string, row: number) =>
       [...text.matchAll(/\[\[/g)].map((m) => `${row}:${[...text.slice(0, m.index)].length + 1}`);

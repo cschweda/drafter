@@ -15,6 +15,12 @@ import {
   unclosedRegion,
 } from './rules/parse';
 import { payoffWithoutSetup, setupWithoutPayoff } from './rules/setups';
+import {
+  markerInParagraph,
+  notInFont,
+  titleKeyNotPrinted,
+  transitionTrailingSpace,
+} from './rules/silent';
 import { stubHeading } from './rules/stub';
 import { transitionNotLast } from './rules/transition';
 import type { LintDiagnostic, LintOptions, Rule, RuleContext } from './types';
@@ -40,6 +46,10 @@ export const rules: readonly Rule[] = [
   lockedNumbersOutOfOrder,
   repeatedSceneNumber,
   lockedSceneGone,
+  markerInParagraph,
+  transitionTrailingSpace,
+  titleKeyNotPrinted,
+  notInFont,
 ];
 
 /**

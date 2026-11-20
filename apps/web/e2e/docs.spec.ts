@@ -489,9 +489,9 @@ test.describe('without JavaScript', () => {
     await expect(row('Price')).toContainText('Free, forever');
     await expect(row('Price')).toContainText('$249.99 once, or $99.99/yr');
     // A planned feature shows its version, never a ✓.
-    await expect(row('Revision colors and marks').locator('td').first()).toHaveText(
-      'v0.27.0, free',
-    );
+    await expect(row('TV templates').locator('td').first()).toHaveText('Phase 3, free');
+    // Production is in the app (v0.27.0), so its rows have a ✓.
+    await expect(row('Revision colors and marks').locator('td').first()).toContainText('yes');
     // ✓ and ✗ are read as words.
     const open = row('Open source');
     await expect(open.locator('td').first()).toContainText('yes');

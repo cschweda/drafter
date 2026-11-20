@@ -570,6 +570,14 @@ class Importer {
   private readonly usedAlts = new Set<string>();
   /** An `OmittedScene` is being read: its blocks become notes once it is. */
   private omitting = false;
+  /**
+   * The file sets its Character element in capitals (`ElementSettings Type="Character"`, with
+   * `AllCaps` in its `FontSpec`'s `Style`), as Final Draft's own files do: a name it holds as
+   * `McCall` prints MCCALL there. A forced cue prints as typed in Drafter, so such a name is
+   * written in capitals. A file that doesn't say so, as Drafter's own exports don't, keeps each
+   * name as it is.
+   */
+  private cueCapitals = false;
 
   run(root: XmlElement): FdxImport {
     const content = root.children.find(
@@ -579,7 +587,16 @@ class Importer {
       throw new FdxError('it has no FinalDraft root holding a Content element.');
     }
     for (const child of root.children) {
-      if (typeof child !== 'string' && child.name === 'AltCollection') this.collectAlts(child);
+      if (typeof child === 'string') continue;
+      if (child.name === 'AltCollection') this.collectAlts(child);
+      else if (child.name === 'ElementSettings' && child.attrs.Type === 'Character') {
+        this.cueCapitals = child.children.some(
+          (c) =>
+            typeof c !== 'string' &&
+            c.name === 'FontSpec' &&
+            (c.attrs.Style ?? '').split('+').includes('AllCaps'),
+        );
+      }
     }
     this.content(content);
     let titlePage: { text: string; title: string | null } | null = null;
@@ -1264,7 +1281,8 @@ class Importer {
     const speech = this.speech;
     if (!speech) return;
     this.speech = null;
-    const cue = speech.cue.map(plainLine).join(' ').trim() + (speech.dual ? ' ^' : '');
+    const typed = speech.cue.map(plainLine).join(' ').trim() + (speech.dual ? ' ^' : '');
+    const cue = this.cueCapitals ? typed.toUpperCase() : typed;
     // Lyric lines one after another are one block, so a lyric paragraph that follows another is
     // written on its own after a blank line, where it still joins this speech on export. That
     // holds only when nothing but lyrics follows: dialogue can't stand without its speaker.

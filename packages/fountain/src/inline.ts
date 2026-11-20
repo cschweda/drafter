@@ -16,6 +16,13 @@ interface Delimiter {
 
 const MARKERS = /[*_\\]/;
 
+const WORD = /[\p{L}\p{N}]/u;
+/** A letter or a digit, in any script. Half of a surrogate pair is neither. */
+const isWord = (code: number | undefined) =>
+  code !== undefined &&
+  (code < 128 ? ASCII_WORD.test(String.fromCharCode(code)) : WORD.test(String.fromCharCode(code)));
+const ASCII_WORD = /[A-Za-z0-9]/;
+
 const isSpace = (code: number | undefined) =>
   code === undefined || /\s/.test(String.fromCharCode(code));
 
@@ -76,12 +83,19 @@ export function parseInline(source: string, segs: readonly Seg[], emphasis: bool
   const italic = new Int32Array(n + 1);
   const underline = new Int32Array(n + 1);
 
+  // The line's first character that isn't a space.
+  let firstInk = 0;
+  while (firstInk < n && isSpace(codes[firstInk])) firstInk++;
+
   const delimiters: Delimiter[] = [];
   for (let i = 0; i < n; i++) {
     const c = codes[i] as number;
     if (c === 92 /* \ */ && i + 1 < n) {
       const next = codes[i + 1];
-      if (next === 42 || next === 95 || next === 92) {
+      // At the start of a line, \# and \= print the mark: with no backslash the line would be
+      // a section or a synopsis, which doesn't print.
+      const lineMark = i === firstInk && (next === 35 || next === 61);
+      if (next === 42 || next === 95 || next === 92 || lineMark) {
         removed[i] = 1;
         i++; // the escaped char stays as literal text
         continue;
@@ -96,8 +110,11 @@ export function parseInline(source: string, segs: readonly Seg[], emphasis: bool
           marker: c,
           length,
           at: i,
-          canOpen: !isSpace(codes[j]),
-          canClose: !isSpace(codes[i - 1]),
+          // An underscore inside a word is an underscore (jane_doe@example.com, my_script_v2):
+          // it opens only at a word's start and closes only at a word's end. An asterisk may
+          // sit inside a word, as the spec's own examples do.
+          canOpen: !isSpace(codes[j]) && !(c === 95 && isWord(codes[i - 1])),
+          canClose: !isSpace(codes[i - 1]) && !(c === 95 && isWord(codes[j])),
           index: -1,
         });
       }

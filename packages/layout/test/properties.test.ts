@@ -74,7 +74,9 @@ function check(doc: Doc, template: Template, layout: Layout) {
       .map((line) => line.inline.map((run) => run.text).join(''))
       .join(' ');
     const lineRole = list[0]?.part.role;
-    const upper = lineRole !== undefined && template.roles[lineRole]?.case === 'upper';
+    // A forced cue (`@McCLANE`) prints as typed, whatever its role's case.
+    const asTyped = block.kind === 'character' && block.forced;
+    const upper = !asTyped && lineRole !== undefined && template.roles[lineRole]?.case === 'upper';
     expect(collapse(list.map((p) => sourceText(p.part)).join(' ')), `text of block ${b}`).toBe(
       collapse(upper ? printable.toUpperCase() : printable),
     );

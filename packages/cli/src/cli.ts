@@ -6,6 +6,7 @@ import { MAX_SCRIPT_BYTES } from '@drafter/archive';
 import { Refused, readCapped, reason } from '@drafter/archive/node';
 import { type Doc, parse, toJSON } from '@drafter/fountain';
 import { type Layout, UnsupportedTemplateError } from '@drafter/layout';
+import { lint } from '@drafter/lint';
 import { DEFAULT_WORDS_PER_MINUTE } from '@drafter/outline';
 import { productionLayout, revisionHeader } from '@drafter/production';
 import { type FontStyle, kindLine, renderScriptHtml, stylesUsed } from '@drafter/render-html-file';
@@ -387,7 +388,7 @@ function exactly(input: string, bytes: Uint8Array): void {
 async function check(input: string, options: BuildOptions, io: IO): Promise<number> {
   const { doc, template, layout, text } = await load(input, { template: options.template }, io);
   const at = locator(text);
-  const problems = problemsOf(doc, layout);
+  const problems = withLint(problemsOf(doc, layout), doc, template);
   const report = [`${input}: ${pages(layout)} (${template.id})`];
   for (const problem of problems) report.push(describe(input, at, problem));
   report.push(summary(problems));
@@ -537,6 +538,19 @@ interface Problem {
 /** Parse and layout diagnostics together, in document order. */
 const problemsOf = (doc: Doc, layout: Layout): Problem[] =>
   [...doc.diagnostics, ...layout.diagnostics].sort((a, b) => a.span.from - b.span.from);
+
+/**
+ * The problems with the Problems pane's own rules added (`@drafter/lint`), as `check` lists them:
+ * text that doesn't print, characters the font can't draw, a speech with no words. A rule that
+ * only repeats what the parser said (the same place, the same words) is left out.
+ */
+function withLint(problems: Problem[], doc: Doc, template: Template): Problem[] {
+  const said = new Set(problems.map((problem) => `${problem.span.from}\n${problem.message}`));
+  const more = lint(doc, template)
+    .filter((d) => !said.has(`${d.span.from}\n${d.message}`))
+    .map((d) => ({ code: d.ruleId, severity: d.severity, span: d.span, message: d.message }));
+  return [...problems, ...more].sort((a, b) => a.span.from - b.span.from);
+}
 
 const isHigh = (c: number) => c >= 0xd800 && c <= 0xdbff;
 const isLow = (c: number) => c >= 0xdc00 && c <= 0xdfff;

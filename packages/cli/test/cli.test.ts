@@ -138,6 +138,29 @@ describe('drafter check', () => {
     expect(result.out).toMatch(/no problems/);
   });
 
+  it('lists the Problems pane’s rules too: text that won’t print, and what the font can’t draw', async () => {
+    const script = join(dir(), 'silent.fountain');
+    writeFileSync(
+      script,
+      'Title: Signal Hill\nCopyright: 2026\n\nINT. ROOM - DAY\n\nBOB\n#1 is the best.\nReally.\n\nИВАН\nДа.\n\nCUT TO: \n\nINT. HALL - DAY\n\nShe waits.\n',
+    );
+    const result = await drafter('check', script);
+    expect(result.code).toBe(0);
+    const listed = [
+      ...result.out.matchAll(/silent\.fountain:(\d+):\d+: (\w+): .*\[([\w-]+)\]/g),
+    ].map(([, line, severity, code]) => `${line} ${severity} ${code}`);
+    expect(listed).toEqual(
+      expect.arrayContaining([
+        '2 note title-key-not-printed',
+        '7 warning marker-in-paragraph',
+        '10 warning not-in-font',
+        '13 note transition-trailing-space',
+      ]),
+    );
+    // Said once: a rule that repeats the parser's own words isn't listed again.
+    expect(new Set(result.out.split('\n')).size).toBe(result.out.split('\n').length);
+  });
+
   it('fails on an error, listing each diagnostic with its line and column', async () => {
     const file = 'fixtures/classification/29-unclosed-boneyard.fountain';
     const result = await drafter('check', file);

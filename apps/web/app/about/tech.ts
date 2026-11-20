@@ -94,6 +94,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/fdx',
       '@drafter/fountain',
       '@drafter/layout',
+      '@drafter/lint',
       '@drafter/outline',
       '@drafter/production',
       '@drafter/render-html-file',
@@ -220,7 +221,7 @@ export const PACKAGES: readonly PackageNote[] = [
   {
     name: '@drafter/lint',
     does: 'The Problems pane’s rules, each with the fixes it offers as text changes.',
-    uses: ['@drafter/fountain', '@drafter/notes', '@drafter/templates'],
+    uses: ['@drafter/fountain', '@drafter/layout', '@drafter/notes', '@drafter/templates'],
   },
   {
     name: '@drafter/fdx',

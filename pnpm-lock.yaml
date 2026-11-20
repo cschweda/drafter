@@ -238,6 +238,9 @@ importers:
       '@drafter/layout':
         specifier: workspace:*
         version: link:../layout
+      '@drafter/lint':
+        specifier: workspace:*
+        version: link:../lint
       '@drafter/outline':
         specifier: workspace:*
         version: link:../outline
@@ -355,16 +358,15 @@ importers:
       '@drafter/fountain':
         specifier: workspace:*
         version: link:../fountain
+      '@drafter/layout':
+        specifier: workspace:*
+        version: link:../layout
       '@drafter/notes':
         specifier: workspace:*
         version: link:../notes
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
-    devDependencies:
-      '@drafter/layout':
-        specifier: workspace:*
-        version: link:../layout
 
   packages/markdown:
     dependencies:
