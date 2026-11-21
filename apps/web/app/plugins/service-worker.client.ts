@@ -23,6 +23,12 @@ import { justUpdated, markUpdating, sessionStore, takeUpdated } from '~/update/u
  * controller that is its cue to reload. It takes moments; if it never comes (the waiting worker
  * is gone, or never answers), the page reloads regardless rather than leaving the writer's choice
  * looking ignored, and the new version is there on the next load.
+ *
+ * One way it never comes: the browser lets the new version in by stopping the old worker first,
+ * and a request from the page in that instant (Nuxt asks for its build manifest a second after it
+ * starts; a font or a lazy chunk would do the same) starts the old worker again. The new one is
+ * then left waiting until the old one goes idle by itself, about half a minute. Telling it again
+ * does nothing; the reload here is what lets it in (`reload` says what happens to that reload).
  */
 const TAKEOVER_MS = 3000;
 
@@ -35,6 +41,8 @@ export default defineNuxtPlugin(() => {
 
   let fallback: ReturnType<typeof setTimeout> | undefined;
   let reloading = false;
+  /** The browser has been asked to reload the page, and the page is still here. */
+  let asked = false;
   /**
    * The reload the writer chose. The recovery copy is written first. If it was "Reload anyway",
    * the browser's own question is skipped, from now. `updated`: the new version has taken over,
@@ -43,13 +51,26 @@ export default defineNuxtPlugin(() => {
    */
   const reload = async (updated: boolean) => {
     clearTimeout(fallback);
-    if (reloading) return;
+    if (reloading) {
+      // The new version took over after the reload was asked for. That is the fallback's reload:
+      // the browser lets a waiting version in when the page is asked for, but that request has
+      // gone to the old worker, which is retired under it, and it is never answered
+      // (docs/DECISIONS.md, 2026-11-21). Asking again is answered by the new version.
+      if (updated && asked) {
+        markUpdating(sessionStore());
+        window.location.reload();
+      }
+      return;
+    }
     reloading = true;
     await flushBeforeReload();
     if (leavingRequested()) allowLeaving();
     if (updated) markUpdating(sessionStore());
     reloadOrGiveUp({
-      reload: () => window.location.reload(),
+      reload: () => {
+        asked = true;
+        window.location.reload();
+      },
       stop: () => window.stop(),
       // The page is still here: it is the version it was, so no "up to date" on the next load,
       // the toast says the switch didn't happen, and the updater comes back, which gives the
@@ -57,6 +78,7 @@ export default defineNuxtPlugin(() => {
       stuck: () => {
         takeUpdated(sessionStore());
         reloading = false;
+        asked = false;
         installError.value = true;
         const settle = comeBack;
         comeBack = undefined;

@@ -65,9 +65,8 @@ function restoreWorker() {
  */
 async function deployNewVersion(page: Page) {
   // Not before the version that is there has finished taking over: a deploy is never thirty
-  // milliseconds behind a first visit's worker, as it can be here. (A hedge, not a proven cause:
-  // in the runs where Reload then never reloaded, the new version had been deployed and chosen
-  // within 30 ms of the first one's files being fetched; docs/DECISIONS.md, 2026-11-20.)
+  // milliseconds behind a first visit's worker, as it can be here. (This was a guess at why
+  // Reload sometimes never reloaded, and it wasn't the cause: docs/DECISIONS.md, 2026-11-21.)
   await page.evaluate(async () => {
     const { active } = await navigator.serviceWorker.ready;
     if (!active || active.state === 'activated') return;
@@ -391,6 +390,42 @@ test.describe('a new version', () => {
   test.describe.configure({ mode: 'serial' });
   test.afterEach(restoreWorker);
 
+  // What each version of the worker was doing, for a test that fails: Reload now and then never
+  // reloads because the new version never takes over (docs/DECISIONS.md, 2026-11-20, (8)), and the
+  // page can't say why. The browser can: each version's state (installed, activating…) and
+  // whether it is running, every time either changes.
+  const log: string[] = [];
+  test.beforeEach(async ({ page }) => {
+    log.length = 0;
+    const began = Date.now();
+    const session = await page.context().newCDPSession(page);
+    session.on('ServiceWorker.workerVersionUpdated', ({ versions }) => {
+      for (const v of versions) {
+        log.push(
+          `${String(Date.now() - began).padStart(6)} ms  version ${v.versionId}  ${v.status}, ${v.runningStatus}` +
+            `, ${v.controlledClients?.length ?? 0} controlled`,
+        );
+      }
+    });
+    session.on('ServiceWorker.workerErrorReported', ({ errorMessage }) => {
+      log.push(`${String(Date.now() - began).padStart(6)} ms  error: ${errorMessage.errorMessage}`);
+    });
+    await session.send('ServiceWorker.enable');
+  });
+  test.afterEach(async ({ page }, info) => {
+    if (info.status === info.expectedStatus) return;
+    const now = await page
+      .evaluate(async () => {
+        const r = await navigator.serviceWorker.getRegistration();
+        const say = (w: ServiceWorker | null | undefined) => (w ? w.state : 'none');
+        return `installing ${say(r?.installing)}, waiting ${say(r?.waiting)}, active ${say(r?.active)}, controlled ${!!navigator.serviceWorker.controller}`;
+      })
+      .catch((error) => `the page didn't answer: ${String(error).slice(0, 120)}`);
+    const text = [...log, `at the end, the page saw: ${now}`].join('\n');
+    console.log(`[worker-states] ${info.titlePath.slice(1).join(' › ')}\n${text}`);
+    await info.attach('worker-states', { body: text, contentType: 'text/plain' });
+  });
+
   test('is offered, and is never applied without a choice', async ({ page }) => {
     await start(page);
     await mark(page);
@@ -431,6 +466,35 @@ test.describe('a new version', () => {
     await reloaded(page);
     await expectScript(page, 'The Call');
     await controlled(page);
+  });
+
+  // The browser lets the new version in by stopping the old worker first. A request from the page
+  // in that instant starts the old worker again, and the new one is left waiting (Nuxt's own
+  // request for its build manifest, a second after it starts, did this about once in 150 runs
+  // of the test above; here a request leaves in the same step as the take-over message, so it
+  // happens every time). The reload that then goes ahead regardless is what lets the new version
+  // in, but its own request for the page was never answered, and the writer was left on "Getting
+  // the newest version…" until the page gave up.
+  test('reloads though a request from the page keeps the old worker running', async ({ page }) => {
+    await page.addInitScript(() => {
+      const post = ServiceWorker.prototype.postMessage as (...args: unknown[]) => void;
+      let sent = false;
+      ServiceWorker.prototype.postMessage = function (this: ServiceWorker, ...args: unknown[]) {
+        post.apply(this, args);
+        if ((args[0] as { type?: string } | null)?.type !== 'SKIP_WAITING' || sent) return;
+        sent = true;
+        void fetch('/manifest.webmanifest').catch(() => {});
+      } as typeof ServiceWorker.prototype.postMessage;
+    });
+    await start(page);
+    await mark(page);
+    await deployNewVersion(page);
+    await reload(page).click();
+    await reloaded(page);
+    await expectScript(page, 'The Call');
+    await controlled(page);
+    // It is the new version the page reloaded into, and it says so.
+    await expect(updated(page)).toBeVisible();
   });
 
   // With autosave working, a reload loses nothing (the script comes back as it was, still unsaved),
