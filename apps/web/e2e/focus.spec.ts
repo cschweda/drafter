@@ -260,29 +260,26 @@ test.describe('focus mode', () => {
   });
 
   // The first save of a sample makes a script of the writer's own, after the file is written and
-  // "Saved" is showing. Typing must go on through that: a slow disk or a busy lock made the moment
-  // long enough to lose a word (and made the test above fail now and then on a slow runner).
-  test('keeps what is typed while the first save makes the script the writer’s own', async ({
-    page,
-    browserName,
-  }) => {
-    test.skip(browserName !== 'chromium', 'the File System Access API');
-    await stubPickers(page);
-    // Taking a script's lock is slow from here on, as on a machine that is busy.
-    await page.addInitScript(
-      (SLOW) => {
-        const locks = navigator.locks;
-        const request = locks.request.bind(locks) as (...args: unknown[]) => Promise<unknown>;
-        (window as unknown as { __slowLocks: boolean }).__slowLocks = false;
-        locks.request = (async (...args: unknown[]) => {
-          if ((window as unknown as { __slowLocks: boolean }).__slowLocks) {
-            await new Promise((done) => setTimeout(done, SLOW));
-          }
-          return request(...args);
-        }) as typeof locks.request;
-      },
-      Number(process.env.SLOW_LOCK_MS ?? 1200),
-    );
+  // "Saved" is showing. Typing must go on through that. Nothing here waits a set time: taking the
+  // new script's lock is held at a gate, so the typing is certain to land inside the switch, and
+  // each test says what opens the gate.
+  const GATE = () => {
+    const w = window as unknown as { __holdLocks: boolean; __openGate?: () => void };
+    // On the prototype, so it holds whichever `navigator.locks` object the page is handed.
+    const request = LockManager.prototype.request as (...args: unknown[]) => Promise<unknown>;
+    w.__holdLocks = false;
+    LockManager.prototype.request = async function (this: LockManager, ...args: unknown[]) {
+      if (w.__holdLocks) {
+        await new Promise<void>((open) => {
+          w.__openGate = open;
+        });
+      }
+      return request.apply(this, args);
+    } as typeof LockManager.prototype.request;
+  };
+
+  /** Types into a sample, saves it for the first time with the gate shut, and types again. */
+  async function typeThroughFirstSave(page: Page) {
     await start(page);
     await page.keyboard.press('ControlOrMeta+Shift+Enter');
     await on(page);
@@ -290,16 +287,17 @@ test.describe('focus mode', () => {
     await expect(state(page)).toHaveText('Unsaved changes');
     await nextFileName(page, 'own.fountain');
     await page.evaluate(() => {
-      (window as unknown as { __slowLocks: boolean }).__slowLocks = true;
+      (window as unknown as { __holdLocks: boolean }).__holdLocks = true;
     });
     await page.keyboard.press('ControlOrMeta+s');
     await expect(state(page)).toHaveText('Saved');
-    // Well inside the moment the script is being made the writer's own.
-    await page.waitForTimeout(300);
     await page.keyboard.type(' more');
+  }
+
+  /** The new script has the text, on the screen and kept in this browser. */
+  async function expectKept(page: Page) {
     await expect(page.locator('.cm-content')).toContainText('QQMARK more');
     await expect(state(page)).toHaveText('Unsaved changes');
-    // And it is the new script's text, kept in this browser, not only on the screen.
     await expect
       .poll(() =>
         page.evaluate(
@@ -319,6 +317,49 @@ test.describe('focus mode', () => {
         ),
       )
       .toEqual(['QQMARK more']);
+  }
+
+  test('keeps what is typed while the first save makes the script the writer’s own', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'the File System Access API');
+    await stubPickers(page);
+    await page.addInitScript(GATE);
+    await typeThroughFirstSave(page);
+    // The switch reaches the gate in its own time, and goes on once the typing is in.
+    const gate = await page.waitForFunction(
+      () => (window as unknown as { __openGate?: () => void }).__openGate,
+    );
+    await gate.evaluate((open) => open());
+    await expectKept(page);
+  });
+
+  // The sample's own delayed write of that typing can be under way at the moment the new script is
+  // shown. It once put the sample back as the open script when it finished, and nothing typed
+  // after that was kept. Here the write itself opens the gate, so the two always overlap.
+  test('keeps it when the sample’s own write is under way as the new script is shown', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'the File System Access API');
+    await stubPickers(page);
+    await page.addInitScript(GATE);
+    await page.addInitScript(() => {
+      const put = IDBObjectStore.prototype.put;
+      IDBObjectStore.prototype.put = function (
+        this: IDBObjectStore,
+        value: { sample?: string; source?: string },
+        key?: IDBValidKey,
+      ) {
+        if (this.name === 'projects' && value?.sample && value.source?.includes('QQMARK more')) {
+          (window as unknown as { __openGate?: () => void }).__openGate?.();
+        }
+        return key === undefined ? put.call(this, value) : put.call(this, value, key);
+      };
+    });
+    await typeThroughFirstSave(page);
+    await expectKept(page);
   });
 
   test('says a failed save in the corner, where the status bar would have', async ({
@@ -380,7 +421,9 @@ test.describe('focus mode', () => {
 test.describe('what the corner keeps from the bars that are gone', () => {
   test('says the recovery copy is unavailable, as an alert', async ({ page }) => {
     await page.addInitScript(() => {
-      indexedDB.open = () => {
+      // On the prototype: WebKit can hand the page a fresh `indexedDB` object, without anything
+      // that was set on the old one.
+      IDBFactory.prototype.open = () => {
         throw new DOMException('The operation is insecure.', 'SecurityError');
       };
     });

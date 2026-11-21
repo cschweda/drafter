@@ -14,7 +14,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { fileNameFor } from '../app/storage/text';
 import { openExported } from './exported';
 import { bytesOf, cancelNextPick, failWrites, picks, removePickers, stubPickers } from './fs-stub';
-import { chooseExport, pasteText, setText } from './modules';
+import { chooseExport, expectScript, pasteText, setText } from './modules';
 import { roomForSaveAndExport } from './viewport';
 
 // Saving and exporting, not the 320px bar, which folds Save and Export (viewport.ts).
@@ -39,7 +39,7 @@ const ready = (page: Page) => toast(page).filter({ hasText: 'Exported' });
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
 }
 
 /** The text of every page of a PDF, as pdfjs reads it, joined. */
@@ -600,7 +600,7 @@ test.describe('exporting through the save picker (Chromium)', () => {
     ).toBeVisible();
     await expect(toast(page)).toHaveText('');
     // The editor is still there, and a later export works.
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
   });
 });
 
@@ -727,7 +727,7 @@ test.describe('export options', () => {
     await choose(page, 'Scene numbers', 'Number every scene');
     await choose(page, 'Title page', 'Title and author only');
     await page.reload();
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     await openOptions(page);
     await expect(
       sceneNumbers(page).getByRole('radio', { name: 'Number every scene', exact: true }),
@@ -946,8 +946,8 @@ test.describe('export options', () => {
 
   test('the script is unchanged by choosing options', async ({ page, isMobile }) => {
     await start(page);
-    const before = await page.title();
-    expect(before).toBe('The Call — Drafter');
+    // The title follows the script a moment after it opens: wait for it.
+    await expect(page).toHaveTitle('The Call — Drafter');
     await choose(page, 'Scene numbers', 'As written');
     await choose(page, 'Title page', 'Title and author only');
     // No changed dot in the title, and Undo has nothing to take back.
@@ -1054,7 +1054,7 @@ test.describe('a script as Markdown', () => {
     await start(page);
     await choose(page, 'Include notes (Markdown, HTML, and EPUB)', 'Include');
     await page.reload();
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     await openOptions(page);
     const notes = optionsDialog(page).getByRole('group', {
       name: 'Include notes (Markdown, HTML, and EPUB)',

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, type Page, test } from '@playwright/test';
 import { HELP_PAGES } from '../app/commands/data';
 import { removePickers, stubPickers, textOf } from './fs-stub';
-import { failStorageWrites, pressToolbarButton } from './modules';
+import { expectScript, failStorageWrites, pressToolbarButton } from './modules';
 
 // Offline use and updates (Phase 1 design §11), on Chromium with the service worker allowed (every
 // other spec blocks it: playwright.config.ts). The build is the production one that
@@ -44,7 +44,7 @@ async function controlled(page: Page) {
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
   await controlled(page);
 }
 
@@ -153,7 +153,7 @@ test.describe('offline', () => {
     await start(page);
     await context.setOffline(true);
     await page.reload();
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     // The title page and the two numbered pages are drawn.
     await expect(pages(page)).toHaveCount(3);
     // The service worker answered: the page is controlled, with no network.
@@ -164,7 +164,7 @@ test.describe('offline', () => {
     await start(page);
     await context.setOffline(true);
     await page.reload();
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     await typeAtEnd(page, '\nThe phnoe rings.\n');
     await expect(page.locator('.cm-misspelled')).toHaveText('phnoe', { timeout: 10_000 });
   });
@@ -198,7 +198,7 @@ test.describe('offline', () => {
     await start(page);
     await context.setOffline(true);
     await page.reload();
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     await page.getByRole('button', { name: 'Export', exact: true }).click();
     const download = page.waitForEvent('download');
     await page
@@ -213,7 +213,7 @@ test.describe('offline', () => {
     await start(page);
     await context.setOffline(true);
     await page.reload();
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     // A first Markdown PDF, with no network: the parser and the five document fonts come from the cache.
     await page.getByRole('button', { name: 'File', exact: true }).click();
     await page
@@ -241,7 +241,7 @@ test.describe('offline', () => {
     }
     // And the app itself still opens.
     await page.goto('/');
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
   });
 
   test('opens the help pages offline, with and without the trailing slash, and not as the app', async ({
@@ -267,7 +267,7 @@ test.describe('offline', () => {
     expect(failed).toEqual([]);
     // And from a page to the app, offline.
     await page.getByRole('link', { name: /Back to Drafter/ }).click();
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
   });
 
   test('opens the licence files the Third-party licences page links, offline', async ({
@@ -429,7 +429,7 @@ test.describe('a new version', () => {
     await deployNewVersion(page);
     await reload(page).click();
     await reloaded(page);
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     await controlled(page);
   });
 
@@ -593,7 +593,7 @@ test.describe('a new version', () => {
   }) => {
     await start(page);
     await page.reload();
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     await page.waitForTimeout(1000);
     await expect(updated(page)).toHaveCount(0);
     await deployNewVersion(page);
@@ -604,7 +604,7 @@ test.describe('a new version', () => {
     await expect(updated(page)).toHaveCount(0, { timeout: 8000 });
     // The next reload is an ordinary one.
     await page.reload();
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     await page.waitForTimeout(1000);
     await expect(updated(page)).toHaveCount(0);
   });
@@ -729,7 +729,7 @@ test.describe('a new version', () => {
     await start(page);
     const other = await context.newPage();
     await other.goto('/');
-    await expect(editor(other)).toContainText('The Call');
+    await expectScript(other, 'The Call');
     await controlled(other);
     // Two tabs can't both edit one script: the second takes it over from the first.
     await other.getByRole('button', { name: 'Type here instead' }).click();
@@ -773,13 +773,13 @@ test.describe('a new version', () => {
     await cdp.send('Network.enable');
     await cdp.send('Network.setBypassServiceWorker', { bypass: true });
     await hard.goto('/');
-    await expect(editor(hard)).toContainText('The Call');
+    await expectScript(hard, 'The Call');
     expect(await hard.evaluate(() => navigator.serviceWorker.controller === null)).toBe(true);
     await mark(hard);
     await expect(update(hard)).toContainText('A new version of Drafter is ready');
     await reload(hard).click();
     await reloaded(hard);
-    await expect(editor(hard)).toContainText('The Call');
+    await expectScript(hard, 'The Call');
     // The first tab was not asked: it keeps its offer.
     await expect(update(page)).toContainText('A new version of Drafter is ready');
   });
@@ -824,7 +824,7 @@ test.describe('the service worker and the content security policy', () => {
     // Served by the worker, offline, the page is still under its policy and breaks none of it.
     await page.context().setOffline(true);
     await page.reload();
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     await page.waitForLoadState('networkidle');
     expect(await page.evaluate(() => window.__violations)).toEqual([]);
     // The policy the page was served with is the page's own: the worker answered with the cached

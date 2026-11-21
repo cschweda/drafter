@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { files, nextFileName, picks, putFile, removePickers, stubPickers, textOf } from './fs-stub';
-import { pasteText, showView, wholeText } from './modules';
+import { expectScript, pasteText, showView, wholeText } from './modules';
 
 // Markdown is a document kind beside Fountain (Plan 4 Task 6). The accessibility test the plan
 // names is in a11y.spec.ts.
@@ -22,7 +22,7 @@ const question = (page: Page) =>
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
 }
 
 /** Shows a tab: on a phone one pane shows at a time; on a wide screen both of these are already up. */

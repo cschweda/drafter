@@ -365,6 +365,15 @@ export const wholeText = (page: Page) =>
   });
 
 /**
+ * Waits until the script holds `text`. Not `toContainText` on the editor: that reads the lines
+ * drawn, and a phone opens scrolled to the cursor, below the title page, so a check that comes a
+ * moment late finds the first lines gone from the page though the script has them (the first
+ * WebKit run on a shared runner, 2026-11-20: ten tests failed at "The Call" this way).
+ */
+export const expectScript = (page: Page, text: string) =>
+  expect.poll(() => wholeText(page).catch(() => null)).toContain(text);
+
+/**
  * Replaces the whole script as the app would (a load, not the writer's typing), so Drafter's
  * settings block, which the editor hides and keeps from typing (2026-11-09), is replaced too.
  */
