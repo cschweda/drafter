@@ -115,6 +115,20 @@ const sentences = fc
   .tuple(fc.integer({ min: 1, max: 60 }), fc.array(prose, { minLength: 1, maxLength: 4 }))
   .map(([n, paras]) => `${filler(n)}\n\n${paras.join('\n\n')}\n\n${filler(3, 'G')}\n`);
 
+/** Speeches of many short sentences, some with a parenthetical partway, between a little action. */
+const speeches = fc
+  .tuple(
+    fc.integer({ min: 1, max: 60 }),
+    fc.array(fc.tuple(prose, fc.boolean(), prose), { minLength: 1, maxLength: 3 }),
+  )
+  .map(
+    ([n, parts]) =>
+      `${filler(n)}\n\n${parts
+        // "So" first: a line that opens with a bracket and closes with one is a parenthetical.
+        .map(([a, paren, b]) => `MARGARET\nSo ${a}${paren ? '\n(beat)' : ''}\nSo ${b}`)
+        .join('\n\nShe waits.\n\n')}\n\n${filler(3, 'G')}\n`,
+  );
+
 for (const id of ['us-screenplay', 'stage-play-standard']) {
   const template = builtins[id] as Template;
 
@@ -134,6 +148,18 @@ for (const id of ['us-screenplay', 'stage-play-standard']) {
     it('holds for action cut at sentences across pages', () => {
       fc.assert(
         fc.property(sentences, (source) => {
+          const doc = parse(source);
+          const layout = paginate(doc, template);
+          check(doc, template, layout);
+          expect(paginate(doc, template)).toEqual(layout);
+        }),
+        { numRuns: 300 },
+      );
+    });
+
+    it('holds for speeches cut at sentences across pages', () => {
+      fc.assert(
+        fc.property(speeches, (source) => {
           const doc = parse(source);
           const layout = paginate(doc, template);
           check(doc, template, layout);

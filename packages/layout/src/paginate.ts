@@ -70,10 +70,15 @@ interface Pos {
 interface Row {
   line: LayoutLine;
   origin: Origin | null;
+  /** Its index in the lines as first wrapped, or -1 for a line wrapped afresh after a cut. */
+  at: number;
   next: Pos;
 }
 
-/** A break in a block: the rows that stay, then a line cut short at a sentence's end, if any. */
+/**
+ * A break in a block or a speech: the rows that stay, then a line cut short at a sentence's end,
+ * if any.
+ */
 interface BlockBreak {
   rows: Row[];
   short?: LayoutLine;
@@ -87,6 +92,10 @@ interface SpeechItem extends Spacing {
   /** The cue as it prints at the top of the next page when the speech splits. */
   contd: LayoutLine[];
   body: LayoutLine[];
+  /** Where each body line came from, for dialogue; null for every other line (see `BlockItem`). */
+  origins: Array<Origin | null>;
+  /** Where `body[0]` stands in the lines the speech was first wrapped into. */
+  base: number;
   tags: Tag[];
   /** `spoken[k]`: how many of the first k body lines are dialogue. */
   spoken: number[];
@@ -173,7 +182,7 @@ export function paginate(doc: Doc, template: Template, opts: PaginateOptions = {
   const { scenes } = built;
   const items = opts.locked ? lockedItems(built.items, doc.blocks, opts.locked) : built.items;
   const pager = new Pager(template, height, scenes, doc.blocks.length);
-  new Filler(template, height, pager, doc.source).fill(items);
+  new Filler(template, height, pager).fill(items);
   for (const body of pager.pages) pages.push(body);
 
   // A block that prints nothing maps to the next printed line, or to the last.
@@ -318,11 +327,18 @@ class Items {
     return entries;
   }
 
-  #lines(i: number, p: Printing, frame: Frame = frameOf(p.style), append?: string) {
+  #lines(
+    i: number,
+    p: Printing,
+    frame: Frame = frameOf(p.style),
+    append?: string,
+    origins?: Array<Origin | null>,
+  ) {
     const options = { blockIndex: i, role: p.role, style: p.style, frame };
     return blockLines(
       this.#blocks[i] as Block,
       append === undefined ? options : { ...options, append },
+      origins,
     );
   }
 
@@ -381,6 +397,7 @@ class Items {
       }));
     }
     const body: LayoutLine[] = [];
+    const origins: Array<Origin | null> = [];
     const tags: Tag[] = [];
     const spoken = [0];
     let first = cueP;
@@ -389,9 +406,21 @@ class Items {
       const p = this.#printings[m];
       if (!p) continue;
       const kind = (this.#blocks[m] as Block).kind;
-      for (const line of this.#lines(m, p)) {
+      // Only dialogue is cut inside a printed line: a parenthetical and a lyric never are.
+      const own: Array<Origin | null> | undefined = kind === 'dialogue' ? [] : undefined;
+      const lines = this.#lines(m, p, undefined, undefined, own);
+      // Each paragraph counted its lines within its own block: move the count into the body's.
+      let moved: Para | undefined;
+      for (const origin of own ?? []) {
+        if (!origin || origin.para === moved) continue;
+        moved = origin.para;
+        moved.end += body.length;
+      }
+      for (let k = 0; k < lines.length; k++) {
+        const line = lines[k] as LayoutLine;
         const tag = isBlank(line) ? 'gap' : kind === 'parenthetical' ? 'paren' : 'text';
         body.push(line);
+        origins.push(own?.[k] ?? null);
         tags.push(tag);
         spoken.push((spoken.at(-1) as number) + (tag === 'text' ? 1 : 0));
       }
@@ -404,6 +433,8 @@ class Items {
       cue,
       contd,
       body,
+      origins,
+      base: 0,
       tags,
       spoken,
       spaceBefore: first.style.spaceBefore,
@@ -458,30 +489,8 @@ class Items {
   }
 }
 
-/** A line's end that ends a sentence: its mark, then any closing quotes or brackets. */
-const SENTENCE_END = /[.!?…]["'”’»)\]]*$/;
-
 /** The fewest lines of a paragraph a page break may leave at the top of the next page. */
 const MIN_LINES_AFTER = 2;
-
-/** How many lines short of full a speech may stop, to break where a sentence ends. */
-const SENTENCE_REACH = 2;
-
-/**
- * Whether a page may break after this line without cutting a sentence in two: the line ends one
- * (`.`, `!`, `?`, `…`, with any closing quote or bracket), or it is the last of the line the
- * writer typed, where they broke it themselves.
- */
-function endsSentence(line: LayoutLine, source: string): boolean {
-  if (SENTENCE_END.test(joined(line.runs).trimEnd())) return true;
-  let at = line.span.to;
-  // Past the spaces and emphasis marks that close the line, to what the writer typed next.
-  for (;;) {
-    const c = source.charCodeAt(at);
-    if (c === 32 || c === 9 || c === 42 || c === 95) at++;
-    else return Number.isNaN(c) || c === 10 || c === 13;
-  }
-}
 
 /** Fills pages with items, line by line (§5.3–§5.5). */
 class Filler {
@@ -489,7 +498,6 @@ class Filler {
     private readonly template: Template,
     private readonly height: number,
     private readonly pager: Pager,
-    private readonly source: string,
   ) {}
 
   fill(items: readonly Item[]) {
@@ -558,42 +566,90 @@ class Filler {
     if (item.type === 'dual') return space + item.rows.length <= room;
     return (
       space + heightOf(item) <= room ||
-      this.#split(item, item.cue.length, 0, room - space, true) !== null
+      this.#speechBreak(item, item.cue.length, { i: 0 }, room - space, true) !== null
     );
   }
 
+  /** What a row of a speech is, for splitting. */
+  #tag(item: SpeechItem, row: Row): Tag {
+    return row.at >= 0 ? (item.tags[row.at] as Tag) : isBlank(row.line) ? 'gap' : 'text';
+  }
+
   /**
-   * How many of a speech's body lines, from `from`, can stay on a page of
-   * `room` lines after `cue` lines of cue and before a `(MORE)` line: never
-   * ending on a parenthetical or a blank line, and, when `strict`, leaving
-   * `minLinesBefore` dialogue lines here and `minLinesAfter` for the next page
-   * (§5.4). Null when there's no such split. Looks at one page of lines at most.
+   * How many lines of dialogue a speech has from `pos` on, counted as far as `need`: reads a few
+   * rows, and past them the count kept with the speech.
    */
-  #split(
+  #spokenFrom(item: SpeechItem, pos: Pos, need: number): number {
+    // Double-spaced, `need` lines take 2 × need − 1 rows; a paragraph cut short gives that many
+    // or ends, so past the rows there are only lines as first wrapped.
+    const { rows, done } = this.#rows(item.body, item.origins, pos, 2 * need + 1);
+    let n = 0;
+    for (const row of rows) if (this.#tag(item, row) === 'text') n++;
+    const last = rows.at(-1);
+    if (n >= need || done || !last || last.next.para) return n;
+    const { spoken } = item;
+    return n + (spoken[item.body.length] as number) - (spoken[last.next.i] as number);
+  }
+
+  /**
+   * Where a speech that doesn't fit breaks, with `room` lines on the page for `cue` lines of cue,
+   * its body lines from `pos`, and a `(MORE)` line (§5.4). A page never ends on a parenthetical or
+   * a blank line, and something always goes over. When `strict`, `minLinesBefore` lines of
+   * dialogue stay and `minLinesAfter` go.
+   *
+   * Dialogue breaks where a sentence ends, as action does (`#blockBreak`): at the last such place
+   * the rule allows, the line that holds it printed short and the rest wrapped afresh. With no
+   * such place, the break is after the last line the rule allows. Null when there is none. Reads
+   * one page of lines at most.
+   */
+  #speechBreak(
     item: SpeechItem,
     cue: number,
-    from: number,
+    pos: Pos,
     room: number,
     strict: boolean,
-  ): number | null {
+  ): BlockBreak | null {
     const { minLinesBefore, minLinesAfter } = this.template.dialogueSplit;
-    const { tags, spoken } = item;
-    const start = spoken[from] as number;
-    const total = (spoken[tags.length] as number) - start;
-    const allowed = (k: number) => {
-      if (tags[from + k - 1] !== 'text') return false;
-      const kept = (spoken[from + k] as number) - start;
-      return !strict || (kept >= minLinesBefore && total - kept >= minLinesAfter);
-    };
-    for (let k = Math.min(room - cue - 1, tags.length - from - 1); k >= 1; k--) {
-      if (!allowed(k)) continue;
-      // The most that fits; or up to two lines fewer, to stop where a sentence ends.
-      for (let j = k; j >= Math.max(1, k - SENTENCE_REACH); j--) {
-        if (allowed(j) && endsSentence(item.body[from + j - 1] as LayoutLine, this.source)) {
-          return j;
-        }
+    const cap = room - cue - 1;
+    if (cap < 1) return null;
+    const { rows, done } = this.#rows(item.body, item.origins, pos, cap + 1);
+    const tags = rows.map((row) => this.#tag(item, row));
+    /** `kept[k]`: how many of the first k rows are dialogue. */
+    const kept = [0];
+    for (const tag of tags) kept.push((kept.at(-1) as number) + (tag === 'text' ? 1 : 0));
+    const allowed = (before: number, next: Pos) =>
+      !strict ||
+      (before >= minLinesBefore && this.#spokenFrom(item, next, minLinesAfter) >= minLinesAfter);
+    // The most rows that can stay: all that fit, but one at least goes over.
+    const top = Math.min(cap, done ? rows.length - 1 : rows.length);
+    const past = (para: Para) => Math.min(item.body.length, para.end - item.base);
+    for (let j = Math.min(cap, rows.length) - 1; j >= 0; j--) {
+      const row = rows[j] as Row;
+      if (tags[j] !== 'text' || !row.origin) continue;
+      const { para, start } = row.origin;
+      const to = offsetOf(para, row.origin.end);
+      const ends = sentenceEnds(textOf(para), offsetOf(para, start), to);
+      const lastOfPara = !row.next.para && row.next.i >= past(para);
+      if (
+        j < top &&
+        (lastOfPara || ends.at(-1) === to) &&
+        allowed(kept[j + 1] as number, row.next)
+      ) {
+        return { rows: rows.slice(0, j + 1), next: row.next };
       }
-      return k;
+      for (let e = ends.length - 1; e >= 0; e--) {
+        const end = ends[e] as number;
+        if (end >= to) continue;
+        const cell = cellAt(para, end);
+        const next: Pos = { i: past(para), para, cell: pastSpaces(para, cell) };
+        if (!allowed((kept[j] as number) + 1, next)) continue;
+        return { rows: rows.slice(0, j), short: paraLine(para, start, cell).line, next };
+      }
+    }
+    for (let k = top; k >= 1; k--) {
+      if (tags[k - 1] !== 'text') continue;
+      const next = (rows[k - 1] as Row).next;
+      if (allowed(kept[k] as number, next)) return { rows: rows.slice(0, k), next };
     }
     return null;
   }
@@ -603,10 +659,14 @@ class Filler {
    * rest of a paragraph a page ended inside, wrapped afresh, then the lines after it as they were
    * first wrapped. `done` when they are all that is left. Costs the rows, not the block's length.
    */
-  #rows(item: BlockItem, pos: Pos, max: number): { rows: Row[]; done: boolean } {
+  #rows(
+    lines: readonly LayoutLine[],
+    origins: ReadonlyArray<Origin | null>,
+    pos: Pos,
+    max: number,
+  ): { rows: Row[]; done: boolean } {
     const rows: Row[] = [];
     if (max <= 0) return { rows, done: false };
-    const { lines, origins } = item;
     if (pos.para) {
       const para = pos.para;
       const { ranges, next } = paraWrap(
@@ -620,11 +680,12 @@ class Filler {
         const { line, origin } = paraLine(para, start, end);
         if (k > 0 && para.double) {
           const here: Pos = { i: pos.i, para, cell: start };
-          rows.push({ line: blankLine(line.span.from), origin: null, next: here });
+          rows.push({ line: blankLine(line.span.from), origin: null, at: -1, next: here });
         }
         rows.push({
           line,
           origin,
+          at: -1,
           next: after === null ? { i: pos.i } : { i: pos.i, para, cell: after },
         });
       });
@@ -632,7 +693,12 @@ class Filler {
     }
     let j = pos.i;
     for (; j < lines.length && rows.length < max; j++) {
-      rows.push({ line: lines[j] as LayoutLine, origin: origins[j] ?? null, next: { i: j + 1 } });
+      rows.push({
+        line: lines[j] as LayoutLine,
+        origin: origins[j] ?? null,
+        at: j,
+        next: { i: j + 1 },
+      });
     }
     return { rows, done: j >= lines.length };
   }
@@ -650,7 +716,7 @@ class Filler {
    * there's no break at all.
    */
   #blockBreak(item: BlockItem, pos: Pos, room: number): BlockBreak | null {
-    const { rows } = this.#rows(item, pos, room + MIN_LINES_AFTER);
+    const { rows } = this.#rows(item.lines, item.origins, pos, room + MIN_LINES_AFTER);
     let lead = 0;
     while (lead < rows.length && isBlank((rows[lead] as Row).line)) lead++;
     const least = lead + this.template.keepWithNextLines;
@@ -672,7 +738,11 @@ class Filler {
           if (end >= to) continue;
           const cell = cellAt(para, end);
           const next: Pos = { i: past(para), para, cell: pastSpaces(para, cell) };
-          if (this.#rows(item, next, MIN_LINES_AFTER).rows.length < MIN_LINES_AFTER) continue;
+          if (
+            this.#rows(item.lines, item.origins, next, MIN_LINES_AFTER).rows.length <
+            MIN_LINES_AFTER
+          )
+            continue;
           const short = paraLine(para, start, cell).line;
           return { rows: rows.slice(0, j), short, next };
         }
@@ -696,7 +766,7 @@ class Filler {
       const room = pager.room - s;
       // How many lines are left, as far as it matters: whether they fit here, or on a page.
       const reach = Math.max(0, item.keepTogether ? this.height : room) + 1;
-      const rest = pos.para ? this.#rows(item, pos, reach) : null;
+      const rest = pos.para ? this.#rows(item.lines, item.origins, pos, reach) : null;
       const left = rest
         ? rest.done
           ? rest.rows.length
@@ -731,38 +801,55 @@ class Filler {
         continue;
       }
       // A page to itself and still no split, such as one line left over: it runs on.
-      for (const row of this.#rows(item, pos, Number.POSITIVE_INFINITY).rows) pager.put(row.line);
+      for (const row of this.#rows(item.lines, item.origins, pos, Number.POSITIVE_INFINITY).rows)
+        pager.put(row.line);
       return;
     }
   }
 
   #placeSpeech(item: SpeechItem, space: number) {
     const { pager } = this;
-    const { body, tags } = item;
+    const { body, origins, tags } = item;
+    const more = item.more ? 1 : 0;
     let cue = item.cue;
-    let from = 0; // the first body line not yet placed
+    let pos: Pos = { i: 0 }; // where the body lines not yet placed start
     let s = space;
+    const putRest = (rows: Row[] | null) => {
+      pager.putAll(cue);
+      if (rows) for (const row of rows) pager.put(row.line);
+      else pager.putAll(body, pos.i);
+      if (item.more) pager.put(this.#more(pager.flow));
+    };
     for (;;) {
-      const at = cue[0]?.span.from ?? body[from]?.span.from ?? pager.flow;
-      if (s + cue.length + body.length - from + (item.more ? 1 : 0) <= pager.room) {
+      const at = cue[0]?.span.from ?? body[pos.i]?.span.from ?? pager.flow;
+      const room = pager.room - s;
+      // The body lines there is room for, when nothing more is cut.
+      const fit = room - cue.length - more;
+      const rest = pos.para ? this.#rows(body, origins, pos, Math.max(0, fit) + 1) : null;
+      const left = rest
+        ? rest.done
+          ? rest.rows.length
+          : Number.POSITIVE_INFINITY
+        : body.length - pos.i;
+      if (left <= fit) {
         pager.space(s, at);
-        pager.putAll(cue);
-        pager.putAll(body, from);
-        if (item.more) pager.put(this.#more(pager.flow));
+        putRest(rest ? rest.rows : null);
         return;
       }
-      const room = pager.room - s;
-      let k = this.#split(item, cue.length, from, room, true);
+      let found = this.#speechBreak(item, cue.length, pos, room, true);
       // A speech taller than a page splits wherever it can.
-      if (k === null && pager.empty) k = this.#split(item, cue.length, from, room, false);
-      if (k !== null) {
+      if (found === null && pager.empty) {
+        found = this.#speechBreak(item, cue.length, pos, room, false);
+      }
+      if (found !== null) {
         pager.space(s, at);
         pager.putAll(cue);
-        pager.putAll(body, from, from + k);
+        for (const row of found.rows) pager.put(row.line);
+        if (found.short) pager.put(found.short);
         pager.put(this.#more(pager.flow));
         pager.newPage();
-        from += k;
-        while (tags[from] === 'gap') from++;
+        pos = found.next;
+        if (!pos.para) while (tags[pos.i] === 'gap') pos = { i: pos.i + 1 };
         cue = item.contd;
         s = 0;
         continue;
@@ -774,9 +861,7 @@ class Filler {
         continue;
       }
       // Nowhere to split at all, such as a parenthetical taller than a page.
-      pager.putAll(cue);
-      pager.putAll(body, from);
-      if (item.more) pager.put(this.#more(pager.flow));
+      putRest(this.#rows(body, origins, pos, Number.POSITIVE_INFINITY).rows);
       return;
     }
   }
@@ -970,6 +1055,22 @@ function cutOf(item: Printed, anchor: Resolved): number {
   return own[Math.min(first + Math.max(0, anchor.printed), own.length - 1)] as number;
 }
 
+/**
+ * Where the lines `from` to `to` of an item came from, for a piece of it. A piece that stops inside
+ * a paragraph mustn't wrap that paragraph's rest again, since the next piece prints it: its lines
+ * there are left without an origin, and break only between them.
+ */
+function originsOf(item: BlockItem | SpeechItem, from: number, to: number): Array<Origin | null> {
+  const origins = item.origins.slice(from, to);
+  const cut = origins.at(-1)?.para;
+  if (cut && cut.end - item.base > to) {
+    for (let k = origins.length - 1; k >= 0 && (origins[k] ?? null)?.para === cut; k--) {
+      origins[k] = null;
+    }
+  }
+  return origins;
+}
+
 /** Splits a block or speech at line indexes `cuts` (ascending, each > 0), a page start before each piece but the first. */
 function pieces(item: BlockItem | SpeechItem, cuts: number[]): Printed[] {
   const out: Printed[] = [];
@@ -979,15 +1080,7 @@ function pieces(item: BlockItem | SpeechItem, cuts: number[]): Printed[] {
       const last = p + 2 === ends.length;
       const from = ends[p] as number;
       const to = ends[p + 1] as number;
-      const origins = item.origins.slice(from, to);
-      // A piece that stops inside a paragraph mustn't wrap that paragraph's rest again: the next
-      // piece prints it. Its lines there break only between them.
-      const cut = origins.at(-1)?.para;
-      if (cut && cut.end - item.base > to) {
-        for (let k = origins.length - 1; k >= 0 && (origins[k] ?? null)?.para === cut; k--) {
-          origins[k] = null;
-        }
-      }
+      const origins = originsOf(item, from, to);
       out.push({
         type: 'block',
         lines: item.lines.slice(from, to),
@@ -1015,6 +1108,8 @@ function pieces(item: BlockItem | SpeechItem, cuts: number[]): Printed[] {
       cue: p === 0 ? item.cue : item.contd,
       contd: item.contd,
       body: body.slice(from, to),
+      origins: originsOf(item, from, to),
+      base: item.base + from,
       tags: tags.slice(from, to),
       spoken: spoken.slice(from, to + 1).map((n) => n - (spoken[from] as number)),
       spaceBefore: p === 0 ? item.spaceBefore : 0,
