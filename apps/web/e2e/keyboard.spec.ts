@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
-import { showSource } from './modules';
+import { expectScript, showSource } from './modules';
 
 // The keyboard-only journey (Phase 1 design §1, item 5): everything a writer does from a new script
 // to a PDF, with no pointer. The page records every pointer event it is sent, and the test ends by
@@ -54,7 +54,7 @@ const noPointer = async (page: Page) =>
  */
 async function open(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
   await expect(page.getByRole('button', { name: 'Sample: start your own' })).toBeVisible();
 }
 

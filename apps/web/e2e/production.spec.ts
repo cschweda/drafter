@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { type Browser, expect, type Page, test } from '@playwright/test';
 import { type Outcome, TRAPS } from '../../../fixtures/trap/traps';
+import { type Browser, expect, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import { editor, palette, replaceWhole, runCommand, showSource, start, wholeText } from './modules';
 

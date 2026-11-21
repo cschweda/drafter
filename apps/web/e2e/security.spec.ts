@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
 import { HELP_PAGES } from '../app/commands/data';
+import { expect, test } from './fixtures';
 import { pressToolbarButton, runCommand, start, turnOnFixture } from './modules';
 
 declare global {

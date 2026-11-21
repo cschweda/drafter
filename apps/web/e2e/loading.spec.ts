@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 
 // While Drafter starts (the SPA loading screen, before the app mounts), the mark moves so a slow
 // start doesn't look frozen; after 3 s it says "Loading Drafter…", and after 15 s it suggests

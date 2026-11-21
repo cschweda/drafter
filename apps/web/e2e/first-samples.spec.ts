@@ -1,5 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
-import { showView } from './modules';
+import { expect, type Page, test } from './fixtures';
+import { expectScript, showView } from './modules';
 
 // The first New of a kind opens with that kind's annotated sample, as the writer's own document,
 // with Start blank above it; every later New of the kind is blank (decided 2026-10-27). The other
@@ -44,7 +44,7 @@ const text = (page: Page) => editor(page).evaluate((el) => el.textContent ?? '')
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
 }
 
 /** Runs a palette command by name, by keyboard. */

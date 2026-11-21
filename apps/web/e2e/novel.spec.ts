@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
+import { expectScript } from './modules';
 
 // Novel is a choice beside Screenplay and Stage play (the Novel plan, Task 4): a Markdown document
 // whose trailing comment names `"template":"novel"`. The chip is hidden on a phone, so these read
@@ -14,7 +15,7 @@ const paletteOption = (page: Page, name: string) =>
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
 }
 
 /** Runs a palette command by name. */

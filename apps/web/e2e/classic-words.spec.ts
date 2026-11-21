@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { editor, setText, showSource, start } from './modules';
 
 // Saying where you are in Classic Mode (design §9, §12): the chip, the key line, the live region,

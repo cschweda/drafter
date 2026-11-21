@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from '../site';
+import { expect, test } from './fixtures';
 
 // The attributes of every `<name …>` tag in `html`, in any order.
 function tags(html: string, name: string): Array<Record<string, string>> {

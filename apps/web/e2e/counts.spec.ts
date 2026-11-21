@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { editor, openCountsPanel, runCommand, setText, showSource, start } from './modules';
 
 // Counts and a daily goal (Plan 5 Task 3). The accessibility test the brief names is in

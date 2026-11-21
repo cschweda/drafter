@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { editor, runCommand, setText, start, stored } from './modules';
 
 // With two panes side by side, the first line of text in each starts at the same height (decided

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { pressToolbarButton, showView, stored } from './modules';
 import { drafterDatabase, sampleSeenRows } from './seed';
 

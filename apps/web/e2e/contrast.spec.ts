@@ -1,5 +1,5 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
-import { editor, pressToolbarButton, stored } from './modules';
+import { expect, type Locator, type Page, test } from './fixtures';
+import { editor, expectScript, pressToolbarButton, stored } from './modules';
 
 // The contrast sliders (the maintainer, 2026-11-03): behind the top bar's Contrast button, one for
 // the Source and one for the Script, each moving its own pane's colours live, in the light and
@@ -34,7 +34,7 @@ const luminance = ([r, g, b]: [number, number, number]) => {
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
 }
 
 const sourceSlider = (page: Page) =>
@@ -157,7 +157,7 @@ test.describe('the contrast sliders', () => {
     await page.keyboard.press('Escape');
     await expect.poll(async () => (await stored(page)).sourceContrast).toBe(85);
     await page.reload();
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     await openContrast(page);
     await expect(sourceSlider(page)).toHaveValue('85');
     await expect(scriptSlider(page)).toHaveValue('90');

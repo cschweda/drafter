@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
 import { WHATS_NEW_SEEN } from '../app/whats-new/banner';
 import { WHATS_NEW } from '../app/whats-new/entries';
+import { expect, type Page, test } from './fixtures';
 import { drafterDatabase, sampleSeenRows } from './seed';
 
 // What is Drafter?, What's new, and What's new's banner on the writing screen (docs/DECISIONS.md,

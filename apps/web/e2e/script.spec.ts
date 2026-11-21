@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import { pressToolbarButton } from './modules';
 import { drafterDatabase, sampleSeenRows, stateWithSettings } from './seed';

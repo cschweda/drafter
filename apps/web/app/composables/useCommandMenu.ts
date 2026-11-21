@@ -79,6 +79,9 @@ export function useCommandMenu(trigger: Ref<HTMLElement | null>) {
         !!active.closest('[data-reka-menu-content]');
       const target = placed;
       placed = null;
+      // A menu is open now: this one closed a moment ago and its fade has only just ended (longer
+      // on a busy machine), and the writer has opened a menu since. Focus is in that menu and stays.
+      if (document.querySelector('[data-reka-menu-content][data-state="open"]')) return;
       if (target?.isConnected && lost) {
         target.focus();
         return;

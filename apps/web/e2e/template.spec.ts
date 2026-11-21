@@ -1,5 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
-import { replaceWhole, wholeText } from './modules';
+import { expect, type Page, test } from './fixtures';
+import { expectScript, replaceWhole, wholeText } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
 const script = (page: Page) => page.getByRole('region', { name: 'Script' });
@@ -15,7 +15,7 @@ const STAGE_BLOCK = /\/\* drafter\s*\{"v":1,"template":"stage-play-standard"\}\s
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
   await expect(chip(page)).toBeVisible();
 }
 

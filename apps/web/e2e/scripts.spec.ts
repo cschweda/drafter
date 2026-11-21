@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { type BrowserContext, expect, type Page, test } from '@playwright/test';
-import { pressToolbarButton, wholeText } from './modules';
+import { type BrowserContext, expect, type Page, test } from './fixtures';
+import { expectScript, pressToolbarButton, wholeText } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -209,7 +209,7 @@ test.describe('new scripts and switching', () => {
     await choose(page, 'New screenplay');
     await page.keyboard.insertText('MINE');
     await choose(page, 'Stage play', menu(page).getByRole('group', { name: 'Samples' }));
-    await expect(editor(page)).toContainText('Title: The Call');
+    await expectScript(page, 'Title: The Call');
     await expect(chip(page)).toHaveText('Stage play');
     // The top bar's sample chip, or a phone's sample row, says so (the status bar doesn't, Task 6).
     await expect(sampleShown(page)).toBeVisible();
@@ -235,7 +235,7 @@ test.describe('new scripts and switching', () => {
     await expect(editor(page)).toContainText('INT. KITCHEN - NIGHT');
     await choose(page, 'Stage play', menu(page).getByRole('group', { name: 'Samples' }));
     // (The editor draws only what is in view, so the stored copy is what shows the edit.)
-    await expect(editor(page)).toContainText('Title: The Call');
+    await expectScript(page, 'Title: The Call');
     expect((await stored(page)).find((p) => p.sample === 'stage-play')?.source).toContain(
       'EDITED SAMPLE',
     );

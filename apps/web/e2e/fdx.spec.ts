@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { bytesOf, nextFileName, picks, putFile, removePickers, stubPickers } from './fs-stub';
-import { expectSaved, runCommand, showView } from './modules';
+import { expectSaved, expectScript, runCommand, showView } from './modules';
 import { roomForSaveAndExport } from './viewport';
 
 // Saving and exporting, not the 320px bar, which folds Save and Export (viewport.ts).
@@ -78,7 +78,7 @@ function mine(page: Page): Promise<Row[]> {
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
 }
 
 /** The imported script, once it is stored. */

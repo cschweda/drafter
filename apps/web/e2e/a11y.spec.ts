@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
-import { type Browser, expect, type Locator, type Page, test } from '@playwright/test';
+import { type Browser, expect, type Locator, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import {
   chooseExport,
@@ -695,6 +695,10 @@ for (const theme of THEMES) {
     test(`has no accessibility violations on the first visit and each tour step (${theme})`, async ({
       page,
     }) => {
+      // Fourteen whole-page scans, one after another: ten seconds here, and just past thirty in
+      // WebKit on a shared runner, where each scan took over two (the trace showed it moving at a
+      // steady pace to step 9 of 11 when the limit came, not waiting on anything).
+      test.slow();
       await useTheme(page, theme);
       await page.goto('/');
       const welcome = page.getByRole('alertdialog', { name: 'Welcome to Drafter' });

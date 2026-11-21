@@ -1,6 +1,5 @@
-import { type BrowserContext, expect, type Page, test } from '@playwright/test';
-
 import { expectNewestThenCompare, listedReasons, newScreenplay } from './bulk-snapshot';
+import { type BrowserContext, expect, type Page, test } from './fixtures';
 import { runCommand, showView, viewTool } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');

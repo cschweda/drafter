@@ -1,5 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
 import { expectNewestThenCompare } from './bulk-snapshot';
+import { expect, type Page, test } from './fixtures';
 import {
   countFileAccess,
   fileAccess,
@@ -8,7 +8,7 @@ import {
   stubPickers,
   textOf,
 } from './fs-stub';
-import { expectSaved, expectUnsaved, saveState } from './modules';
+import { expectSaved, expectScript, expectUnsaved, saveState } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
 // Revert to Saved is on Save's arrow (Save options), and in More actions where Save is folded.
@@ -27,7 +27,7 @@ const MESSAGE = (file: string) =>
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
 }
 
 async function chooseNew(page: Page, name: string) {

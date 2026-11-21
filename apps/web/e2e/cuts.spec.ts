@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { editor, palette, runCommand, setText, showSource, start, wholeText } from './modules';
 
 // Cuts (drafts-and-cuts design §3): everything cut is kept, found between snapshots (never between

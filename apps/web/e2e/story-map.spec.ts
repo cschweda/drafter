@@ -2,13 +2,14 @@ import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { embeddedSource } from '@drafter/archive';
-import { type Browser, expect, type Page, test } from '@playwright/test';
 import { openExported } from './exported';
+import { type Browser, expect, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import {
   chooseExport,
   clickInSource,
   editor,
+  expectScript,
   runCommand,
   setText,
   settled,
@@ -191,7 +192,7 @@ test('dialog choices are kept for the script', async ({ page }) => {
   expect(text).toContain('My first screenplay');
   expect(text).toContain('A finished screenplay');
   await page.reload();
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
   await openDialog(page);
   await expect(dialog(page).getByRole('button', { name: 'Finished' })).toHaveAttribute(
     'aria-pressed',

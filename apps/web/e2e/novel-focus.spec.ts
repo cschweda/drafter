@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { runCommand, settled, showSource, showView, start } from './modules';
 
 // Focus on one chapter or one section (Novel plan, Task 7): only the passage shows in the Source

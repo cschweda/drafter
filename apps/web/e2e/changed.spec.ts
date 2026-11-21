@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
 import { expectNewestThenCompare } from './bulk-snapshot';
+import { expect, type Page, test } from './fixtures';
 import { nextFileName, putFile, stubPickers, textOf } from './fs-stub';
 import { expectSaved, expectUnsaved } from './modules';
 
@@ -344,13 +344,18 @@ test.describe('a file changed somewhere else (Chromium)', () => {
     await typeAtEnd(page, 'Mine.');
     // A keystroke lands while the check hashes the two texts, every time, so it can never settle.
     await page.evaluate(() => {
-      const digest = crypto.subtle.digest.bind(crypto.subtle);
-      crypto.subtle.digest = async (...args: Parameters<typeof digest>) => {
+      // On the prototype: WebKit can hand the page a fresh `crypto.subtle`, without what was set
+      // on the old one.
+      const digest = SubtleCrypto.prototype.digest;
+      SubtleCrypto.prototype.digest = async function (
+        this: SubtleCrypto,
+        ...args: Parameters<typeof digest>
+      ) {
         const tile = (document.querySelector('.cm-content') as unknown as { cmTile: EditorTile })
           .cmTile;
         const view = tile.root?.view ?? tile.view;
         view?.dispatch({ changes: { from: view.state.doc.length, insert: '.' } });
-        return digest(...args);
+        return digest.apply(this, args);
       };
     });
     await saveButton(page).click();

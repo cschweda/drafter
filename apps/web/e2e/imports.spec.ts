@@ -1,7 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
 import { makeZip } from '../../../packages/archive/test/make-zip';
+import { expect, type Page, test } from './fixtures';
 import { bytesOf, nextFileName, picks, putFile, removePickers, stubPickers } from './fs-stub';
-import { expectSaved, showView } from './modules';
+import { expectSaved, expectScript, showView } from './modules';
 
 // Highland and Fade In files (Imports and Markdown out): each is a zip, opened as a new Fountain
 // script that is not the file's (Save asks for a .fountain, and the file is never written). The
@@ -79,7 +79,7 @@ function mine(page: Page): Promise<Row[]> {
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
 }
 
 /** The imported script, once it is stored. */

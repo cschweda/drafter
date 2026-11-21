@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { expect, type Page, test } from '@playwright/test';
 import { DICTIONARIES } from '../../../packages/spell/src/dictionaries';
 import { DEPENDENCY_NOTES, TECH_SECTIONS } from '../app/about/tech';
 import { COMMAND_DATA, DOWNLOAD_PAGE, HELP_PAGES, helpHref } from '../app/commands/data';
 import { ABOUT_PAGE_IDS } from '../app/commands/help-menu';
-import { showView } from './modules';
+import { expect, type Page, test } from './fixtures';
+import { expectScript, showView } from './modules';
 
 // The help pages (Phase 1 design §4.5): Saving and your browser, Keyboard shortcuts, and Privacy.
 // They are prerendered, so they read without JavaScript, and they share the app's theme.
@@ -33,7 +33,7 @@ async function mainText(page: Page): Promise<string> {
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
 }
 
 /** The Source tab, which a phone doesn't show to begin with. */
@@ -821,7 +821,7 @@ test.describe('with JavaScript', () => {
       await page.goto(path);
       await page.getByRole('link', { name: /Back to Drafter/ }).click();
       await expect(page, path).toHaveURL(/\/$/);
-      await expect(editor(page)).toContainText('The Call');
+      await expectScript(page, 'The Call');
       await page.close();
     }
   });

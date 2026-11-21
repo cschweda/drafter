@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import {
   chooseTab,
   closeSettings,
@@ -234,6 +234,39 @@ test.describe('script modules', () => {
     await expect(fixtureSwitch(page)).not.toBeChecked();
     await closeSettings(page);
     await expect(countScenes(page)).toHaveCount(0);
+  });
+
+  // A command chosen from a menu gets focus back wherever it put it, once the menu has faded out.
+  // If another menu was opened in that moment (a tenth of a second, longer on a busy machine),
+  // focus was pulled out of it to its button, and the arrow keys stopped moving in the menu. The
+  // fade is made long here, so the second menu is always open when the first one finishes.
+  test('a menu opened while another is still fading keeps focus', async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 0) >= 1024, 'where the button is in More actions');
+    await start(page);
+    await openSettings(page);
+    await fixtureSwitch(page).click();
+    await consentDialog(page).getByRole('button', { name: 'Turn on' }).click();
+    await expect(fixtureSwitch(page)).toBeChecked();
+    await page.keyboard.press('Escape');
+    await expect(settingsDialog(page)).toBeHidden();
+    await setText(page, SCRIPT);
+    await page.addStyleTag({
+      content:
+        '[data-reka-menu-content][data-state="closed"] { animation-duration: 1500ms !important; }',
+    });
+    const fading = page.locator('[data-reka-menu-content][data-state="closed"]');
+
+    await pressToolbarButton(page, 'Count scenes', { focus: true });
+    await page.keyboard.press('Space');
+    await expect(fading).toHaveCount(1);
+    await lastPane(page).getByRole('button', { name: 'More tabs' }).focus();
+    await page.keyboard.press('Enter');
+    const last = page.getByRole('menu', { name: 'More tabs' }).getByRole('menuitem').last();
+    await page.keyboard.press('End');
+    await expect(last).toBeFocused();
+    // The first menu has gone, and focus is where the keys left it.
+    await expect(fading).toHaveCount(0);
+    await expect(last).toBeFocused();
   });
 
   test("reaches the module's button, tab, and command from the keyboard", async ({

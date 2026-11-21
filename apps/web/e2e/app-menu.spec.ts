@@ -1,6 +1,6 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { files, nextFileName, picks, removePickers, stubPickers } from './fs-stub';
-import { pressToolbarButton } from './modules';
+import { expectScript, pressToolbarButton } from './modules';
 
 // The accessibility test for the open menu is in a11y.spec.ts; keyboard behavior is tested here.
 
@@ -22,7 +22,7 @@ const turned = (transform: string) => {
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
 }
 
 async function openMenu(page: Page) {
