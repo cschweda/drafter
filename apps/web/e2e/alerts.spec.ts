@@ -66,7 +66,9 @@ async function stubPersistence(page: Page) {
 
 async function breakIndexedDb(page: Page) {
   await page.addInitScript(() => {
-    indexedDB.open = () => {
+    // On the prototype: WebKit can hand the page a fresh `indexedDB` object, without anything
+    // that was set on the old one.
+    IDBFactory.prototype.open = () => {
       throw new DOMException('The operation is insecure.', 'SecurityError');
     };
   });
