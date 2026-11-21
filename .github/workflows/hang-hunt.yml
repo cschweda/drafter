@@ -71,20 +71,22 @@ jobs:
       - name: The browser's system libraries
         if: steps.browsers.outputs.cache-hit == 'true' && runner.os == 'Linux'
         run: pnpm --filter @drafter/web exec playwright install-deps chromium
-      # Four times in each job: the build and the browser are there already, so each further pass
+      # Six times in each job: the build and the browser are there already, so each further pass
       # costs only its own minutes. A failure in one pass doesn't stop the next; the job fails at
       # the end if any did, and each pass's `[page-stack]` is in the log under its own heading.
-      - name: The Chromium tests, four times
+      - name: The Chromium tests, six times
         env:
-          # Round 3 is the control. Rounds 1 and 2 (120 runs of the suite) had the hang report on
-          # and no page stopped, where about two were expected. The report turns each page's
-          # debugger on from the start, which may be what keeps the fault away. So this round runs
-          # without it: a page that stops shows as a test out of time on a click or a key, with
-          # its trace, and no stack. "1" turns the report back on.
-          HANG_REPORT: "0"
+          # Round 4. Round 3, the control, ran with no report and one page in 80 runs stopped
+          # (focus.spec "says a script's file is gone": a click on File 1.4 s after load, and no
+          # frame of the screen after it), where rounds 1 and 2 had the debugger on from the start
+          # and none in 120 did. So nothing is turned on beforehand now: "late" looks at a page
+          # only once its test is out of time (apps/web/e2e/fixtures.ts, reportLate): the
+          # processor each of the browser's processes is using, the renderer's threads, and the
+          # debugger turned on then.
+          HANG_REPORT: late
         run: |
           failed=0
-          for pass in 1 2 3 4; do
+          for pass in 1 2 3 4 5 6; do
             echo "::group::pass $pass"
             pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4 || { failed=1; echo "PASS $pass FAILED"; cp -r apps/web/playwright-report "apps/web/report-pass-$pass" || true; }
             echo "::endgroup::"

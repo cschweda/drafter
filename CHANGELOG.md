@@ -14,7 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
-- **The hang hunt's third round is a control.** (On the hunt's own branch, which is never merged.) Rounds 1 and 2 ran the Chromium tests 120 times with the hang report on, and no page stopped. Round 3 runs them 80 times with it off, to learn whether the page debugger the report turns on is what keeps the fault away.
+- **The hang hunt, rounds 3 and 4.** (On the hunt's own branch, which is never merged.) Rounds 1 and 2 ran the Chromium tests 120 times with each page's debugger on, and no page stopped. Round 3, the control, ran them 80 times with it off, and one did: a click on File 1.4 seconds after the page loaded, and not one more frame of the screen. So the debugger may be what keeps the fault away. Round 4 turns nothing on beforehand and looks only at a page whose test is out of time: the processor each of the browser's processes is using (a spinning page uses all of one, a waiting page none), the renderer's threads and the system call each is in, and the debugger turned on then. Tried on a page made to spin: the processor count shows it; a debugger or a profiler asked only afterwards gets no answer from such a page.
 
 - **Build tools brought up to date.** The two GitHub Actions that Dependabot offered (`pnpm/action-setup` 6.1.1, `actions/download-artifact` 8.0.2). The Docker image stays on Node 24, the version every other build uses: Dependabot's bump of the image alone to Node 26 failed its build, and it is now told to leave Node's major version to `.nvmrc`. For developers; nothing in the app changes.
 
