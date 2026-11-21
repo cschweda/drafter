@@ -14,6 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- **An update test that doesn't find what it typed now says where the text is.** Once, on a macOS runner (2026-11-21), `offline.spec.ts` "Save first where Save is a download…" reloaded with autosave failing and did not find its typed line on the screen afterwards. The run could not say whether the line was in the editor off the screen, still in the copy a closing page leaves for the next launch, or gone, and 40 runs on a loaded machine and 150 reloads did not reproduce it (the script's lock was never refused to the reloaded page, which was the one way found that the left-behind copy could be skipped). A failing update test now prints and attaches `kept-text`: the end of the editor's own text, of any copy left behind, and of each stored script, and whether the tab is read-only. For developers; nothing in the app changes.
+
 - **A design for page breaks at the end of a sentence**, approved on 2026-11-21 and now being built: `docs/plans/2026-11-21-sentence-page-breaks.md`. A page would end at the last sentence that fits, with the rest wrapped again on the next page, as Final Draft does; locked scripts keep every page where it is. Nothing in the app changes yet.
 
 - **Build tools brought up to date.** The two GitHub Actions that Dependabot offered (`pnpm/action-setup` 6.1.1, `actions/download-artifact` 8.0.2). The Docker image stays on Node 24, the version every other build uses: Dependabot's bump of the image alone to Node 26 failed its build, and it is now told to leave Node's major version to `.nvmrc`. For developers; nothing in the app changes.
