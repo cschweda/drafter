@@ -38,6 +38,12 @@ updates:
     open-pull-requests-limit: 2
     commit-message:
       prefix: docker
+    # Node's major version is chosen in `.nvmrc`, which CI and the release builds read: the image
+    # follows it by hand, with them (a bump of the image alone to Node 26 failed its build,
+    # 2026-11-20). Patch and minor updates of the image still come.
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /

@@ -12,9 +12,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- **Build tools brought up to date.** The two GitHub Actions that Dependabot offered (`pnpm/action-setup` 6.1.1, `actions/download-artifact` 8.0.2). The Docker image stays on Node 24, the version every other build uses: Dependabot's bump of the image alone to Node 26 failed its build, and it is now told to leave Node's major version to `.nvmrc`. For developers; nothing in the app changes.
+
 - **A browser test that times out now says what its page was doing.** About one run of the checks in fifty, a test stops at a click or a key that never returns, a second or two after the page loads, and the page answers nothing after that. Half of what looked like this turned out to be menus that had closed themselves (fixed in v0.27.1 and above); the rest is a page whose main thread is busy and stays busy, which has never happened in 400 tries on a real machine. So the next one reports itself: in the checks, each Chromium page has its debugger on from the start, and a test that times out pauses the page and keeps the stack with its results. The browser tests take about 4% longer. For developers; nothing in the app changes.
 
 ### Fixed
+
+- **The first scheduled Safari run's one failure was a test out of time.** "Goes back to the app from each page" loads sixteen help pages and the app after each, about two seconds apiece on that runner, against a 30-second limit. It has the longer limit now. Tests only.
 
 - **One timed browser test no longer runs on shared runners.** "A warm scan is fast" (the History worker matching again after an edit, 20 to 30 ms on a real machine, limit 500 ms) took 1.3 to 1.6 seconds three times in CI with nothing in its path changed, the last on the nightly Safari run. It is named "a warm scan is within its budget" now, which keeps it for the release gates, where every timed test runs on a real machine. Tests only.
 
