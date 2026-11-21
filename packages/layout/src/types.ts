@@ -84,13 +84,26 @@ export interface PaginateOptions {
   numbers?: ReadonlyMap<number, string>;
 }
 
-/** Where a locked page starts: the source line at `at`, after `printed` printed lines from it. */
+/**
+ * Where a locked page starts: in the source line at `at`, at its character `char`. A page locked
+ * before pages could end inside a printed line (v0.27.1 and earlier) has no `char`, and starts
+ * after `printed` printed lines of that source line, wrapped the plain way.
+ */
 export interface PageAnchor {
   label: string;
   /** Offset of the anchor source line's start in the text being laid out. */
   at: number;
-  /** Printed lines from that line that stay on the page before; clamped to the block's lines. */
+  /**
+   * Printed lines from that line that stay on the page before; clamped to the block's lines. Read
+   * only when there is no `char`.
+   */
   printed: number;
+  /**
+   * How far into the source line the page's first character is: 0 for the line's start. The page
+   * starts at the word that holds it; in a block that is never cut inside a printed line (a
+   * heading, a parenthetical), at the printed line that holds it.
+   */
+  char?: number;
 }
 
 /**
