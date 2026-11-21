@@ -59,8 +59,15 @@ const reporting = (page: Page, browserName: string) =>
 export const test = base.extend({
   page: async ({ page, browserName }, use, info) => {
     const session = await reporting(page, browserName);
-    await session?.send('Debugger.enable');
+    // A page with JavaScript off ("without JavaScript" in docs.spec.ts) refuses the debugger, and
+    // has nothing to spin in: it goes without.
+    const on = session
+      ? await session.send('Debugger.enable').then(
+          () => true,
+          () => false,
+        )
+      : false;
     await use(page);
-    if (session && info.status === 'timedOut') await reportHang(session, info);
+    if (session && on && info.status === 'timedOut') await reportHang(session, info);
   },
 });
