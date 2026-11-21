@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { pressToolbarButton } from './modules';
+import { expectScript, pressToolbarButton } from './modules';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -228,7 +228,7 @@ test.describe('the recovery copy', () => {
         }).observe(document, { childList: true, subtree: true });
       });
       await page.goto('/');
-      await expect(editor(page)).toContainText('Title: The Call');
+      await expectScript(page, 'Title: The Call');
       // The chip is there only when it matters (fresh-look Task 6).
       await page.waitForTimeout(500);
       await expect(status(page).getByRole('button', { name: /Autosave:/ })).toHaveCount(0);
@@ -369,7 +369,7 @@ test.describe('the recovery copy', () => {
     test('keeps editing and warns when IndexedDB is unavailable', async ({ page }) => {
       await breakIndexedDb(page);
       await page.goto('/');
-      await expect(editor(page)).toContainText('Title: The Call');
+      await expectScript(page, 'Title: The Call');
       await expect(status(page).getByRole('button', { name: /Autosave:/ })).toHaveText(
         'Autosave: off',
       );
@@ -487,7 +487,7 @@ test.describe('the recovery copy', () => {
   test.describe('the first item of the status bar', () => {
     test('says nothing of a sample: the top bar does', async ({ page }) => {
       await page.goto('/');
-      await expect(editor(page)).toContainText('Title: The Call');
+      await expectScript(page, 'Title: The Call');
       await expect(status(page)).toContainText('Not saved to a file yet');
       await expect(status(page)).not.toContainText(/sample/i);
     });
@@ -572,7 +572,7 @@ test.describe('the recovery copy', () => {
     test('asks before leaving a sample when nothing can keep the edits', async ({ page }) => {
       await breakIndexedDb(page);
       await page.goto('/');
-      await expect(editor(page)).toContainText('Title: The Call');
+      await expectScript(page, 'Title: The Call');
       expect(await asks(page)).toBe(false);
       await typeAtEnd(page, '\n\nOnly in memory.');
       await expect(editor(page)).toContainText('Only in memory.');
@@ -725,7 +725,7 @@ test.describe('the text a closing page left behind', () => {
     const [row] = await stored(page);
     await leaveStash(page, row.id, 'From a stale stash.', row.updatedAt - 1000);
     await page.reload();
-    await expect(editor(page)).toContainText('Title: The Call');
+    await expectScript(page, 'Title: The Call');
     await expect(editor(page)).not.toContainText('From a stale stash.');
     expect((await stored(page))[0].source).toBe(row.source);
     // It is no use to anyone now.
@@ -819,7 +819,7 @@ test.describe('the text a closing page left behind', () => {
     const before = await stored(page);
     await leaveStash(page, 'a-script-that-was-deleted', 'Nobody wants this.', Date.now() + 1000);
     await page.reload();
-    await expect(editor(page)).toContainText('Title: The Call');
+    await expectScript(page, 'Title: The Call');
     expect(await stashLeft(page, 'a-script-that-was-deleted')).toBeNull();
     expect(await stored(page)).toEqual(before);
   });
@@ -850,7 +850,7 @@ test.describe('the text a closing page left behind', () => {
       };
     });
     await page.goto('/');
-    await expect(editor(page)).toContainText('Title: The Call');
+    await expectScript(page, 'Title: The Call');
     await typeAtEnd(page, '\n\nTyped while it opened.');
     await expect
       .poll(async () => (await stored(page)).length, { timeout: 15000 })

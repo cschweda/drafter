@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type BrowserContext, expect, type Locator, type Page, test } from '@playwright/test';
+import { expectScript } from './modules';
 
 // The alerts' tones (fresh-look Task 3b; the maintainer, 2026-10-31: "nothing blaring"): a caution
 // (the recovery copy may be cleared, a read-only tab, an update waiting) is a quiet amber, an error
@@ -9,8 +10,6 @@ import { type BrowserContext, expect, type Locator, type Page, test } from '@pla
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const THEMES = ['dark', 'light'] as const;
 type Theme = (typeof THEMES)[number];
-
-const editor = (page: Page) => page.locator('.cm-content');
 
 async function useTheme(page: Page | BrowserContext, theme: Theme) {
   await page.addInitScript((t) => localStorage.setItem('nuxt-color-mode', t), theme);
@@ -136,7 +135,7 @@ for (const theme of THEMES) {
       await useTheme(context, theme);
       const first = await context.newPage();
       await first.goto('/');
-      await expect(editor(first)).toContainText('The Call');
+      await expectScript(first, 'The Call');
       const second = await context.newPage();
       await second.goto('/');
       await expect(
@@ -151,7 +150,7 @@ for (const theme of THEMES) {
       await useTheme(page, theme);
       await waitingWorker(page);
       await page.goto('/');
-      await expect(editor(page)).toContainText('The Call');
+      await expectScript(page, 'The Call');
       await page.keyboard.press('ControlOrMeta+k');
       const palette = page.getByRole('dialog', { name: 'Command palette' });
       await palette.locator('input').fill('Check for updates');

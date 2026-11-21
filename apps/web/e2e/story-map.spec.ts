@@ -9,6 +9,7 @@ import {
   chooseExport,
   clickInSource,
   editor,
+  expectScript,
   runCommand,
   setText,
   settled,
@@ -191,7 +192,7 @@ test('dialog choices are kept for the script', async ({ page }) => {
   expect(text).toContain('My first screenplay');
   expect(text).toContain('A finished screenplay');
   await page.reload();
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
   await openDialog(page);
   await expect(dialog(page).getByRole('button', { name: 'Finished' })).toHaveAttribute(
     'aria-pressed',

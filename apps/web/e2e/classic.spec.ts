@@ -587,12 +587,15 @@ test.describe('the metadata block', () => {
   });
 });
 
-test('on an emulated iPhone an Undo straight after Cut takes the typing too, in Fountain Mode', async ({
+test('on an emulated iPhone an Undo straight after Cut may take the typing too, in Fountain Mode', async ({
   page,
 }, info) => {
-  // Not Classic Mode's: the same keys in Fountain Mode, with no wait after the cut, take back the
-  // cut and the typing before it in one Undo. Pinned so a change in WebKit or CodeMirror shows, and
-  // so the wait in "cut and paste over all" stays the iPhone's alone.
+  // Not Classic Mode's: the same keys in Fountain Mode. With no wait after the cut, one Undo takes
+  // back the cut and the typing before it; when the Undo comes a moment later (a busy machine, or a
+  // writer's hands) it takes back the cut alone, and the next takes the typing. Which one happens
+  // is a matter of milliseconds, so both are right here, and nothing else is: this says why the
+  // wait in "cut and paste over all" is the iPhone's alone, and shows a change in WebKit or
+  // CodeMirror that loses or doubles text.
   test.skip(info.project.name !== 'phone-webkit', 'the emulated iPhone');
   await start(page);
   await newScript(page, 'New stage play');
@@ -601,11 +604,17 @@ test('on an emulated iPhone an Undo straight after Cut takes the typing too, in 
   const blank = await wholeText(page);
   await page.keyboard.type('A bare stage.');
   await expect.poll(() => wholeText(page)).toContain('A bare stage.');
+  const typed = await wholeText(page);
   await page.keyboard.press('ControlOrMeta+a');
   await page.keyboard.press('ControlOrMeta+x');
   await expect.poll(() => wholeText(page)).not.toContain('A bare stage.');
   await page.keyboard.press('ControlOrMeta+z');
-  await expect.poll(() => wholeText(page)).toBe(blank);
+  await expect.poll(async () => [blank, typed].includes(await wholeText(page))).toBe(true);
+  // The cut alone came back: the typing is the next Undo's.
+  if ((await wholeText(page)) === typed) {
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect.poll(() => wholeText(page)).toBe(blank);
+  }
 });
 
 test.describe('capitals and Action', () => {
