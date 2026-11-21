@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
-import { showView, wholeText } from './modules';
+import { expectScript, showView, wholeText } from './modules';
 
 // Drafter's spellcheck (Phase 2 design §12; Plan D): the worker checks the text after a pause, and
 // the Source pane underlines what it marks. Every name, place, and misspelling here is invented.
@@ -20,7 +20,7 @@ const FAILED = 'Spellcheck couldn’t load its dictionary';
 
 async function start(page: Page) {
   await page.goto('/');
-  await expect(editor(page)).toContainText('The Call');
+  await expectScript(page, 'The Call');
 }
 
 /** The Source tab, which a phone doesn't show to begin with. */

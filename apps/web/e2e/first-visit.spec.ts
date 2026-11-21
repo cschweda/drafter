@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
 import { removePickers } from './fs-stub';
-import { showView } from './modules';
+import { expectScript, showView } from './modules';
 
 // A first visit (Phase 1 design §4): the screenplay sample, with the cursor on its first scene
 // heading and a bar offering the writer's own start. The welcome dialog is Task 6's; the
@@ -416,7 +416,7 @@ test.describe('a returning visit', () => {
     // The sample is the most recent script: it opens again, with its chip (or bar).
     await page.reload();
     await showSource(page);
-    await expect(editor(page)).toContainText('The Call');
+    await expectScript(page, 'The Call');
     await expect(sample(page)).toBeVisible();
 
     // A script of the writer's own: no chip or bar.
