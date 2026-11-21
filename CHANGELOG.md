@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **A workflow that hunts the page that stops dead.** About one run of the checks in fifty has a test time out on a page that stopped answering a second or two after it loaded, and it has never happened off the shared runners. `hang-hunt.yml` runs the Chromium tests forty times over there with the hang report on, by hand or from its own pull request, so the next one is caught in a day and says what the page was running. It blocks nothing and goes once the fault is found. For developers.
+
 - **The browser tests run in Safari's engine every night.** The checks on a pull request run Chromium only, and a fault that only Safari has was found at the release gates, after the code was merged (a menu that closed itself was live for some hours). A new workflow, `nightly.yml`, runs the same tests in WebKit at desktop and phone sizes on `staging` once a night, on macOS, and skips a night with nothing new. It reports and blocks nothing. For developers; nothing in the app changes.
 
 ### Changed

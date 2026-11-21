@@ -1,0 +1,91 @@
+# Hunts the page that stops dead (docs/DECISIONS.md, 2026-11-20, "A page that stops dead"): about
+# one run of checks.yml in fifty has a test time out on a click or a key that never returns, a
+# second or two after its page loaded. It has never happened on a writer's machine, so this runs
+# the Chromium tests many times over on the runners where it does, with the hang report on
+# (apps/web/e2e/fixtures.ts): a test that times out prints what its page was running, as
+# `[page-stack]` in the log.
+#
+# By hand only (Actions → hang hunt → Run workflow), or on a pull request that changes this file.
+# It reports and blocks nothing, and is to be deleted once the fault is found.
+name: hang hunt
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: The branch to test
+        default: staging
+  pull_request:
+    paths:
+      - .github/workflows/hang-hunt.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hang-hunt-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hunt:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        round: [1, 2, 3, 4, 5]
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Nothing here pushes: the token isn't left in .git/config.
+          persist-credentials: false
+          ref: ${{ inputs.ref || github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+      # Some tests import the packages' builds (an export read back, a file opened), so build them.
+      - name: Build the packages
+        run: pnpm -r --filter "./packages/*" build
+      # Chromium is kept between runs, by Playwright's version; Linux's system libraries are not
+      # (they install in a few seconds, and a cache can't restore them).
+      - name: Playwright's version
+        id: playwright
+        run: echo "version=$(pnpm --filter @drafter/web exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Cache the browser
+        id: browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: The browser for the end-to-end tests
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @drafter/web exec playwright install --with-deps chromium
+      - name: The browser's system libraries
+        if: steps.browsers.outputs.cache-hit == 'true' && runner.os == 'Linux'
+        run: pnpm --filter @drafter/web exec playwright install-deps chromium
+      # Twice in each job: the build and the browser are there already, so the second costs only
+      # its own minutes. A failure in the first doesn't stop the second.
+      - name: The Chromium tests, first time
+        env:
+          HANG_REPORT: "1"
+        run: pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4
+      - name: The Chromium tests, second time
+        if: always()
+        env:
+          HANG_REPORT: "1"
+        run: pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4
+      - name: The test report, if anything failed
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hang-hunt-${{ matrix.round }}-${{ matrix.shard }}
+          path: apps/web/playwright-report
+          retention-days: 7
