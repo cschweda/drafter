@@ -68,14 +68,16 @@ async function stubPersistence(page: Page, granted: boolean) {
  */
 async function breakIndexedDb(page: Page) {
   await page.addInitScript(() => {
-    const open = indexedDB.open.bind(indexedDB);
+    // On the prototype: WebKit can hand the page a fresh `indexedDB` object, without anything
+    // that was set on the old one.
+    const open = IDBFactory.prototype.open;
     const mend = window as unknown as { indexedDbDown: boolean };
     mend.indexedDbDown = true;
-    indexedDB.open = (...args: Parameters<typeof open>) => {
+    IDBFactory.prototype.open = function (this: IDBFactory, ...args: Parameters<typeof open>) {
       if (mend.indexedDbDown) {
         throw new DOMException('The operation is insecure.', 'SecurityError');
       }
-      return open(...args);
+      return open.apply(this, args);
     };
   });
 }
@@ -825,9 +827,10 @@ test.describe('the text a closing page left behind', () => {
   test('keeps text typed before the database answers', async ({ page }) => {
     // A first visit whose IndexedDB takes a while to open.
     await page.addInitScript(() => {
-      const open = indexedDB.open.bind(indexedDB);
-      indexedDB.open = (...args: Parameters<typeof open>) => {
-        const request = open(...args);
+      // On the prototype, as in `breakIndexedDb`.
+      const open = IDBFactory.prototype.open;
+      IDBFactory.prototype.open = function (this: IDBFactory, ...args: Parameters<typeof open>) {
+        const request = open.apply(this, args);
         return new Proxy(request, {
           set(target, property, value) {
             if (property === 'onsuccess') {

@@ -265,17 +265,17 @@ test.describe('focus mode', () => {
   // each test says what opens the gate.
   const GATE = () => {
     const w = window as unknown as { __holdLocks: boolean; __openGate?: () => void };
-    const locks = navigator.locks;
-    const request = locks.request.bind(locks) as (...args: unknown[]) => Promise<unknown>;
+    // On the prototype, so it holds whichever `navigator.locks` object the page is handed.
+    const request = LockManager.prototype.request as (...args: unknown[]) => Promise<unknown>;
     w.__holdLocks = false;
-    locks.request = (async (...args: unknown[]) => {
+    LockManager.prototype.request = async function (this: LockManager, ...args: unknown[]) {
       if (w.__holdLocks) {
         await new Promise<void>((open) => {
           w.__openGate = open;
         });
       }
-      return request(...args);
-    }) as typeof locks.request;
+      return request.apply(this, args);
+    } as typeof LockManager.prototype.request;
   };
 
   /** Types into a sample, saves it for the first time with the gate shut, and types again. */
@@ -421,7 +421,9 @@ test.describe('focus mode', () => {
 test.describe('what the corner keeps from the bars that are gone', () => {
   test('says the recovery copy is unavailable, as an alert', async ({ page }) => {
     await page.addInitScript(() => {
-      indexedDB.open = () => {
+      // On the prototype: WebKit can hand the page a fresh `indexedDB` object, without anything
+      // that was set on the old one.
+      IDBFactory.prototype.open = () => {
         throw new DOMException('The operation is insecure.', 'SecurityError');
       };
     });
