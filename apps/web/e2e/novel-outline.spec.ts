@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { runCommand, settled, showSource, start } from './modules';
 
 // The Outline for a novel (Novel plan, Task 5): the sample novel's parts, chapters, and sections

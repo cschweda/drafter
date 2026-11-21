@@ -1,5 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
 import { makeZip } from '../../../packages/archive/test/make-zip';
+import { expect, type Page, test } from './fixtures';
 import { bytesOf, nextFileName, picks, putFile, removePickers, stubPickers } from './fs-stub';
 import { expectSaved, expectScript, showView } from './modules';
 

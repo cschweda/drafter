@@ -125,6 +125,9 @@ jobs:
         if: steps.browsers.outputs.cache-hit == 'true' && runner.os == 'Linux'
         run: pnpm --filter @drafter/web exec playwright install-deps chromium
       - name: The web app's end-to-end tests, in Chromium
+        # A test that times out says what its page was running (apps/web/e2e/fixtures.ts).
+        env:
+          HANG_REPORT: "1"
         run: pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4
       - name: The test report, if anything failed
         if: failure()

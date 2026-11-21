@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { failStorageWrites } from './modules';
 
 // Help: About Drafter, the sample scripts, and Check for updates (decided 2026-10-29). The

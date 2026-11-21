@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from './fixtures';
 import { chooseTab, editor, palette, paletteInput, runCommand, setText, start } from './modules';
 
 // Scaffold's character and location pages, and its Cast and Places (seeing-the-script design

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
-import { type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { type BrowserContext, expect, type Page, test } from './fixtures';
 import { files, nextFileName, picks, removePickers, stubPickers } from './fs-stub';
 import { pressToolbarButton, showView } from './modules';
 

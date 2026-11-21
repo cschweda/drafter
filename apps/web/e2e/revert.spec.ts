@@ -1,5 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
 import { expectNewestThenCompare } from './bulk-snapshot';
+import { expect, type Page, test } from './fixtures';
 import {
   countFileAccess,
   fileAccess,

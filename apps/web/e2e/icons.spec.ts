@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 // The icons are bundled into the build (nothing is fetched), from a scan of the source: one the
 // scan misses draws nothing, with no error to say so.

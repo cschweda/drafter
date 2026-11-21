@@ -1,5 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
 import { type Outcome, TRAPS, type Trap } from '../../../fixtures/trap/traps';
+import { expect, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import { showView } from './modules';
 

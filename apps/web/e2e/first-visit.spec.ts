@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import { expectScript, showView } from './modules';
 

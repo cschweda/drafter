@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { expect, type Page, test } from '@playwright/test';
 import { DICTIONARIES } from '../../../packages/spell/src/dictionaries';
 import { DEPENDENCY_NOTES, TECH_SECTIONS } from '../app/about/tech';
 import { COMMAND_DATA, DOWNLOAD_PAGE, HELP_PAGES, helpHref } from '../app/commands/data';
 import { ABOUT_PAGE_IDS } from '../app/commands/help-menu';
+import { expect, type Page, test } from './fixtures';
 import { expectScript, showView } from './modules';
 
 // The help pages (Phase 1 design §4.5): Saving and your browser, Keyboard shortcuts, and Privacy.

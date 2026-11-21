@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { embeddedSource } from '@drafter/archive';
-import { type Browser, expect, type Page, test } from '@playwright/test';
 import { openExported } from './exported';
+import { type Browser, expect, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import {
   chooseExport,

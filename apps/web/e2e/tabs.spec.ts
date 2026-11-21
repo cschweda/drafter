@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { type BrowserContext, expect, type Page, test } from './fixtures';
 import { alertsHeard, watchAlerts } from './fs-stub';
 import { pressToolbarButton, runCommand, start } from './modules';
 

@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from './fixtures';
 import { editor, palette, paletteInput, setText, start } from './modules';
 
 // One dialog style (fresh-look design §5, Task 7): every dialog is a DDialog, a native <dialog> on

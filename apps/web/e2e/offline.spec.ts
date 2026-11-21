@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { expect, type Page, test } from '@playwright/test';
 import { HELP_PAGES } from '../app/commands/data';
+import { expect, type Page, test } from './fixtures';
 import { removePickers, stubPickers, textOf } from './fs-stub';
 import { expectScript, failStorageWrites, pressToolbarButton } from './modules';
 

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { pressToolbarButton } from './modules';
 
 // The welcome dialog and the guided tour (Phase 1 design §4.4). playwright.config.ts marks the tour

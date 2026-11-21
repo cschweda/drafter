@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { zipStored } from '@drafter/archive';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import {
   alertsHeard,
   bytesOf,

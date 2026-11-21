@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { editor, pressToolbarButton, setText, showSource, start, wholeText } from './modules';
 
 // Classic Mode on a phone (design §10): an on-screen keyboard has Enter and no Tab, so the element
