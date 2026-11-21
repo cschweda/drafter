@@ -14,6 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- **Sentence page breaks, step 5 of 6: the documents.** The technical design's page filling and dialogue splitting (§5.3, §5.4) say how a page ends at a sentence, where a sentence ends, and why a break costs a page's work whatever the paragraph's length. The production design (§7.2) has the `chars` list and what an older Drafter makes of a newer lock. `DEFERRED.md` drops "breaking a page inside a line" and lists what was left out (dual dialogue, a limit on white space, lyrics, a locked `.fdx`'s pages). `DECISIONS.md` has what was decided while building. What's new and the in-app pages wait for the release itself.
+
 - **Sentence page breaks, step 4 of 6: a locked page's start is kept by character.** A page can now start inside a printed line, where a sentence does, and a count of printed lines can't say that. So a lock records, for each page, how far into its source line the page's first character is, and the engine cuts the paragraph or speech at the word that holds it.
   - **A script locked before this keeps every page exactly.** Its pages are still read by their counts, against the plain wrap those counts were made on. A new test holds the engine to it: three page maps made by v0.27.1's own engine, with pages that start partway into paragraphs and speeches, must print line for line as v0.27.1 printed them, and after an edit every locked page must start at the same line.
   - **A new lock keeps the pages you see**, sentence breaks and all, line for line.
