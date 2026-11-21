@@ -137,7 +137,10 @@ test.describe('the history worker on a long history', () => {
     expect(cold.updates).toBeGreaterThan(1);
   });
 
-  test('a warm scan is fast', async ({ page, browserName }, testInfo) => {
+  // "within": a clock on a shared runner, so a release gate and not a pull request or the nightly
+  // run, like the cold scan above ("quickly"). Matching again took 1.3 to 1.6 s three times in CI
+  // (20 to 30 ms on a writer's machine) with nothing in the history path changed.
+  test('a warm scan is within its budget', async ({ page, browserName }, testInfo) => {
     const projectId = await longHistory(page);
     expectFound(await scan(page, projectId, NOW));
     // A new worker: every print is in the cache, and no snapshot is read.
