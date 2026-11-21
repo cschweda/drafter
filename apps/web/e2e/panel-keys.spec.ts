@@ -76,11 +76,18 @@ async function expectTypingAfterLeavesScript(page: Page, move: () => Promise<voi
   await move();
   await page.keyboard.type('xyz');
   expect(await wholeText(page)).toBe(before);
-  // Back in the editor, the cursor is where it was: at the end. A plain `focus()` puts the
-  // browser's own cursor at the start of the editor first, and CodeMirror puts its cursor back a
-  // moment later; a key sent in between would land at the top of the script (as it did, now and
-  // then, on a slow runner), so the cursor is waited for, as a writer's hands would.
-  await editor(page).focus();
+  // Back in the editor, the cursor is where it was: at the end. Focus goes back the way the app
+  // sends it (CodeMirror's own `focus`, which puts its cursor back in the same step), not with a
+  // plain `focus()` on the element: that leaves the browser's cursor at the top of the editor for
+  // CodeMirror to put right, and when the page is busy for a few hundred milliseconds just then,
+  // CodeMirror takes the browser's cursor as the writer's instead (probed 2026-11-20: 400 ms was
+  // enough). No part of the app focuses the editor that way.
+  await editor(page).evaluate((el) => {
+    type Linked = { view?: { focus(): void } };
+    const content = el as Element & { cmTile?: Linked; cmView?: Linked };
+    (content.cmTile ?? content.cmView)?.view?.focus();
+  });
+  await expect(editor(page)).toBeFocused();
   await cursorAtEnd(page);
   await page.keyboard.type('Q');
   await expect.poll(() => wholeText(page)).toBe(`${before}Q`);
