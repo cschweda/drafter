@@ -343,8 +343,9 @@ class Items {
   }
 
   #block(i: number, p: Printing): BlockItem {
-    // Only action is cut inside a printed line, so only its lines need to know where they came from.
-    const cuts = p.role === 'action';
+    // Only action is cut inside a printed line, so only its lines need to know where they came
+    // from. By the element, not the role it takes: a play's action prints as `stage_direction`.
+    const cuts = (this.#blocks[i] as Block).kind === 'action';
     const origins: Array<Origin | null> = [];
     const lines = blockLines(
       this.#blocks[i] as Block,
