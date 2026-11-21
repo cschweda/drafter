@@ -185,6 +185,17 @@ describe('action across a page, cut at a sentence', () => {
     ]);
   });
 
+  it('cuts a stage direction in a play, which is the same element under another name', () => {
+    const play = builtins['stage-play-standard'] as Template;
+    expect(play.roles.action).toBeUndefined();
+    // A stage direction is narrower: five words a line. Eight lines for five of room; the first
+    // sentence ends with line 3.
+    const [first, second] = pagesOf(withRoom(5, paragraph(15, 25), play));
+    expect(counts(first as string[])).toEqual([5, 5, 5]);
+    expect((first as string[])[2]?.endsWith(`${word(15)}.`)).toBe(true);
+    expect(counts(second as string[])).toEqual([5, 5, 5, 5, 5]);
+  });
+
   it('leaves a heading alone: only action is cut inside a line', () => {
     const heading = `.${sentence(1, 15)} ${sentence(16, 25)}`;
     const layout = lay(`${filler(48)}\n\n${heading}\n`);
