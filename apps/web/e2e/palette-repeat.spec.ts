@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 
 // Opening the command palette again and again must keep working: on Firefox, Enter was sometimes
 // ignored on a later opening. Each run here is ten openings in a row, one script, no reload.

@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from './fixtures';
 import { editor, expectScript, pressToolbarButton, stored } from './modules';
 
 // The contrast sliders (the maintainer, 2026-11-03): behind the top bar's Contrast button, one for

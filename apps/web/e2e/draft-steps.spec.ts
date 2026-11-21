@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { palette, runCommand, setText, showSource, start, wholeText } from './modules';
 
 // Draft by draft (drafts-and-cuts design §2.4): the drafts in order, Draft 01 → 02 → … → now, each

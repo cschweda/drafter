@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { type BrowserContext, expect, type Page, test } from './fixtures';
 import { expectScript, showView, wholeText } from './modules';
 
 // Drafter's spellcheck (Phase 2 design §12; Plan D): the worker checks the text after a pause, and

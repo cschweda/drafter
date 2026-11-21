@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import { chooseExport, editor, pasteText, start } from './modules';
 

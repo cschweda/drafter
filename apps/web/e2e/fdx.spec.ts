@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { bytesOf, nextFileName, picks, putFile, removePickers, stubPickers } from './fs-stub';
 import { expectSaved, expectScript, runCommand, showView } from './modules';
 import { roomForSaveAndExport } from './viewport';

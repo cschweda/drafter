@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { expect, type Page, test } from '@playwright/test';
 import { listZip } from '../../../packages/archive/src/index';
 import {
   type CutEntry,
@@ -8,6 +7,7 @@ import {
   readCutsFile,
   readDraftFile,
 } from '../../../packages/history/src/index';
+import { expect, type Page, test } from './fixtures';
 import {
   filesIn,
   folderPicks,

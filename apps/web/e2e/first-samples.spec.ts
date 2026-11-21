@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { expectScript, showView } from './modules';
 
 // The first New of a kind opens with that kind's annotated sample, as the writer's own document,

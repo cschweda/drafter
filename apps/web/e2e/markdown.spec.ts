@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { files, nextFileName, picks, putFile, removePickers, stubPickers, textOf } from './fs-stub';
 import { expectScript, pasteText, showView, wholeText } from './modules';
 

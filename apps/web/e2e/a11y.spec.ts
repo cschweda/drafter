@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
-import { type Browser, expect, type Locator, type Page, test } from '@playwright/test';
+import { type Browser, expect, type Locator, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import {
   chooseExport,

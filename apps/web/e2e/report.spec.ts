@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { type BrowserContext, expect, type Page, test } from './fixtures';
 
 // Help → Report a problem… and Suggest an idea… (docs/DECISIONS.md, Report a problem): a dialog
 // that fills in GitHub's new-issue page, which the writer submits there. Nothing is sent by Drafter;

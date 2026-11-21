@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **The browser tests run in Safari's engine every night.** The checks on a pull request run Chromium only, and a fault that only Safari has was found at the release gates, after the code was merged (a menu that closed itself was live for some hours). A new workflow, `nightly.yml`, runs the same tests in WebKit at desktop and phone sizes on `staging` once a night, on macOS, and skips a night with nothing new. It reports and blocks nothing. For developers; nothing in the app changes.
 
+### Changed
+
+- **A browser test that times out now says what its page was doing.** About one run of the checks in fifty, a test stops at a click or a key that never returns, a second or two after the page loads, and the page answers nothing after that. Half of what looked like this turned out to be menus that had closed themselves (fixed in v0.27.1 and above); the rest is a page whose main thread is busy and stays busy, which has never happened in 400 tries on a real machine. So the next one reports itself: in the checks, each Chromium page has its debugger on from the start, and a test that times out pauses the page and keeps the stack with its results. The browser tests take about 4% longer. For developers; nothing in the app changes.
+
 ### Fixed
 
 - **A menu opened straight after choosing from another could lose the arrow keys.** A command chosen from a menu (Count scenes, History, anything in the Drafter and Help menus) gets focus back where it put it once the menu has faded out, about a tenth of a second later. If you opened another menu in that moment, focus was pulled out of it to its button, and the arrow keys no longer moved through the menu. A menu that is open now keeps focus. Found by the first night's Safari run, where a busy machine made the moment long; it could happen in any browser.

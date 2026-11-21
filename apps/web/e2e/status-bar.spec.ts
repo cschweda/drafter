@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import { editor, problemsTab, runCommand, setText, showView, start } from './modules';
 

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
 import { DIFF_TOKENS } from '../app/compare/colors';
+import { expect, type Page, test } from './fixtures';
 import {
   clickViewTool,
   closeSettings,

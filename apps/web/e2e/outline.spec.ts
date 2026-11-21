@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
 import { expectNewestThenCompare, newScreenplay } from './bulk-snapshot';
+import { expect, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import {
   editor,

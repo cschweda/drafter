@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { expectScript, replaceWhole, wholeText } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');

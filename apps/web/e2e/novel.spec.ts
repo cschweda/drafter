@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { expectScript } from './modules';
 
 // Novel is a choice beside Screenplay and Stage play (the Novel plan, Task 4): a Markdown document

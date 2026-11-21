@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { editor, setText, showSource, start, wholeText } from './modules';
 
 // A whole script replaced in one go (select all, then text typed as one composition, as Firefox

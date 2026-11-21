@@ -1,6 +1,6 @@
-import { expect, type Page, test } from '@playwright/test';
 import type { HistoryProbe, ProbeScan } from '../app/history/probe';
 import { LONG_SCENES, longScript, newScreenplay, seedLongHistory } from './bulk-snapshot';
+import { expect, type Page, test } from './fixtures';
 import { editor, start } from './modules';
 
 // The history worker (version-history design §3.4) on a long history: 300 snapshots of a 120-page

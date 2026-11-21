@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { type BrowserContext, expect, type Locator, type Page, test } from '@playwright/test';
+import { type BrowserContext, expect, type Locator, type Page, test } from './fixtures';
 import { expectScript } from './modules';
 
 // The alerts' tones (fresh-look Task 3b; the maintainer, 2026-10-31: "nothing blaring"): a caution

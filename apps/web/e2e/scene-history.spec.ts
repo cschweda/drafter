@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { nextFileName, stubPickers } from './fs-stub';
 import { editor, runCommand, setText, showSource, start, wholeText } from './modules';
 import { drafterDatabase, sampleSeenRows } from './seed';

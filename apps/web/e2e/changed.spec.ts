@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
 import { expectNewestThenCompare } from './bulk-snapshot';
+import { expect, type Page, test } from './fixtures';
 import { nextFileName, putFile, stubPickers, textOf } from './fs-stub';
 import { expectSaved, expectUnsaved } from './modules';
 

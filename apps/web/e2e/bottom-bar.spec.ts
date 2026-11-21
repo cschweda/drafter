@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from './fixtures';
 import { editor, setText, start, turnOnFixture } from './modules';
 
 // One pane below 1024px, made for a phone (fresh-look design §3.1, §6; Task 9): a 56px bottom tab
