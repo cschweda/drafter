@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **The browser tests run in Safari's engine every night.** The checks on a pull request run Chromium only, and a fault that only Safari has was found at the release gates, after the code was merged (a menu that closed itself was live for some hours). A new workflow, `nightly.yml`, runs the same tests in WebKit at desktop and phone sizes on `staging` once a night, on macOS, and skips a night with nothing new. It reports and blocks nothing. For developers; nothing in the app changes.
+
 ### Fixed
 
 - **Typing just after a sample's first save could stop being kept.** The first save of a sample makes a script of your own, and you can type through that moment. If the sample's own delayed write of your typing was still under way at the instant the new script was shown, the sample was put back as the open script when that write finished. From then on nothing you typed was kept in the browser's recovery copy, until the script was opened again; the text stayed on screen and a save still wrote it to the file. The write now leaves the open script alone when another has been shown meanwhile. The window was a few milliseconds wide: it was found because a browser test failed once on the release's own checks.
