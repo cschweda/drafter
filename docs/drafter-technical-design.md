@@ -436,7 +436,13 @@ for each printed block B (in order):
   else:                                                  newPage; place
 ```
 
-A block that isn't dialogue **can split** when at least `keepWithNextLines` of its lines stay (after any blank lines it opens with), at least two go to the next page, and the last line to stay isn't blank; it keeps as many lines as that allows. So no line of a paragraph stands alone at the foot of a page or the head of the next, and a paragraph too short for that (three lines, with room for two) moves whole. A block taller than a page splits the same way, a page at a time.
+A block that isn't dialogue **can split** when at least `keepWithNextLines` of its lines stay (after any blank lines it opens with), at least two go to the next page, and the last line to stay isn't blank. So no line of a paragraph stands alone at the foot of a page or the head of the next, and a paragraph too short for that moves whole. A block taller than a page splits the same way, a page at a time.
+
+**Action splits where a sentence ends** (since v0.27.2; `docs/plans/2026-11-21-sentence-page-breaks.md`). Of the places in the paragraph where a sentence ends, the page ends at the **last** one that fits and leaves those two lines on each side. The printed line that holds it is cut there and printed short, and the rest of that source line is wrapped again from the first word of the next sentence, so the lines after the break are not the lines the paragraph had before it. A line the writer ended counts as a sentence's end. When there is no such place (one long sentence; sentences that end only in the first line), the break is after the last printed line that fits, as it was before. A cut inside a line can leave two lines on each side where a break between lines can't, so a three-line paragraph with room for two sometimes starts at the foot of a page now. Only the `action` element is cut inside a line, whatever role a template gives it (`stage_direction` in a play); every other block that splits does so between its lines.
+
+**Where a sentence ends** (`sentenceEnds`). At `.`, `!`, `?` or `…` (or several), with any closing quote or bracket, when a space follows and then something a sentence can start with: a capital letter, a digit, an opening quote or bracket, or a dash. A lone period after `Mr`, `Mrs`, `Ms`, `Dr`, `St`, `Jr`, `Sr`, `Mt`, `Fr`, `Prof`, `Capt`, `Sgt`, `Lt`, `Col`, `Gen`, `Sen`, `Rev`, `vs`, `etc`, or a single capital letter doesn't end one. It is a guess, and a wrong one costs a page that ends where a sentence nearly does.
+
+**The cost of a break is a page's.** Each printed line of action or dialogue keeps the source line it came from (`Para`) and which of its cells it holds (`Origin`). A break reads the lines that could stay (`#rows`), looks for sentence ends only in their text, and wraps only as much of the rest as it needs to count two lines; the next page wraps the next page's worth. No run of marks, brackets or letters is followed past the line being asked about. So a paragraph of half a million characters costs each page the same as a short one (`complexity.test.ts`).
 
 A chain too tall for an empty page is placed normally, so the loop always advances. `spaceBefore` is suppressed at the top of a page, and the first line on a page is never blank. A `page_break` ends the current page unless that page is still empty, so forced breaks never create blank pages and consecutive `===` lines act as one.
 
@@ -444,10 +450,10 @@ A chain too tall for an empty page is placed normally, so the loop always advanc
 
 When a dialogue block of `n` wrapped lines doesn't fit in the `remaining` lines of a page, let `p = min(remaining − 1, n − minLinesAfter)`: the most lines that can stay while leaving one line for `(MORE)` and at least `minLinesAfter` lines for the next page. If `p ≥ minLinesBefore`:
 
-1. Place `p` dialogue lines, never splitting inside a parenthetical and never ending on one. If one of the two lines before the `p`th ends a sentence (`.`, `!`, `?`, or `…`, with any closing quote or bracket, or the end of a line the writer typed) and the `p`th doesn't, stop there instead, within the same limits.
+1. Place dialogue lines, never splitting inside a parenthetical and never ending on one. **The speech stops where a sentence ends** (since v0.27.2), as action does (§5.3): at the last sentence end, anywhere in the lines that could stay, that leaves `minLinesBefore` lines of dialogue here and `minLinesAfter` for the next page; the line that holds it is printed short. With no such place, `p` lines are placed. (v0.27.1 looked for a sentence only at the ends of the two lines before the `p`th.) Only dialogue is cut inside a line: a parenthetical and a lyric never are.
 2. Emit a synthetic `(MORE)` line at `dialogueSplit.moreIndent`.
 3. New page. Emit a synthetic character line `NAME (CONT'D)`. If the cue already has an extension, append to it — `NAME (V.O.) (CONT'D)` — unless it already ends in `(CONT'D)`.
-4. Continue with the remaining lines, splitting again if they still don't fit.
+4. Continue with what is left, wrapped again from the next sentence's first word when the break was inside a line, splitting again if it still doesn't fit.
 
 Otherwise, move the whole group to the next page. Character cues have `keepWithNext`, so a cue is never orphaned. With the default thresholds of 2 and 2, `minLinesAfter` never blocks a split, because a speech that doesn't fit always leaves at least two lines over; it starts to matter at 3.
 

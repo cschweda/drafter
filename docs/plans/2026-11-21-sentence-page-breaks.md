@@ -1,6 +1,6 @@
 # Page breaks at the end of a sentence: design
 
-**Status:** approved by the maintainer on 2026-11-21, with the three questions of §9 answered as recommended. Being built in the order of §8.
+**Status:** approved by the maintainer on 2026-11-21, with the three questions of §9 answered as recommended. Steps 1 to 5 of §8 are built (2026-11-21); where the build departs from this text is in §10.
 
 **Asked for:** the fix releases before v0.28.0, item 2 (2026-11-20), carried over from v0.27.1 as "needs a design". The maintainer's three decisions of 2026-11-21 are in §2.
 
@@ -117,3 +117,16 @@ Asked with the design, answered by the maintainer on 2026-11-21 ("1-3 your recom
 1. **No setting.** Unlocked scripts repaginate; it is the engine's behaviour.
 2. **No limit on white space to start with.** One is set from real scripts if pages come out ragged.
 3. **Dual dialogue stays as it is.**
+
+## 10. As built
+
+Steps 1 to 5 were built on 2026-11-21, test first. The release (step 6's merge to `main`, the version, What's new and the in-app Why) waits for the maintainer's word. The build departs from the text above in these places; `docs/DECISIONS.md` (2026-11-21) has the reasons in full.
+
+1. **Old locks are not converted (§5).** A script locked before this change is read by its counts against the plain wrap, as before, with no character worked out for it. The result is the one §5 promises (every locked page starts at the same word, proved line for line against fixtures made by v0.27.1's engine), by less machinery.
+2. **The characters are in a list of their own (§5).** v0.27.1 refuses a page entry that is not exactly `[label, line, printed]`, so the character can't be a fourth item. The file keeps the three-item entries and adds `chars`, one per page, written only when some page has one. An older Drafter ignores it.
+3. **Action is told by the kind of block, not its role (§3).** A stage play's directions are action under another role, and get the same breaks.
+4. **The sentence finder reads only around the page's end (§4).** It never follows a run of marks, brackets or letters past the place asked about, so a break costs a page's worth of work whatever the paragraph holds. A commit review found the first version did not (300,000 question marks took 36 seconds).
+5. **One pull request per step into a branch, `sentence-breaks`, then one into `staging` (§8),** so `staging` never held half the rule.
+6. **The Final Draft comparison (§5) is not done:** it waits for the maintainer's `.fdx`.
+
+The release gates (step 6) were run on the full stack before the merge to `staging`: Chromium 1,408 passed; WebKit, Firefox and both phone sizes 4,493 passed, and the 2 that failed (a timed test and a dropped connection, both in WebKit at phone size) passed five times of five alone.
