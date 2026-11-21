@@ -813,6 +813,9 @@ test.describe('with JavaScript', () => {
   });
 
   test('goes back to the app from each page', async ({ context }) => {
+    // Sixteen pages, and the app loaded after each: a steady 2 seconds apiece on the nightly WebKit
+    // runner, which ran out of the 30 seconds at the last page (2026-11-21).
+    test.slow();
     // A tab of its own for each page: Firefox refuses a tab's navigations past a rate ("Too many
     // attempts to navigate or modify history within a short timeframe"), and sixteen help pages and
     // the app, each loaded and left in one tab within seconds, went past it on the sixteenth Back.
