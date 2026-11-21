@@ -278,7 +278,7 @@ test.describe('focus mode', () => {
     } as typeof LockManager.prototype.request;
   };
 
-  /** Types into a sample, saves it for the first time with the gate shut, and types again. */
+  /** Types into a sample, saves it for the first time with the gate shut, and types again once the switch is at the gate. */
   async function typeThroughFirstSave(page: Page) {
     await start(page);
     await page.keyboard.press('ControlOrMeta+Shift+Enter');
@@ -291,6 +291,9 @@ test.describe('focus mode', () => {
     });
     await page.keyboard.press('ControlOrMeta+s');
     await expect(state(page)).toHaveText('Saved');
+    // "Saved" shows before the switch reaches the gate. Typing sooner could let the sample's write
+    // of it land first, with no gate yet for that write to open, and the switch would never end.
+    await page.waitForFunction(() => (window as unknown as { __openGate?: () => void }).__openGate);
     await page.keyboard.type(' more');
   }
 
@@ -327,11 +330,8 @@ test.describe('focus mode', () => {
     await stubPickers(page);
     await page.addInitScript(GATE);
     await typeThroughFirstSave(page);
-    // The switch reaches the gate in its own time, and goes on once the typing is in.
-    const gate = await page.waitForFunction(
-      () => (window as unknown as { __openGate?: () => void }).__openGate,
-    );
-    await gate.evaluate((open) => open());
+    // The typing is in, and the switch goes on.
+    await page.evaluate(() => (window as unknown as { __openGate: () => void }).__openGate());
     await expectKept(page);
   });
 
