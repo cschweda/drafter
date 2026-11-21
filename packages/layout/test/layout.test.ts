@@ -278,22 +278,22 @@ describe('a paragraph across a page', () => {
 describe('a speech across a page', () => {
   const run = 'wwwwwwwwww xxxxxxxxxx yyyyyyyyyy';
   /** Six lines of dialogue: the second is `end`, and each of the others is one run of words. */
-  const speech = (end: string) => `MARGARET\n${run} ${end} ${run} ${run} ${run} ${run}`;
+  const speech = (end: string) => `MARGARET\n${run} ${end} W${run.slice(1)} ${run} ${run} ${run}`;
   const foot = (layout: Layout) =>
     page(layout, 1)
       .lines.map((line) => text(line))
       .filter((t) => t.trim() !== '')
       .slice(-2);
 
-  it('stops where a sentence ends, when that is within two lines of a full page', () => {
+  it('stops where a sentence ends', () => {
     const layout = lay(`${filler(47)}\n\n${speech('aaaaaaaaaa bbbbbbbbbb cccccccccc d.')}\n`);
     expect(foot(layout)).toEqual(['aaaaaaaaaa bbbbbbbbbb cccccccccc d.', '(MORE)']);
   });
 
-  it('fills the page when no sentence ends that near', () => {
+  it('fills the page when no sentence ends on it', () => {
     const layout = lay(`${filler(47)}\n\n${speech('aaaaaaaaaa bbbbbbbbbb cccccccccc dd')}\n`);
     expect(foot(layout)).toEqual([run, '(MORE)']);
-    expect(page(layout, 1).lines.filter((line) => text(line) === run)).toHaveLength(3);
+    expect(page(layout, 1).lines.filter((line) => /^w+ x+ y+$/i.test(text(line)))).toHaveLength(3);
   });
 });
 

@@ -32,6 +32,23 @@ const cases: Array<[string, () => string]> = [
     () =>
       `${Array.from({ length: 60_000 }, (_, i) => `${'Then more '.repeat(1 + ((i * 7) % 5))}comes.`).join(' ')}\n`,
   ],
+  [
+    'a speech of a hundred thousand sentences in one line',
+    () => `MARGARET\n${'Word. '.repeat(100_000)}\n`,
+  ],
+  [
+    'a speech of sixty thousand sentences of every length',
+    () =>
+      `MARGARET\n${Array.from({ length: 60_000 }, (_, i) => `${'Then more '.repeat(1 + ((i * 7) % 5))}comes.`).join(' ')}\n`,
+  ],
+  [
+    'a speech of three hundred thousand question marks',
+    () => `MARGARET\nA${'?'.repeat(300_000)} B\n`,
+  ],
+  [
+    'a speech of sentences and fifty thousand parentheticals',
+    () => `MARGARET\n${'One. Two. Three. Four.\n(beat)\n'.repeat(50_000)}Bye.\n`,
+  ],
   ['fifty thousand page breaks', () => '===\n\nA.\n\n'.repeat(50_000)],
   [
     'a title page of two hundred thousand lines',
