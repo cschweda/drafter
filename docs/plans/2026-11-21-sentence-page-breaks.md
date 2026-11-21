@@ -1,6 +1,6 @@
 # Page breaks at the end of a sentence: design
 
-**Status:** for the maintainer's approval. Nothing here is built.
+**Status:** approved by the maintainer on 2026-11-21, with the three questions of §9 answered as recommended. Being built in the order of §8.
 
 **Asked for:** the fix releases before v0.28.0, item 2 (2026-11-20), carried over from v0.27.1 as "needs a design". The maintainer's three decisions of 2026-11-21 are in §2.
 
@@ -32,7 +32,7 @@ That is what a reader of a script expects, and what Final Draft does by default 
 ## 2. Decisions already made
 
 1. **Scripts that are already locked keep their pages exactly.** Their page starts are converted when the script is read; nobody is asked to lock again (§5).
-2. **Unlocked scripts repaginate, with no setting.** Breaks move, and a script's length can change by a page. It is the engine's behaviour, like the widow and orphan rule in v0.27.1, not an option. *This is my reading of "yes" to a question that offered two answers; say so if you wanted the setting (on by default) instead.*
+2. **Unlocked scripts repaginate, with no setting.** Breaks move, and a script's length can change by a page. It is the engine's behaviour, like the widow and orphan rule in v0.27.1, not an option. Confirmed 2026-11-21 (§9).
 3. **Action and dialogue both, two lines at least on each side, and today's rule when no sentence fits** (§3).
 
 ## 3. The rule
@@ -110,8 +110,10 @@ Each step is tested before the next starts, and all of it goes to `staging` behi
 
 It is a patch release (v0.27.2) under the freeze unless you say otherwise.
 
-## 9. Questions still open
+## 9. Questions answered
 
-1. **Decision 2**, as flagged: no setting. Confirm, or ask for the setting.
-2. **A limit on white space** (§3): none to start, set from real scripts if needed. Agree?
-3. **Dual dialogue left as it is** (§3). Agree?
+Asked with the design, answered by the maintainer on 2026-11-21 ("1-3 your recommendations"):
+
+1. **No setting.** Unlocked scripts repaginate; it is the engine's behaviour.
+2. **No limit on white space to start with.** One is set from real scripts if pages come out ragged.
+3. **Dual dialogue stays as it is.**

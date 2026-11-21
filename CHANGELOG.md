@@ -12,7 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
-- **A design for page breaks at the end of a sentence**, for approval before anything is built: `docs/plans/2026-11-21-sentence-page-breaks.md`. A page would end at the last sentence that fits, with the rest wrapped again on the next page, as Final Draft does; locked scripts keep every page where it is. Nothing in the app changes yet.
+- **A design for page breaks at the end of a sentence**, approved on 2026-11-21 and now being built: `docs/plans/2026-11-21-sentence-page-breaks.md`. A page would end at the last sentence that fits, with the rest wrapped again on the next page, as Final Draft does; locked scripts keep every page where it is. Nothing in the app changes yet.
 
 - **Build tools brought up to date.** The two GitHub Actions that Dependabot offered (`pnpm/action-setup` 6.1.1, `actions/download-artifact` 8.0.2). The Docker image stays on Node 24, the version every other build uses: Dependabot's bump of the image alone to Node 26 failed its build, and it is now told to leave Node's major version to `.nvmrc`. For developers; nothing in the app changes.
 
