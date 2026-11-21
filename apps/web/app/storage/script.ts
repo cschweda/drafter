@@ -770,7 +770,9 @@ function create(): ScriptSession {
       } else {
         // Not this tab's to overwrite: change those fields in the stored copy only.
         await updateProject(id, fields);
-        if (held?.id === id) project.value = { ...held, ...fields };
+        // Only if it is still the script shown: another may have opened during the write.
+        const now = project.value;
+        if (held?.id === id && now?.id === id) project.value = { ...now, ...fields };
       }
     });
   }

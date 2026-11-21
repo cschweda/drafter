@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **Typing just after a sample's first save could stop being kept.** The first save of a sample makes a script of your own, and you can type through that moment. If the sample's own delayed write of your typing was still under way at the instant the new script was shown, the sample was put back as the open script when that write finished. From then on nothing you typed was kept in the browser's recovery copy, until the script was opened again; the text stayed on screen and a save still wrote it to the file. The write now leaves the open script alone when another has been shown meanwhile. The window was a few milliseconds wide: it was found because a browser test failed once on the release's own checks.
+- **The test for that moment no longer depends on timing.** It slowed the browser's lock by a set time and typed after another set time, which is how it met the fault above only now and then. Two tests replace it: taking the new script's lock is held at a gate, one test opens the gate once the typing is in, and the other has the sample's write open it, so the overlap happens on every run.
+
 ## [0.27.1] - 2026-11-20
 
 **Fixes before features.** After a review of the whole app that went looking for trouble, this release makes what is here right before anything new is built. **Four faults a writer could meet are fixed:** words typed just after a sample's first save were lost; a menu could close by itself when opened straight after another; Reload for a new version could wait for ever; and the Inspector's header could lose its labels for good. **Drafter now says so when words won't print as you wrote them**: characters the script font can't draw, a `#` line inside a speech, title-page keys that don't print. An underscore inside a word (an email address, `My_Script_v2`) prints as an underscore, a name forced with `@` prints as typed, and a page break never leaves one line of a paragraph behind. Two things are new: **an outline is a board of cards from the start**, with Final Draft's outline colors brought in, and **Save As asks for a name** in Firefox, Safari, and Brave.
