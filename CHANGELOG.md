@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **The browser tests run in Safari's engine every night.** The checks on a pull request run Chromium only, and a fault that only Safari has was found at the release gates, after the code was merged (a menu that closed itself was live for some hours). A new workflow, `nightly.yml`, runs the same tests in WebKit at desktop and phone sizes on `staging` once a night, on macOS, and skips a night with nothing new. It reports and blocks nothing. For developers; nothing in the app changes.
 
+- **Sentence page breaks, step 1 of 6: finding where a sentence ends.** `@drafter/layout` has a new function, `sentenceEnds`, which the engine will use to end a page at the last sentence that fits (`docs/plans/2026-11-21-sentence-page-breaks.md`). A sentence ends at `.`, `!`, `?` or `…` with any closing quote, when a space and then a capital, a digit, an opening quote or a dash follows; `Dr.`, `Mrs.`, `etc.` and an initial don't end one. Nothing uses it yet, so no page changes.
+
 ### Changed
 
 - **Build tools brought up to date.** The two GitHub Actions that Dependabot offered (`pnpm/action-setup` 6.1.1, `actions/download-artifact` 8.0.2). The Docker image stays on Node 24, the version every other build uses: Dependabot's bump of the image alone to Node 26 failed its build, and it is now told to leave Node's major version to `.nvmrc`. For developers; nothing in the app changes.
