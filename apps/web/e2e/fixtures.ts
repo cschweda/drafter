@@ -134,12 +134,22 @@ async function reportLate(page: Page, info: TestInfo) {
         'sudo',
         [
           ...['-n', 'timeout', '10', 'gdb', '-nx', '-batch'],
-          ...['-iex', 'set debuginfod enabled off', '-p', String(pid), '-ex', 'bt 70'],
+          ...[
+            '-iex',
+            'set debuginfod enabled off',
+            '-p',
+            String(pid),
+            '-ex',
+            'bt 70',
+            '-ex',
+            'thread apply all bt 12',
+          ],
         ],
         { timeout: 12_000, maxBuffer: 4_000_000 },
         (error, out) => {
           const frames: string[] = [];
           for (const line of String(out).split('\n')) {
+            if (line.startsWith('Thread ')) frames.push(`  ${line.slice(0, 80)}`);
             const m = /^#(\d+)\s+(?:0x([0-9a-f]+) in )?(\S+)/.exec(line);
             if (!m) continue;
             let where = '';

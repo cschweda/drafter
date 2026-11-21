@@ -71,6 +71,9 @@ jobs:
       - name: The browser's system libraries
         if: steps.browsers.outputs.cache-hit == 'true' && runner.os == 'Linux'
         run: pnpm --filter @drafter/web exec playwright install-deps chromium
+      # Round 6 runs the whole browser; a cached install may hold only the shell.
+      - name: The whole browser
+        run: pnpm --filter @drafter/web exec playwright install chromium
       # For the stopped page's stack (reportLate).
       - name: gdb
         run: sudo apt-get install -y gdb || (sudo apt-get update && sudo apt-get install -y gdb)
@@ -79,13 +82,15 @@ jobs:
       # the end if any did, and each pass's `[page-stack]` is in the log under its own heading.
       - name: The Chromium tests, six times
         env:
-          # Round 5. Round 4 looked at a page only once its test was out of time, and three in
-          # 120 runs had stopped (classic.spec:202, contrast.spec:146, novel.spec:80, each on its
-          # first key or click). None was spinning: the renderer used no processor, its main
-          # thread asleep in a futex, and the debugger turned on then got no answer. So this
-          # round asks what the page is waiting for (apps/web/e2e/fixtures.ts, reportLate): the
-          # main thread's stack by gdb, whether a second page of the same context loads and
-          # reaches the storage, and which locks are held.
+          # Round 6. Round 5 caught two more (classic-switch.spec:86, keyboard.spec:332). The main
+          # thread did not wake once in two seconds and sat in pthread_cond_wait, a wait with no
+          # time limit, called from inside the browser (one from V8's own memory); a page that is
+          # only idle sits in pthread_cond_timedwait. A second page of the same context loaded,
+          # read the storage, and saw one lock held and none waited for. So the page is blocked
+          # inside the browser, and the storage and the locks are not what it waits for. This
+          # round runs the whole browser in its new headless mode instead of the headless shell
+          # the tests use by default: a writer runs the first, never the second.
+          HUNT_CHANNEL: chromium
           HANG_REPORT: late
         run: |
           failed=0

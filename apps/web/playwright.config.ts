@@ -19,6 +19,9 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${port}`,
     trace: 'retain-on-failure',
+    // The hang hunt's sixth round: `chromium` is the whole browser in its new headless mode, where
+    // the default is the old headless shell.
+    channel: process.env.HUNT_CHANNEL || undefined,
     // The build has a service worker (Phase 1 design §11). Most tests are about something else and
     // would only share a page with a worker that is installing, precaching 3.5 MB, and answering
     // from its cache, so contexts block it; e2e/offline.spec.ts allows it for its own tests, and
