@@ -139,6 +139,23 @@ describe('sentenceEnds', () => {
     expect(sentenceEnds(text, 5, 8)).toEqual([]);
   });
 
+  it('reads no further than the places it is given, whatever the text', () => {
+    // Each of these would cost its whole length at every call if a run were followed to its end.
+    for (const text of [
+      `A${'?'.repeat(300_000)} B`,
+      `A.${')'.repeat(300_000)} B`,
+      `${'x'.repeat(300_000)}. B`,
+    ]) {
+      const start = performance.now();
+      for (let at = 0; at < 300_000; at += 60) sentenceEnds(text, at, at + 60);
+      expect(performance.now() - start, text.slice(0, 4)).toBeLessThan(500);
+    }
+  });
+
+  it('still finds an end whose marks start before the first place', () => {
+    expect(sentenceEnds('Really?!" He nods.', 8)).toEqual([9]);
+  });
+
   it('reads half a million characters without slowing down', () => {
     const text = 'Word. '.repeat(100_000);
     expect(sentenceEnds(text, 300_000, 300_060).length).toBe(10);

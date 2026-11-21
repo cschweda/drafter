@@ -10,8 +10,12 @@ function lineIndexOf(text: string, at: number): number {
 
 /**
  * The page map a lock records: for each body page, the source line of its first printed line
- * (0-based, in `text`, the text that was laid out) and how many printed lines of the same block,
- * from that source line, came before it on earlier pages. Labelled by page number.
+ * (0-based, in `text`, the text that was laid out), how far into that line the page's first
+ * character is, and how many printed lines of the same block, from that source line, came before
+ * it on earlier pages. Labelled by page number.
+ *
+ * The character is where the page starts. The count is for v0.27.1 and earlier, which read
+ * nothing else: for a page that starts inside a printed line they start it at the next line.
  */
 export function pageMapOf(layout: Layout, text: string): LockedPage[] {
   const out: LockedPage[] = [];
@@ -24,7 +28,8 @@ export function pageMapOf(layout: Layout, text: string): LockedPage[] {
       const printed = seen.filter(
         (s) => s.blockIndex === first.blockIndex && s.from >= at && s.from < first.span.from,
       ).length;
-      out.push({ label: String(page.number), line: lineIndexOf(text, at), printed });
+      const char = first.span.from - at;
+      out.push({ label: String(page.number), line: lineIndexOf(text, at), printed, char });
     }
     for (const line of page.lines)
       if (line.blockIndex >= 0) seen.push({ blockIndex: line.blockIndex, from: line.span.from });

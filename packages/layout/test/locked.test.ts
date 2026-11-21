@@ -14,11 +14,14 @@ interface Anchor {
   label: string;
   at: number;
   printed: number;
+  char?: number;
 }
 
 /**
  * Where each body page of `layout` starts, the way a lock records it: the start of the source line
- * of the page's first printed line, and how many printed lines from that source line came before.
+ * of the page's first printed line, how far into that line the page's first character is, and
+ * (what v0.27.1 recorded, and nothing else) how many printed lines from that source line came
+ * before.
  */
 function anchorsOf(layout: Layout, source: string, label = (n: number) => String(n)): Anchor[] {
   const out: Anchor[] = [];
@@ -31,7 +34,7 @@ function anchorsOf(layout: Layout, source: string, label = (n: number) => String
       const printed = seen.filter(
         (s) => s.blockIndex === first.blockIndex && s.from >= at && s.from < first.span.from,
       ).length;
-      out.push({ label: label(page.number), at, printed });
+      out.push({ label: label(page.number), at, printed, char: first.span.from - at });
     }
     for (const line of page.lines)
       if (line.blockIndex >= 0) seen.push({ blockIndex: line.blockIndex, from: line.span.from });
