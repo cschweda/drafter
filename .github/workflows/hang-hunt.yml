@@ -29,7 +29,7 @@ concurrency:
 jobs:
   hunt:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 100
     strategy:
       fail-fast: false
       matrix:
@@ -71,21 +71,26 @@ jobs:
       - name: The browser's system libraries
         if: steps.browsers.outputs.cache-hit == 'true' && runner.os == 'Linux'
         run: pnpm --filter @drafter/web exec playwright install-deps chromium
-      # Twice in each job: the build and the browser are there already, so the second costs only
-      # its own minutes. A failure in the first doesn't stop the second.
-      - name: The Chromium tests, first time
+      # Four times in each job: the build and the browser are there already, so each further pass
+      # costs only its own minutes. A failure in one pass doesn't stop the next; the job fails at
+      # the end if any did, and each pass's `[page-stack]` is in the log under its own heading.
+      - name: The Chromium tests, four times
         env:
           HANG_REPORT: "1"
-        run: pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4
-      - name: The Chromium tests, second time
-        if: always()
-        env:
-          HANG_REPORT: "1"
-        run: pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4
+        run: |
+          failed=0
+          for pass in 1 2 3 4; do
+            echo "::group::pass $pass"
+            pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4 || { failed=1; echo "PASS $pass FAILED"; cp -r apps/web/playwright-report "apps/web/report-pass-$pass" || true; }
+            echo "::endgroup::"
+          done
+          exit $failed
       - name: The test report, if anything failed
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: hang-hunt-${{ matrix.round }}-${{ matrix.shard }}
-          path: apps/web/playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/report-pass-*
           retention-days: 7
