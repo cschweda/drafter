@@ -14,6 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- **The hang hunt's third round is a control.** (On the hunt's own branch, which is never merged.) Rounds 1 and 2 ran the Chromium tests 120 times with the hang report on, and no page stopped. Round 3 runs them 80 times with it off, to learn whether the page debugger the report turns on is what keeps the fault away.
+
 - **Build tools brought up to date.** The two GitHub Actions that Dependabot offered (`pnpm/action-setup` 6.1.1, `actions/download-artifact` 8.0.2). The Docker image stays on Node 24, the version every other build uses: Dependabot's bump of the image alone to Node 26 failed its build, and it is now told to leave Node's major version to `.nvmrc`. For developers; nothing in the app changes.
 
 - **A browser test that times out now says what its page was doing.** About one run of the checks in fifty, a test stops at a click or a key that never returns, a second or two after the page loads, and the page answers nothing after that. Half of what looked like this turned out to be menus that had closed themselves (fixed in v0.27.1 and above); the rest is a page whose main thread is busy and stays busy, which has never happened in 400 tries on a real machine. So the next one reports itself: in the checks, each Chromium page has its debugger on from the start, and a test that times out pauses the page and keeps the stack with its results. The browser tests take about 4% longer. For developers; nothing in the app changes.
