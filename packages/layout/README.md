@@ -24,6 +24,7 @@ Pure and deterministic: no DOM, no globals, no clock. The same document and temp
 | `titlePageFor(titlePage, mode)` | A title page cut to `mode`: `'full'` returns it as is, `'none'` gives null, and `'title-author'` keeps only Title, Credit, Author or Authors, and Source (by the names the layout reads), in their order. Never changes the one it is given. A title page left with nothing that prints lays out as none, and the script still starts on page 1. |
 | `sceneNumbersFor(doc, template, numbering)` | Each printed scene heading's number, by block index, for `'none'`, `'written'`, or `'all'`: exactly what `paginate` prints, so another export (the Markdown file) numbers scenes as the PDF does. |
 | `wrap(text, runs, width)` | Word-wraps one line of styled runs to a width, keeping styles and source spans across breaks. One array of runs per output line. |
+| `sentenceEnds(text, from?, to?)` | Where sentences end in a line of text when another follows: just past each stop and its closing quote. Titles, abbreviations and initials (`Dr.`, `etc.`, `J.`) don't end one. Reads only the text between the two places. |
 | `Layout`, `Page`, `LayoutLine`, `LayoutRun`, `LayoutDiagnostic`, `PaginateOptions`, `SceneNumbering`, `TitlePageMode` | The result and option types. |
 
 ## The result
