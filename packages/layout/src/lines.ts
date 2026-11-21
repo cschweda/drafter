@@ -174,6 +174,70 @@ export function paraLine(
 export const paraWrap = (para: Para, start: number, limit: number) =>
   wrapCells(cellsFor(para), para.frame.width, start, limit);
 
+/** How many cells a paragraph has. */
+export const cellCount = (para: Para): number => cellsFor(para).run.length;
+
+/**
+ * The cell a paragraph is cut at for a page that starts at `offset` in the source: the first cell
+ * that came from there or later, moved to the start of its word (back, when it is inside one; on,
+ * past the spaces before one). The cell count when the paragraph ends before `offset`.
+ */
+export function cellAtSource(para: Para, offset: number): number {
+  const cells = cellsFor(para);
+  const n = cells.run.length;
+  const source = (c: number) => {
+    const run = para.runs[cells.run[c] as number] as LayoutRun;
+    const scale = (run.span.to - run.span.from) / run.text.length;
+    return run.span.from + Math.round((cells.from[c] as number) * scale);
+  };
+  let lo = 0;
+  let hi = n;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (source(mid) < offset) lo = mid + 1;
+    else hi = mid;
+  }
+  let c = lo;
+  while (c > 0 && c < n && !cells.space[c] && !cells.space[c - 1]) c--;
+  while (c < n && cells.space[c]) c++;
+  return c;
+}
+
+/**
+ * Cells `start` to `end` of a paragraph as a paragraph of its own, without the spaces it would end
+ * with: a piece of one that a locked page's start cuts. Null when nothing is left of it.
+ */
+export function subPara(para: Para, start: number, end: number): Para | null {
+  const cells = cellsFor(para);
+  let to = end;
+  while (to > start && cells.space[to - 1]) to--;
+  if (to <= start) return null;
+  const { frame, role, blockIndex, fallback, double } = para;
+  const runs = sliceCells(para.runs, cells, start, to);
+  return { runs, frame, role, blockIndex, fallback, double, end: 0 };
+}
+
+/**
+ * Wraps a paragraph onto `lines`, with a blank line before each of its lines but the very first
+ * when it is double-spaced, and where each came from onto `origins`, if given.
+ */
+export function pushPara(para: Para, lines: LayoutLine[], origins?: Array<Origin | null>): void {
+  const { runs, frame, role, blockIndex } = para;
+  // The cells are this call's only: a script's worth of them is not kept for a cut that is rare.
+  const cells = cellsOf(runs);
+  for (const [start, end] of wrapCells(cells, frame.width).ranges) {
+    const piece = sliceCells(runs, cells, start, end);
+    const span = spanOf(piece, para.fallback);
+    if (lines.length > 0 && para.double) {
+      lines.push(blankLine(span.from));
+      origins?.push(null);
+    }
+    lines.push({ col: colFor(frame, end - start), runs: piece, role, blockIndex, span });
+    origins?.push({ para, start, end });
+  }
+  para.end = lines.length;
+}
+
 /**
  * A block's printed lines (technical design §5.2). Each source line wraps on its own; lines
  * holding only notes or boneyard print nothing. The role's prefix and suffix, and any `append`,
@@ -207,21 +271,11 @@ export function blockLines(
       if (style.suffix) runs.push(addedRun(style.suffix, style, end));
       if (append) runs.push(addedRun(append, style, end));
     }
-    const para: Para | null = origins
-      ? { runs, frame, role, blockIndex, fallback: line.span, double, end: 0 }
-      : null;
-    const cells = cellsOf(runs);
-    for (const [start, end] of wrapCells(cells, frame.width).ranges) {
-      const piece = sliceCells(runs, cells, start, end);
-      const span = spanOf(piece, line.span);
-      if (lines.length > 0 && double) {
-        lines.push(blankLine(span.from));
-        origins?.push(null);
-      }
-      lines.push({ col: colFor(frame, end - start), runs: piece, role, blockIndex, span });
-      if (para) origins?.push({ para, start, end });
-    }
-    if (para) para.end = lines.length;
+    pushPara(
+      { runs, frame, role, blockIndex, fallback: line.span, double, end: 0 },
+      lines,
+      origins,
+    );
   });
   return lines;
 }

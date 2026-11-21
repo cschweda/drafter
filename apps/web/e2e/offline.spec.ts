@@ -424,6 +424,54 @@ test.describe('a new version', () => {
     const text = [...log, `at the end, the page saw: ${now}`].join('\n');
     console.log(`[worker-states] ${info.titlePath.slice(1).join(' › ')}\n${text}`);
     await info.attach('worker-states', { body: text, contentType: 'text/plain' });
+    // Where the text is, for a test that didn't find what it typed after a reload (a macOS
+    // runner, 2026-11-21, once: not on the screen, and nothing said whether it was in the editor
+    // off the screen, left for the next launch, or gone). The end of each copy, which is where
+    // these tests type: the editor's own, what a closing page left behind, and what is stored.
+    const kept = await page
+      .evaluate(async () => {
+        type Linked = { view?: { state: { doc: { toString(): string }; readOnly: boolean } } };
+        const content = document.querySelector('.cm-content') as
+          | (Element & { cmTile?: Linked; cmView?: Linked })
+          | null;
+        const state = (content?.cmTile ?? content?.cmView)?.view?.state;
+        const end = (text: string) =>
+          `${text.length} characters, ending ${JSON.stringify(text.slice(-60))}`;
+        const left = Object.keys(localStorage)
+          .filter((key) => key.startsWith('drafter:unwritten:'))
+          .map((key) => {
+            const value = JSON.parse(localStorage.getItem(key) ?? '{}') as {
+              source?: string;
+              at?: number;
+            };
+            return `left behind at ${value.at}: ${end(value.source ?? '')}`;
+          });
+        const stored = await new Promise<string[]>((resolve) => {
+          const open = indexedDB.open('drafter');
+          open.onerror = () => resolve(['the database did not open']);
+          open.onsuccess = () => {
+            const all = open.result.transaction('projects').objectStore('projects').getAll();
+            all.onsuccess = () =>
+              resolve(
+                (all.result as Array<{ source: string; updatedAt: number; sample?: string }>).map(
+                  (p) =>
+                    `stored${p.sample ? ' (sample)' : ''}, updated ${p.updatedAt}: ${end(p.source)}`,
+                ),
+              );
+            all.onerror = () => resolve(['the scripts could not be read']);
+          };
+        });
+        return [
+          state
+            ? `editor${state.readOnly ? ' (read-only)' : ''}: ${end(state.doc.toString())}`
+            : 'no editor',
+          ...(left.length ? left : ['nothing left behind']),
+          ...stored,
+        ].join('\n');
+      })
+      .catch((error) => `the page didn't answer: ${String(error).slice(0, 120)}`);
+    console.log(`[kept-text] ${info.titlePath.slice(1).join(' › ')}\n${kept}`);
+    await info.attach('kept-text', { body: kept, contentType: 'text/plain' });
   });
 
   test('is offered, and is never applied without a choice', async ({ page }) => {

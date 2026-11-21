@@ -14,11 +14,14 @@ interface Anchor {
   label: string;
   at: number;
   printed: number;
+  char?: number;
 }
 
 /**
  * Where each body page of `layout` starts, the way a lock records it: the start of the source line
- * of the page's first printed line, and how many printed lines from that source line came before.
+ * of the page's first printed line, how far into that line the page's first character is, and
+ * (what v0.27.1 recorded, and nothing else) how many printed lines from that source line came
+ * before.
  */
 function anchorsOf(layout: Layout, source: string, label = (n: number) => String(n)): Anchor[] {
   const out: Anchor[] = [];
@@ -31,7 +34,7 @@ function anchorsOf(layout: Layout, source: string, label = (n: number) => String
       const printed = seen.filter(
         (s) => s.blockIndex === first.blockIndex && s.from >= at && s.from < first.span.from,
       ).length;
-      out.push({ label: label(page.number), at, printed });
+      out.push({ label: label(page.number), at, printed, char: first.span.from - at });
     }
     for (const line of page.lines)
       if (line.blockIndex >= 0) seen.push({ blockIndex: line.blockIndex, from: line.span.from });
@@ -58,10 +61,7 @@ describe('locked pagination', () => {
     expect(body(unlocked).length).toBeGreaterThanOrEqual(6);
   });
 
-  // Fails from step 2 of the sentence page breaks until step 4: a page that starts where a
-  // sentence does, inside a printed line, can't be written as a count of printed lines. Step 4
-  // stores the character, and takes `fails` off.
-  it.fails('keeps a page that starts partway into a paragraph or a speech', () => {
+  it('keeps a page that starts partway into a paragraph or a speech', () => {
     // A paragraph of short sentences and a speech of them, each across a page's end: both split
     // where a sentence ends, so a page starts inside a block and `printed` is exercised.
     const sentences = Array.from(
@@ -76,8 +76,7 @@ describe('locked pagination', () => {
     expect(paginate(parse(source), screenplay, { locked: { anchors, folded: [] } })).toEqual(free);
   });
 
-  // Step 4, as above: the fixture's speeches are cut at sentences now.
-  it.fails('keeps every label when nothing changed', () => {
+  it('keeps every label when nothing changed', () => {
     const anchors = anchorsOf(unlocked, base);
     const locked = paginate(parse(base), screenplay, { locked: { anchors, folded: [] } });
     expect(locked).toEqual(unlocked);
@@ -89,8 +88,7 @@ describe('locked pagination', () => {
     expect(byLabel(relabelled, '13')?.pageNumber?.text).toBe('13.');
   });
 
-  // Step 4, as above: the fixture's speeches are cut at sentences now.
-  it.fails('grows one page into 12A and 12B and leaves 13 where it was', () => {
+  it('grows one page into 12A and 12B and leaves 13 where it was', () => {
     const at = anchorOf('13').at;
     const added = `${Array.from({ length: 40 }, (_, i) => `Added paragraph ${i + 1}.`).join('\n\n')}\n\n`;
     const source = base.slice(0, at) + added + base.slice(at);
@@ -109,8 +107,7 @@ describe('locked pagination', () => {
     expect(byLabel(layout, '12B')?.number).toBe((byLabel(layout, '12')?.number ?? 0) + 2);
   });
 
-  // Step 4, as above: the fixture's speeches are cut at sentences now.
-  it.fails('new opening pages before page 1 print as 1A, 1B, never a second 1', () => {
+  it('new opening pages before page 1 print as 1A, 1B, never a second 1', () => {
     // Page 1's anchor is pinned to the start of the text (production Ruling 27), so it holds the
     // title page's offset; with nothing added, the layout is the unlocked one.
     const plain = anchorsOf(unlocked, base);
@@ -133,8 +130,7 @@ describe('locked pagination', () => {
     expect(texts(byLabel(layout, '1'))[0]).toBe('EXT. ROOFTOP - NIGHT');
   });
 
-  // Step 4, as above: the fixture's speeches are cut at sentences now.
-  it.fails('a shrunk page ends short', () => {
+  it('a shrunk page ends short', () => {
     // Remove everything on page 12 after its first block.
     const start = anchorOf('12').at;
     const from = base.indexOf('\n\n', start) + 2;
@@ -157,8 +153,7 @@ describe('locked pagination', () => {
       );
   });
 
-  // Step 4, as above: the fixture's speeches are cut at sentences now.
-  it.fails('folds pages whose anchors all vanished', () => {
+  it('folds pages whose anchors all vanished', () => {
     // Page 13's text is cut: its anchor lands where 14's was, so 13 is kept there and 14 drops.
     const from = anchorOf('13').at;
     const to = anchorOf('14').at;

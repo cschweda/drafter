@@ -4,6 +4,8 @@ import {
   blankLine,
   blockLines,
   cellAt,
+  cellAtSource,
+  cellCount,
   columns,
   type Frame,
   frameOf,
@@ -15,6 +17,8 @@ import {
   paraLine,
   paraWrap,
   pastSpaces,
+  pushPara,
+  subPara,
   textOf,
 } from './lines';
 import { printedLabels, suffix } from './locked';
@@ -49,8 +53,6 @@ interface BlockItem extends Spacing {
    * cut inside.
    */
   origins: Array<Origin | null>;
-  /** Where `lines[0]` stands in the lines the block was first wrapped into: 0 but for a piece of one. */
-  base: number;
   /** A page may end inside one of its printed lines, where a sentence ends: action only. */
   cuts: boolean;
   keepTogether: boolean;
@@ -94,8 +96,6 @@ interface SpeechItem extends Spacing {
   body: LayoutLine[];
   /** Where each body line came from, for dialogue; null for every other line (see `BlockItem`). */
   origins: Array<Origin | null>;
-  /** Where `body[0]` stands in the lines the speech was first wrapped into. */
-  base: number;
   tags: Tag[];
   /** `spoken[k]`: how many of the first k body lines are dialogue. */
   spoken: number[];
@@ -356,7 +356,6 @@ class Items {
       type: 'block',
       lines,
       origins,
-      base: 0,
       cuts,
       spaceBefore: p.style.spaceBefore,
       spaceAfter: p.style.spaceAfter ?? 0,
@@ -434,7 +433,6 @@ class Items {
       contd,
       body,
       origins,
-      base: 0,
       tags,
       spoken,
       spaceBefore: first.style.spaceBefore,
@@ -622,7 +620,7 @@ class Filler {
       (before >= minLinesBefore && this.#spokenFrom(item, next, minLinesAfter) >= minLinesAfter);
     // The most rows that can stay: all that fit, but one at least goes over.
     const top = Math.min(cap, done ? rows.length - 1 : rows.length);
-    const past = (para: Para) => Math.min(item.body.length, para.end - item.base);
+    const past = (para: Para) => Math.min(item.body.length, para.end);
     for (let j = Math.min(cap, rows.length) - 1; j >= 0; j--) {
       const row = rows[j] as Row;
       if (tags[j] !== 'text' || !row.origin) continue;
@@ -722,7 +720,7 @@ class Filler {
     const least = lead + this.template.keepWithNextLines;
     if (item.cuts) {
       // Past the paragraph a row belongs to: where the block goes on after what is cut from it.
-      const past = (para: Para) => Math.min(item.lines.length, para.end - item.base);
+      const past = (para: Para) => Math.min(item.lines.length, para.end);
       for (let j = Math.min(room, rows.length) - 1; j >= 0 && j + 1 >= least; j--) {
         const row = rows[j] as Row;
         if (!row.origin) continue;
@@ -996,13 +994,26 @@ class Pager {
   }
 }
 
-/** A locked page's start, resolved to the block and the printed line of it the page starts at. */
+/** A locked page's start, resolved to the block it is in. */
 interface Resolved {
   start: PageStart;
   at: number;
   printed: number;
+  char: number | undefined;
   block: number;
 }
+
+/**
+ * Where in an item a locked page starts: at line `k` of its lines (a block) or its body (a
+ * speech), or, with `cell`, inside that line, at that cell of the line's paragraph.
+ */
+interface Cut {
+  k: number;
+  cell: number | null;
+}
+
+/** The whole item starts the page. */
+const WHOLE: Cut = { k: 0, cell: null };
 
 /** The index of the block holding offset `at`, or of the first block after it; `blocks.length` past the end. */
 function blockAt(blocks: readonly Block[], at: number): number {
@@ -1039,82 +1050,162 @@ function blocksOf(item: Printed): [number, number] | null {
 }
 
 /**
- * Where in an item a locked page starts: the index of the line in its lines (a block) or its body
- * (a speech) that opens the page; 0 for the whole item. The anchor's source line's first printed
- * line, `printed` lines on, clamped to the block's last printed line.
+ * Where in an item a locked page starts (`WHOLE` for the item's own start).
+ *
+ * By character: the printed line of the anchor's source line that holds the character, and the
+ * word in it that does, when the line is one a page may be cut inside (action, dialogue) and the
+ * word isn't the line's first. By count, for a page locked by v0.27.1 or earlier: the source
+ * line's first printed line, `printed` lines on, clamped to the block's last printed line. The
+ * lines an item starts with are the plain wrap v0.27.1 made, so that is the line it counted to.
  */
-function cutOf(item: Printed, anchor: Resolved): number {
-  if (item.type === 'dual') return 0;
+function cutOf(item: Printed, anchor: Resolved): Cut {
+  if (item.type === 'dual') return WHOLE;
   const lines = sourceLines(item);
   const own: number[] = [];
   for (let k = 0; k < lines.length; k++)
     if ((lines[k] as LayoutLine).blockIndex === anchor.block) own.push(k);
-  if (own.length === 0) return 0;
+  if (own.length === 0) return WHOLE;
   let first = own.findIndex((k) => (lines[k] as LayoutLine).span.from >= anchor.at);
   if (first < 0) first = own.length - 1;
-  return own[Math.min(first + Math.max(0, anchor.printed), own.length - 1)] as number;
+  if (anchor.char === undefined) {
+    return {
+      k: own[Math.min(first + Math.max(0, anchor.printed), own.length - 1)] as number,
+      cell: null,
+    };
+  }
+  const target = anchor.at + anchor.char;
+  const { origins } = item;
+  const para = origins[own[first] as number]?.para;
+  // The last printed line of the same source line that starts at or before the character.
+  let x = first;
+  for (let y = first + 1; y < own.length; y++) {
+    const k = own[y] as number;
+    if ((lines[k] as LayoutLine).span.from > target) break;
+    if (para && origins[k]?.para !== para) break;
+    x = y;
+  }
+  const k = own[x] as number;
+  const origin = origins[k];
+  if (!origin) return { k, cell: null };
+  const cell = cellAtSource(origin.para, target);
+  return cell <= origin.start || cell >= cellCount(origin.para) ? { k, cell: null } : { k, cell };
 }
 
 /**
- * Where the lines `from` to `to` of an item came from, for a piece of it. A piece that stops inside
- * a paragraph mustn't wrap that paragraph's rest again, since the next piece prints it: its lines
- * there are left without an origin, and break only between them.
+ * The part of an item's lines from one page start to the next (`to` null: to the item's end), as
+ * lines and origins of their own. A paragraph that lies whole between them keeps its lines; one
+ * that a page start cuts is wrapped again from the cut, or up to it, as a paragraph of its own, so
+ * that a later break inside it wraps no further than the piece goes. `at` gives each line's index
+ * in the item's lines, or -1 for a line wrapped again.
  */
-function originsOf(item: BlockItem | SpeechItem, from: number, to: number): Array<Origin | null> {
-  const origins = item.origins.slice(from, to);
-  const cut = origins.at(-1)?.para;
-  if (cut && cut.end - item.base > to) {
-    for (let k = origins.length - 1; k >= 0 && (origins[k] ?? null)?.para === cut; k--) {
-      origins[k] = null;
+function between(
+  lines: readonly LayoutLine[],
+  origins: ReadonlyArray<Origin | null>,
+  from: Cut,
+  to: Cut | null,
+): { lines: LayoutLine[]; origins: Array<Origin | null>; at: number[] } {
+  const out = {
+    lines: [] as LayoutLine[],
+    origins: [] as Array<Origin | null>,
+    at: [] as number[],
+  };
+  const end = to ? to.k : lines.length;
+  let inside = from.cell;
+  for (let i = from.k; i < end || (i === end && to !== null && to.cell !== null); ) {
+    const origin = origins[i] ?? null;
+    if (!origin) {
+      out.lines.push(lines[i] as LayoutLine);
+      out.origins.push(null);
+      out.at.push(i);
+      i++;
+      continue;
     }
+    const { para } = origin;
+    const past = Math.min(lines.length, para.end);
+    const start = inside ?? origin.start;
+    inside = null;
+    // Where the next page start cuts this paragraph, if it does.
+    const stop = to !== null && to.k < past ? (to.cell ?? (origins[to.k] as Origin).start) : null;
+    if (start === 0 && stop === null) {
+      const whole: Para = { ...para, end: 0 };
+      for (let j = i; j < past; j++) {
+        const o = origins[j] ?? null;
+        out.lines.push(lines[j] as LayoutLine);
+        out.origins.push(o ? { para: whole, start: o.start, end: o.end } : null);
+        out.at.push(j);
+      }
+      whole.end = out.lines.length;
+      i = past;
+      continue;
+    }
+    const part = subPara(para, start, stop ?? cellCount(para));
+    if (part) {
+      pushPara(part, out.lines, out.origins);
+      while (out.at.length < out.lines.length) out.at.push(-1);
+    }
+    if (stop !== null) break;
+    i = past;
   }
-  return origins;
+  return out;
 }
 
-/** Splits a block or speech at line indexes `cuts` (ascending, each > 0), a page start before each piece but the first. */
-function pieces(item: BlockItem | SpeechItem, cuts: number[]): Printed[] {
+/** Splits a block or speech at `cuts` (ascending, none the item's own start), a page start before each piece but the first. */
+function pieces(item: BlockItem | SpeechItem, cuts: readonly Cut[]): Printed[] {
   const out: Printed[] = [];
-  if (item.type === 'block') {
-    const ends = [0, ...cuts, item.lines.length];
-    for (let p = 0; p + 1 < ends.length; p++) {
-      const last = p + 2 === ends.length;
-      const from = ends[p] as number;
-      const to = ends[p + 1] as number;
-      const origins = originsOf(item, from, to);
+  const bounds: Array<Cut | null> = [WHOLE, ...cuts, null];
+  for (let p = 0; p + 1 < bounds.length; p++) {
+    const last = p + 2 === bounds.length;
+    const from = bounds[p] as Cut;
+    const to = bounds[p + 1] ?? null;
+    const spacing = {
+      spaceBefore: p === 0 ? item.spaceBefore : 0,
+      spaceAfter: last ? item.spaceAfter : 0,
+      keepWithNext: last ? item.keepWithNext : false,
+    };
+    if (item.type === 'block') {
+      const part = between(item.lines, item.origins, from, to);
       out.push({
         type: 'block',
-        lines: item.lines.slice(from, to),
-        origins,
-        base: item.base + from,
+        lines: part.lines,
+        origins: part.origins,
         cuts: item.cuts,
-        spaceBefore: p === 0 ? item.spaceBefore : 0,
-        spaceAfter: last ? item.spaceAfter : 0,
-        keepWithNext: last ? item.keepWithNext : false,
         keepTogether: false,
+        ...spacing,
       });
+      continue;
     }
-    return out;
-  }
-  const { body, tags, spoken } = item;
-  const ends = [0, ...cuts, body.length];
-  for (let p = 0; p + 1 < ends.length; p++) {
-    let from = ends[p] as number;
-    let to = ends[p + 1] as number;
-    while (from < to && tags[from] === 'gap') from++;
-    while (to > from && tags[to - 1] === 'gap') to--;
-    const last = p + 2 === ends.length;
+    const part = between(item.body, item.origins, from, to);
+    const all = part.lines.map((line, k): Tag => {
+      const at = part.at[k] as number;
+      return at >= 0 ? (item.tags[at] as Tag) : isBlank(line) ? 'gap' : 'text';
+    });
+    // A piece neither starts nor ends on a blank line.
+    let a = 0;
+    let b = all.length;
+    while (a < b && all[a] === 'gap') a++;
+    while (b > a && all[b - 1] === 'gap') b--;
+    const tags = all.slice(a, b);
+    const spoken = [0];
+    for (const tag of tags) spoken.push((spoken.at(-1) as number) + (tag === 'text' ? 1 : 0));
+    const origins = part.origins.slice(a, b);
+    // Each paragraph's end was counted in the lines before the blank ones were dropped.
+    if (a > 0) {
+      let moved: Para | undefined;
+      for (const origin of origins) {
+        if (!origin || origin.para === moved) continue;
+        moved = origin.para;
+        moved.end -= a;
+      }
+    }
     const piece: SpeechItem = {
       type: 'speech',
       cue: p === 0 ? item.cue : item.contd,
       contd: item.contd,
-      body: body.slice(from, to),
-      origins: originsOf(item, from, to),
-      base: item.base + from,
-      tags: tags.slice(from, to),
-      spoken: spoken.slice(from, to + 1).map((n) => n - (spoken[from] as number)),
-      spaceBefore: p === 0 ? item.spaceBefore : 0,
-      spaceAfter: last ? item.spaceAfter : 0,
-      keepWithNext: last ? item.keepWithNext : false,
+      body: part.lines.slice(a, b),
+      origins,
+      tags,
+      spoken,
+      ...spacing,
     };
     if (!last) piece.more = true;
     out.push(piece);
@@ -1124,7 +1215,8 @@ function pieces(item: BlockItem | SpeechItem, cuts: number[]): Printed[] {
 
 /**
  * The items of a locked script (production design §7.2): a page break before each locked page's
- * start, splitting a block between its printed lines, or a speech with `(MORE)` and `(CONT'D)`.
+ * start, splitting a block or a speech (with `(MORE)` and `(CONT'D)`) where the page starts:
+ * between its printed lines, or inside one, at a word.
  */
 function lockedItems(
   items: readonly Item[],
@@ -1137,9 +1229,10 @@ function lockedItems(
       start: { label: a.label, printed: printed(a.label) },
       at: a.at,
       printed: a.printed,
+      char: a.char,
       block: blockAt(blocks, a.at),
     }))
-    .sort((a, b) => a.at - b.at);
+    .sort((a, b) => a.at - b.at || (a.char ?? a.printed) - (b.char ?? b.printed));
   const out: Item[] = [];
   let next = 0;
   for (const item of items) {
@@ -1148,23 +1241,30 @@ function lockedItems(
       out.push(item);
       continue;
     }
-    // Cut points in this item, by line index, the later anchor winning a tie.
-    const cuts = new Map<number, PageStart>();
+    // Page starts in this item, by where they cut it, the later anchor winning a tie.
+    const found = new Map<string, { cut: Cut; start: PageStart }>();
     for (; next < anchors.length && (anchors[next] as Resolved).block <= range[1]; next++) {
       const anchor = anchors[next] as Resolved;
-      cuts.set(anchor.block < range[0] ? 0 : cutOf(item, anchor), anchor.start);
+      const cut = anchor.block < range[0] ? WHOLE : cutOf(item, anchor);
+      found.set(`${cut.k}:${cut.cell ?? -1}`, { cut, start: anchor.start });
     }
-    const before = cuts.get(0);
-    if (before) out.push({ type: 'break', start: before });
-    cuts.delete(0);
-    if (cuts.size === 0 || item.type === 'dual') {
+    const before = found.get('0:-1');
+    if (before) out.push({ type: 'break', start: before.start });
+    found.delete('0:-1');
+    if (found.size === 0 || item.type === 'dual') {
       out.push(item);
       continue;
     }
-    const at = [...cuts.keys()].sort((a, b) => a - b);
-    const parts = pieces(item, at);
+    const starts = [...found.values()].sort(
+      (a, b) => a.cut.k - b.cut.k || (a.cut.cell ?? -1) - (b.cut.cell ?? -1),
+    );
+    const parts = pieces(
+      item,
+      starts.map((s) => s.cut),
+    );
     for (let p = 0; p < parts.length; p++) {
-      if (p > 0) out.push({ type: 'break', start: cuts.get(at[p - 1] as number) as PageStart });
+      if (p > 0)
+        out.push({ type: 'break', start: (starts[p - 1] as (typeof starts)[number]).start });
       out.push(parts[p] as Printed);
     }
   }
