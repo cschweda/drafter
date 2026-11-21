@@ -111,7 +111,11 @@ export function createRecoveryCopy({
         // The title is a cache of the text. The first edit to a first document's sample text
         // ends Start blank's offer for good: from here the text is the writer's work.
         const edited = current.blank !== undefined && source !== current.baseline;
-        project.value = await writeSource(current, source, edited ? { blank: undefined } : {});
+        const next = await writeSource(current, source, edited ? { blank: undefined } : {});
+        // Another script may have been shown while the write was under way (the first save of a
+        // sample keeps the editor open through its switch). The held copy is that script's then,
+        // and putting this one back would leave every later write with no script to go to.
+        if (project.value?.id === id) project.value = next;
       });
     } catch (error) {
       fail();
