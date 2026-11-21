@@ -20,6 +20,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- **The new Reload test asked for one thing too many.** It expected "Drafter is up to date" after the reload. In one run of forty on a shared runner the reload that goes ahead regardless was answered after all, and that reload says nothing, by design. The test now checks what matters: the page reloaded, the script is there, and the new version is in control. Tests only.
+
 - **The first scheduled Safari run's one failure was a test out of time.** "Goes back to the app from each page" loads sixteen help pages and the app after each, about two seconds apiece on that runner, against a 30-second limit. It has the longer limit now. Tests only.
 
 - **One timed browser test no longer runs on shared runners.** "A warm scan is fast" (the History worker matching again after an edit, 20 to 30 ms on a real machine, limit 500 ms) took 1.3 to 1.6 seconds three times in CI with nothing in its path changed, the last on the nightly Safari run. It is named "a warm scan is within its budget" now, which keeps it for the release gates, where every timed test runs on a real machine. Tests only.
