@@ -51,18 +51,45 @@ test.describe('keys in a tab other than the Source', () => {
   }
 });
 
-/** Waits until the browser's cursor is in the script's last line. */
+/**
+ * Waits until the cursor is at the end of the script, for CodeMirror and for the browser: the
+ * editor's own selection is there, and the browser's caret, where a typed key lands, reads as the
+ * same place. The browser's caret is asked through CodeMirror (`posAtDOM`), not by looking for it
+ * inside the last line's element: at the end of the text it can as well be held by the element
+ * around the lines, which is the same place and failed that look now and then. What was found
+ * is in the failure, so a miss says which of the two was elsewhere.
+ */
 const cursorAtEnd = (page: Page) =>
   expect
     .poll(() =>
       page.evaluate(() => {
+        type View = {
+          state: { doc: { length: number }; selection: { main: { head: number } } };
+          posAtDOM(node: Node, offset: number): number;
+        };
+        type Linked = { view?: View };
+        const content = document.querySelector('.cm-content') as
+          | (Element & { cmTile?: Linked; cmView?: Linked })
+          | null;
+        const view = (content?.cmTile ?? content?.cmView)?.view;
         const sel = document.getSelection();
-        const lines = document.querySelectorAll('.cm-content .cm-line');
-        const last = lines[lines.length - 1];
-        return !!sel?.focusNode && !!last && last.contains(sel.focusNode);
+        if (!view || !sel?.focusNode) return 'no editor or no caret';
+        const end = view.state.doc.length;
+        const head = view.state.selection.main.head;
+        let caret: number | string;
+        try {
+          caret = content?.contains(sel.focusNode)
+            ? view.posAtDOM(sel.focusNode, sel.focusOffset)
+            : `outside the editor, in ${sel.focusNode.nodeName}`;
+        } catch (error) {
+          caret = String(error);
+        }
+        return head === end && caret === end
+          ? 'at the end'
+          : `the editor's cursor at ${head}, the browser's caret at ${caret}, the end at ${end}`;
       }),
     )
-    .toBe(true);
+    .toBe('at the end');
 
 /** With the cursor at the end of the script, `move` takes focus elsewhere; then "xyz" is typed. */
 async function expectTypingAfterLeavesScript(page: Page, move: () => Promise<void>) {
