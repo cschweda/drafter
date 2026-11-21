@@ -114,6 +114,18 @@ export function readProduction(meta: DrafterMeta | null): Production | null {
     if (!set) return null;
     readSets.push(set);
   }
+  // Each page's character, beside the tuples. Wrong in any way, they are all ignored: the pages
+  // then start by their counts, as in v0.27.1, and the lock still stands.
+  const { chars } = raw;
+  if (
+    Array.isArray(chars) &&
+    chars.length === readPages.length &&
+    chars.every((c) => c === null || isCount(c))
+  ) {
+    chars.forEach((c, k) => {
+      if (c !== null) (readPages[k] as LockedPage).char = c;
+    });
+  }
   const production: Production = {
     lockedAt,
     firstScene,
@@ -130,7 +142,8 @@ export function readProduction(meta: DrafterMeta | null): Production | null {
 
 /**
  * The meta to give `setMeta`: the other keys untouched, the production block set (pages written
- * back as `[label, line, printed]` tuples, which are short on one line), or removed for `null`.
+ * back as `[label, line, printed]` tuples, which are short on one line, and each page's character
+ * beside them in `chars`), or removed for `null`.
  */
 export function productionMeta(
   meta: DrafterMeta | null,
@@ -141,6 +154,14 @@ export function productionMeta(
     delete next[KEY];
     return next;
   }
-  next[KEY] = { ...production, pages: production.pages.map((p) => [p.label, p.line, p.printed]) };
+  const block: Record<string, unknown> = {
+    ...production,
+    pages: production.pages.map((p) => [p.label, p.line, p.printed]),
+  };
+  // The tuples stay three long: v0.27.1 and earlier refuse a block whose pages are anything else.
+  if (production.pages.some((p) => p.char !== undefined)) {
+    block.chars = production.pages.map((p) => p.char ?? null);
+  }
+  next[KEY] = block;
   return next;
 }

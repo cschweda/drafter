@@ -268,8 +268,14 @@ test.describe('focus mode', () => {
     // On the prototype, so it holds whichever `navigator.locks` object the page is handed.
     const request = LockManager.prototype.request as (...args: unknown[]) => Promise<unknown>;
     w.__holdLocks = false;
+    // The sample's own lock is the first one asked for, as the app starts, and the editor takes
+    // typing before it is granted. It is never held here, whenever it comes: held, the app never
+    // finishes starting and the save waits for it for good (a macOS runner, 2026-11-21, where it
+    // came after the gate was shut). Only another script's lock waits: the new script's.
+    let own: unknown;
     LockManager.prototype.request = async function (this: LockManager, ...args: unknown[]) {
-      if (w.__holdLocks) {
+      own ??= args[0];
+      if (w.__holdLocks && args[0] !== own) {
         await new Promise<void>((open) => {
           w.__openGate = open;
         });

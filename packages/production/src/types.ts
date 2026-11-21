@@ -13,13 +13,26 @@ export interface ProductionSet {
   gaps?: string[];
 }
 
-/** Where a locked page starts. In the file this is the tuple `[label, line, printed]`. */
+/**
+ * Where a locked page starts. In the file this is the tuple `[label, line, printed]`, as v0.27.1
+ * and earlier read it, with `char` beside the tuples, in the block's `chars`.
+ */
 export interface LockedPage {
   label: string;
   /** 0-based source line in the baseline text. */
   line: number;
-  /** Printed-line offset into that source line, for a page that starts partway into a paragraph or speech. */
+  /**
+   * Printed-line offset into that source line, for a page that starts partway into a paragraph or
+   * speech: how many of its printed lines, wrapped the plain way, come before the page. What a
+   * page locked by v0.27.1 or earlier starts by, and what those versions read from a later lock.
+   */
   printed: number;
+  /**
+   * How far into that source line the page's first character is. A page can start inside a printed
+   * line, where a sentence does, which a count of printed lines can't say. Absent on a page
+   * locked by v0.27.1 or earlier.
+   */
+  char?: number;
 }
 
 export interface Production {
