@@ -76,7 +76,12 @@ jobs:
       # the end if any did, and each pass's `[page-stack]` is in the log under its own heading.
       - name: The Chromium tests, four times
         env:
-          HANG_REPORT: "1"
+          # Round 3 is the control. Rounds 1 and 2 (120 runs of the suite) had the hang report on
+          # and no page stopped, where about two were expected. The report turns each page's
+          # debugger on from the start, which may be what keeps the fault away. So this round runs
+          # without it: a page that stops shows as a test out of time on a click or a key, with
+          # its trace, and no stack. "1" turns the report back on.
+          HANG_REPORT: "0"
         run: |
           failed=0
           for pass in 1 2 3 4; do
