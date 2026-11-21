@@ -4,7 +4,7 @@ The [README](../README.md#roadmap) has the short list: what's next, and what com
 
 ## Where things stand
 
-Drafter is at **v0.27.1**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
+Drafter is at **v0.27.2**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
 
 Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. Lately it brought:
 
@@ -26,6 +26,7 @@ Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. La
 - **An About menu, and reports by email** (v0.26.2): Help for learning Drafter and About for Drafter itself; Report a problem… and Suggest an idea… can send by email on drafter.dev, through the site's own function and Resend; plain autosave warnings, typing never blocked by a script's file, and Drafter's settings block hidden in the editor.
 - **Production**, free (v0.27.0): lock pages and scene numbers (12A, 5A), revise in the industry's colors with marks where words changed, mark scenes OMITTED, and send out revised pages, a breakdown of every scene, and sides for an actor ([help](https://drafter.dev/docs/production/), [design](drafter-production-design.md)).
 - **Fixes before features** (v0.27.1), after a review of the whole app in November 2026: four faults a writer could meet are fixed (words typed just after a sample's first save were lost; a menu could close by itself; Reload for a new version could wait for ever; the Inspector's header could lose its labels), Drafter says so when words won't print as written, a page break never leaves one line of a paragraph behind, an outline is a board of cards with Final Draft's outline colors, and Save As asks for a name in every browser.
+- **A page ends where a sentence does** (v0.27.2): a paragraph of action or a speech that doesn't fit on a page stops at the last sentence that fits, with at least two lines on each side, and the rest is wrapped again on the next page. A locked script keeps every page where it is; a new lock keeps the pages you see ([design](plans/2026-11-21-sentence-page-breaks.md)). Also fixed: Reload for a new version stalling, and a menu losing the arrow keys.
 
 Next, in order:
 
