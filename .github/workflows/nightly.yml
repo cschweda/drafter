@@ -1,0 +1,108 @@
+# The browser tests in Safari's engine (WebKit), at desktop and phone sizes, once a night on staging.
+# checks.yml runs Chromium only, so that a pull request waits 25 minutes and not an hour; a fault
+# that only Safari has was caught at the release gate, after the code was merged and sometimes
+# after it was live (the menu that closed itself, 2026-11-20). This run says so the next morning.
+# docs/DECISIONS.md, 2026-11-20.
+#
+# A schedule runs from the default branch's copy of this file, whatever it checks out: the nightly
+# run starts once this file is on main. A pull request that changes this file runs it too, on that
+# pull request's code, so a change to it is tested before it is merged.
+#
+# It uses no secret, and nothing requires it: it reports, it doesn't block.
+name: nightly
+
+on:
+  schedule:
+    # 08:10 UTC: the small hours in the Americas, after a day's merges into staging.
+    - cron: "10 8 * * *"
+  pull_request:
+    paths: [.github/workflows/nightly.yml]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: The branch, tag, or commit to test
+        default: staging
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.event.pull_request.number || inputs.ref || 'staging' }}
+  cancel-in-progress: true
+
+jobs:
+  # A night with nothing new on staging runs nothing: the last run already said how it stands.
+  changed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.since.outputs.run }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'staging' }}
+          persist-credentials: false
+      - name: Whether anything was committed in the last day
+        id: since
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != schedule ] || [ -n "$(git log -1 --since='25 hours ago' --format=%H)" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing new since the last run."
+          fi
+
+  # On macOS, whose WebKit is nearest to Safari's, and whose fonts the layouts were written against.
+  # The same tests checks.yml runs in Chromium: the ones that time typing or drawing against a fixed
+  # limit are left to the release gate.
+  e2e:
+    name: ${{ matrix.project }} (${{ matrix.shard }}/4)
+    needs: changed
+    if: needs.changed.outputs.run == 'true'
+    runs-on: macos-15
+    timeout-minutes: 60
+    strategy:
+      # Every shard runs to the end, so one run shows every failure.
+      fail-fast: false
+      matrix:
+        project: [webkit, phone-webkit]
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'staging' }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+      # Some tests import the packages' builds (an export read back, a file opened), so build them.
+      - name: Build the packages
+        run: pnpm -r --filter "./packages/*" build
+      - name: Playwright's version
+        id: playwright
+        run: echo "version=$(pnpm --filter @drafter/web exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Cache the browser
+        id: browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: playwright-webkit-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: The browser for the end-to-end tests
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @drafter/web exec playwright install --with-deps webkit
+      - name: The web app's end-to-end tests, in WebKit
+        run: pnpm --filter @drafter/web e2e --project=${{ matrix.project }} --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4
+      - name: The test report, if anything failed
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report-${{ matrix.project }}-${{ matrix.shard }}
+          path: apps/web/playwright-report
+          retention-days: 7

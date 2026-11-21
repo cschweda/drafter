@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **The browser tests run in Safari's engine every night.** The checks on a pull request run Chromium only, and a fault that only Safari has was found at the release gates, after the code was merged (a menu that closed itself was live for some hours). A new workflow, `nightly.yml`, runs the same tests in WebKit at desktop and phone sizes on `staging` once a night, on macOS, and skips a night with nothing new. It reports and blocks nothing. For developers; nothing in the app changes.
+
 ## [0.27.1] - 2026-11-20
 
 **Fixes before features.** After a review of the whole app that went looking for trouble, this release makes what is here right before anything new is built. **Four faults a writer could meet are fixed:** words typed just after a sample's first save were lost; a menu could close by itself when opened straight after another; Reload for a new version could wait for ever; and the Inspector's header could lose its labels for good. **Drafter now says so when words won't print as you wrote them**: characters the script font can't draw, a `#` line inside a speech, title-page keys that don't print. An underscore inside a word (an email address, `My_Script_v2`) prints as an underscore, a name forced with `@` prints as typed, and a page break never leaves one line of a paragraph behind. Two things are new: **an outline is a board of cards from the start**, with Final Draft's outline colors brought in, and **Save As asks for a name** in Firefox, Safari, and Brave.
