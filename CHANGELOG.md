@@ -18,6 +18,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- **A test of the first save could hold the wrong lock.** Two tests in `focus.spec.ts` hold the new script's lock at a gate so that typing lands inside the switch. The gate held any lock asked for after it shut, and on a slow macOS runner the sample's own lock, which the app asks for as it starts, came after: the app never finished starting, the save waited for it, and the test saw "Unsaved changes" where it expected "Saved". Reproduced by making that first request 1.5 seconds late (2 of 2 failed, then 2 of 2 passed). The gate now lets the sample's lock through whenever it comes. Checked on the way: text typed before that lock is granted stays on the screen and reaches storage, with the lock up to 4 seconds late. Tests only; nothing in the app changes.
+
 - **The new Reload test asked for one thing too many.** It expected "Drafter is up to date" after the reload. In one run of forty on a shared runner the reload that goes ahead regardless was answered after all, and that reload says nothing, by design. The test now checks what matters: the page reloaded, the script is there, and the new version is in control. Tests only.
 
 - **The first scheduled Safari run's one failure was a test out of time.** "Goes back to the app from each page" loads sixteen help pages and the app after each, about two seconds apiece on that runner, against a 30-second limit. It has the longer limit now. Tests only.
