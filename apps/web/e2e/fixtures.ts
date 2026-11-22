@@ -178,6 +178,8 @@ async function reportLate(page: Page, info: TestInfo) {
     )?.processInfo ?? [];
   const renderers = (procs: Proc[]) => procs.filter((p) => p.type === 'renderer').map((p) => p.id);
   let stopped: number[] = [];
+  /** Renderers whose main thread did not wake once in the two seconds. */
+  const asleep: number[] = [];
   try {
     const browser = page.context().browser();
     session = browser ? await within(browser.newBrowserCDPSession(), 3000) : null;
@@ -197,6 +199,12 @@ async function reportLate(page: Page, info: TestInfo) {
         const old = then?.get(tid);
         const ticks = t.ticks - (old?.ticks ?? t.ticks);
         const woke = t.woke - (old?.woke ?? t.woke);
+        // The app's page has a worker (the spelling); an idle spare renderer has none. First.
+        if (tid === String(p.id) && woke === 0 && old) {
+          const app = [...threads(p.id).values()].some((x) => x.name.startsWith('DedicatedWorker'));
+          if (app) asleep.unshift(p.id);
+          else asleep.push(p.id);
+        }
         // The main thread always; any other only if it ran.
         if (tid !== String(p.id) && ticks === 0 && t.state !== 'R') continue;
         say(
@@ -222,6 +230,27 @@ async function reportLate(page: Page, info: TestInfo) {
     say(`the page, asked for 1+1: ${answer ?? 'no answer in 3 seconds'}`);
   } catch (error) {
     say(`could not ask the page: ${String(error).slice(0, 200)}`);
+  }
+  const got = await stacks;
+  // Round 8, in the browser that has symbols to be had (HUNT_CORE, a folder): the whole of each
+  // renderer whose main thread never woke is written out, for the workflow to read with the
+  // symbols once the tests are done. gdb has let go by now (`got`); two can't hold one process.
+  if (process.env.HUNT_CORE && asleep.length > 0) {
+    for (const pid of asleep.slice(0, 2)) {
+      const began = Date.now();
+      const out = await new Promise<string>((done) =>
+        execFile(
+          'sudo',
+          ['-n', 'timeout', '90', 'gcore', '-o', `${process.env.HUNT_CORE}/core`, String(pid)],
+          { timeout: 95_000, maxBuffer: 4_000_000 },
+          (error, text, errors) =>
+            done(
+              `${error ? String(error).slice(0, 200) : 'written'} ${String(text).slice(-200)} ${String(errors).slice(-200)}`,
+            ),
+        ),
+      );
+      say(`core of renderer ${pid} in ${Date.now() - began} ms: ${out.replace(/\s+/g, ' ')}`);
+    }
   }
   let second: Page | null = null;
   try {
@@ -260,8 +289,7 @@ async function reportLate(page: Page, info: TestInfo) {
   } catch (error) {
     say(`a second page: ${String(error).slice(0, 200)}`);
   }
-  for (const [pid, frames] of await stacks)
-    say(`main thread of renderer ${pid}, stopped:`, ...frames);
+  for (const [pid, frames] of got) say(`main thread of renderer ${pid}, stopped:`, ...frames);
   try {
     const fresh = renderers(await sample()).filter((pid) => !stopped.includes(pid));
     if (second && fresh.length === 0) say('the second page has no process of its own');
@@ -281,7 +309,7 @@ const reporting = (page: Page, browserName: string) =>
     : null;
 
 /**
- * Round 7's breadcrumbs (`HANG_REPORT=crumbs`). Six rounds say a stopped page is asleep inside a
+ * The breadcrumbs of rounds 7 and 8 (`HANG_REPORT=crumbs`). Six rounds say a stopped page is asleep inside a
  * call into the browser that never returns, reached from the page's own JavaScript, and nothing
  * can be asked of the page once it has. So each page says what it is about to do before every
  * call of that kind (one that can wait on another process or thread), as a line on the console:
@@ -365,8 +393,108 @@ function crumbs() {
       },
     });
   }
-  // The page's own clock, so a stop shows as the lines ending.
+  // The page's own clock, so a stop shows as the lines ending. Set before the timers are wrapped.
   setInterval(() => crumb('tick'), 250);
+
+  // Round 8. In round 7 two pages stopped with every call above returned: so the page was in a
+  // call not listed, or in none (laying out, painting). These say which of the page's own
+  // functions was running: each timer, frame, microtask, event listener, handler and observer
+  // says `> kind, the start of its source` going in and `< kind` coming out. And the calls that
+  // make the browser lay the page out say so too.
+  type Fn = (...args: unknown[]) => unknown;
+  const snip = (f: unknown) => String(f).replace(/\s+/g, ' ').slice(0, 70);
+  const tasks = new WeakMap<object, Fn>();
+  const task = (kind: string, f: unknown): unknown => {
+    if (typeof f !== 'function') return f;
+    const known = tasks.get(f);
+    if (known) return known;
+    const mine = function (this: unknown, ...args: unknown[]) {
+      const type = kind === 'event' ? ` ${(args[0] as Event | undefined)?.type ?? ''}` : '';
+      crumb(`> ${kind}${type} ${snip(f)}`);
+      try {
+        return (f as Fn).apply(this, args);
+      } finally {
+        crumb(`< ${kind}${type}`);
+      }
+    };
+    tasks.set(f, mine);
+    return mine;
+  };
+  const g = globalThis as Record<string, unknown>;
+  for (const name of [
+    'setTimeout',
+    'setInterval',
+    'requestAnimationFrame',
+    'requestIdleCallback',
+    'queueMicrotask',
+  ]) {
+    const was = g[name];
+    if (typeof was !== 'function') continue;
+    g[name] = function (this: unknown, f: unknown, ...rest: unknown[]) {
+      return (was as Fn).call(globalThis, task(name, f), ...rest);
+    };
+  }
+  const target = proto('EventTarget') as Record<string, Fn> | undefined;
+  if (target) {
+    const add = target.addEventListener as Fn;
+    const remove = target.removeEventListener as Fn;
+    target.addEventListener = function (this: unknown, type, f, ...rest) {
+      return add.call(this, type, task('event', f), ...rest);
+    };
+    target.removeEventListener = function (this: unknown, type, f, ...rest) {
+      return remove.call(this, type, (typeof f === 'function' && tasks.get(f)) || f, ...rest);
+    };
+  }
+  const handler = (owner: string, prop: string) => {
+    const at = proto(owner);
+    const was = at && Object.getOwnPropertyDescriptor(at, prop);
+    if (!at || !was?.set) return;
+    const set = was.set;
+    Object.defineProperty(at, prop, {
+      ...was,
+      set(this: unknown, f: unknown) {
+        set.call(this, task(`${owner}.${prop}`, f));
+      },
+    });
+  };
+  for (const owner of ['Worker', 'MessagePort', 'BroadcastChannel']) handler(owner, 'onmessage');
+  for (const prop of ['onsuccess', 'onerror']) handler('IDBRequest', prop);
+  for (const prop of ['onupgradeneeded', 'onblocked']) handler('IDBOpenDBRequest', prop);
+  for (const prop of ['oncomplete', 'onerror', 'onabort']) handler('IDBTransaction', prop);
+  for (const name of ['MutationObserver', 'ResizeObserver', 'IntersectionObserver']) {
+    const was = g[name];
+    if (typeof was !== 'function') continue;
+    g[name] = new Proxy(was, {
+      construct: (made, args, self) =>
+        Reflect.construct(made, [task(name, args[0]), ...args.slice(1)], self) as object,
+    });
+  }
+  wrap(proto('Element'), 'scrollIntoView', 'element.scrollIntoView');
+  for (const m of ['focus', 'blur']) wrap(proto('HTMLElement'), m, `element.${m}`);
+  for (const m of ['elementFromPoint', 'elementsFromPoint', 'caretRangeFromPoint', 'hasFocus']) {
+    wrap(proto('Document'), m, `document.${m}`);
+  }
+  wrap(globalThis, 'getSelection', 'getSelection');
+  const reads = (owner: string, props: string[]) => {
+    const at = proto(owner);
+    for (const prop of props) {
+      const was = at && Object.getOwnPropertyDescriptor(at, prop);
+      if (!at || !was?.get) continue;
+      const get = was.get;
+      Object.defineProperty(at, prop, {
+        ...was,
+        get(this: unknown) {
+          crumb(`${owner}.${prop}`);
+          const out: unknown = get.call(this);
+          crumb(`${owner}.${prop} back`);
+          return out;
+        },
+      });
+    }
+  };
+  reads('ServiceWorkerContainer', ['controller', 'ready']);
+  reads('Navigator', ['onLine', 'languages', 'userActivation']);
+  reads('Notification', ['permission']);
 }
 
 export const test = base.extend({
@@ -388,14 +516,14 @@ export const test = base.extend({
         const text = message.text();
         if (!text.startsWith('[crumb]')) return;
         said.push(`${(Date.now() % 100_000) / 1000} ${text.slice(8)}`);
-        if (said.length > 400) said.shift();
+        if (said.length > 3000) said.shift();
       });
     }
     await use(page);
     if (session && on && info.status === 'timedOut') await reportHang(session, info);
     if (leaving && info.status === 'timedOut') {
       // The lines up to the last one that isn't the clock's, and the clock's after it.
-      const text = said.slice(-120).join('\n');
+      const text = said.slice(-260).join('\n');
       console.log(
         `[page-crumbs] ${info.titlePath.slice(1).join(' › ')} at ${(Date.now() % 100_000) / 1000}\n${text}`,
       );

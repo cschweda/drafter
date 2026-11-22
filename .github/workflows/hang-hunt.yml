@@ -29,11 +29,11 @@ concurrency:
 jobs:
   hunt:
     runs-on: ubuntu-24.04
-    timeout-minutes: 100
+    timeout-minutes: 170
     strategy:
       fail-fast: false
       matrix:
-        round: [1, 2, 3, 4, 5]
+        round: [1, 2]
         shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -77,22 +77,20 @@ jobs:
       # For the stopped page's stack (reportLate).
       - name: gdb
         run: sudo apt-get install -y gdb || (sudo apt-get update && sudo apt-get install -y gdb)
-      # Six times in each job: the build and the browser are there already, so each further pass
+      # Nine times in each job: the build and the browser are there already, so each further pass
       # costs only its own minutes. A failure in one pass doesn't stop the next; the job fails at
       # the end if any did, and each pass's `[page-stack]` is in the log under its own heading.
-      - name: The Chromium tests, six times
+      - name: The Chromium tests, nine times
         env:
-          # Round 7. Round 6 ran the whole browser and two pages in 120 runs stopped, as often as
-          # in the headless shell, in the same wait: so the fault is not the shell's alone. Every
-          # stack so far ends inside the browser, under a call made from the page's JavaScript,
-          # and a stopped page can't be asked which. So each page now says what it is about to
-          # do before every call that can wait on another process (apps/web/e2e/fixtures.ts,
-          # crumbs), and a test out of time prints the last of those lines as `[page-crumbs]`,
-          # with the report from outside as before.
+          # Round 8, this half. Round 7's pages said each call that can wait on another process,
+          # and two stopped with every such call returned, both just after start-up's last one.
+          # So the stop is in a call not listed, or in none (laying out, painting). The pages now
+          # also say which of their own functions is running: each timer, frame, event listener,
+          # handler and observer, going in and coming out.
           HANG_REPORT: crumbs
         run: |
           failed=0
-          for pass in 1 2 3 4 5 6; do
+          for pass in 1 2 3 4 5 6 7 8 9; do
             echo "::group::pass $pass"
             pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4 || { failed=1; echo "PASS $pass FAILED"; cp -r apps/web/playwright-report "apps/web/report-pass-$pass" || true; }
             echo "::endgroup::"
@@ -107,3 +105,67 @@ jobs:
             apps/web/playwright-report
             apps/web/report-pass-*
           retention-days: 7
+
+  # Round 8, the other half: the same tests in Debian's Chromium, whose symbols Debian publishes.
+  # Every stack so far is addresses in a browser without symbols, and they stop a few frames up.
+  # Here a renderer whose main thread never wakes is written out whole (gcore, from the fixture),
+  # and once the tests are done the symbols are installed and the stack read by name.
+  hunt-symbols:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    container:
+      image: debian:sid
+      # gdb has to attach to a process that isn't its child, and Chromium wants more shared
+      # memory than Docker's 64 MB.
+      options: --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --shm-size=2g
+    strategy:
+      fail-fast: false
+      matrix:
+        round: [3, 4, 5]
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: What the container lacks
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git sudo gdb procps xz-utils unzip chromium fonts-liberation fonts-noto-core
+          chromium --version
+          mkdir -p /tmp/hang-cores
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.ref || github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+      - name: Build the packages
+        run: pnpm -r --filter "./packages/*" build
+      - name: The Chromium tests, nine times
+        env:
+          HANG_REPORT: late
+          HUNT_EXECUTABLE: /usr/bin/chromium
+          HUNT_CORE: /tmp/hang-cores
+        run: |
+          failed=0
+          for pass in 1 2 3 4 5 6 7 8 9; do
+            echo "::group::pass $pass"
+            pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4 || { failed=1; echo "PASS $pass FAILED"; }
+            echo "::endgroup::"
+            ls -la /tmp/hang-cores
+          done
+          exit $failed
+      - name: The stopped pages' stacks, by name
+        if: always()
+        run: |
+          ls -la /tmp/hang-cores
+          ls /tmp/hang-cores/core.* >/dev/null 2>&1 || { echo "no page was written out"; exit 0; }
+          echo "deb http://deb.debian.org/debian-debug unstable-debug main" > /etc/apt/sources.list.d/debug.list
+          apt-get update
+          apt-get install -y chromium-dbgsym || echo "NO SYMBOLS FROM APT"
+          df -h / | tail -1
+          for core in /tmp/hang-cores/core.*; do
+            echo "[named-stack] $core"
+            timeout 3000 gdb -nx -batch -iex 'set debuginfod enabled off' /usr/lib/chromium/chromium "$core" -ex 'bt 80' -ex 'thread apply all bt 30' 2>&1 | cut -c1-400 || echo "gdb gave up on $core"
+          done
