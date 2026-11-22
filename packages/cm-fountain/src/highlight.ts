@@ -211,6 +211,7 @@ const ASTERISK = 42;
 const UNDERSCORE = 95;
 const BACKSLASH = 92;
 const NUMBER_SIGN = 35;
+const EQUALS_SIGN = 61;
 const SPACE = /\s/;
 
 /** Whitespace as the parser trims it, so what it leaves out of the text is what stays unmarked. */
@@ -376,13 +377,18 @@ function releaseUnprinted(
 
   // Escapes, found left to right as the parser reads them: a backslash before `*`, `_`, or
   // another backslash is left out, and the character after it prints, even if it is a backslash.
-  // The run's first character prints, so it is never one.
+  // So is the backslash of `\#` or `\=` where the line's ink starts (after spaces, which stay in
+  // the run). The run's first character prints, so it is never one.
+  // Where the line's ink starts: its first character that isn't a space, as the parser counts it.
+  let firstInk = 0;
+  while (firstInk < raw.length && /\s/.test(raw.charAt(firstInk))) firstInk++;
   const isEscape = new Uint8Array(printed.length);
   for (let i = 1; i + 1 < printed.length; i++) {
     const after = codeAt(i + 1);
+    const lineMark = (after === NUMBER_SIGN || after === EQUALS_SIGN) && printed[i] === firstInk;
     if (
       codeAt(i) === BACKSLASH &&
-      (after === ASTERISK || after === UNDERSCORE || after === BACKSLASH)
+      (after === ASTERISK || after === UNDERSCORE || after === BACKSLASH || lineMark)
     ) {
       isEscape[i] = 1;
       i++;
