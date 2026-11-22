@@ -88,7 +88,10 @@ jobs:
       # Chrome for Testing build of 156.
       - name: A later build of the browser
         run: |
-          if [ "${{ matrix.round }}" -le 2 ]; then
+          # Round 11: the last build of 156 stopped three times in 108 runs, so the fault was not
+          # mended within 156; the 159 did not stop in 72, which at that rate proves little. All
+          # twenty jobs run the 159 now: 180 runs.
+          if [ "${{ matrix.round }}" -le 5 ]; then
             pnpm dlx playwright@1.65.1 install chromium-headless-shell
             exe=$(find ~/.cache/ms-playwright -path '*headless_shell-1255*' -type f -name 'chrome-headless-shell' -o -path '*headless_shell-1255*' -type f -name 'headless_shell' | head -1)
           else
