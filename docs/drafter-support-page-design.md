@@ -45,8 +45,12 @@ These would make it a failure even if money came in.
 
 The maintainer opens the accounts; Drafter only links to them. The providers take the card details and pay out; Drafter never handles payment data.
 
-- **Ko-fi, the main route** (the builder's recommendation; the maintainer has not confirmed it). Anyone with a card or PayPal can tip, with no account, once or monthly. No platform fee on tips at the time of writing; card fees apply. Check the fees at signup.
-- **GitHub Sponsors, beside it.** For people who have a GitHub account. Needs enrolment (a payout account and a tax form), which takes some days.
+Both routes, decided by the maintainer on 2026-11-22, with one rule: **a writer must never need a GitHub account, or any account, to leave a tip.**
+
+- **Ko-fi, the first and main route.** Anyone can tip by card, Apple Pay, Google Pay or PayPal, with no account, once or monthly. For that to hold, the maintainer connects **Stripe** to the Ko-fi page, not PayPal alone: with only PayPal connected, a giver without a PayPal account can be asked to make one. No platform fee on tips at the time of writing; card fees apply. Check the fees at signup.
+- **GitHub Sponsors, second.** For people who already have a GitHub account, and said so on the page, so no writer takes it for the way in. Needs enrolment (two-factor sign-in, a payout account, a tax form), which takes some days.
+
+The fewest steps from wanting to tip to having tipped: Help → Support Drafter → Leave a tip → the amount and a card on Ko-fi's page. The link goes to the Ko-fi page itself, where the amount is the first thing asked, not to a profile or a post.
 
 Two things for the maintainer, outside the build: check the employer's rules on outside income before money arrives, and treat tips as ordinary income.
 
@@ -62,11 +66,15 @@ The two addresses live in one place in the code (`SUPPORT_LINKS`), so a route ca
    >
    > If it has been useful and you'd like to say thanks, you can leave a tip. It helps with the domain and hosting, and with the time it takes.
    >
-   > [Leave a tip on Ko-fi] [Sponsor on GitHub]
+   > [Leave a tip]
+   >
+   > By card, Apple Pay, Google Pay or PayPal, on Ko-fi. No account needed.
+   >
+   > Have a GitHub account? You can [sponsor Drafter on GitHub] instead.
    >
    > Nothing changes in Drafter whether you do or not. Each link opens the provider's own page; Drafter sends them nothing, and a tip is not tax-deductible.
 
-   The two links are ordinary secondary buttons of the app's own, with `rel="noopener noreferrer"`.
+   "Leave a tip" is the page's one button (the app's own primary button); the GitHub route is a link in a sentence, so the page has one obvious thing to press. Both have `rel="noopener noreferrer"`.
 
 2. **About.** One more entry in `ABOUT_LINKS`: "Support Drafter", which opens the help page (not the provider), after the existing links.
 
@@ -82,7 +90,7 @@ The two addresses live in one place in the code (`SUPPORT_LINKS`), so a route ca
 - The content security policy is byte-for-byte what it was.
 - The built page requests nothing from another origin (`privacy-check.mjs`).
 - The writing screen's markup holds neither link and none of the page's words; the only ways to the page are Help, About and the palette.
-- With `SUPPORT_LINKS` empty, the page, the About entry and the command are absent.
+- With `SUPPORT_LINKS` empty, the page, the About entry and the command are absent; with only Ko-fi's address, the GitHub sentence is.
 
 ## Left to the builder
 
@@ -92,4 +100,5 @@ The two addresses live in one place in the code (`SUPPORT_LINKS`), so a route ca
 
 ## Needed from the maintainer before it ships
 
-- The Ko-fi page's address, and GitHub Sponsors enrolled (or a decision to ship with one route).
+- A Ko-fi page with Stripe connected, and its address.
+- GitHub Sponsors enrolled. If it is still waiting for approval at release, the page ships with Ko-fi alone and the GitHub sentence is added when it is through.
