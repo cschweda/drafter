@@ -80,14 +80,24 @@ jobs:
       # Nine times in each job: the build and the browser are there already, so each further pass
       # costs only its own minutes. A failure in one pass doesn't stop the next; the job fails at
       # the end if any did, and each pass's `[page-stack]` is in the log under its own heading.
-      # Round 12. Round 11 ran Chromium 159 180 times and five pages stopped: so every build
-      # tried but Debian's stops, and a newer browser is no cure. The tests' own build again,
-      # and a stopped page's report now has the words of each thread's stack that point into
-      # the browser's file (fixtures.ts, `scan`): the build is public, so they can be set
-      # beside it afterwards to name the functions the thread is inside.
+      # Round 13. Round 12 named where the stopped page waits: its main thread is in
+      # ProxyMain::BeginMainFrame > LayerTreeHost::WaitForCommitCompletion, waiting for the
+      # compositor to finish a commit, and the compositor is idle. Other projects that caught the
+      # same wait traced it to the software raster path (a tile's raster job that yields and is
+      # never run again, so the pending tree never activates), and it went when the pages were
+      # rastered on a GPU, SwiftShader's, which runs on the processor. So this round runs every
+      # job that way, to see whether it goes here too. The first step fails the job if the
+      # browser does not say it rasters on the GPU, so a switch that stopped working is not
+      # counted as a clean run.
+      - name: How the browser rasters
+        working-directory: apps/web
+        env:
+          HUNT_ARGS: --enable-unsafe-swiftshader --use-angle=swiftshader --enable-gpu-rasterization
+        run: node e2e/raster-check.mjs
       - name: The Chromium tests, nine times
         env:
           HANG_REPORT: late
+          HUNT_ARGS: --enable-unsafe-swiftshader --use-angle=swiftshader --enable-gpu-rasterization
         run: |
           failed=0
           for pass in 1 2 3 4 5 6 7 8 9; do
