@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Support Drafter, a tip jar.** A new help page, in the About menu and the palette ("tip", "sponsor" and "donate" find it), for anyone who would like to say thanks: one button, **Leave a tip**, which opens the maintainer's page on Ko-fi, where a card, Apple Pay, Google Pay or PayPal is enough and no account is needed. Drafter is free and every part of it stays free; nothing changes whether you tip or not, there is nothing for people who do, and nothing in Drafter ever asks: no banner, no reminder, no word of it on the writing screen. Both the page and Drafter itself load nothing from Ko-fi and send it nothing: it is a link, listed with everything else that uses the network in the README and on the Privacy page. A build without the maintainer's Ko-fi address (`app/about/support.ts`) has no such page. The design is `docs/drafter-support-page-design.md`.
+
 ### Changed
 
 - **On the Linux runners, the browser tests' Chromium rasters its pages on a GPU.** About one run of the checks in fifty had a test time out on a page that stopped answering. The hang hunt found where: the page's main thread waits in Chromium's compositor (`LayerTreeHost::WaitForCommitCompletion`) for a frame that is never finished, with nothing of Drafter's running; others who caught the same wait traced it to the software raster path, where a tile's job yields on a machine with few cores and is never run again. Rastering on SwiftShader's GPU, which runs on the processor, takes the tiles off that path: 337 runs of the tests that way had no stopped page. So `checks.yml` sets `E2E_GPU_RASTER=1` on Linux, `playwright.config.ts` gives Chromium the switches, and `scripts/raster-check.mjs` fails the job first if the browser doesn't say it rasters on the GPU. The runs are about a third slower, so each test and each `expect` has twice its time there. macOS is as it was: it never happened there. For developers.

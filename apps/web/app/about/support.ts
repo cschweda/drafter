@@ -12,7 +12,9 @@ export interface SupportLinks {
 }
 
 /** The maintainer's two addresses go here, and nowhere else. */
-export const SUPPORT_LINKS: SupportLinks = {};
+export const SUPPORT_LINKS: SupportLinks = {
+  kofi: 'https://ko-fi.com/chrisschweda',
+};
 
 /** The address, when it is an https page on `host` whose path `fits`, with no query or fragment. */
 function page(address: string | undefined, host: string, fits: RegExp): string | undefined {

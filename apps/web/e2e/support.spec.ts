@@ -83,6 +83,19 @@ test.describe('the Support page', () => {
     expect(html).not.toMatch(/Leave a tip|ko-fi/i);
   });
 
+  test('is in the privacy record', async ({ page }) => {
+    await page.goto('/docs/privacy/');
+    const main = page.getByRole('main');
+    const sites = SUPPORT_ROUTES.sponsor ? 'Ko-fi and GitHub' : 'Ko-fi';
+    await expect(main).toContainText(
+      `The Support page links to ${sites}. Nothing is sent there unless you follow a link.`,
+    );
+    await expect(main.getByRole('link', { name: 'Support page' })).toHaveAttribute(
+      'href',
+      '/docs/support/',
+    );
+  });
+
   test('is found in the palette by "tip" and by "donate"', async ({ page }) => {
     await start(page);
     for (const word of ['tip jar', 'donate']) {
@@ -105,6 +118,11 @@ test.describe('a build with no Ko-fi page', () => {
     const response = await page.goto('/docs/support/');
     expect(response?.status()).toBe(404);
     await expect(page.locator('[data-support]')).toHaveCount(0);
+  });
+
+  test('says nothing of Ko-fi on the Privacy page', async ({ page }) => {
+    await page.goto('/docs/privacy/');
+    await expect(page.getByRole('main')).not.toContainText('Ko-fi');
   });
 
   test('has no Support command in the palette', async ({ page }) => {
