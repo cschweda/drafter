@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        round: [1, 2]
+        round: [1, 2, 3, 4, 5]
         shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -80,16 +80,29 @@ jobs:
       # Nine times in each job: the build and the browser are there already, so each further pass
       # costs only its own minutes. A failure in one pass doesn't stop the next; the job fails at
       # the end if any did, and each pass's `[page-stack]` is in the log under its own heading.
+      # Round 10. The tests' own Chromium (Chrome for Testing 156.0.8078.4, an early build of 156)
+      # stopped in the Debian container as it does on the runner, and Debian's own (156.0.8078.79,
+      # the finished 156) ran 108 times there without a stop. So the fault looks like the early
+      # build's, mended since. This round runs later builds on the runner: in rounds 1 and 2 the
+      # headless shell the next Playwright (1.65.1) brings, 159; in rounds 3 to 5 the last
+      # Chrome for Testing build of 156.
+      - name: A later build of the browser
+        run: |
+          if [ "${{ matrix.round }}" -le 2 ]; then
+            pnpm dlx playwright@1.65.1 install chromium-headless-shell
+            exe=$(find ~/.cache/ms-playwright -path '*headless_shell-1255*' -type f -name 'chrome-headless-shell' -o -path '*headless_shell-1255*' -type f -name 'headless_shell' | head -1)
+          else
+            mkdir -p /tmp/cft && cd /tmp/cft
+            curl -fsSLO https://storage.googleapis.com/chrome-for-testing-public/156.0.8078.80/linux64/chrome-headless-shell-linux64.zip
+            unzip -q chrome-headless-shell-linux64.zip
+            exe=/tmp/cft/chrome-headless-shell-linux64/chrome-headless-shell
+          fi
+          test -x "$exe"
+          "$exe" --version || true
+          echo "HUNT_EXECUTABLE=$exe" >> "$GITHUB_ENV"
       - name: The Chromium tests, nine times
         env:
-          # Round 8, this half. Round 7's pages said each call that can wait on another process,
-          # and two stopped with every such call returned, both just after start-up's last one.
-          # So the stop is in a call not listed, or in none (laying out, painting). The pages now
-          # also say which of their own functions is running: each timer, frame, event listener,
-          # handler and observer, going in and coming out.
-          # Round 9 runs this half again as it was: four stopped in 72 runs, each having come out
-          # of every function it went into (three just after a click's listener, one after a frame).
-          HANG_REPORT: crumbs
+          HANG_REPORT: late
         run: |
           failed=0
           for pass in 1 2 3 4 5 6 7 8 9; do
@@ -108,70 +121,3 @@ jobs:
             apps/web/report-pass-*
           retention-days: 7
 
-  # Round 8, the other half: the same tests in Debian's Chromium, whose symbols Debian publishes.
-  # Every stack so far is addresses in a browser without symbols, and they stop a few frames up.
-  # Here a renderer whose main thread never wakes is written out whole (gcore, from the fixture),
-  # and once the tests are done the symbols are installed and the stack read by name.
-  hunt-symbols:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 240
-    container:
-      image: debian:sid
-      # gdb has to attach to a process that isn't its child, and Chromium wants more shared
-      # memory than Docker's 64 MB.
-      options: --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --shm-size=2g
-    strategy:
-      fail-fast: false
-      matrix:
-        round: [3, 4, 5]
-        shard: [1, 2, 3, 4]
-    steps:
-      - name: What the container lacks
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git sudo gdb procps xz-utils unzip chromium fonts-liberation fonts-noto-core
-          chromium --version
-          mkdir -p /tmp/hang-cores
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-          ref: ${{ inputs.ref || github.event.pull_request.head.sha }}
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version-file: .nvmrc
-      - name: Install the workspace
-        run: pnpm install --frozen-lockfile
-      - name: Build the packages
-        run: pnpm -r --filter "./packages/*" build
-      - name: The tests' own browser
-        run: pnpm --filter @drafter/web exec playwright install chromium
-      - name: The Chromium tests, nine times
-        env:
-          # Round 9. Debian's Chromium (156) in this container ran the tests 108 times and no page
-          # stopped, while four stopped in 72 runs on the runner itself. So it is the browser's
-          # build or the place it runs. This half runs the tests' own Chromium here in the
-          # container: if it stops here it is the build, and if it doesn't it is the place.
-          HANG_REPORT: late
-        run: |
-          failed=0
-          for pass in 1 2 3 4 5 6 7 8 9; do
-            echo "::group::pass $pass"
-            pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4 || { failed=1; echo "PASS $pass FAILED"; }
-            echo "::endgroup::"
-            ls -la /tmp/hang-cores
-          done
-          exit $failed
-      - name: The stopped pages' stacks, by name
-        if: always()
-        run: |
-          ls -la /tmp/hang-cores
-          ls /tmp/hang-cores/core.* >/dev/null 2>&1 || { echo "no page was written out"; exit 0; }
-          echo "deb http://deb.debian.org/debian-debug unstable-debug main" > /etc/apt/sources.list.d/debug.list
-          apt-get update
-          apt-get install -y chromium-dbgsym || echo "NO SYMBOLS FROM APT"
-          df -h / | tail -1
-          for core in /tmp/hang-cores/core.*; do
-            echo "[named-stack] $core"
-            timeout 3000 gdb -nx -batch -iex 'set debuginfod enabled off' /usr/lib/chromium/chromium "$core" -ex 'bt 80' -ex 'thread apply all bt 30' 2>&1 | cut -c1-400 || echo "gdb gave up on $core"
-          done
