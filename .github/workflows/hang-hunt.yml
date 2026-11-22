@@ -87,6 +87,8 @@ jobs:
           # So the stop is in a call not listed, or in none (laying out, painting). The pages now
           # also say which of their own functions is running: each timer, frame, event listener,
           # handler and observer, going in and coming out.
+          # Round 9 runs this half again as it was: four stopped in 72 runs, each having come out
+          # of every function it went into (three just after a click's listener, one after a frame).
           HANG_REPORT: crumbs
         run: |
           failed=0
@@ -142,11 +144,15 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build the packages
         run: pnpm -r --filter "./packages/*" build
+      - name: The tests' own browser
+        run: pnpm --filter @drafter/web exec playwright install chromium
       - name: The Chromium tests, nine times
         env:
+          # Round 9. Debian's Chromium (156) in this container ran the tests 108 times and no page
+          # stopped, while four stopped in 72 runs on the runner itself. So it is the browser's
+          # build or the place it runs. This half runs the tests' own Chromium here in the
+          # container: if it stops here it is the build, and if it doesn't it is the place.
           HANG_REPORT: late
-          HUNT_EXECUTABLE: /usr/bin/chromium
-          HUNT_CORE: /tmp/hang-cores
         run: |
           failed=0
           for pass in 1 2 3 4 5 6 7 8 9; do
