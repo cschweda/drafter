@@ -214,6 +214,11 @@ test.describe('the What’s new banner', () => {
       await useTheme(page, theme);
       await returning(page);
       await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
+      // The banner fades in, and axe measures the colors on the screen: halfway through they are
+      // the fade's. The fade's classes are on the banner from before it is drawn until it is
+      // over; the fade itself starts a frame later, so waiting for the animations that are
+      // running can find none yet.
+      await expect(banner(page)).not.toHaveClass(/whats-new-enter/);
       await page.evaluate(() =>
         Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))),
       );

@@ -124,10 +124,18 @@ jobs:
       - name: The browser's system libraries
         if: steps.browsers.outputs.cache-hit == 'true' && runner.os == 'Linux'
         run: pnpm --filter @drafter/web exec playwright install-deps chromium
+      # On Linux the tests' Chromium rasters on SwiftShader's GPU, which keeps a page from
+      # stopping dead in Chromium's software raster path (apps/web/playwright.config.ts). This
+      # fails the job if the browser doesn't say it does.
+      - name: How the browser rasters
+        if: runner.os == 'Linux'
+        working-directory: apps/web
+        run: node scripts/raster-check.mjs
       - name: The web app's end-to-end tests, in Chromium
         # A test that times out says what its page was running (apps/web/e2e/fixtures.ts).
         env:
           HANG_REPORT: "1"
+          E2E_GPU_RASTER: ${{ runner.os == 'Linux' && '1' || '' }}
         run: pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4
       - name: The test report, if anything failed
         if: failure()
