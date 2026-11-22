@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **A dialog asked for again the moment it closed could fail to open, or open and shut.** A browser takes a dialog off the screen at once and says so later, at times a few hundred milliseconds later, and Drafter kept "it is open" until then: so the same dialog chosen again in between (closed with Cancel or Escape, then chosen from the palette straight away) was not opened, or was opened and then shut by the late word. Every dialog now knows it is closed as soon as it is, once for each time it was open, and takes no notice of a late word that comes after it has opened again. Found by a browser test that failed one time in four when the test browser drew its pages another way. `DDialog.vue`.
+
 ## [0.27.2] - 2026-11-21
 
 **A page ends where a sentence does.** When a paragraph of action or a speech doesn't fit on a page, the page now ends at the last sentence that fits, and the rest starts the next page, wrapped again from its first word; at least two lines stay on each side. Where no sentence ends in reach, the break is at a line, as before. A speech that splits still has `(MORE)` under it and `(CONT'D)` after its cue. **A locked script keeps every page exactly where it is**, and a script you lock from now on keeps the pages you see, sentence breaks and all. **Two faults are fixed:** Reload for a new version could sit on "Getting the newest version…" for ten seconds and then say it couldn't switch, and a menu opened straight after choosing from another could lose the arrow keys. The rest is for developers: the browser tests now run in Safari's engine every night, and several tests that failed now and then are settled.

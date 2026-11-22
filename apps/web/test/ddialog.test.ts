@@ -218,3 +218,58 @@ describe('DDialog, when it closes', () => {
     expect(document.activeElement).toBe(elsewhere);
   });
 });
+
+// A browser clears `open` at once and sends its `close` event later, sometimes hundreds of
+// milliseconds later. A caller that learns of the close only then holds a stale "it is open", so
+// asking for the dialog again in between opens nothing, or opens a dialog the late event shuts.
+describe('DDialog, when the browser is late to say it closed', () => {
+  /** Closing clears `open` and says nothing; `late()` is the browser's event, when it comes. */
+  function stubLateClose() {
+    HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+      this.removeAttribute('open');
+    };
+    return () => document.querySelector('dialog')?.dispatchEvent(new Event('close'));
+  }
+  /** Past the microtasks that follow a change to the page. */
+  const soon = () => Promise.resolve().then(() => Promise.resolve());
+
+  test('tells the caller as soon as it is closed, and once', async () => {
+    const late = stubLateClose();
+    let closes = 0;
+    const dialog = mount({ onClose: () => closes++ });
+    dialog.showModal();
+    dialog.close();
+    await soon();
+    expect(closes).toBe(1);
+    late();
+    expect(closes).toBe(1);
+  });
+
+  test('says nothing of the late event once the dialog is open again', async () => {
+    const late = stubLateClose();
+    let closes = 0;
+    const dialog = mount({ onClose: () => closes++ });
+    dialog.showModal();
+    dialog.close();
+    await soon();
+    dialog.showModal();
+    late();
+    expect(closes).toBe(1);
+    dialog.close();
+    await soon();
+    expect(closes).toBe(2);
+  });
+
+  test('still gives focus back to what opened it', async () => {
+    stubLateClose();
+    const opener = button('opener');
+    const dialog = mount();
+    opener.focus();
+    dialog.showModal();
+    document.getElementById('inside')?.focus();
+    dialog.close();
+    await soon();
+    await afterClose();
+    expect(document.activeElement).toBe(opener);
+  });
+});
