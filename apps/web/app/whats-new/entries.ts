@@ -45,6 +45,23 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.27.3-cursor-stays',
+    date: '2026-11-22',
+    version: '0.27.3',
+    kind: 'Fixed',
+    title: 'The cursor stays where you left it',
+    text: 'When the palette or a dialog closed while the page was busy, the cursor could jump to the top of the script, and the next thing you typed went in there. It now stays where it was.',
+    link: release('0.27.3'),
+  },
+  {
+    id: 'v0.27.3-dialogs-and-tour',
+    date: '2026-11-22',
+    version: '0.27.3',
+    kind: 'Fixed',
+    title: 'A dialog opened again at once, and focus after the tour',
+    text: 'A dialog asked for again the moment it closed could fail to open. After the tour, focus could be left on nothing, so the next Tab started from the top of the page; both are fixed.',
+  },
+  {
     id: 'v0.27.2-sentence-breaks',
     date: '2026-11-21',
     version: '0.27.2',

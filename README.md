@@ -18,7 +18,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.27.2.** The web app and the desktop apps for Windows and Linux are ready to use. v0.27.2 makes **a page end where a sentence does**: a paragraph or a speech that doesn't fit stops at the last sentence that fits, with at least two lines on each side, and a locked script keeps every page where it is. v0.27.1 was **fixes before features**, and v0.27.0 brought **Production**, free. See the [roadmap](#roadmap).
+> **Status: v0.27.3.** The web app and the desktop apps for Windows and Linux are ready to use. v0.27.3 **keeps the cursor where you left it**: it could jump to the top of the script when the palette or a dialog closed on a busy page, and two smaller faults with dialogs and the tour are fixed with it. v0.27.2 made **a page end where a sentence does**, v0.27.1 was **fixes before features**, and v0.27.0 brought **Production**, free. See the [roadmap](#roadmap).
 
 ## Contents
 
@@ -179,7 +179,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.27.2, there are **8,882 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,475 browser tests**, each run in five browser setups (7,375 runs), 140 end-to-end tests of the desktop app, and **294 trap documents** with 1,376 checks:
+**What runs.** As of v0.27.3, there are **8,885 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,480 browser tests**, each run in five browser setups (7,400 runs), 140 end-to-end tests of the desktop app, and **294 trap documents** with 1,376 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
@@ -325,6 +325,7 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 - **Production** (v0.27.0): locked pages and scene numbers, revision colors and marks, OMITTED scenes, revised pages, a breakdown report, and sides, free.
 - **Fixes before features** (v0.27.1): four faults a writer could meet fixed, warnings when words won't print as written, page breaks that never leave one line of a paragraph behind, an outline as a board of cards, and Save As with a name in every browser.
 - **A page ends where a sentence does** (v0.27.2): action and speeches break at the last sentence that fits, locked scripts keep every page, and Reload for a new version no longer stalls.
+- **The cursor stays where you left it** (v0.27.3): it no longer jumps to the top of the script when the palette or a dialog closes on a busy page; a dialog reopened at once opens, and focus comes back after the tour.
 
 **Next:**
 
