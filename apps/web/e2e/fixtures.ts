@@ -143,12 +143,50 @@ async function reportLate(page: Page, info: TestInfo) {
             'bt 70',
             '-ex',
             'thread apply all bt 12',
+            // Round 12: the unwinder gives up a few frames in (the browser has no unwind tables
+            // it can read), so the stack's own words are read as well. Each that points into
+            // the browser's file may be a return address: set beside the same build's file,
+            // they say which functions the thread is inside.
+            '-ex',
+            'echo SCAN\\n',
+            '-ex',
+            'thread apply all x/700xg $sp',
           ],
         ],
-        { timeout: 12_000, maxBuffer: 4_000_000 },
+        { timeout: 14_000, maxBuffer: 16_000_000 },
         (error, out) => {
           const frames: string[] = [];
-          for (const line of String(out).split('\n')) {
+          const [bt = '', scan = ''] = String(out).split('\nSCAN\n');
+          const found: string[] = [];
+          let whose = '';
+          const flush = () => {
+            // The main thread in full; a few words of each other.
+            if (whose && found.length > 0)
+              frames.push(
+                `  scan ${whose}: ${found.slice(0, whose.startsWith('Thread 1 ') ? 320 : 40).join(' ')}`,
+              );
+            found.length = 0;
+          };
+          const exe = maps.find((r) => /chrom/.test(r.file))?.file;
+          const scanned = () => {
+            for (const line of scan.split('\n')) {
+              if (line.startsWith('Thread ')) {
+                flush();
+                whose = line.slice(0, 60);
+                continue;
+              }
+              const words = /^0x[0-9a-f]+[^:]*:\s+(.*)$/.exec(line)?.[1];
+              if (!words) continue;
+              for (const word of words.split(/\s+/)) {
+                if (!/^0x[0-9a-f]{9,}$/.test(word)) continue;
+                const at = BigInt(word);
+                const map = maps.find((r) => at >= r.from && at < r.to);
+                if (map && map.file === exe) found.push((at - map.from + map.at).toString(16));
+              }
+            }
+            flush();
+          };
+          for (const line of bt.split('\n')) {
             if (line.startsWith('Thread ')) frames.push(`  ${line.slice(0, 80)}`);
             const m = /^#(\d+)\s+(?:0x([0-9a-f]+) in )?(\S+)/.exec(line);
             if (!m) continue;
@@ -160,6 +198,7 @@ async function reportLate(page: Page, info: TestInfo) {
             }
             frames.push(`    #${m[1]} ${m[3]} ${where}`);
           }
+          scanned();
           if (frames.length === 0)
             frames.push(
               `    no stack: ${String(error).slice(0, 160)} ${String(out).slice(0, 600)}`,

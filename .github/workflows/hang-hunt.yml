@@ -80,29 +80,11 @@ jobs:
       # Nine times in each job: the build and the browser are there already, so each further pass
       # costs only its own minutes. A failure in one pass doesn't stop the next; the job fails at
       # the end if any did, and each pass's `[page-stack]` is in the log under its own heading.
-      # Round 10. The tests' own Chromium (Chrome for Testing 156.0.8078.4, an early build of 156)
-      # stopped in the Debian container as it does on the runner, and Debian's own (156.0.8078.79,
-      # the finished 156) ran 108 times there without a stop. So the fault looks like the early
-      # build's, mended since. This round runs later builds on the runner: in rounds 1 and 2 the
-      # headless shell the next Playwright (1.65.1) brings, 159; in rounds 3 to 5 the last
-      # Chrome for Testing build of 156.
-      - name: A later build of the browser
-        run: |
-          # Round 11: the last build of 156 stopped three times in 108 runs, so the fault was not
-          # mended within 156; the 159 did not stop in 72, which at that rate proves little. All
-          # twenty jobs run the 159 now: 180 runs.
-          if [ "${{ matrix.round }}" -le 5 ]; then
-            pnpm dlx playwright@1.65.1 install chromium-headless-shell
-            exe=$(find ~/.cache/ms-playwright -path '*headless_shell-1255*' -type f -name 'chrome-headless-shell' -o -path '*headless_shell-1255*' -type f -name 'headless_shell' | head -1)
-          else
-            mkdir -p /tmp/cft && cd /tmp/cft
-            curl -fsSLO https://storage.googleapis.com/chrome-for-testing-public/156.0.8078.80/linux64/chrome-headless-shell-linux64.zip
-            unzip -q chrome-headless-shell-linux64.zip
-            exe=/tmp/cft/chrome-headless-shell-linux64/chrome-headless-shell
-          fi
-          test -x "$exe"
-          "$exe" --version || true
-          echo "HUNT_EXECUTABLE=$exe" >> "$GITHUB_ENV"
+      # Round 12. Round 11 ran Chromium 159 180 times and five pages stopped: so every build
+      # tried but Debian's stops, and a newer browser is no cure. The tests' own build again,
+      # and a stopped page's report now has the words of each thread's stack that point into
+      # the browser's file (fixtures.ts, `scan`): the build is public, so they can be set
+      # beside it afterwards to name the functions the thread is inside.
       - name: The Chromium tests, nine times
         env:
           HANG_REPORT: late
