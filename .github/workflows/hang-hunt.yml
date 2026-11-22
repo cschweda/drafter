@@ -89,18 +89,25 @@ jobs:
       # job that way, to see whether it goes here too. The first step fails the job if the
       # browser does not say it rasters on the GPU, so a switch that stopped working is not
       # counted as a clean run.
+      # Round 14. Round 13 ran about 177 times and no page stopped. But a pass took 10 to 20
+      # minutes where it had taken 9 to 12, and on the slowest runners five tests failed for want
+      # of time (14 passes): none of them fails on a fast machine with the same switches. So this
+      # round is the thirteenth again, to see the clean count twice, with each test's time limit
+      # and each `expect`'s doubled (HUNT_SLOW), to see what still fails when time is not short.
+      # Eight passes, not nine: three jobs ran out of the job's own limit in their ninth.
       - name: How the browser rasters
         working-directory: apps/web
         env:
           HUNT_ARGS: --enable-unsafe-swiftshader --use-angle=swiftshader --enable-gpu-rasterization
         run: node e2e/raster-check.mjs
-      - name: The Chromium tests, nine times
+      - name: The Chromium tests, eight times
         env:
           HANG_REPORT: late
+          HUNT_SLOW: '1'
           HUNT_ARGS: --enable-unsafe-swiftshader --use-angle=swiftshader --enable-gpu-rasterization
         run: |
           failed=0
-          for pass in 1 2 3 4 5 6 7 8 9; do
+          for pass in 1 2 3 4 5 6 7 8; do
             echo "::group::pass $pass"
             pnpm --filter @drafter/web e2e --project=chromium --grep-invert "long task|quickly|budget|within" --shard=${{ matrix.shard }}/4 || { failed=1; echo "PASS $pass FAILED"; cp -r apps/web/playwright-report "apps/web/report-pass-$pass" || true; }
             echo "::endgroup::"

@@ -14,6 +14,10 @@ export default defineConfig({
   testDir: 'e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
+  // The hang hunt's fourteenth round: with pages rastered on SwiftShader the slowest runners took
+  // up to twice as long, and tests there ran out of their 30 seconds, or an `expect` out of its 5.
+  // HUNT_SLOW doubles both, to see what still fails when time is not short.
+  ...(process.env.HUNT_SLOW ? { timeout: 60_000, expect: { timeout: 10_000 } } : {}),
   // On CI: annotations in the run, and an HTML report the workflow keeps when something fails.
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
