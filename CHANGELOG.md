@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- **After the tour, focus could be left on nothing.** When the tour ends, focus goes back to where it was asked for (the Help button, say), once the last card has faded away. Drafter waited a little over a second for that, and on a slow machine the fade takes longer: so the wait gave up, the card went, and focus was on nothing, with the next Tab starting from the top of the page. It now waits for as long as the card takes, and looks again if the button could not take focus yet. Found by a browser test that failed on the slowest of the shared runners. `AppTour.vue`.
 - **A dialog asked for again the moment it closed could fail to open, or open and shut.** A browser takes a dialog off the screen at once and says so later, at times a few hundred milliseconds later, and Drafter kept "it is open" until then: so the same dialog chosen again in between (closed with Cancel or Escape, then chosen from the palette straight away) was not opened, or was opened and then shut by the late word. Every dialog now knows it is closed as soon as it is, once for each time it was open, and takes no notice of a late word that comes after it has opened again. Found by a browser test that failed one time in four when the test browser drew its pages another way. `DDialog.vue`.
 
 ## [0.27.2] - 2026-11-21
