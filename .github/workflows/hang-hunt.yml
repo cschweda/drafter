@@ -82,16 +82,14 @@ jobs:
       # the end if any did, and each pass's `[page-stack]` is in the log under its own heading.
       - name: The Chromium tests, six times
         env:
-          # Round 6. Round 5 caught two more (classic-switch.spec:86, keyboard.spec:332). The main
-          # thread did not wake once in two seconds and sat in pthread_cond_wait, a wait with no
-          # time limit, called from inside the browser (one from V8's own memory); a page that is
-          # only idle sits in pthread_cond_timedwait. A second page of the same context loaded,
-          # read the storage, and saw one lock held and none waited for. So the page is blocked
-          # inside the browser, and the storage and the locks are not what it waits for. This
-          # round runs the whole browser in its new headless mode instead of the headless shell
-          # the tests use by default: a writer runs the first, never the second.
-          HUNT_CHANNEL: chromium
-          HANG_REPORT: late
+          # Round 7. Round 6 ran the whole browser and two pages in 120 runs stopped, as often as
+          # in the headless shell, in the same wait: so the fault is not the shell's alone. Every
+          # stack so far ends inside the browser, under a call made from the page's JavaScript,
+          # and a stopped page can't be asked which. So each page now says what it is about to
+          # do before every call that can wait on another process (apps/web/e2e/fixtures.ts,
+          # crumbs), and a test out of time prints the last of those lines as `[page-crumbs]`,
+          # with the report from outside as before.
+          HANG_REPORT: crumbs
         run: |
           failed=0
           for pass in 1 2 3 4 5 6; do
