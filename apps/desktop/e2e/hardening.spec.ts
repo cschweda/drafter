@@ -172,6 +172,26 @@ test('sends the site’s policy headers with its pages', async ({ desktop }) => 
   expect(headers.permissions).toContain('camera=()');
 });
 
+// The Support page's button (apps/web/app/pages/docs/support.vue) opens the maintainer's Ko-fi
+// page. That one address goes to the browser unasked, like Drafter's other links; anything else
+// on the same site is asked about, so the site is no way out for a script.
+test('opens the Support page’s tip link unasked, and asks about any other address on its site', async ({
+  desktop,
+  profile,
+}) => {
+  const { page } = await desktop();
+  await page.evaluate(() => {
+    window.open('https://ko-fi.com/chrisschweda');
+    window.open('https://ko-fi.com/chrisschweda?d=INT.%20SECRET%20SCRIPT');
+  });
+  await expect.poll(() => openedExternally(profile)).toHaveLength(2);
+  expect(openedExternally(profile)).toEqual([
+    'https://ko-fi.com/chrisschweda',
+    'asked https://ko-fi.com/chrisschweda?d=INT.%20SECRET%20SCRIPT',
+  ]);
+  expect(page.url()).toBe('app://drafter/');
+});
+
 // A page that a hostile file had somehow made run code could put the script in an address and
 // hand it to the system browser, past the network block (red/blue audit, 2026-11-03). Only
 // Drafter's own links go at once; anything else waits for the writer's yes, and a hidden window
