@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.27.2] - 2026-11-21
+
+**A page ends where a sentence does.** When a paragraph of action or a speech doesn't fit on a page, the page now ends at the last sentence that fits, and the rest starts the next page, wrapped again from its first word; at least two lines stay on each side. Where no sentence ends in reach, the break is at a line, as before. A speech that splits still has `(MORE)` under it and `(CONT'D)` after its cue. **A locked script keeps every page exactly where it is**, and a script you lock from now on keeps the pages you see, sentence breaks and all. **Two faults are fixed:** Reload for a new version could sit on "Getting the newest version…" for ten seconds and then say it couldn't switch, and a menu opened straight after choosing from another could lose the arrow keys. The rest is for developers: the browser tests now run in Safari's engine every night, and several tests that failed now and then are settled.
+
 ### Added
 
 - **A workflow that hunts the page that stops dead.** About one run of the checks in fifty has a test time out on a page that stopped answering a second or two after it loaded, and it has never happened off the shared runners. `hang-hunt.yml` runs the Chromium tests forty times over there with the hang report on, by hand or from its own pull request, so the next one is caught in a day and says what the page was running. It blocks nothing and goes once the fault is found. Its fourth round caught three stopped pages, and none was running anything: the page was waiting, not spinning. So the fifth takes the stopped page's stack from outside and asks a second page which locks are held. It caught two more: the main thread was in a wait with no time limit inside the browser itself, while a second page of the same context loaded and read the storage, with one lock held and none waited for. The sixth runs the whole browser in place of the headless shell the tests use, to see whether the fault is the shell's alone. It is not: the whole browser stopped as often. The seventh has each page say what it is about to ask of the browser before it asks, so a page that stops has named the call it did not come back from. For developers.
@@ -33,7 +37,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **An update test that doesn't find what it typed now says where the text is.** Once, on a macOS runner (2026-11-21), `offline.spec.ts` "Save first where Save is a download…" reloaded with autosave failing and did not find its typed line on the screen afterwards. The run could not say whether the line was in the editor off the screen, still in the copy a closing page leaves for the next launch, or gone, and 40 runs on a loaded machine and 150 reloads did not reproduce it (the script's lock was never refused to the reloaded page, which was the one way found that the left-behind copy could be skipped). A failing update test now prints and attaches `kept-text`: the end of the editor's own text, of any copy left behind, and of each stored script, and whether the tab is read-only. For developers; nothing in the app changes.
 
-- **A design for page breaks at the end of a sentence**, approved on 2026-11-21 and now being built: `docs/plans/2026-11-21-sentence-page-breaks.md`. A page would end at the last sentence that fits, with the rest wrapped again on the next page, as Final Draft does; locked scripts keep every page where it is. Nothing in the app changes yet.
+- **A design for page breaks at the end of a sentence**, approved on 2026-11-21 and built in this release: `docs/plans/2026-11-21-sentence-page-breaks.md`. A page would end at the last sentence that fits, with the rest wrapped again on the next page, as Final Draft does; locked scripts keep every page where it is. Nothing in the app changes yet.
 
 - **Build tools brought up to date.** The two GitHub Actions that Dependabot offered (`pnpm/action-setup` 6.1.1, `actions/download-artifact` 8.0.2). The Docker image stays on Node 24, the version every other build uses: Dependabot's bump of the image alone to Node 26 failed its build, and it is now told to leave Node's major version to `.nvmrc`. For developers; nothing in the app changes.
 
@@ -1499,7 +1503,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.27.1...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.27.2...HEAD
+[0.27.2]: https://github.com/cschweda/drafter/compare/v0.27.1...v0.27.2
 [0.27.1]: https://github.com/cschweda/drafter/compare/v0.27.0...v0.27.1
 [0.27.0]: https://github.com/cschweda/drafter/compare/v0.26.2...v0.27.0
 [0.26.2]: https://github.com/cschweda/drafter/compare/v0.26.1...v0.26.2

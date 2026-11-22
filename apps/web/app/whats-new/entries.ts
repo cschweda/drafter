@@ -45,6 +45,23 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.27.2-sentence-breaks',
+    date: '2026-11-21',
+    version: '0.27.2',
+    kind: 'Improved',
+    title: 'A page ends where a sentence does',
+    text: 'A paragraph or a speech that doesn’t fit on a page now stops at the last sentence that fits, and the rest starts the next page, with at least two lines on each side. A locked script keeps every page where it is.',
+    link: release('0.27.2'),
+  },
+  {
+    id: 'v0.27.2-reload-and-menus',
+    date: '2026-11-21',
+    version: '0.27.2',
+    kind: 'Fixed',
+    title: 'Reload for a new version, and menus opened one after another',
+    text: 'Reload could wait ten seconds and then say it couldn’t switch to the new version. A menu opened straight after choosing from another could lose the arrow keys; both are fixed.',
+  },
+  {
     id: 'v0.27.1-lost-typing',
     date: '2026-11-20',
     version: '0.27.1',
