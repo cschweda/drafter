@@ -136,15 +136,23 @@ watch(
   { immediate: true },
 );
 
+/** How often `settle` looks, and for how long at most (a quarter of a minute). */
+const SETTLE_EVERY = 120;
+const SETTLE_TRIES = 125;
+
 /**
  * Puts focus back where the tour was asked for, unless something else has it by now. The tour's
- * dialogs fade out with focus still in them, so this waits for them to go.
+ * dialogs fade out with focus still in them, so this waits for them to go: for as long as they
+ * take, since a slow machine draws a fifth of a second's fade over seconds, and a wait that gives
+ * up first leaves focus on nothing once the card is gone. It also looks again when the button
+ * didn't take focus (the page under a card can't, until the card has let go of it).
  */
 function settle(tries = 0) {
   setTimeout(() => {
+    const again = tries < SETTLE_TRIES && !unmounted;
     const active = document.activeElement;
-    if (active?.closest('.tour-dialog, .welcome-dialog, .intro-dialog') && tries < 10) {
-      settle(tries + 1);
+    if (active?.closest('.tour-dialog, .welcome-dialog, .intro-dialog')) {
+      if (again) settle(tries + 1);
       return;
     }
     if (active && active !== document.body) return;
@@ -156,7 +164,8 @@ function settle(tries = 0) {
         ? opener
         : document.querySelector<HTMLElement>('[data-tour="menu"]');
     back?.focus();
-  }, 120);
+    if (back && document.activeElement !== back && again) settle(tries + 1);
+  }, SETTLE_EVERY);
 }
 
 function skip() {

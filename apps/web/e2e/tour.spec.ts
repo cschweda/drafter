@@ -195,6 +195,24 @@ test.describe('the welcome and the tour', () => {
     await expect(helpButton(page)).toBeFocused();
   });
 
+  test('gives focus back to Help however long the last card takes to go', async ({ page }) => {
+    await skipWelcome(page);
+    // A slow machine draws the card's fade over seconds, not a fifth of one.
+    await page.addStyleTag({
+      content:
+        '[class*="tour"] { transition-duration: 3s !important; animation-duration: 3s !important; }',
+    });
+    await takeTourFromHelp(page);
+    await intro(page).getByRole('button', { name: 'Start Guided Tour' }).click();
+    for (let index = 1; index <= 11; index++) {
+      await expect(step(page)).toContainText(`${index} / 11`);
+      await step(page)
+        .getByRole('button', { name: index === 11 ? 'Finish' : 'Next' })
+        .click();
+    }
+    await expect(helpButton(page)).toBeFocused({ timeout: 15_000 });
+  });
+
   test('replays the tour from the palette’s Take the tour', async ({ page }) => {
     await skipWelcome(page);
     await page.keyboard.press('ControlOrMeta+k');
