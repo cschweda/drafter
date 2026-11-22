@@ -378,6 +378,6 @@ Made by Christopher Schweda ([cschweda](https://github.com/cschweda)), who also 
 
 [MIT](LICENSE) © 2026 Christopher Schweda. Courier Prime and Inter Tight are distributed under the SIL Open Font License, each with its license file alongside the fonts. The logo, icons, and share image are in [`brand/`](brand/). See the [Changelog](CHANGELOG.md) for every release.
 
-Drafter is free, and stays free. If you'd like to say thanks: [Support Drafter](https://drafter.dev/docs/support/).
+Drafter is free, and stays free. If you'd like to say thanks, you can leave a tip on [Ko-fi](https://ko-fi.com/chrisschweda) or [Buy Me a Coffee](https://buymeacoffee.com/cschweda); neither needs an account. More on the [Support Drafter](https://drafter.dev/docs/support/) page.
 
 **Trademark.** Drafter™ and the Drafter logo are trademarks of Christopher Schweda. The MIT License covers the code, so you are free to use, change, and share it; it doesn't grant use of the Drafter name or logo. A changed copy you share needs a name of its own. Final Draft is a trademark of its owner. Drafter reads and writes its file format so a script can move between the two apps, and isn't connected with or endorsed by Final Draft.

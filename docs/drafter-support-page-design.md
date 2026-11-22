@@ -50,6 +50,8 @@ Both routes, decided by the maintainer on 2026-11-22, with one rule: **a writer 
 - **Ko-fi, the first and main route.** Anyone can tip by card, Apple Pay, Google Pay or PayPal, with no account, once or monthly. For that to hold, the maintainer connects **Stripe** to the Ko-fi page, not PayPal alone: with only PayPal connected, a giver without a PayPal account can be asked to make one. No platform fee on tips at the time of writing; card fees apply. Check the fees at signup.
 - **GitHub Sponsors, second.** For people who already have a GitHub account, and said so on the page, so no writer takes it for the way in. Needs enrolment (two-factor sign-in, a payout account, a tax form), which takes some days.
 
+- **Buy Me a Coffee, in the README only** (decided by the maintainer on 2026-11-22, when they opened an account there too). The app and the website keep Ko-fi as the one button; the README's line and GitHub's funding file name both.
+
 The fewest steps from wanting to tip to having tipped: Help → Support Drafter → Leave a tip → the amount and a card on Ko-fi's page. The link goes to the Ko-fi page itself, where the amount is the first thing asked, not to a profile or a post.
 
 Two things for the maintainer, outside the build: check the employer's rules on outside income before money arrives, and treat tips as ordinary income.
