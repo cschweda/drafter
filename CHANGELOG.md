@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **On the Linux runners, the browser tests' Chromium rasters its pages on a GPU.** About one run of the checks in fifty had a test time out on a page that stopped answering. The hang hunt found where: the page's main thread waits in Chromium's compositor (`LayerTreeHost::WaitForCommitCompletion`) for a frame that is never finished, with nothing of Drafter's running; others who caught the same wait traced it to the software raster path, where a tile's job yields on a machine with few cores and is never run again. Rastering on SwiftShader's GPU, which runs on the processor, takes the tiles off that path: 337 runs of the tests that way had no stopped page. So `checks.yml` sets `E2E_GPU_RASTER=1` on Linux, `playwright.config.ts` gives Chromium the switches, and `scripts/raster-check.mjs` fails the job first if the browser doesn't say it rasters on the GPU. The runs are about a third slower, so each test and each `expect` has twice its time there. macOS is as it was: it never happened there. For developers.
+
 ### Fixed
 
 - **After the tour, focus could be left on nothing.** When the tour ends, focus goes back to where it was asked for (the Help button, say), once the last card has faded away. Drafter waited a little over a second for that, and on a slow machine the fade takes longer: so the wait gave up, the card went, and focus was on nothing, with the next Tab starting from the top of the page. It now waits for as long as the card takes, and looks again if the button could not take focus yet. Found by a browser test that failed on the slowest of the shared runners. `AppTour.vue`.
