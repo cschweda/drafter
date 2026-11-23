@@ -71,6 +71,11 @@ describe('a paragraph with too many marks', () => {
 ===`),
     ).toBe(true);
     expect(() => parseMarkdown(underlined(20_000))).toThrow(MarkedTooDensely);
+    // Inside a block quote too, however deep, and in a list item.
+    expect(denseMarks('> a\n> ===\n>\n'.repeat(MAX_UNDERLINED + 1))).toBe(true);
+    expect(denseMarks('> > a\n> > ---\n\n'.repeat(MAX_UNDERLINED + 1))).toBe(true);
+    expect(denseMarks('- a\n  ===\n\n'.repeat(MAX_UNDERLINED + 1))).toBe(true);
+    expect(() => parseMarkdown('> a\n> ===\n>\n'.repeat(20_000))).toThrow(MarkedTooDensely);
     // A rule with a blank line above it is a break between scenes, not a heading: any number.
     expect(denseMarks('a\n\n---\n\n'.repeat(MAX_UNDERLINED * 3))).toBe(false);
     // And a heading written with `#` is never counted.

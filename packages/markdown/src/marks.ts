@@ -36,6 +36,7 @@ const SPACE = 32;
 const TAB = 9;
 const EQUALS = 61;
 const HYPHEN = 45;
+const QUOTE = 62;
 
 /** Whether `code` is an emphasis mark, `*` or `_`. */
 export const isEmphasisMark = (code: number): boolean => code === STAR || code === UNDERSCORE;
@@ -81,8 +82,10 @@ export function denseMarks(source: string): boolean {
     }
     if (code !== SPACE && code !== TAB) {
       lineBlank = false;
-      if (rule >= 0)
+      // A block quote's `>` is not part of the line it quotes: `> a` over `> ===` is a heading too.
+      if (rule >= 0 && code !== QUOTE) {
         rule = (code === EQUALS || code === HYPHEN) && (rule === 0 || rule === code) ? code : -1;
+      }
     }
     if (isEmphasisMark(code) && ++marks > MAX_MARKS) return true;
     if (code === OPEN) open++;
