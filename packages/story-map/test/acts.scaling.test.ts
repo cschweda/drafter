@@ -18,7 +18,7 @@ describe('a script of many acts', () => {
   test(
     'is built in time that grows with its length, not with the square of it',
     () => {
-      const { growth } = scaling(acts, (source) => build(source), 1500);
+      const { growth } = scaling(acts, (source) => build(source), 4000);
       expect(growth).toBeLessThan(MAX_GROWTH);
     },
     SCALING_TIMEOUT,

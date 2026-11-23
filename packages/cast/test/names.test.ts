@@ -60,20 +60,14 @@ describe('names', () => {
       { name: 'DR. VOSS', word: false },
       { name: 'ANN LEE ROSS', word: false },
     ]);
-    // By first word, then by second; a one-word name stands alone.
+    // By first word, then word by word; a one-word name stands alone.
     expect(map.get('ANN')?.alone.map((s) => s.character)).toEqual([0]);
-    expect(
-      map
-        .get('ANN')
-        ?.next.get('LEE')
-        ?.map((s) => s.words.join(' ')),
-    ).toEqual(['ANN LEE ROSS', 'ANN LEE']);
-    expect(
-      map
-        .get('Ann')
-        ?.next.get('Lee')
-        ?.map((s) => s.character),
-    ).toEqual([3, 1]);
+    const lee = map.get('ANN')?.next.get('LEE');
+    expect(lee?.ends.map((s) => s.words.join(' '))).toEqual(['ANN LEE']);
+    expect(lee?.next.get('ROSS')?.ends.map((s) => s.words.join(' '))).toEqual(['ANN LEE ROSS']);
+    const mixed = map.get('Ann')?.next.get('Lee');
+    expect(mixed?.ends.map((s) => s.character)).toEqual([1]);
+    expect(mixed?.next.get('Ross')?.ends.map((s) => s.character)).toEqual([3]);
     const found: Array<[number, number]> = [];
     const text = 'ANN LEE waves. ANN waves back. Ann Lee laughs. ANN. LEE. DR VOSS, DR. VOSS.';
     matchNames(text, map, (character, at) => found.push([character, at]));

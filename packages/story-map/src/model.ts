@@ -409,8 +409,14 @@ export function buildStoryMap(input: MapInput): StoryMap {
     };
   });
 
+  // Each act's scenes, gathered in one pass: asking every act to look through every scene took
+  // the two multiplied (the audit of the red/blue audit of 23 November 2026, M2).
+  const byAct: number[][] = sections.map(() => []);
+  scenes.forEach((scene, s) => {
+    if (scene.act !== null) byAct[scene.act - 1]?.push(s);
+  });
   const acts: MapAct[] = sections.map((section, a) => {
-    const mine = scenes.flatMap((scene, s) => (scene.act === a + 1 ? [s] : []));
+    const mine = byAct[a] as number[];
     return {
       n: a + 1,
       title: actTitle(section),
