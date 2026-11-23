@@ -241,6 +241,7 @@ export async function releaseFixture(page: Page) {
     );
   await expect.poll(waiting).toBeGreaterThan(0);
   await page.evaluate(() => window.dispatchEvent(new Event('drafter-fixture-go')));
+}
 
 /** Save's question where saving downloads: the first Save of a script with no file asks its name. */
 const saveName = (page: Page) => page.getByRole('dialog', { name: 'Save', exact: true });
@@ -276,7 +277,6 @@ export async function takeSaveName(page: Page) {
   await expect(saveName(page).getByRole('textbox', { name: 'File name' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(saveName(page)).toBeHidden();
-
 }
 
 /** Opens the palette from the keyboard and runs the command called `title`. */
