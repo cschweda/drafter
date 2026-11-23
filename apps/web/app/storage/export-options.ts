@@ -106,9 +106,13 @@ export const REVISION_MARKS_WHERE =
  * and is shared by the three exports that read it.
  */
 export const NOTES_LEGEND = 'Include notes (Markdown, HTML, EPUB, and Final Draft)';
+/** For a Markdown document, which never exports to Final Draft: no word of it. */
+export const NOTES_LEGEND_MARKDOWN = 'Include notes (Markdown, HTML, and EPUB)';
 /** Under the Include notes choices: the exports that read them. */
 export const NOTES_ONLY_MARKDOWN =
   'Only the Markdown, HTML, EPUB, and Final Draft exports carry notes; a PDF never prints them.';
+export const NOTES_ONLY_MARKDOWN_DOCUMENT =
+  'Only the Markdown, HTML, and EPUB exports carry notes; a PDF never prints them.';
 
 /** The words for each choice that isn't the default, in the toast's sentence. */
 const SCENE_PHRASE: Record<Exclude<SceneNumbering, 'none'>, string> = {
