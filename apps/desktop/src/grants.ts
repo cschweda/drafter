@@ -29,12 +29,15 @@
 // nothing else there: the names are worked out in main from the script's real name (its cuts
 // file, `<name>.cuts.md`; its drafts folder, `<stem> drafts`; and draft files in it named
 // `<stem> – Draft NN`), never taken from the page, so a page granted one script can't make a file
-// there of any other name, nor reach the drafts or cuts of a work whose name is a different one.
-// Two scripts in one folder whose names clean to the same thing (`cleanWorkName`: `.Boca.fountain`
-// and `Boca.fountain`, a `:` against a `_`, two names alike in their first 120 units) share those
-// names, and so each other's drafts and cuts: accepted, since it takes such a pair and a
-// compromised page both, and refusing every name that isn't clean would take drafts beside the
-// file away from a script named with a colon (red/blue audit of 23 November 2026, D4).
+// there of any other name, nor reach the drafts or cuts of a work with another name.
+// A work is its name without the extension: a script keeps its drafts when its kind changes
+// (Fountain to Markdown), so `Boca.fountain` and `Boca.md` in one folder are one work with one
+// drafts folder, and a page granted either reaches the drafts of both (each has its own cuts
+// file). So do two scripts whose names clean to the same thing (`cleanWorkName`: `.Boca.fountain`
+// and `Boca.fountain`, a `:` against a `_`, two names alike in their first 120 units), cuts file
+// and all. Accepted: it takes such files side by side and a compromised page both, and refusing
+// every name that isn't clean would take drafts beside the file away from a script named with a
+// colon (red/blue audit of 23 November 2026, D4, and the audit of it).
 // Each grant records the file's real path (every link followed). Every use works the real path
 // out again and refuses if it changed: a chosen file swapped for a link to another (or a folder on
 // its way swapped for one) is not the file the writer chose.
