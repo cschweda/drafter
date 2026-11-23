@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **"Unsaved" is in the status bar.** The red dot and "Unsaved", which saves when clicked, now sit at the foot of the window beside "Saved to …", and the top bar shows no save state at all, so nothing in it ever moves. A phone-width screen has no status bar, and keeps the dot in the top bar.
+
 ## [0.27.4] - 2026-11-23
 
 **Save says where it went, and a script comes back from Final Draft.** Saving no longer moves anything in the top bar, the status bar says which file a save went to, and Safari and Firefox ask what to call a script the first time it is saved. A script exported as a Final Draft file, opened there, and saved now comes back with its sections, synopses, notes, and title page: found by sending real files through Final Draft 13 and reading what came back. Also here: the third clean-room audit and its fixes.
