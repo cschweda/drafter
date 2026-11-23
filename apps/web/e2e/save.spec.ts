@@ -539,9 +539,24 @@ test('reads back the bytes of a saved file', async ({ page, browserName, isMobil
   expect(bytes).not.toContain(13);
 });
 
+test('says so when the browser refuses to open its save dialog', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'only Chromium has a save dialog to refuse');
+  await start(page);
+  // What a browser does when the save comes too long after the click that asked for it.
+  await page.evaluate(() => {
+    (window as unknown as { showSaveFilePicker: () => Promise<never> }).showSaveFilePicker = () =>
+      Promise.reject(new DOMException('Must be handling a user gesture', 'SecurityError'));
+  });
+  await page.keyboard.press('ControlOrMeta+s');
+  await expect(page.getByRole('alert').filter({ hasText: 'save dialog' })).toHaveText(
+    'The browser didn’t open its save dialog. Nothing was saved. Choose Save again.',
+  );
+});
+
 // The save state in the top bar (fresh-look Task 6; the maintainer, 2026-10-31): a red dot and
-// "Unsaved" right after the title while there are changes, which saves when clicked; a "Saved" for
-// a moment after a save, then nothing. The tab's icon gets the same red dot.
+// "Unsaved" right after the title while there are changes, which saves when clicked, in a place
+// that is the same size filled or empty; for a moment after a save the status bar says where it
+// went (a phone, with no status bar, shows a check). The tab's icon gets the same red dot.
 test.describe('the unsaved indicator', () => {
   const unsaved = (page: Page) => page.getByRole('button', { name: 'Unsaved changes — Save' });
   const justSaved = (page: Page) => page.locator('[data-just-saved]');
@@ -583,13 +598,51 @@ test.describe('the unsaved indicator', () => {
     await download;
     await expect(unsaved(page)).toHaveCount(0);
     await expect(justSaved(page)).toBeVisible();
-    await expect(justSaved(page)).toHaveText('Saved');
+    if (isMobile) {
+      // A phone has no status bar: a check, in the dot's place.
+      await expect(justSaved(page)).toHaveText('');
+      expect(await justSaved(page).evaluate((el) => !!el.closest('header.toolbar'))).toBe(true);
+    } else {
+      // The status bar says where it went; the top bar says nothing.
+      await expect(justSaved(page)).toHaveText('Saved to Untitled Screenplay.fountain');
+      expect(await justSaved(page).evaluate((el) => !!el.closest('.status-bar'))).toBe(true);
+    }
     // Gone after about two seconds.
     await expect(justSaved(page)).toHaveCount(0, { timeout: 4000 });
     await expect(page.locator('[data-save-state]')).toHaveAttribute('data-save-state', 'saved');
     // Typing again brings it back at once.
     await typeAtEnd(page, 'Y');
     await expect(unsaved(page)).toBeVisible();
+  });
+
+  test('keeps everything in the top bar where it is, unsaved, saving, and saved', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'a phone’s bar has no room to hold a place empty');
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    // Where each thing in the top bar is: its left edge and its width.
+    const places = () =>
+      page.locator('header.toolbar').evaluate((bar) =>
+        Array.from(bar.querySelectorAll('button, .title, [data-save-state]'))
+          .filter((el) => !el.closest('[data-save-state]') || el.matches('[data-save-state]'))
+          .map((el) => {
+            const box = el.getBoundingClientRect();
+            return `${Math.round(box.left)}:${Math.round(box.width)}`;
+          }),
+      );
+    const clean = await places();
+    await page.keyboard.insertText('X');
+    await expect(unsaved(page)).toBeVisible();
+    expect(await places()).toEqual(clean);
+    const download = page.waitForEvent('download');
+    await unsaved(page).click();
+    await download;
+    await expect(justSaved(page)).toBeVisible();
+    expect(await places()).toEqual(clean);
+    await expect(justSaved(page)).toHaveCount(0, { timeout: 4000 });
+    expect(await places()).toEqual(clean);
   });
 
   test('fades Saved out, and not with reduced motion', async ({ page, isMobile }) => {

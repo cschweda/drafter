@@ -65,7 +65,13 @@ export const saveAnnouncement = ref('');
 export const savesLanded = ref(0);
 let clearing: ReturnType<typeof setTimeout> | undefined;
 let speaking: ReturnType<typeof setTimeout> | undefined;
+/** The name of the file the last save went to, for "Saved to The Call.fountain" in the status bar. */
+export const savedFile = ref('');
+/** A save landed a moment ago: the top bar's check on a phone, the status bar's line elsewhere. */
+export const justSaved = ref(false);
+
 function announceSave() {
+  savedFile.value = useScript().project.value?.fileName ?? '';
   savesLanded.value++;
   clearTimeout(clearing);
   clearTimeout(speaking);
@@ -95,6 +101,11 @@ watch(useGuard().readOnly, (on) => {
 function messageFor(error: unknown): string {
   if (error instanceof CheckUnsettledError) {
     return 'Couldn’t check the file for changes because the script kept changing. Nothing was saved. Try saving again.';
+  }
+  // The browser opens its save dialog only in answer to a click or a key, and only for a moment
+  // after it: a save that waited too long (for a slow check, say) is refused, with no dialog.
+  if (error instanceof DOMException && error.name === 'SecurityError') {
+    return 'The browser didn’t open its save dialog. Nothing was saved. Choose Save again.';
   }
   if (error instanceof DOMException && error.name === 'NotAllowedError') {
     return 'Drafter isn’t allowed to write that file. Choose Save As to save it somewhere else.';
