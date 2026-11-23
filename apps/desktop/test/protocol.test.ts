@@ -339,10 +339,66 @@ describe('trustedExternal', () => {
       'https://github.com/cschweda/drafter/releases/tag/v0.28.0',
       'https://github.com/cschweda/drafter/blob/main/SECURITY.md#reporting-a-problem',
       'https://github.com/cschweda/drafter/blob/main/CHANGELOG.md#0274---2026-11-23',
-      `https://github.com/cschweda/drafter/issues/new?title=x&body=${script}`,
+      `https://github.com/cschweda/drafter/issues/new?template=bug.yml&title=x&what-happened=${script}`,
     ]) {
       expect(trustedExternal(url), url.slice(0, 60)).toBe(true);
     }
+  });
+
+  test('trusts the report links only as the app builds them (the audit of the audit, D1)', () => {
+    const text = 'A'.repeat(100_000);
+    const base = 'https://github.com/cschweda/drafter/issues/new';
+    for (const url of [
+      `${base}?anything=${text}`,
+      `${base}?template=bug.yml&title=x&secret=${'A'.repeat(50)}`,
+      `${base}?template=bug.yml&title=${text}`,
+      `${base}?template=bug.yml#${'A'.repeat(50)}`,
+      `${base}#frag`,
+      `mailto:cschweda@gmail.com?subject=x&body=${text}`,
+      'mailto:cschweda@gmail.com?subject=a%0D%0ABcc%3A%20evil%40example.com',
+      'mailto:cschweda@gmail.com?subject=a%0Ab',
+    ]) {
+      expect(trustedExternal(url), url.slice(0, 70)).toBe(false);
+    }
+    for (const url of [
+      base,
+      `${base}?template=bug.yml&title=Export+skips&labels=bug&what-happened=It+did%0Athis&expected=That&version=0.28.0`,
+      `${base}?template=idea.yml&title=An+idea&idea=${'A'.repeat(5000)}&version=x`,
+      'mailto:cschweda@gmail.com',
+      'mailto:cschweda@gmail.com?subject=Drafter&body=Line%20one%0ALine%20two',
+    ]) {
+      expect(trustedExternal(url), url.slice(0, 70)).toBe(true);
+    }
+  });
+
+  test('keeps to the lengths and the fields the web app’s report uses', async () => {
+    const web = await import('../../web/app/report/issue');
+    const mine = await import('../src/protocol');
+    expect(mine.MAX_ISSUE_URL).toBe(web.MAX_ISSUE_URL);
+    expect(mine.MAX_MAIL_URL).toBe(web.MAX_MAIL_URL);
+    // A report with every field filled is trusted, problem and idea.
+    for (const kind of ['problem', 'idea'] as const) {
+      const { url } = web.issueLink(
+        { kind, title: 'T', happened: 'h', expected: 'e', idea: 'i', includeVersion: true },
+        'Drafter 0.28.0',
+      );
+      expect(trustedExternal(url), url).toBe(true);
+    }
+  });
+
+  test('trusts an address only as it is written, with one slash at a time', () => {
+    for (const url of [
+      'https://drafter.dev//evil.example/SECRET',
+      'https://drafter.dev/docs//x',
+      ' https://drafter.dev/docs/',
+      'https://drafter.dev/a\tb',
+      'https://drafter.dev/\\evil.example/',
+      'HTTPS://DRAFTER.DEV/docs/',
+    ]) {
+      expect(trustedExternal(url), JSON.stringify(url)).toBe(false);
+    }
+    expect(trustedExternal('https://metaincognita.com')).toBe(true);
+    expect(trustedExternal('https://drafter.dev/docs/technical/')).toBe(true);
   });
 
   test('every link the web app has to a trusted site is still trusted', () => {
