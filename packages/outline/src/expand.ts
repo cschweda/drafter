@@ -12,7 +12,11 @@ export const STUB_HEADING = 'INT. LOCATION - DAY';
 /** A play's stub heading: a scene is a `##` section there. */
 export const STAGE_STUB = '## New scene';
 
-const ITEM = /^\s*-\s+(.*\S)\s*$/;
+/**
+ * A list item's words (`- Words`), or undefined. The end is trimmed first: one pattern for the
+ * words and the spaces after them tried a dash and a long run of spaces every way it split.
+ */
+const itemOf = (line: string): string | undefined => /^\s*-\s+(\S.*)$/.exec(line.trimEnd())?.[1];
 
 /** Whether `template` makes a `##` section a scene: a play. */
 function isPlay(template: Template): boolean {
@@ -58,7 +62,7 @@ export function expandOutline(doc: Doc, template: Template, range: Span): TextCh
     if (block.kind === 'synopsis') {
       texts = block.lines.map((line) => line.raw.replace(/^\s*=\s*/, '').trim());
     } else if (block.kind === 'action') {
-      const items = block.lines.map((line) => ITEM.exec(line.raw.replace(/\r$/, ''))?.[1]);
+      const items = block.lines.map((line) => itemOf(line.raw));
       if (items.every((item) => item !== undefined)) texts = items as string[];
     }
     if (!texts) continue;

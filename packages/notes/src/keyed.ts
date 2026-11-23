@@ -63,7 +63,7 @@ const HEAD = /^\p{L}[\p{L}\p{M} '’.\-?!]*$/u;
  * a name that could be spaces, a note of three thousand of them was tried every way they split in
  * three, and held the editor for fifteen seconds (red/blue audit of 23 November 2026, W1).
  */
-const ON = /^[ \t]*([^\s:](?:[^\r\n:]*?[^\s:])?)[ \t]+on[ \t]+["“]([^"”\r\n]*)["”][ \t]*:/u;
+const ON = /^[ \t]*([^\s:](?:[^\r\n:]*?[^\s:])?)[ \t]+on[ \t]+["“]([^"“”\r\n]*)["”][ \t]*:/u;
 
 /** `#word` at a word's start: a letter, then letters, digits, or hyphens. */
 const TAG = /(?<![\p{L}\p{M}\p{N}_#])#(\p{L}[\p{L}\p{M}\p{N}-]*)/gu;

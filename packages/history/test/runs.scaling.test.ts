@@ -44,7 +44,7 @@ describe('long runs in a scene', () => {
 
   test('trailing spaces come off each line as the pattern took them', () => {
     fc.assert(
-      fc.property(fc.stringMatching(/^[ a\t\n]{0,24}$/), (text) => {
+      fc.property(fc.stringMatching(/^[ a\t\n\r\u2028\u2029]{0,24}$/), (text) => {
         expect(withoutTrailingSpaces(text)).toBe(text.replace(/[ \t]+$/gm, ''));
       }),
     );

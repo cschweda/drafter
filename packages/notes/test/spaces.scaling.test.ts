@@ -62,4 +62,14 @@ describe('a note of spaces', () => {
     },
     SCALING_TIMEOUT,
   );
+
+  test(
+    'a note of “on” and an opening quote, over and over, is read in time that grows with it',
+    () => {
+      // The audit of that audit (W1): the quoted part took in each new opening quote.
+      const { growth } = scaling((n: number) => `a${' on “'.repeat(n)}`, readNote, 2000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
 });

@@ -107,12 +107,16 @@ export function withoutTrailing(text: string, chars: string): string {
   return end === text.length ? text : text.slice(0, end);
 }
 
-/** `text` with the spaces and tabs off the end of each line. */
+/**
+ * `text` with the spaces and tabs off the end of each line. A line ends where the pattern this
+ * replaced ended one: at `\n`, `\r`, and the line and paragraph separators (U+2028, U+2029), so
+ * a scene holding one hashes as it always did.
+ */
 export function withoutTrailingSpaces(text: string): string {
   return text
-    .split('\n')
-    .map((line) => withoutTrailing(line, ' \t'))
-    .join('\n');
+    .split(/([\n\r\u2028\u2029])/)
+    .map((part, i) => (i % 2 === 0 ? withoutTrailing(part, ' \t') : part))
+    .join('');
 }
 
 /** A scene's source as hashed: `\r\n` as `\n`, trailing spaces off each line, no trailing blank lines. */
