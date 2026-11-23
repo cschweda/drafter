@@ -59,8 +59,9 @@ const SUPPORT_PROVIDERS = SUPPORT_ROUTES.sponsor ? 'Ko-fi and GitHub' : 'Ko-fi';
       <strong>What does use the network, all of it:</strong> loading Drafter from drafter.dev (the
       app, its fonts, and its dictionaries all come from drafter.dev itself); on drafter.dev only,
       Plausible’s count of page visits (<a href="#analytics">below</a>); in the desktop app, a check
-      with GitHub for a new version when it starts, which you can turn off in Settings; and the links
-      and reports you click. None of it carries your script.
+      with GitHub for a new version when it starts, which you can turn off in Settings; the links
+      you click; and a report, if you choose to send one (on drafter.dev, Send email passes it
+      through drafter.dev to Resend, a mail service). None of it carries your script.
     </p>
     <p v-if="SUPPORT_ON">
       The <a :href="helpHref(SUPPORT_PAGE)">Support page</a> links to {{ SUPPORT_PROVIDERS }}.
@@ -83,8 +84,8 @@ const SUPPORT_PROVIDERS = SUPPORT_ROUTES.sponsor ? 'Ko-fi and GitHub' : 'Ko-fi';
       <li><strong>No account.</strong> There is nothing to sign up for or sign in to.</li>
       <li><strong>No cookies, and no tracking of you.</strong> Drafter never follows you from site to site and never records your keystrokes. drafter.dev measures visitor traffic with Plausible, privacy-focused analytics with no cookies (<a href="#analytics">below</a>); the desktop app has no analytics.</li>
       <li><strong>No telemetry.</strong> Drafter sends no error reports, and nothing about what you do in it or the state of your browser. On drafter.dev only, Plausible counts page visits (<a href="#analytics">below</a>).</li>
-      <li><strong>No uploads.</strong> A script, its title, its word count, and your settings never leave the device. Drafter has no server that could receive them.</li>
-      <li><strong>No outside services but one.</strong> The fonts, icons, and dictionaries are part of Drafter and come from drafter.dev itself, not from Google or a content network. On drafter.dev, the one outside service is Plausible.</li>
+      <li><strong>No uploads.</strong> A script, its title, its word count, and your settings never leave the device. No server is ever sent them.</li>
+      <li><strong>No outside services but two.</strong> The fonts, icons, and dictionaries are part of Drafter and come from drafter.dev itself, not from Google or a content network. On drafter.dev, the outside services are Plausible, which counts page visits, and Resend, which delivers a report only when you choose Send email (<a href="#reporting">below</a>).</li>
       <li><strong>No browser spellcheck service.</strong> Chrome’s Enhanced spell check and Edge’s Microsoft Editor send what you type to Google or Microsoft, so Drafter turns the browser’s spellcheck off in every field. Its own spellcheck runs on your device. The one exception is Report a problem, whose text you are about to send anyway.</li>
     </ul>
     <p>

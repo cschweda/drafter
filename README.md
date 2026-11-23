@@ -42,7 +42,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 - **Free, with no catch.** No price, no trial, no subscription, no locked "free tier", and no ads. Drafter isn't a business: one writer makes it, for writers, and gives it away. There is no paid version, and there won't be one.
 - **No login, ever.** No sign-up, no sign-in, no licence key, no activation. Close it, open it tomorrow, and you're back in your script.
-- **Private.** No cookies, no tracking of you, no telemetry. Drafter has no server that could receive your script, so it never leaves your device. The website counts page visits with cookie-free [Plausible](https://plausible.io/privacy-focused-web-analytics); **the desktop app has no analytics at all.** [Privacy](#privacy-your-script-stays-with-you), below, has the details.
+- **Private.** No cookies, no tracking of you, no telemetry. No server is ever sent your script, so it never leaves your device. The website counts page visits with cookie-free [Plausible](https://plausible.io/privacy-focused-web-analytics); **the desktop app has no analytics at all.** [Privacy](#privacy-your-script-stays-with-you), below, has the details.
 - **Open.** The code is MIT-licensed. Your script is a plain `.fountain` text file you own, which any app can open and which will still open in fifty years. A lapsed licence can never lock you out of your own work.
 - **Instant, and offline.** No installer or setup is needed to begin. Once it has loaded, Drafter runs with no connection, on a plane or a train.
 - **No forced updates.** The web app updates when you reload, or the next time you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
@@ -53,7 +53,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 Writers worry, rightly, about a script getting out before it's ready. Drafter is built so it can't, and an [audit](docs/privacy-audit-2026-11-03.md) checks it.
 
-- **Nothing in the cloud.** No server stores anything about your script, at drafter.dev or anywhere else: not its text, its title, its length, or its name. drafter.dev is a set of static files that sends the app to your browser. It has no database, no accounts, and nowhere to upload to. The desktop app has no server at all.
+- **Nothing in the cloud.** No server stores anything about your script, at drafter.dev or anywhere else: not its text, its title, its length, or its name. drafter.dev is a set of static files that sends the app to your browser, and one small function that passes on a report you choose to send by email. It has no database, no accounts, and nowhere to upload a script to. The desktop app has no server at all.
 - **Kept on your device only.** Your script lives in the files you save, plus Drafter's autosave, its history, drafts, and cuts. In the web app those are in your browser's own storage (IndexedDB) on this device, and in the desktop app in its folder on your computer. Drafts and cuts are also plain files beside your script.
 - **No AI.** Drafter has no AI in it: no AI service, no model, and nothing that reads your script to suggest, summarize, or learn from it. Your words never train anything. If you want your own AI app to read your scripts, [Drafter for Claude](https://drafter.dev/docs/drafter-for-claude/) is a separate program you set up yourself. It reads only the folders you name, and Drafter never starts it.
 - **It leaves only when you send it.** A file you share, a report you open on GitHub, an email you write: those go because you chose them, and only what you see goes.
@@ -66,6 +66,7 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 | A count of page visits ([Plausible](https://drafter.dev/docs/privacy/#analytics): privacy-first, no cookies, no ads; only to see the basic traffic, for future improvements) | plausible.io | drafter.dev only: each page view and the time on it, each address cut before any `?` or `#`; no clicks, downloads, or forms | No. The desktop app and self-hosted copies don't have it |
 | A check for a new version | GitHub | The desktop app, when it starts; you can turn it off in Settings | No. GitHub sees your IP address, version, and system |
 | A report or an idea | GitHub, or your email app | Only when you click **Open on GitHub** or **Write an email** | Only what you typed and saw |
+| A report or an idea, sent by email for you | drafter.dev's own function, which hands it to [Resend](https://resend.com) to deliver to the maintainer | drafter.dev only: when you click **Send email**. Opening the report dialog asks that function once whether email is set up, and sends nothing else | Only what you typed and saw, and your reply address if you gave one |
 | A tip, if you choose to leave one | Ko-fi | Only when you follow the link on the [Support page](https://drafter.dev/docs/support/) | No |
 | A module you add yourself | The addresses it names | Desktop app only, and only once you agree to them | It can, so add only modules you trust ([more](https://drafter.dev/docs/privacy/#modules)) |
 
@@ -235,7 +236,7 @@ Sources: each maker's own pricing, features, and help pages (Final Draft, Writer
 
 **On the web:** open [drafter.dev](https://drafter.dev) and write, on a computer or a phone, offline once it has loaded. Chrome and Edge save straight back to your file; other browsers download a copy ([Storage and browsers](docs/DEVELOPMENT.md#storage-and-browsers)). Install it as an app from the address bar to keep it in your Dock or Start menu.
 
-**On the desktop:** the same editor in a window of its own, built with Electron. It always saves in place, keeps its autosave in its own folder where no browser can delete it (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`), opens a `.fountain` file with a double-click, and asks **Save**, **Don't Save**, or **Cancel** before closing. It works offline. Its only network request is one update check at start, which you can turn off in Settings, and it never installs an update by itself. [Drafter on the web and on the desktop](docs/web-and-desktop.md) compares the two.
+**On the desktop:** the same editor in a window of its own, built with Electron. It always saves in place, keeps its autosave in its own folder where no browser can delete it (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`), opens a `.fountain` file with a double-click, and asks **Save**, **Don't Save**, or **Cancel** before closing. It works offline. Its only network requests are to GitHub, for updates: a check at start, which you can turn off in Settings, and, for the AppImage and the Windows app, the update itself, downloaded in the background. It never installs an update by itself. [Drafter on the web and on the desktop](docs/web-and-desktop.md) compares the two.
 
 ### Windows
 

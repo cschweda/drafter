@@ -23,9 +23,9 @@ The same page is in Drafter, under Help → Technical details, and at [drafter.d
 
 ## The short version
 
-Drafter is a web app that runs entirely in your browser, or in a window of its own on the desktop. There is no server behind it and no account to make: once the page has loaded, everything happens on your device, and your script never leaves it.
+Drafter is a web app that runs entirely in your browser, or in a window of its own on the desktop. No server works on your script and there is no account to make: once the page has loaded, everything happens on your device, and your script never leaves it.
 
-drafter.dev is a set of static files: HTML, JavaScript, CSS, fonts, and dictionaries, built with Nuxt and Vue and served by Netlify. Nothing on the site runs code for you or stores anything. It is written in TypeScript, and every part of it, down to the Fountain parser, is Drafter’s own, written from public specifications (the clean-room rule, below).
+drafter.dev is a set of static files: HTML, JavaScript, CSS, fonts, and dictionaries, built with Nuxt and Vue and served by Netlify. Nothing on the site stores anything, and the only code it runs for you is a small function that passes on a report you choose to send by email. It is written in TypeScript, and every part of it, down to the Fountain parser, is Drafter’s own, written from public specifications (the clean-room rule, below).
 
 ## How it’s organized
 
@@ -283,7 +283,7 @@ flowchart TD
 
 Drafter takes as few of other people’s packages as it can, and none from the screenwriting world. Here is each one the app, the desktop app, the command line, and Drafter for Claude need to build and run, and what it does for Drafter.
 
-- `nuxt`: Builds drafter.dev as a set of static files, with nothing running on a server.
+- `nuxt`: Builds drafter.dev as a set of static files; the one thing that runs on a server is the small function that passes on a report sent by email.
 - `vue`: Draws the app’s screens and keeps them up to date as you write.
 - `vue-router`: Gives the app and each help page an address of its own.
 - `@nuxt/ui`: The menus, dialogs, tabs, and command palette.
