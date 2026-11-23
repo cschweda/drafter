@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { SUPPORT_LINKS } from '../../web/app/about/support';
 import {
   appHandler,
   cspFromHeaders,
@@ -279,6 +280,29 @@ describe('trustedExternal', () => {
       'mailto:cschweda@gmail.com?subject=Hi&body=There',
     ])
       expect(trustedExternal(url), url).toBe(true);
+  });
+
+  test('lets the Support page’s tip link through: that page exactly, and nothing else on its site', () => {
+    expect(trustedExternal('https://ko-fi.com/chrisschweda')).toBe(true);
+    for (const url of [
+      'https://ko-fi.com/chrisschweda?d=INT.%20SECRET',
+      'https://ko-fi.com/chrisschweda#INT.%20SECRET',
+      'https://ko-fi.com/chrisschweda/INT.%20SECRET',
+      'https://ko-fi.com/someoneelse',
+      'https://ko-fi.com/',
+      'https://KO-FI.com/chrisschweda/../x',
+      'https://a@ko-fi.com/chrisschweda',
+      'https://ko-fi.com:8443/chrisschweda',
+      'http://ko-fi.com/chrisschweda',
+      'https://ko-fi.com.evil.example/chrisschweda',
+    ])
+      expect(trustedExternal(url), url).toBe(false);
+  });
+
+  test('trusts the same tip link the web app’s Support page has', () => {
+    for (const address of Object.values(SUPPORT_LINKS)) {
+      expect(trustedExternal(address), address).toBe(true);
+    }
   });
 
   test('asks about anything else, however it is dressed up', () => {

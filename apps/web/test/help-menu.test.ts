@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
+import { SUPPORT_ON } from '../app/about/support';
 import { DOWNLOAD_PAGE, HELP_PAGES } from '../app/commands/data';
 import {
   ABOUT_MENU_COMMANDS,
@@ -54,6 +55,7 @@ describe('the About menu', () => {
       'help-privacy',
       'help-licences',
       'help-technical',
+      ...(SUPPORT_ON ? ['help-support'] : []),
       'report-problem',
       'suggest-idea',
       'copy-technical-details',
@@ -67,7 +69,13 @@ describe('the About menu', () => {
     );
     expect(groups).toEqual([
       ['about-drafter'],
-      ['What’s new', 'Privacy', 'Third-party licences', 'Technical details'],
+      [
+        'What’s new',
+        'Privacy',
+        'Third-party licences',
+        'Technical details',
+        ...(SUPPORT_ON ? ['Support Drafter'] : []),
+      ],
       ['report-problem', 'suggest-idea', 'copy-technical-details'],
       ['check-for-updates'],
     ]);

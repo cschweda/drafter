@@ -268,6 +268,14 @@ const TRUSTED_HOSTS = new Set([
   'metaincognita.com',
 ]);
 
+/**
+ * The Support page's links (apps/web/app/about/support.ts), each trusted as that one address and
+ * nothing else on its site: no query, no fragment, no other path. A whole host here would be a
+ * place a page could put the script in an address, which the asking is there to stop. A test
+ * holds this list to the web app's.
+ */
+const TRUSTED_PAGES = new Set(['https://ko-fi.com/chrisschweda']);
+
 /** Whether a page may send `url` to the browser without asking: one of Drafter's own links. */
 export function trustedExternal(url: string): boolean {
   let parsed: URL;
@@ -276,6 +284,7 @@ export function trustedExternal(url: string): boolean {
   } catch {
     return false;
   }
+  if (TRUSTED_PAGES.has(url)) return true;
   if (parsed.protocol === 'mailto:') return navigationFor(url) === 'external';
   if (parsed.protocol !== 'https:' || parsed.username !== '' || parsed.password !== '')
     return false;

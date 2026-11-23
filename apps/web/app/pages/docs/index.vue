@@ -43,6 +43,8 @@ const about: Record<string, string> = {
   'help-technical':
     'How Drafter is put together, for the curious: its packages, workers, storage, offline use, the desktop app, releases, and dependencies, with diagrams.',
   'help-whats-new': 'What has changed in Drafter, newest first, in plain words.',
+  'help-support':
+    'Drafter is free and stays free. If it has been useful, you can leave a tip, with no account needed.',
 };
 </script>
 
