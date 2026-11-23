@@ -1,19 +1,19 @@
 {
-  "version": "0.27.2",
-  "date": "2026-11-21",
+  "version": "0.27.4",
+  "date": "2026-11-23",
   "unit": {
-    "packages": 4773,
+    "packages": 4777,
     "packageCount": 24,
-    "web": 2811,
+    "web": 2814,
     "desktop": 446,
     "modules": 58,
     "trapHarness": 794,
-    "total": 8882
+    "total": 8889
   },
   "e2e": {
-    "web": 1475,
+    "web": 1483,
     "webProjects": ["chromium", "firefox", "webkit", "phone", "phone-webkit"],
-    "webRuns": 7375,
+    "webRuns": 7415,
     "desktop": 140
   },
   "trap": {

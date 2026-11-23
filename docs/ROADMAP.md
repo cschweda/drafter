@@ -4,7 +4,7 @@ The [README](../README.md#roadmap) has the short list: what's next, and what com
 
 ## Where things stand
 
-Drafter is at **v0.27.2**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
+Drafter is at **v0.27.4**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
 
 Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. Lately it brought:
 
@@ -27,6 +27,8 @@ Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. La
 - **Production**, free (v0.27.0): lock pages and scene numbers (12A, 5A), revise in the industry's colors with marks where words changed, mark scenes OMITTED, and send out revised pages, a breakdown of every scene, and sides for an actor ([help](https://drafter.dev/docs/production/), [design](drafter-production-design.md)).
 - **Fixes before features** (v0.27.1), after a review of the whole app in November 2026: four faults a writer could meet are fixed (words typed just after a sample's first save were lost; a menu could close by itself; Reload for a new version could wait for ever; the Inspector's header could lose its labels), Drafter says so when words won't print as written, a page break never leaves one line of a paragraph behind, an outline is a board of cards with Final Draft's outline colors, and Save As asks for a name in every browser.
 - **A page ends where a sentence does** (v0.27.2): a paragraph of action or a speech that doesn't fit on a page stops at the last sentence that fits, with at least two lines on each side, and the rest is wrapped again on the next page. A locked script keeps every page where it is; a new lock keeps the pages you see ([design](plans/2026-11-21-sentence-page-breaks.md)). Also fixed: Reload for a new version stalling, and a menu losing the arrow keys.
+- **The cursor stays where you left it** (v0.27.3): three faults found while hunting a fault in the test browser. The cursor could jump to the top of the script when the palette or a dialog closed on a busy page, so the next thing typed went in there; a dialog asked for again the moment it closed could fail to open; and focus could be left on nothing after the tour on a slow machine.
+- **Save says where it went, and a script comes back from Final Draft** (v0.27.4). Saving: the top bar keeps a place of one size for the unsaved state, so nothing in it moves; the status bar says "Saved to" and the file's name; where a browser saves by downloading, the first Save asks what to call the file. Final Draft: two real round trips through Final Draft 13 showed what it keeps (a paragraph's type and text) and what it drops (every mark of Drafter's), so sections, synopses, and notes are written as its own outline, summary, and note paragraphs, and a title page with no marks is read by what its lines are. Final Draft prints its outline text unless its outline is hidden. Also: the third clean-room audit, and the planned canvas of idea cards named the Wall.
 
 Next, in order:
 

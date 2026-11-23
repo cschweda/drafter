@@ -49,8 +49,8 @@ useDocsHead({
       instead.
     </p>
     <p>
-      Nothing changes in Drafter whether you do or not. Each link opens the provider’s own page;
-      Drafter sends them nothing, and a tip is not tax-deductible.
+      Nothing changes in Drafter whether you do or not. The button opens Ko-fi’s own page;
+      Drafter sends it nothing, and a tip is not tax-deductible.
     </p>
   </article>
 </template>

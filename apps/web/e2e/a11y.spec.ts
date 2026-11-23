@@ -20,6 +20,7 @@ import {
   settled,
   showSource,
   start,
+  takeSaveName,
   viewTool,
 } from './modules';
 
@@ -902,6 +903,7 @@ test.describe('the accessibility tree', () => {
     });
     await page.keyboard.insertText('ONE');
     await page.keyboard.press('ControlOrMeta+s');
+    await takeSaveName(page);
     await expect
       .poll(() => page.evaluate(() => (window as unknown as { heard: string[] }).heard))
       .toContain('Saved');

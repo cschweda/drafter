@@ -672,4 +672,4 @@ Built from the shared screenwriting convention (what comes after what on a page)
 ## Added after planning (maintainer, 2026-11-02)
 
 - A worked-out pending Character is soft for heading prefixes only: `INT.` typed straight after a speech starts a Scene heading.
-- The Beat Board block stays unprotected for this release (in DEFERRED): Select All then Delete removes it, and Undo restores it.
+- The Wall block stays unprotected for this release (in DEFERRED): Select All then Delete removes it, and Undo restores it.

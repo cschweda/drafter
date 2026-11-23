@@ -574,7 +574,7 @@ class Importer {
   /**
    * The file sets its Character element in capitals (`ElementSettings Type="Character"`, with
    * `AllCaps` in its `FontSpec`'s `Style`), as Final Draft's own files do: a name it holds as
-   * `McCall` prints MCCALL there. A forced cue prints as typed in Drafter, so such a name is
+   * `McBride` prints MCBRIDE there. A forced cue prints as typed in Drafter, so such a name is
    * written in capitals. A file that doesn't say so, as Drafter's own exports don't, keeps each
    * name as it is.
    */
@@ -911,7 +911,9 @@ class Importer {
       this.pageBreak = true;
     }
     // A summary or a note inside a speech waits for its end rather than breaking it.
-    const aside = (summaryType || noteType) && this.speech !== null;
+    // One Drafter wrote says so with its mark, and stood between blocks there: it ends the speech.
+    const own = attrs.DrafterNote === 'Yes' || attrs.DrafterSynopsis === 'Yes';
+    const aside = (summaryType || noteType) && !own && this.speech !== null;
     if (!inSpeech && !aside) this.flushSpeech();
 
     // A section's depth is 1 to 6, as export writes it; any other value (a huge one would make a
@@ -919,7 +921,9 @@ class Importer {
     const sectionMark = attrs.DrafterSection;
     const section =
       sectionMark !== undefined && /^[1-6]$/.test(sectionMark) ? Number(sectionMark) : 0;
-    const sectionType = type === 'General' || type === 'Scene Heading';
+    // Drafter writes its mark on a General paragraph (before v0.27.4), a play's Scene Heading, and
+    // an outline paragraph, where it holds a depth past Final Draft's three levels.
+    const sectionType = type === 'General' || type === 'Scene Heading' || outline !== null;
     // Final Draft's outline paragraphs (`Outline 1 (Acts)` and so on) are sections of their
     // depth, or of their `OutlineLevel` when they carry one; deeper than six is six.
     const level = attrs.OutlineLevel?.trim() ?? '';
@@ -928,7 +932,7 @@ class Importer {
       : 0;
     const depth = sectionType && section > 0 ? section : outlineDepth;
     const isSection = depth > 0;
-    if (sectionType && sectionMark !== undefined && !(section > 0)) {
+    if (sectionType && !outline && sectionMark !== undefined && !(section > 0)) {
       this.action(lines, type);
     } else if (isSection) {
       if (outlineDepth === 0 || lines.length > 0) {
@@ -937,13 +941,13 @@ class Importer {
         const color = outline ? sceneColorOf(attrs.Color) : null;
         if (color) this.push(`[[Color: ${color}]]`);
       }
-    } else if (summaryType) {
+    } else if (summaryType && !own) {
       // Final Draft's summary of the item before it: a synopsis in its place, which keeps the order
       // (after the speech, inside one).
       if (lines.length > 0) this.place(this.synopsisLines(lines));
     } else if ((type === 'General' && attrs.DrafterNote === 'Yes') || noteType) {
       if (lines.length > 0 || !noteType) this.place(this.note(lines));
-    } else if (type === 'General' && attrs.DrafterSynopsis === 'Yes') {
+    } else if ((type === 'General' || summaryType) && attrs.DrafterSynopsis === 'Yes') {
       if (lines.length > 0) this.push(this.synopsisLines(lines));
     } else if (type === 'Scene Heading' || type === 'Shot') {
       if (lines.length > 0) this.heading(lines, type, attrs.Number);
@@ -1398,10 +1402,35 @@ function byKey(
   return fields;
 }
 
+/** A line that opens as a copyright notice does. */
+const COPYRIGHT_LINE = /^(?:©|\(c\)|copyright\b)/i;
+/** A date in figures alone (`11/23/26`, `23.11.2026`). */
+const FIGURE_DATE = /^\d{1,4}[/.-]\d{1,2}[/.-]\d{1,4}$/;
+/** A year, in a line short enough to be a date and nothing more. */
+const YEAR = /\b(?:19|20)\d{2}\b/;
+const DATE_LINE_MAX = 40;
+/** How a line that says where the story came from opens. */
+const SOURCE_LINE =
+  /^(?:based\s+(?:up)?on|adapted\s+from|inspired\s+by|from\s+(?:the|a|an)\b|story\s+by)/i;
+
+function isDateLine(words: string): boolean {
+  if (FIGURE_DATE.test(words)) return true;
+  // "Draft 3" and "Second draft" say which draft, as a date does.
+  return (
+    words.length <= DATE_LINE_MAX &&
+    !words.includes('@') &&
+    (YEAR.test(words) || /\bdraft\b/i.test(words))
+  );
+}
+
 /**
- * Fields by order, for a title page Final Draft wrote: the first centered block is the Title; a
- * centered "by" or "written by" is the Credit, and the centered block after it the Author; every
- * other line goes into one Notes field. Empty paragraphs, and ones holding only spaces (a blank
+ * Fields by order, for a title page Final Draft wrote, which keeps each line's text and alignment
+ * and nothing that names its field (seen in files it saved, 2026-11-23): the first centered block
+ * is the Title; a centered "by" or "written by" is the Credit, and the centered block after it the
+ * Author; a centered line after those is the Source. Of the lines that aren't centered, one that
+ * opens as a copyright notice is the Copyright, the first that reads as a date is the Draft date,
+ * and every other is the Contact, which prints (the maintainer, 2026-11-23: better a note printed
+ * with the contact than a contact block that never prints). Empty paragraphs, and ones holding only spaces (a blank
  * line is likely written as an empty `<Text>`, though no real file has confirmed it), only
  * separate blocks.
  */
@@ -1416,7 +1445,13 @@ function byOrder(
   // The Title and Notes fields are kept at hand: a page of many credits has many fields, and
   // searching them all at each paragraph would take time in the product of the two.
   let title: Field | null = null;
-  let notes: Field | null = null;
+  // One field of each kind, however its lines are scattered.
+  const held = new Map<string, Field>();
+  const into = (key: string, lines: Tok[][]) => {
+    const field = held.get(key);
+    if (field) append(field.lines, lines);
+    else held.set(key, add(key, lines));
+  };
   const add = (key: string, lines: Tok[][]) => {
     current = { key, lines };
     fields.push(current);
@@ -1432,12 +1467,16 @@ function byOrder(
     const words = visible(lines).join(' ').trim();
     const last = current as Field | null;
     if (centered && /^(?:written\s+)?by$/i.test(words)) add('Credit', lines);
+    // Before the author's own second line: Final Draft leaves no gap between them.
+    else if (centered && title && SOURCE_LINE.test(words)) into('Source', lines);
     else if (centered && last?.key === 'Author' && !gap) append(last.lines, lines);
     else if (centered && last?.key === 'Credit') add('Author', lines);
     else if (centered && last?.key === 'Title' && !gap) append(last.lines, lines);
     else if (centered && !title) title = add('Title', lines);
-    else if (notes) append((notes as Field).lines, lines);
-    else notes = add('Notes', lines);
+    else if (centered) into('Source', lines);
+    else if (COPYRIGHT_LINE.test(words)) into('Copyright', lines);
+    else if (!held.has('Draft date') && isDateLine(words)) into('Draft date', lines);
+    else into('Contact', lines);
     gap = false;
   }
   return fields;

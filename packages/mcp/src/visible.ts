@@ -1,5 +1,5 @@
 // What a tool may show of a file (§6): the writer's text exactly, with the notes and the boneyard
-// cut unless the call asks for them, and the metadata block (with a Beat Board block before it)
+// cut unless the call asks for them, and the metadata block (with a Wall block before it)
 // and the title page's Contact field cut always. Nothing else is changed: no detector, no filter.
 import type { Doc } from '@drafter/fountain';
 import { findMarkdownMeta } from '@drafter/markdown';
@@ -88,7 +88,7 @@ function trailingBlock(source: string, opener: string, end: number): number {
 }
 
 /**
- * Where the script's own text ends: before the metadata block and a Beat Board block before it,
+ * Where the script's own text ends: before the metadata block and a Wall block before it,
  * and the blank lines before them; the source's length when there is neither.
  */
 export function scriptEnd(doc: Doc): number {
@@ -99,7 +99,7 @@ export function scriptEnd(doc: Doc): number {
   const meta = trailingBlock(source, META_OPENER, source.length);
   if (meta >= 0) {
     end = Math.min(end, meta);
-    const board = trailingBlock(source, '/* beat board', meta);
+    const board = trailingBlock(source, '/* the wall', meta);
     if (board >= 0) end = Math.min(end, board);
   }
   return end === source.length ? end : backOverSpace(source, end);

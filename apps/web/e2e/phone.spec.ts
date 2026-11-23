@@ -1,6 +1,6 @@
 import { expect, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
-import { pressToolbarButton, runCommand, setText, showSource } from './modules';
+import { downloadOf, pressToolbarButton, runCommand, setText, showSource } from './modules';
 
 // Phone sizes (Phase 1 design §12): the toolbar is icons below 1024px, and the template chip does not
 // fit among them, so the app menu holds the template choice. The icon toolbar plus the app menu is
@@ -152,7 +152,7 @@ test.describe('the toolbar at 320px', () => {
     // Save: a download, where the browser has no file picker.
     const download = page.waitForEvent('download');
     await pressToolbarButton(page, 'Save');
-    expect((await download).suggestedFilename()).toBe('The Call.fountain');
+    expect((await downloadOf(page, download)).suggestedFilename()).toBe('The Call.fountain');
 
     // Focus mode on, and off with its own button.
     await pressToolbarButton(page, 'Focus');

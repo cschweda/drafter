@@ -140,7 +140,7 @@ export function optionsPhrase(options: ExportOptions): string {
 }
 
 export const FDX_NOTE =
-  'A Final Draft file gets the title page you choose, and always keeps the scene numbers written in the script: Final Draft decides whether to print them. Its notes go in only with Include notes, as [[…]] in the text, which Final Draft prints, so Drafter can read them back.';
+  'A Final Draft file gets the title page you choose, and always keeps the scene numbers written in the script: Final Draft decides whether to print them. Its notes and synopses go in only with Include notes, as Final Draft’s own notes and summaries (a note inside a line stays as [[…]] in the text). Final Draft shows them and your sections in purple, as its outline, and prints them unless you hide the outline from its View menu.';
 export const OPTIONS_NOT_FOR_MARKDOWN =
   'A Markdown document has no scene numbers, title page, or notes to choose; it can still carry its text for Drafter to reopen.';
 /** The dialog's first line for a Markdown document, whose only choice is for its HTML and EPUB. */

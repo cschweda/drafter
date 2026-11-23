@@ -244,7 +244,7 @@ The last step is the novel's long-task test (`e2e/novel-counts.spec.ts`), on its
 - [Technical design](drafter-technical-design.md): how each package works, from the parser and pagination to storage, linting, accessibility, security, and testing.
 - [Phase 0 kickoff prompt](drafter-phase0-kickoff-prompt.md): the self-contained brief for building the engine.
 - [Phase 1 design](drafter-phase1-design.md): the first public release, from the first visit and its guided tour to the editor, saving, export, focus mode, and phones, with mockups in [`docs/phase1/`](phase1/).
-- [Phase 2 design](drafter-phase2-design.md): structure, from the shared scene index and the keyed-note convention to the Outline, Cards, Notes, snapshots and Compare, spellcheck, the script map, Stats, the Beat Board, reader notes, and Reference, and the plans that ship them.
+- [Phase 2 design](drafter-phase2-design.md): structure, from the shared scene index and the keyed-note convention to the Outline, Cards, Notes, snapshots and Compare, spellcheck, the script map, Stats, the Wall, reader notes, and Reference, and the plans that ship them.
 - [Structure strip design](drafter-structure-strip-design.md): the band of sections and scenes above the panes, its rows, sizes, keys, and how Phase 2's script map and Timeline build on it.
 - [Markdown PDF design](drafter-markdown-pdf-design.md): a Markdown document as a printable PDF: what prints, line and page breaks, paper, and page numbers.
 - [Getting a script out the door](drafter-out-the-door-design.md): the guided starters, export options, running times, and the Technical details page.

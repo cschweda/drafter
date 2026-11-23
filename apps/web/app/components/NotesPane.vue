@@ -36,7 +36,7 @@ import { sayOutline } from '~/outline/notice';
 import { useOutline } from '~/outline/use-outline';
 
 // The Notes tab (Phase 2 design §8): every note and boneyard in the script, in one list, each
-// linked to its place; not the scene fields or the Beat Board's cards. Filter chips choose a group;
+// linked to its place; not the scene fields or the Wall's cards. Filter chips choose a group;
 // the filters narrow it (in a sheet on a phone). The list is one listbox with one tab stop: Up and
 // Down move, Enter goes to the note, E edits it in place, R resolves or reopens it, C sets its
 // category, Delete deletes it, and the context-menu key or Shift+F10 opens its menu. Every change

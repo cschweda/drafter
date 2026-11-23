@@ -42,7 +42,7 @@ The left pane is always a [CodeMirror 6](https://codemirror.net) editor showing 
 | **Problems** | Lint results, like a compiler's error list. Click to jump. | Phase 1 |
 | **Outline** | Sections, scenes, synopses, scene colors, page counts, and running times. Reorder scenes by drag or keyboard, and the source is rewritten. | Phase 2 (built) |
 | **Cards** | An index-card view of scenes with synopsis and color, moved by drag or keyboard. | Phase 2 (built) |
-| **Beat Board** | A free canvas of idea cards to color, link, and move into the outline, with storylines shown in color. | Phase 2 |
+| **Wall** | A free canvas of idea cards to color, link, and move into the outline, with storylines shown in color. | Phase 2 |
 | **Notes** | Every `[[note]]` and `/* boneyard */` in one place, linked to its position, with categories, readers, and open or resolved status. | Phase 2 (built) |
 | **Stats** | Page count, running time at your own rate and an estimate from the dialogue, each character's screen time and dialogue share, a character-by-scene grid, INT/EXT and DAY/NIGHT breakdowns, and, next, pacing. | Phase 2 (built) |
 | **Scaffold** | Who is in the cursor's scene, where, and for how long, with a page for each character and place. | Phase 2 (built) |

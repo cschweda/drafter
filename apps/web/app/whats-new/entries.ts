@@ -45,6 +45,40 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.27.4-save-says-where',
+    date: '2026-11-23',
+    version: '0.27.4',
+    kind: 'Improved',
+    title: 'Save says where it went, and nothing in the top bar moves',
+    text: 'After a save, the status bar says which file it went to (“Saved to The Call.fountain”), and the top bar’s buttons stay where they are. In Safari and Firefox, which save by downloading, the first Save of a new script asks what to call it.',
+    link: release('0.27.4'),
+  },
+  {
+    id: 'v0.27.4-final-draft-round-trip',
+    date: '2026-11-23',
+    version: '0.27.4',
+    kind: 'Fixed',
+    title: 'A script comes back from Final Draft with its sections and title page',
+    text: 'A script exported as a Final Draft file, opened there, and saved used to come back with its sections as plain lines, its scene synopses gone, and its title page as one note; all of them now come back as themselves. Final Draft prints that outline text unless you hide the outline from its View menu.',
+  },
+  {
+    id: 'v0.27.3-cursor-stays',
+    date: '2026-11-22',
+    version: '0.27.3',
+    kind: 'Fixed',
+    title: 'The cursor stays where you left it',
+    text: 'When the palette or a dialog closed while the page was busy, the cursor could jump to the top of the script, and the next thing you typed went in there. It now stays where it was.',
+    link: release('0.27.3'),
+  },
+  {
+    id: 'v0.27.3-dialogs-and-tour',
+    date: '2026-11-22',
+    version: '0.27.3',
+    kind: 'Fixed',
+    title: 'A dialog opened again at once, and focus after the tour',
+    text: 'A dialog asked for again the moment it closed could fail to open. After the tour, focus could be left on nothing, so the next Tab started from the top of the page; both are fixed.',
+  },
+  {
     id: 'v0.27.2-sentence-breaks',
     date: '2026-11-21',
     version: '0.27.2',

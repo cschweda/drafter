@@ -452,11 +452,26 @@ describe('saving through a FileAccess', () => {
     expect(t.saveError.value).toBe('');
   });
 
+  /**
+   * A save that asks what to call the file, where saving downloads: the first Save of a script
+   * with no file, or of one whose kind changed. Takes the name suggested.
+   */
+  async function saveNamed(t: { save(): Promise<'saved' | 'cancelled'> }) {
+    const { saveAsQuestion } = await import('../app/storage/save');
+    const done = t.save();
+    await vi.waitFor(() => expect(saveAsQuestion.value).not.toBeNull());
+    // Save's own question, not Save As's.
+    expect(saveAsQuestion.value?.first).toBe(true);
+    saveAsQuestion.value?.answer(saveAsQuestion.value.name);
+    return done;
+  }
+
   test('downloads the script when the browser can’t save in place', async () => {
     const t = await fresh({ inPlace: false });
     await t.script.newScript('screenplay');
     t.type('A\n');
-    expect(await t.save()).toBe('saved');
+    // The first Save asks what to call it, with its title's name suggested.
+    expect(await saveNamed(t)).toBe('saved');
     expect(t.log.picks).toHaveLength(0);
     expect(t.log.downloads).toEqual([
       { name: 'Untitled Screenplay.fountain', data: t.shown(), type: 'text/plain' },
@@ -464,7 +479,7 @@ describe('saving through a FileAccess', () => {
     expect(t.script.dirty.value).toBe(false);
     expect(t.script.project.value?.fileName).toBe('Untitled Screenplay.fountain');
     expect(t.script.project.value?.fsHandleId).toBeUndefined();
-    // Again, under the same name.
+    // Again, under the same name, with nothing asked.
     t.type('B\n');
     await t.save();
     expect(t.log.downloads[1]?.name).toBe('Untitled Screenplay.fountain');
@@ -476,8 +491,8 @@ describe('saving through a FileAccess', () => {
     const { saveAsQuestion } = await import('../app/storage/save');
     await t.script.newScript('screenplay');
     t.type('A\n');
-    await t.save();
-    // Save never asks: the same name again.
+    await saveNamed(t);
+    // Answered, the question is gone.
     expect(saveAsQuestion.value).toBeNull();
 
     const saving = t.saveAs();
@@ -525,7 +540,7 @@ describe('saving through a FileAccess', () => {
     await t.script.newScript('markdown');
     expect(t.shown()).toBe('# Untitled\n\n');
     t.type('# The Treatment\n');
-    expect(await t.save()).toBe('saved');
+    expect(await saveNamed(t)).toBe('saved');
     expect(t.log.downloads[0]?.name).toBe('Untitled.md');
     expect(t.script.project.value?.fileName).toBe('Untitled.md');
   });
@@ -563,11 +578,12 @@ describe('saving through a FileAccess', () => {
     const t = await fresh({ inPlace: false });
     await t.script.newScript('screenplay');
     t.type('A\n');
-    await t.save();
+    await saveNamed(t);
     expect(t.log.downloads[0]?.name).toBe('Untitled Screenplay.fountain');
     await t.script.setKind('markdown');
     t.type('# Notes\n');
-    await t.save();
+    // The file is the other kind's now: Save asks again, with the new extension.
+    await saveNamed(t);
     expect(t.log.downloads[1]?.name).toBe('Notes.md');
     expect(t.script.project.value?.fileName).toBe('Notes.md');
   });

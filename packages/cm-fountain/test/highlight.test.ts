@@ -585,6 +585,10 @@ describe('fountainDecorations', () => {
         '\\\\\\*x\\**',
         '**a **b** c** _d _e_ f_',
         '*a [[n]] *b* c*',
+        // A line-start escape after spaces: the parser prints `#` and `=`, less the backslash.
+        ' \\#',
+        '\t \\= x',
+        '  \\# *a*',
       ]) {
         expectCovered(text);
       }
