@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **Three checks the clean-room audits asked for now run with the tests:** no film reference in any source, test, fixture, or sample; no Final Draft file committed that is large or outside a fixture folder; and `docs/DEPENDENCIES.md` naming every package and each thing it depends on. Each catches something an audit had found by hand more than once.
+
 ### Added
 
 - **Support Drafter, a tip jar.** A new help page, in the About menu and the palette ("tip", "sponsor" and "donate" find it), for anyone who would like to say thanks: one button, **Leave a tip**, which opens the maintainer's page on Ko-fi, where a card, Apple Pay, Google Pay or PayPal is enough and no account is needed. Drafter is free and every part of it stays free; nothing changes whether you tip or not, there is nothing for people who do, and nothing in Drafter ever asks: no banner, no reminder, no word of it on the writing screen. Both the page and Drafter itself load nothing from Ko-fi and send it nothing: it is a link, listed with everything else that uses the network in the README and on the Privacy page. A build without the maintainer's Ko-fi address (`app/about/support.ts`) has no such page. In the desktop app the button opens that one address in your browser without asking, as Drafter's other links do, and any other address on the same site is still asked about. The README's own line, and the Sponsor button on GitHub, name Buy Me a Coffee as well. The design is `docs/drafter-support-page-design.md`.
