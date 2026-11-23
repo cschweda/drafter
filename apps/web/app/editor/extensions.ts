@@ -32,6 +32,7 @@ import type { WritingMode } from '../settings/settings';
 import { useSettings } from '../settings/settings';
 import { onSpellContextMenu } from '../spell/menu';
 import { sayClassic } from './element-notice';
+import { keepCursorOnFocus } from './keep-cursor';
 import { keySounds } from './key-sounds';
 import { provisionalNumbersExtension } from './provisional';
 import { revealedLine } from './reveal-line';
@@ -278,6 +279,8 @@ export function editorExtensions(hooks: EditorHooks, kind: DocumentKind = 'fount
       drop: (event) => Array.from(event.dataTransfer?.types ?? []).includes('Files'),
       contextmenu: (event, view) => onSpellContextMenu(event, view),
     }),
+    // Focus that comes back to a busy page leaves the cursor where it was (editor/keep-cursor.ts).
+    keepCursorOnFocus,
     // Settings → Typewriter sounds, off by default: read at each key, so the setting needs no
     // reconfigure, and the settings aren't read until a key is pressed.
     keySounds(() => useSettings().settings.value.keySounds),

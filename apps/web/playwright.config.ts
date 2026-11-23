@@ -8,12 +8,33 @@ import { drafterDatabase, sampleSeenRows } from './e2e/seed';
 // E2E_PORT lets two worktrees run their suites at once without sharing a server.
 const port = Number(process.env.E2E_PORT ?? 4173);
 
+// On the Linux runners the checks' Chromium rasters its pages on a GPU: SwiftShader's, which runs
+// on the processor (`E2E_GPU_RASTER=1` in checks.yml). In its software raster path Chromium
+// loses a wakeup now and then on a machine with few cores: a tile's raster job yields and is never
+// run again, the frame is never finished, and the page's main thread waits for it for good, in
+// `LayerTreeHost::WaitForCommitCompletion`. About one run of the tests in fifty had a page stop
+// that way, and none in 337 on the GPU (the hang hunt, in the CHANGELOG). It never happened on a
+// Mac, so it is off there and by default. `scripts/raster-check.mjs` fails the job if the browser
+// stops saying it rasters on the GPU, so the switches can't stop working unnoticed.
+//
+// The runs are slower that way (a third on most runners, twice on the slowest), so each test and
+// each `expect` gets twice the time.
+// (scripts/raster-check.mjs has the same three.)
+const GPU_RASTER_ARGS = [
+  '--enable-unsafe-swiftshader',
+  '--use-angle=swiftshader',
+  '--enable-gpu-rasterization',
+];
+const gpuRaster = process.env.E2E_GPU_RASTER === '1';
+const chromiumLaunch = gpuRaster ? { launchOptions: { args: GPU_RASTER_ARGS } } : {};
+
 export default defineConfig({
   // The accessibility tests run with the rest (decided 2026-10-28, docs/DECISIONS.md);
   // `pnpm e2e:a11y` runs them alone.
   testDir: 'e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
+  ...(gpuRaster ? { timeout: 60_000, expect: { timeout: 10_000 } } : {}),
   // On CI: annotations in the run, and an HTML report the workflow keeps when something fails.
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
@@ -69,10 +90,10 @@ export default defineConfig({
     },
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], ...chromiumLaunch } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-    { name: 'phone', use: { ...devices['Pixel 7'] } },
+    { name: 'phone', use: { ...devices['Pixel 7'], ...chromiumLaunch } },
     // iPhones run WebKit whatever the browser, so phone sizes get it too.
     { name: 'phone-webkit', use: { ...devices['iPhone SE'] } },
   ],

@@ -6,6 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.27.3] - 2026-11-22
+
+**The cursor stays where you left it.** Three faults a writer could meet are fixed: the cursor could jump to the top of the script when the palette or a dialog closed on a busy page, so the next thing typed went in there; a dialog asked for again the moment it closed could fail to open; and focus could be left on nothing after the tour. All three were found while hunting a fault in the test browser, which is also dealt with: the checks no longer have a page stop dead about one run in fifty.
+
+### Changed
+
+- **On the Linux runners, the browser tests' Chromium rasters its pages on a GPU.** About one run of the checks in fifty had a test time out on a page that stopped answering. The hang hunt found where: the page's main thread waits in Chromium's compositor (`LayerTreeHost::WaitForCommitCompletion`) for a frame that is never finished, with nothing of Drafter's running; others who caught the same wait traced it to the software raster path, where a tile's job yields on a machine with few cores and is never run again. Rastering on SwiftShader's GPU, which runs on the processor, takes the tiles off that path: 337 runs of the tests that way had no stopped page. So `checks.yml` sets `E2E_GPU_RASTER=1` on Linux, `playwright.config.ts` gives Chromium the switches, and `scripts/raster-check.mjs` fails the job first if the browser doesn't say it rasters on the GPU. The runs are about a third slower, so each test and each `expect` has twice its time there. macOS is as it was: it never happened there. For developers.
+
+### Fixed
+
+- **A backslash that won't print was shown as if it would.** At the start of a line, `\#` and `\=` print the mark without the backslash, and the editor dims the backslash to say so. After spaces at the start of the line it printed the same way but was not dimmed. Found by a test that tries random text, in the release's own checks. `cm-fountain/src/highlight.ts`.
+- **The cursor could jump to the top of the script when the palette or a dialog closed.** A browser that gives the editor focus puts its caret at the editor's start, and the editor puts it back where the cursor was, but only when it hears of the caret within a fifth of a second. On a page busy for longer than that just then (a long script laid out again), it took the caret at the start for the writer's, and the next thing typed went in at the top of the script. The caret is now put back as focus arrives, so how busy the page is no longer matters; a click or a tap still puts the cursor where it lands. A cursor scrolled far out of view is left to the editor's own correction, as before. Found from a browser test that failed now and then on the macOS runners. `editor/keep-cursor.ts`.
+- **After the tour, focus could be left on nothing.** When the tour ends, focus goes back to where it was asked for (the Help button, say), once the last card has faded away. Drafter waited a little over a second for that, and on a slow machine the fade takes longer: so the wait gave up, the card went, and focus was on nothing, with the next Tab starting from the top of the page. It now waits for as long as the card takes, and looks again if the button could not take focus yet. Found by a browser test that failed on the slowest of the shared runners. `AppTour.vue`.
+- **A dialog asked for again the moment it closed could fail to open, or open and shut.** A browser takes a dialog off the screen at once and says so later, at times a few hundred milliseconds later, and Drafter kept "it is open" until then: so the same dialog chosen again in between (closed with Cancel or Escape, then chosen from the palette straight away) was not opened, or was opened and then shut by the late word. Every dialog now knows it is closed as soon as it is, once for each time it was open, and takes no notice of a late word that comes after it has opened again. Found by a browser test that failed one time in four when the test browser drew its pages another way. `DDialog.vue`.
+
 ## [0.27.2] - 2026-11-21
 
 **A page ends where a sentence does.** When a paragraph of action or a speech doesn't fit on a page, the page now ends at the last sentence that fits, and the rest starts the next page, wrapped again from its first word; at least two lines stay on each side. Where no sentence ends in reach, the break is at a line, as before. A speech that splits still has `(MORE)` under it and `(CONT'D)` after its cue. **A locked script keeps every page exactly where it is**, and a script you lock from now on keeps the pages you see, sentence breaks and all. **Two faults are fixed:** Reload for a new version could sit on "Getting the newest version…" for ten seconds and then say it couldn't switch, and a menu opened straight after choosing from another could lose the arrow keys. The rest is for developers: the browser tests now run in Safari's engine every night, and several tests that failed now and then are settled.
@@ -1499,7 +1514,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.27.2...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.27.3...HEAD
+[0.27.3]: https://github.com/cschweda/drafter/compare/v0.27.2...v0.27.3
 [0.27.2]: https://github.com/cschweda/drafter/compare/v0.27.1...v0.27.2
 [0.27.1]: https://github.com/cschweda/drafter/compare/v0.27.0...v0.27.1
 [0.27.0]: https://github.com/cschweda/drafter/compare/v0.26.2...v0.27.0

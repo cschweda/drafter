@@ -7,13 +7,21 @@
 // with none under reduced motion.
 //
 // Its ref is a stand-in for the element: `open`, `showModal()`, `close()`, `focus()`, and `el` for anything
-// else. Attributes and listeners (aria-labelledby, @close, @cancel) go on the <dialog> itself.
+// else. Attributes and listeners (aria-labelledby, @cancel) go on the <dialog> itself.
+//
+// @close is the dialog's own word, not the browser's event: the browser clears `open` at once and
+// sends `close` later, at times hundreds of milliseconds later, and a caller that keeps "it is
+// open" until then misses a request for the dialog made in between, or has the late event shut the
+// dialog it has just opened again. So the caller is told when `open` goes (the next microtask),
+// once for each time the dialog was open, and the browser's event says it only if that hasn't.
 // When it closes, focus goes back to what had it when it opened, unless something else has taken
 // it by then (a dialog that sends focus elsewhere on purpose still does). When that can't take it
 // (it is gone, hidden, or was nothing: a menu's row, or the palette's), focus goes to `fallback`
 // (a selector), else the editor, else the Drafter menu, so it is never left on nothing.
 // `ref` is imported, not auto-imported, so test/ddialog.test.ts can mount the component as written.
-import { ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, useAttrs } from 'vue';
+
+defineOptions({ inheritAttrs: false });
 
 const props = withDefaults(defineProps<{ size?: 'sm' | 'md' | 'lg'; fallback?: string }>(), {
   size: 'md',
@@ -23,7 +31,16 @@ const props = withDefaults(defineProps<{ size?: 'sm' | 'md' | 'lg'; fallback?: s
 /** Where focus goes when the opener can't take it back, after the caller's own `fallback`. */
 const FALLBACKS = ['.cm-content', '[data-tour="menu"]'];
 
+const attrs = useAttrs();
+/** Everything given to the dialog but @close, which is said from here. */
+const rest = computed(() => {
+  const { onClose: _, ...others } = attrs;
+  return others;
+});
+
 const el = ref<HTMLDialogElement>();
+/** Whether the dialog has been open since the caller was last told it closed. */
+let owed = false;
 /** What had focus when the dialog opened. */
 let opener: HTMLElement | null = null;
 
@@ -33,6 +50,7 @@ function showModal() {
   const active = document.activeElement;
   opener = active instanceof HTMLElement && active !== document.body ? active : null;
   dialog.showModal();
+  owed = true;
 }
 
 function close(value?: string) {
@@ -58,7 +76,7 @@ const passing = (target: Element) => target.closest('[role="menu"]') !== null;
 // about to go (a quick Escape, while that menu is still closing), after the dialog's own close
 // listeners have had their turn. A row of any other menu was focused since, on purpose (More,
 // opened at once after Settings closed), and keeps it.
-function onClose() {
+function returnFocus() {
   const back = opener;
   setTimeout(() => {
     const dialog = el.value;
@@ -81,6 +99,26 @@ function onClose() {
   });
 }
 
+/** Tells the caller the dialog closed, once for each time it was open, then sees to focus. */
+function sayClosed() {
+  if (!owed || el.value?.open) return;
+  owed = false;
+  const listeners = attrs.onClose as undefined | (() => void) | (() => void)[];
+  for (const listener of [listeners].flat()) listener?.();
+  returnFocus();
+}
+
+let watching: MutationObserver | undefined;
+onMounted(() => {
+  if (!el.value) return;
+  watching = new MutationObserver(() => {
+    if (el.value?.open) owed = true;
+    else sayClosed();
+  });
+  watching.observe(el.value, { attributes: true, attributeFilter: ['open'] });
+});
+onBeforeUnmount(() => watching?.disconnect());
+
 defineExpose({
   el,
   showModal,
@@ -95,7 +133,13 @@ defineExpose({
 </script>
 
 <template>
-  <dialog ref="el" class="d-dialog" :class="`d-dialog--${props.size}`" @close="onClose">
+  <dialog
+    ref="el"
+    v-bind="rest"
+    class="d-dialog"
+    :class="`d-dialog--${props.size}`"
+    @close="sayClosed"
+  >
     <slot />
   </dialog>
 </template>
