@@ -1,4 +1,5 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { SUPPORT_ON, SUPPORT_PAGE } from '../about/support';
 import { DOWNLOAD_PAGE, HELP_PAGES } from './data';
 
 // The Help and About menus (the maintainer, 2026-11-09: "split the help menu into a help and about
@@ -13,6 +14,8 @@ export const ABOUT_PAGE_IDS: readonly string[] = [
   'help-privacy',
   'help-licences',
   'help-technical',
+  // Last, and only in a build that has the page (about/support.ts).
+  ...(SUPPORT_ON ? [SUPPORT_PAGE.id] : []),
 ];
 
 /**
@@ -60,6 +63,7 @@ export const HELP_MENU_ICONS: Record<string, string> = {
   'help-licences': 'i-lucide-scale',
   'help-technical': 'i-lucide-cpu',
   'help-whats-new': 'i-lucide-sparkles',
+  [SUPPORT_PAGE.id]: 'i-lucide-coffee',
   [DOWNLOAD_PAGE.id]: 'i-lucide-download',
   'reset-sample': 'i-lucide-rotate-ccw',
   'report-problem': 'i-lucide-bug',
