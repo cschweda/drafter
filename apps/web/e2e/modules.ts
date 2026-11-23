@@ -229,6 +229,20 @@ export const textOf = (page: Page) =>
       .join('\n'),
   );
 
+/**
+ * Lets the fixture module's waiting run go on (app/modules/fixture.ts, "… after a pause"), once
+ * it is waiting: the test has done what it meant to do meanwhile.
+ */
+export async function releaseFixture(page: Page) {
+  const waiting = () =>
+    page.evaluate(
+      () =>
+        (window as unknown as { __drafterFixtureWaiting?: number }).__drafterFixtureWaiting ?? 0,
+    );
+  await expect.poll(waiting).toBeGreaterThan(0);
+  await page.evaluate(() => window.dispatchEvent(new Event('drafter-fixture-go')));
+}
+
 /** Opens the palette from the keyboard and runs the command called `title`. */
 export async function runCommand(page: Page, title: string) {
   await page.keyboard.press('ControlOrMeta+k');
