@@ -378,8 +378,10 @@ useDocsHead({
       synopsis, Drafter’s own scene notes (colour, goal, setups and payoffs) included, while HTML
       and EPUB carry only the notes you wrote yourself, beside their place in the Reading view; a
       PDF or plain text never prints them. A Final Draft file carries every note and synopsis only
-      when Include notes says Include, as <code>[[…]]</code> in the text, which Final Draft prints,
-      so Drafter can read them back; with Leave out it has none. A Markdown
+      when Include notes says Include, as Final Draft’s own notes and summaries (a note inside a
+      line stays as <code>[[…]]</code> in the text); with Leave out it has none. Final Draft shows
+      them, and your sections, in purple as its outline, and prints them unless you hide the
+      outline from its View menu: do that there before you print, and the pages match Drafter’s. A Markdown
       document’s Markdown export is its own text, as it is.
     </p>
 

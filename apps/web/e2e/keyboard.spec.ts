@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { expect, type Locator, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
-import { expectScript, showSource } from './modules';
+import { downloadOf, expectScript, showSource } from './modules';
 
 // The keyboard-only journey (Phase 1 design §1, item 5): everything a writer does from a new script
 // to a PDF, with no pointer. The page records every pointer event it is sent, and the test ends by
@@ -145,7 +145,7 @@ test('writes, finds, fixes, switches, saves, and exports with no pointer', async
   // 6. Save: Mod+S downloads the file here, where there is no file picker.
   const saved = page.waitForEvent('download');
   await page.keyboard.press('ControlOrMeta+s');
-  const file = await saved;
+  const file = await downloadOf(page, saved);
   expect(file.suggestedFilename()).toBe('Untitled.fountain');
   const source = await readFile(await file.path(), 'utf8');
   expect(source).toContain('INT. KITCHEN - DAY');
@@ -229,7 +229,7 @@ test.describe('the toolbar by Tab', () => {
     await tabTo(page, 'Save');
     const saved = page.waitForEvent('download');
     await page.keyboard.press('Enter');
-    expect((await saved).suggestedFilename()).toBe('The Call.fountain');
+    expect((await downloadOf(page, saved)).suggestedFilename()).toBe('The Call.fountain');
 
     await tabTo(page, 'Export');
     await page.keyboard.press('Enter');

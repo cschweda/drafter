@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { HELP_PAGES } from '../app/commands/data';
 import { expect, type Page, test } from './fixtures';
 import { removePickers, stubPickers, textOf } from './fs-stub';
-import { expectScript, failStorageWrites, pressToolbarButton } from './modules';
+import { downloadOf, expectScript, failStorageWrites, pressToolbarButton } from './modules';
 
 // Offline use and updates (Phase 1 design §11), on Chromium with the service worker allowed (every
 // other spec blocks it: playwright.config.ts). The build is the production one that
@@ -799,7 +799,8 @@ test.describe('a new version', () => {
     await reload(page).click();
     const download = page.waitForEvent('download');
     await saveFirst(page).click();
-    expect((await download).suggestedFilename()).toBe('The Call.fountain');
+    // The sample has no file yet, so the save asks its name first.
+    expect((await downloadOf(page, download)).suggestedFilename()).toBe('The Call.fountain');
     // Not reloaded: the download has to finish first. The question is replaced by a message.
     await expect(update(page)).toContainText(
       'Your script is downloading. Reload when it has finished.',
@@ -824,7 +825,7 @@ test.describe('a new version', () => {
     await reload(page).click();
     const download = page.waitForEvent('download');
     await saveFirst(page).click();
-    await download;
+    await downloadOf(page, download);
     const downloading = 'Your script is downloading. Reload when it has finished.';
     await expect(update(page)).toContainText(downloading);
     await pressToolbarButton(page, 'Focus');

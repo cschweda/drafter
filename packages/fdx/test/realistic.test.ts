@@ -274,7 +274,14 @@ describe('short-film.fdx', () => {
   it('reads the title page by order', () => {
     expect(film.title).toBe('THE SPARE KEY');
     const fields = film.doc.titlePage?.fields ?? [];
-    expect(fields.map((f) => f.key)).toEqual(['Title', 'Credit', 'Author', 'Notes']);
+    expect(fields.map((f) => f.key)).toEqual([
+      'Title',
+      'Credit',
+      'Author',
+      'Source',
+      'Draft date',
+      'Contact',
+    ]);
     const author = fields.find((f) => f.key === 'Author');
     expect(author?.runs.map((r) => r.map((x) => x.text).join(''))).toEqual([
       'Marguerite Osei-Lund',

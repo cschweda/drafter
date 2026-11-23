@@ -25,7 +25,7 @@ import { showStats } from '~/stats/tab';
 import { useRates } from '~/stats/timing';
 import { useWritingStats } from '~/stats/writing';
 import { openError } from '~/storage/open';
-import { readOnlyHint, saveError } from '~/storage/save';
+import { justSaved, readOnlyHint, savedFile, saveError } from '~/storage/save';
 import { blankError, kindError, type RecoveryState, useScript } from '~/storage/script';
 import { useStorageNotice } from '~/storage/storage-notice';
 
@@ -303,6 +303,17 @@ const urgent = computed(
           <UIcon name="i-lucide-triangle-alert" class="icon" />
           {{ RECOVERY[warning].label }}
         </button>
+        <!-- Where the save went, for a moment after it (the maintainer, 2026-11-23): last on this
+             side, so nothing beside it moves when it comes and goes. -->
+        <span
+          v-if="justSaved && wide"
+          class="saved-to item wide-only"
+          aria-hidden="true"
+          data-just-saved
+        >
+          <UIcon name="i-lucide-check" class="icon" />
+          {{ savedFile ? `Saved to ${savedFile}` : 'Saved' }}
+        </span>
         <span class="spacer" />
         <span v-if="keys" class="keys wide-only" data-item="keys">{{ keys }}</span>
         <span v-if="progress" class="wide-only" data-item="goal">{{ progressLabel(progress) }}</span>
@@ -437,6 +448,36 @@ const urgent = computed(
 .recovery.warn:hover,
 .recovery.warn[aria-expanded="true"] {
   background: var(--warn-hover);
+}
+.saved-to {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* As the top bar's "Saved" did: shown, then faded over its last half-second. */
+  animation: saved-to-fade 2s var(--ease) both;
+}
+@keyframes saved-to-fade {
+  0%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .saved-to {
+    animation: none;
+  }
+}
+.saved-to .icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
 }
 .recovery.warn .icon {
   color: var(--warn);

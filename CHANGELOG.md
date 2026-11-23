@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.27.4] - 2026-11-23
+
+**Save says where it went, and a script comes back from Final Draft.** Saving no longer moves anything in the top bar, the status bar says which file a save went to, and Safari and Firefox ask what to call a script the first time it is saved. A script exported as a Final Draft file, opened there, and saved now comes back with its sections, synopses, notes, and title page: found by sending real files through Final Draft 13 and reading what came back. Also here: the third clean-room audit and its fixes.
+
 ### Changed
 
 - **The third clean-room audit, and its fixes** ([the audit](docs/clean-room-audit-2026-11-22.md)). It found no copied code, no screenwriting package or converter, and no file from another app. Fixed: a film reference that had come back in the layout tests; three small values in the Final Draft import's tests and notes that had come from a real sample, now invented; and records that had fallen behind (`DEPENDENCIES.md`, the clean-room rules, three plans). `.gitignore` now keeps any real Final Draft file out of `samples/fdx/`. Nothing a writer sees changes.
@@ -14,6 +18,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - **Seven browser tests raced a clock.** The test fixture's module that "adds a note after a pause" waited 1.2 seconds, and each test had that long to switch scripts, open a dialog or edit the text before the run went on. On a slow runner the test lost: the run finished first and reported the wrong thing (`modules.spec.ts:367` failed four times that way on the Linux checks, once on the release's own pull request). The fixture now waits for the test's word, and the test gives it once what it meant to do is done. For developers. One of the seven then failed once on macOS a new way: it let the run go while the next script was still being opened (a script is made in the database first), so the run finished in the old one. That test now waits for the new script, and the one that turns the module off waits for the switch to show it.
+- **Saving no longer moves the top bar.** "Unsaved" and "Saved" came and went beside the title, and every button after them shifted each time. That place is now always the same size, filled or empty, so nothing in the bar moves. On a phone-width screen, where the bar has no room to hold empty, the dot still takes its place when it appears.
+- **After a save, the status bar says where it went:** "Saved to The Call.fountain", for a moment. The top bar used to say only "Saved", which didn't tell a script saved to a file from one kept only in the browser.
+- **In Safari and Firefox, the first Save asks what to call the file.** Those browsers save by downloading and have no save dialog, so Drafter used to download a new script under its title without asking; only Save As asked. Now the first Save of a script with no file asks for its name, with the title's suggested, and Save keeps that name from then on. Chrome, Edge, and the desktop app already asked, in their own dialog.
+- **Between 640 and 1280 pixels wide the top bar shows the unsaved dot without the word,** so the place it holds doesn't take room from the search.
+- **A save dialog the browser refuses to open is no longer silent.** Drafter says the dialog didn't open and that nothing was saved.
+- **Sections, synopses, and notes survive a trip through Final Draft.** A script exported as `.fdx`, opened in Final Draft, and saved from there used to come back with each `#` section as a line of action and a stray note beside it, because Final Draft drops the marks Drafter wrote them with. They are now written as Final Draft's own outline, summary, and note paragraphs, which it keeps. A note exported this way no longer prints in Final Draft. A scene's own synopsis is written the same way, as a summary under its heading: Final Draft 13 dropped it from where Drafter used to put it. **The title page comes back too:** Final Draft keeps each line and whether it is centered, but not which field it is, and Drafter used to read everything under the author as one Notes field, which doesn't print. It now reads a source line as the Source, a date as the Draft date, a copyright notice as the Copyright, and the rest as the Contact. Final Draft prints its outline text while its outline is shown: hide the outline from its View menu before printing there, as the Export options and the Saving help page now say. Found with two real round trips, on files the maintainer made in Final Draft 13, where sections, synopses, and notes show as its own hidden outline text.
 
 ## [0.27.3] - 2026-11-22
 
@@ -1523,7 +1533,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.27.3...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.27.4...HEAD
+[0.27.4]: https://github.com/cschweda/drafter/compare/v0.27.3...v0.27.4
 [0.27.3]: https://github.com/cschweda/drafter/compare/v0.27.2...v0.27.3
 [0.27.2]: https://github.com/cschweda/drafter/compare/v0.27.1...v0.27.2
 [0.27.1]: https://github.com/cschweda/drafter/compare/v0.27.0...v0.27.1

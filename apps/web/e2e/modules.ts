@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { type Download, expect, type Locator, type Page } from '@playwright/test';
 
 // Helpers for the specs that try the module host. `pnpm e2e` builds with the test module, the
 // Fixture, which has a button ("Count scenes"), a tab ("Fixture"), a command ("Fixture: add a
@@ -241,6 +241,42 @@ export async function releaseFixture(page: Page) {
     );
   await expect.poll(waiting).toBeGreaterThan(0);
   await page.evaluate(() => window.dispatchEvent(new Event('drafter-fixture-go')));
+}
+
+/** Save's question where saving downloads: the first Save of a script with no file asks its name. */
+const saveName = (page: Page) => page.getByRole('dialog', { name: 'Save', exact: true });
+
+/**
+ * A save's download, with the name question answered on the way if the save asks it (Enter takes
+ * the name suggested). The first Save of a script with no file asks; a later one doesn't.
+ */
+export async function downloadOf(page: Page, download: Promise<Download>): Promise<Download> {
+  const asked = await Promise.race([
+    download.then(() => false),
+    saveName(page)
+      .waitFor()
+      .then(() => true)
+      // The download came first, and the test ended with nothing asked.
+      .catch(() => false),
+  ]);
+  if (asked) {
+    await expect(saveName(page).getByRole('textbox', { name: 'File name' })).toBeFocused();
+    await page.keyboard.press('Enter');
+  }
+  return download;
+}
+
+/** Takes the name suggested, where this browser's Save asks for one (it has no save dialog). */
+export async function takeSaveName(page: Page) {
+  const asks = await page.evaluate(
+    () =>
+      typeof (window as unknown as { showSaveFilePicker?: unknown }).showSaveFilePicker !==
+      'function',
+  );
+  if (!asks) return;
+  await expect(saveName(page).getByRole('textbox', { name: 'File name' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(saveName(page)).toBeHidden();
 }
 
 /** Opens the palette from the keyboard and runs the command called `title`. */

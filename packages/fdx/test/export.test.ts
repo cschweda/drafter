@@ -45,15 +45,12 @@ describe('toFdx', () => {
     );
   });
 
-  it('maps a scene heading, with a locked number and its synopses', () => {
+  it('maps a scene heading, with a locked number, and its synopses in their places', () => {
     expect(content('INT. HALL - DAY #12A#\n\n= First.\n\nAction.\n\n= Second.\n')).toEqual([
-      P(
-        'Scene Heading',
-        { Number: '12A' },
-        el('SceneProperties', { Title: '', Summary: 'First.\nSecond.' }),
-        T('INT. HALL - DAY'),
-      ),
+      P('Scene Heading', { Number: '12A' }, T('INT. HALL - DAY')),
+      P('Summary', { DrafterSynopsis: 'Yes' }, T('First.')),
       P('Action', {}, T('Action.')),
+      P('Summary', { DrafterSynopsis: 'Yes' }, T('Second.')),
     ]);
     expect(content('INT. HALL - DAY\n')).toEqual([P('Scene Heading', {}, T('INT. HALL - DAY'))]);
     expect(content('.SNOWY FIELD\n')).toEqual([P('Scene Heading', {}, T('SNOWY FIELD'))]);
@@ -61,13 +58,9 @@ describe('toFdx', () => {
 
   it("maps a stage play's scene to a Scene Heading and its act to a section", () => {
     expect(content('# Act One\n\n## Scene 1\n\n= A kitchen.\n\nA table.\n', play)).toEqual([
-      P('General', { DrafterSection: '1' }, T('Act One')),
-      P(
-        'Scene Heading',
-        { DrafterSection: '2' },
-        el('SceneProperties', { Title: '', Summary: 'A kitchen.' }),
-        T('Scene 1'),
-      ),
+      P('Outline 1', { DrafterSection: '1' }, T('Act One')),
+      P('Scene Heading', { DrafterSection: '2' }, T('Scene 1')),
+      P('Summary', { DrafterSynopsis: 'Yes' }, T('A kitchen.')),
       P('Action', {}, T('A table.')),
     ]);
   });
@@ -107,23 +100,23 @@ describe('toFdx', () => {
     expect(content('One.\n\n===\n')).toEqual([P('Action', {}, T('One.'))]);
   });
 
-  it('maps a section to General with its depth', () => {
+  it("maps a section to Final Draft's outline paragraph, with its depth", () => {
     expect(content('# Act\n\n## Sequence\n\n###### Deep\n')).toEqual([
-      P('General', { DrafterSection: '1' }, T('Act')),
-      P('General', { DrafterSection: '2' }, T('Sequence')),
-      P('General', { DrafterSection: '6' }, T('Deep')),
+      P('Outline 1', { DrafterSection: '1' }, T('Act')),
+      P('Outline 2', { DrafterSection: '2' }, T('Sequence')),
+      P('Outline 3', { DrafterSection: '6' }, T('Deep')),
     ]);
   });
 
   it('caps a section deeper than six levels at six, the most import takes', () => {
     expect(content('####### Deeper\n')).toEqual([
-      P('General', { DrafterSection: '6' }, T('Deeper')),
+      P('Outline 3', { DrafterSection: '6' }, T('Deeper')),
     ]);
   });
 
   it('carries a note on its own line, and keeps a note inside a line in the text', () => {
     expect(content('[[remember this]]\n\nHe *runs* [[a note]] fast.\n')).toEqual([
-      P('General', { DrafterNote: 'Yes' }, T('remember this')),
+      P('Note', { DrafterNote: 'Yes' }, T('remember this')),
       P('Action', {}, T('He '), T('runs', 'Italic'), T(' [[a note]] fast.')),
     ]);
   });
@@ -155,7 +148,7 @@ describe('toFdx', () => {
     const kept = content(source).length;
     const tree = (strip(readXml(xml)).children[0] as XmlElement).children;
     expect(tree).toEqual([
-      P('General', { DrafterSection: '1' }, T('ACT ONE')),
+      P('Outline 1', { DrafterSection: '1' }, T('ACT ONE')),
       P('Scene Heading', {}, T('INT. LAB - NIGHT')),
       // The parser's own text, as the PDF prints it: the spaces on both sides of a note stay.
       P('Action', {}, T('A lamp.  It flickers.')),
@@ -275,38 +268,30 @@ describe('toFdx', () => {
     }
   });
 
-  it('exports a synopsis no scene collects as a General paragraph, in document order', () => {
-    const syn = (text: string) => P('General', { DrafterSynopsis: 'Yes' }, T(text));
+  it('exports every synopsis as a Summary paragraph, in document order', () => {
+    const syn = (text: string) => P('Summary', { DrafterSynopsis: 'Yes' }, T(text));
     expect(content('= Before any scene.\n\nINT. A - DAY\n')).toEqual([
       syn('Before any scene.'),
       P('Scene Heading', {}, T('INT. A - DAY')),
     ]);
     expect(content('# Act\n\n= About the act.\n\nINT. A - DAY\n\n= Of the scene.\n')).toEqual([
-      P('General', { DrafterSection: '1' }, T('Act')),
+      P('Outline 1', { DrafterSection: '1' }, T('Act')),
       syn('About the act.'),
-      P(
-        'Scene Heading',
-        {},
-        el('SceneProperties', { Title: '', Summary: 'Of the scene.' }),
-        T('INT. A - DAY'),
-      ),
+      P('Scene Heading', {}, T('INT. A - DAY')),
+      syn('Of the scene.'),
     ]);
     expect(content('# Act\n\n= Act synopsis.\n\n## Scene 1\n\n= Scene synopsis.\n', play)).toEqual([
-      P('General', { DrafterSection: '1' }, T('Act')),
+      P('Outline 1', { DrafterSection: '1' }, T('Act')),
       syn('Act synopsis.'),
-      P(
-        'Scene Heading',
-        { DrafterSection: '2' },
-        el('SceneProperties', { Title: '', Summary: 'Scene synopsis.' }),
-        T('Scene 1'),
-      ),
+      P('Scene Heading', { DrafterSection: '2' }, T('Scene 1')),
+      syn('Scene synopsis.'),
     ]);
   });
 
   it('puts a pending page break on a synopsis nothing collects', () => {
     expect(content('One.\n\n===\n\n= Loose.\n')).toEqual([
       P('Action', {}, T('One.')),
-      P('General', { DrafterSynopsis: 'Yes', StartsNewPage: 'Yes' }, T('Loose.')),
+      P('Summary', { DrafterSynopsis: 'Yes', StartsNewPage: 'Yes' }, T('Loose.')),
     ]);
   });
 

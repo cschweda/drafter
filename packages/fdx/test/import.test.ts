@@ -1,10 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { type Doc, parse, print } from '@drafter/fountain';
+import { builtins } from '@drafter/templates';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { FdxError, fromFdx, XmlError } from '../src';
+import { FdxError, fromFdx, toFdx, XmlError } from '../src';
 import { HANG_MS, MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
+
+const screenplay = builtins['us-screenplay'];
 
 const fixture = (name: string) =>
   readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)), 'utf8');
@@ -438,6 +441,25 @@ describe('fromFdx: unmapped content', () => {
 });
 
 describe("fromFdx: Drafter's own marks", () => {
+  it("keeps sections, synopses, and notes when another app drops Drafter's marks", () => {
+    // Final Draft keeps a paragraph's type and drops attributes it doesn't know, so the kinds
+    // that never print travel as its own kinds (Outline 1 to 3, Summary, Note).
+    const source =
+      '# Act One\n\n= About the act.\n\n## Sequence\n\n### Beat\n\nINT. HALL - DAY\n\n= Of the scene.\n= Its second line.\n\n[[remember this]]\n\nShe waits.\n';
+    // Final Draft 13 also drops a scene's `Summary` attribute (seen in a file it saved).
+    const saved = toFdx(parse(source), screenplay)
+      .replace(/ Drafter[A-Za-z]+="[^"]*"/g, '')
+      .replace(/ Summary="[^"]*"/g, '');
+    expect(saved).not.toContain('Drafter');
+    expect(fromFdx(saved).text).toBe(source);
+  });
+
+  it("reads a section deeper than Final Draft's three outline levels from its own mark", () => {
+    expect(fromFdx(fdx(P('Outline 3', 'Deep', ' DrafterSection="5"'))).text).toBe('##### Deep\n');
+    // A mark Drafter can't trust leaves the outline paragraph's own depth.
+    expect(fromFdx(fdx(P('Outline 3', 'Deep', ' DrafterSection="99"'))).text).toBe('### Deep\n');
+  });
+
   it('honours DrafterSection, DrafterSynopsis, DrafterNote, DrafterLyric, and DrafterKey', () => {
     const result = fromFdx(fixture('drafter-marks.fdx'));
     expect(result.text).toBe(
@@ -501,7 +523,7 @@ describe('fromFdx: the title page', () => {
         'Title: _**THE LAST LAMP**_',
         'Credit: written by',
         'Author: Imogen Vale',
-        'Notes: 12 Harbour Row',
+        'Contact: 12 Harbour Row',
         '    vale@example.com',
         '',
         'The sea.',
@@ -513,8 +535,68 @@ describe('fromFdx: the title page', () => {
       'Title',
       'Credit',
       'Author',
-      'Notes',
+      'Contact',
     ]);
+  });
+
+  it('reads the lines under the author by what they are: source, date, copyright, contact', () => {
+    // As Final Draft saves a title page Drafter exported: each paragraph's text and alignment, and
+    // nothing that says which field it is.
+    const line = (align: string) => (text: string) =>
+      `<Paragraph Alignment="${align}"><Text>${text}</Text></Paragraph>`;
+    const centered = ['The Round Trip', 'Written by', 'A. Tester', 'Based on nothing at all'];
+    const left = [
+      '23 November 2026',
+      'A. Tester',
+      '12 Sample Street',
+      '(c) 2026 A. Tester',
+      'Anything else joins the contact.',
+    ];
+    const result = fromFdx(
+      fdx(
+        P('Action', 'The sea.'),
+        `<TitlePage><Content>${centered.map(line('Center')).join('')}${left
+          .map(line('Left'))
+          .join('')}</Content></TitlePage>`,
+      ),
+    );
+    expect(result.text).toBe(
+      [
+        'Title: The Round Trip',
+        'Credit: Written by',
+        'Author: A. Tester',
+        'Source: Based on nothing at all',
+        'Draft date: 23 November 2026',
+        'Contact: A. Tester',
+        '    12 Sample Street',
+        '    Anything else joins the contact.',
+        'Copyright: (c) 2026 A. Tester',
+        '',
+        'The sea.',
+        '',
+      ].join('\n'),
+    );
+  });
+
+  it('reads a date in figures as the draft date, and only the first date', () => {
+    const left = (text: string) => `<Paragraph Alignment="Left"><Text>${text}</Text></Paragraph>`;
+    const page = (lines: string[]) =>
+      fromFdx(
+        fdx(
+          P('Action', 'The sea.'),
+          `<TitlePage><Content><Paragraph Alignment="Center"><Text>T</Text></Paragraph>${lines
+            .map(left)
+            .join('')}</Content></TitlePage>`,
+        ),
+      ).text;
+    expect(page(['11/23/26'])).toContain('Draft date: 11/23/26\n');
+    expect(page(['Draft of 3 March 2026', 'Revised 9 May 2026'])).toContain(
+      'Draft date: Draft of 3 March 2026\nContact: Revised 9 May 2026\n',
+    );
+    // A year in an address or a long line is not a date.
+    expect(page(['Suite 2020, 1 Long Road, a town with a long name, and a country'])).toContain(
+      'Contact: Suite 2020',
+    );
   });
 
   it('takes a paragraph with an empty Text run as a gap between blocks, as an empty paragraph', () => {
@@ -542,7 +624,7 @@ describe('fromFdx: the title page', () => {
         'Title: THE NETS',
         'Credit: by',
         'Author: Imogen Vale',
-        'Notes: Based on a story by Ada Quill',
+        'Source: Based on a story by Ada Quill',
         '',
         'The sea.',
         '',

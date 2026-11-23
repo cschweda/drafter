@@ -2,7 +2,8 @@
 import DDialog from '~/components/ui/DDialog.vue';
 import { saveAsQuestion } from '~/storage/save';
 
-// Save As… in a browser that saves by downloading (Firefox, Safari): there is no picker to type a
+// Save As…, and the first Save of a script with no file, in a browser that saves by downloading
+// (Firefox, Safari): there is no picker to type a
 // name into, so this asks for one. The file goes to the browser's downloads under that name, and
 // the script follows it, so the next Save downloads under it too. Chrome, Edge, and the desktop
 // app never show this: their own Save dialog asks. Escape and Cancel save nothing.
@@ -54,8 +55,14 @@ function onClose() {
     @close="onClose"
   >
     <form v-if="saveAsQuestion" @submit="onSubmit">
-      <h2 id="save-as-title" class="d-dialog-title">Save As</h2>
-      <p id="save-as-why">
+      <h2 id="save-as-title" class="d-dialog-title">
+        {{ saveAsQuestion.first ? 'Save' : 'Save As' }}
+      </h2>
+      <p v-if="saveAsQuestion.first" id="save-as-why">
+        This browser saves a script by downloading it. Give it a name, and it goes to your
+        downloads. Save keeps that name from then on.
+      </p>
+      <p v-else id="save-as-why">
         This browser saves a script by downloading it. Give this version a name, and it goes to
         your downloads beside any you saved before.
       </p>

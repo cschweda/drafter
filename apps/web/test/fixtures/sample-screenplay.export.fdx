@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <FinalDraft DocumentType="Script" Template="No" Version="5">
   <Content>
-    <Paragraph Type="General" DrafterNote="Yes">
+    <Paragraph Type="Note" DrafterNote="Yes">
       <Text>This is a short sample screenplay, not a finished script. The "Key: value" lines at the top make the title page. Notes in double brackets, like this one, stay in the source but never print. Delete them when you're done exploring.</Text>
     </Paragraph>
-    <Paragraph Type="General" DrafterSection="1">
+    <Paragraph Type="Outline 1" DrafterSection="1">
       <Text>Act One</Text>
     </Paragraph>
-    <Paragraph Type="General" DrafterSynopsis="Yes">
+    <Paragraph Type="Summary" DrafterSynopsis="Yes">
       <Text>Margaret waits up for a call that never comes.</Text>
     </Paragraph>
-    <Paragraph Type="General" DrafterNote="Yes">
+    <Paragraph Type="Note" DrafterNote="Yes">
       <Text>A line starting with # is a section, and one starting with = is a synopsis. They build the outline and never print.</Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
       <Text>INT. KITCHEN - NIGHT</Text>
     </Paragraph>
-    <Paragraph Type="General" DrafterNote="Yes">
+    <Paragraph Type="Note" DrafterNote="Yes">
       <Text>A scene heading starts with INT. or EXT. and usually ends with the time of day.</Text>
     </Paragraph>
     <Paragraph Type="Action">
@@ -29,7 +29,7 @@
       <Text>SILENCE.
 Just the clock.</Text>
     </Paragraph>
-    <Paragraph Type="General" DrafterNote="Yes">
+    <Paragraph Type="Note" DrafterNote="Yes">
       <Text>Without the ! at the start, SILENCE would read as a character saying "Just the clock." The ! forces the lines to be action.</Text>
     </Paragraph>
     <Paragraph Type="Character">
@@ -41,7 +41,7 @@ Just the clock.</Text>
     <Paragraph Type="Dialogue">
       <Text>You said you'd call.</Text>
     </Paragraph>
-    <Paragraph Type="General" DrafterNote="Yes">
+    <Paragraph Type="Note" DrafterNote="Yes">
       <Text>A name in capitals on its own line, followed directly by speech, is a character cue. A line in parentheses right under the name is a parenthetical.</Text>
     </Paragraph>
     <Paragraph Type="Action">
@@ -56,7 +56,7 @@ Just the clock.</Text>
     <Paragraph Type="Dialogue">
       <Text>Mom? It's me. I lost my phone.</Text>
     </Paragraph>
-    <Paragraph Type="General" DrafterNote="Yes">
+    <Paragraph Type="Note" DrafterNote="Yes">
       <Text>(O.S.) means off screen: we hear Danny before we see him.</Text>
     </Paragraph>
     <Paragraph Type="Action">
@@ -88,7 +88,7 @@ Just the clock.</Text>
     <Paragraph Type="Action">
       <Text>He sets the box on the table and lifts the lid. Something that used to be a cake.</Text>
     </Paragraph>
-    <Paragraph Type="General" DrafterNote="Yes">
+    <Paragraph Type="Note" DrafterNote="Yes">
       <Text>Margaret speaks again right after a line of action, so Drafter adds (CONT'D) to her name by itself. Don't type it.</Text>
     </Paragraph>
     <Paragraph Type="Character">
@@ -106,7 +106,7 @@ Just the clock.</Text>
     <Paragraph Type="Action">
       <Text>They both start talking at once.</Text>
     </Paragraph>
-    <Paragraph Type="General" DrafterNote="Yes">
+    <Paragraph Type="Note" DrafterNote="Yes">
       <Text>A ^ after the second name sets two speeches side by side.</Text>
     </Paragraph>
     <Paragraph>
@@ -125,7 +125,7 @@ Just the clock.</Text>
         </Paragraph>
       </DualDialogue>
     </Paragraph>
-    <Paragraph Type="General" DrafterNote="Yes">
+    <Paragraph Type="Note" DrafterNote="Yes">
       <Text>Text between /* and */ is cut but kept, in case you want it back. It never prints.</Text>
     </Paragraph>
     <Paragraph Type="Action">
@@ -154,7 +154,7 @@ Just the clock.</Text>
       <Text Style="Bold">Next</Text>
       <Text> year you'll come at seven.</Text>
     </Paragraph>
-    <Paragraph Type="General" DrafterNote="Yes">
+    <Paragraph Type="Note" DrafterNote="Yes">
       <Text>Single *stars* make italics, double **stars** make bold, and _underscores_ underline. A line wrapped in &gt; and &lt; is centered.</Text>
     </Paragraph>
     <Paragraph Type="Action" Alignment="Center">

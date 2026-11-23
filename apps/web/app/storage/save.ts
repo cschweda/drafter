@@ -22,13 +22,16 @@ import { inTurn, whenIdle } from './turn';
 export const saveAsQuestion = ref<{
   /** The name suggested: the script's file, or its title's. */
   name: string;
+  /** Save of a script with no file yet asked, not Save As: the dialog says "Save". */
+  first: boolean;
   answer(name: string | null): void;
 } | null>(null);
 
-function askFileName(name: string): Promise<string | null> {
+function askFileName(name: string, first: boolean): Promise<string | null> {
   return new Promise((resolve) => {
     saveAsQuestion.value = {
       name,
+      first,
       answer: (typed) => {
         saveAsQuestion.value = null;
         resolve(typed);
@@ -65,7 +68,13 @@ export const saveAnnouncement = ref('');
 export const savesLanded = ref(0);
 let clearing: ReturnType<typeof setTimeout> | undefined;
 let speaking: ReturnType<typeof setTimeout> | undefined;
+/** The name of the file the last save went to, for "Saved to The Call.fountain" in the status bar. */
+export const savedFile = ref('');
+/** A save landed a moment ago: the top bar's check on a phone, the status bar's line elsewhere. */
+export const justSaved = ref(false);
+
 function announceSave() {
+  savedFile.value = useScript().project.value?.fileName ?? '';
   savesLanded.value++;
   clearTimeout(clearing);
   clearTimeout(speaking);
@@ -95,6 +104,11 @@ watch(useGuard().readOnly, (on) => {
 function messageFor(error: unknown): string {
   if (error instanceof CheckUnsettledError) {
     return 'Couldn’t check the file for changes because the script kept changing. Nothing was saved. Try saving again.';
+  }
+  // The browser opens its save dialog only in answer to a click or a key, and only for a moment
+  // after it: a save that waited too long (for a slow check, say) is refused, with no dialog.
+  if (error instanceof DOMException && error.name === 'SecurityError') {
+    return 'The browser didn’t open its save dialog. Nothing was saved. Choose Save again.';
   }
   if (error instanceof DOMException && error.name === 'NotAllowedError') {
     return 'Drafter isn’t allowed to write that file. Choose Save As to save it somewhere else.';
@@ -148,10 +162,13 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
 
   if (!files.canSaveInPlace) {
     // A browser that saves by downloading has no picker to type a name into, so Save As asks for
-    // one itself: a version kept under a name of its own, beside the one saved before.
+    // one itself: a version kept under a name of its own, beside the one saved before. So does the
+    // first Save of a script with no file (the maintainer, 2026-11-23: "I should be given the
+    // option to change the default filename"), as the picker does where there is one; after it,
+    // Save downloads under that name without asking.
     let fileName = name;
-    if (ask) {
-      const typed = await askFileName(name);
+    if (ask || !bound) {
+      const typed = await askFileName(name, !ask);
       if (typed === null) return 'cancelled';
       fileName = downloadName(typed, markdown ? '.md' : '.fountain');
     }
