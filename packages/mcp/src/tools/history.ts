@@ -215,7 +215,7 @@ type DraftsOutput = z.infer<typeof draftsOutput>;
 
 /** What a draft file says of itself, kept while the file is unchanged; null when unreadable. */
 type DraftSummary = { item: DraftItem } | null;
-const draftSummaries = new LoadCache<DraftSummary>(MAX_DRAFTS);
+const draftSummaries = new LoadCache<DraftSummary>(MAX_DRAFTS, Number.POSITIVE_INFINITY);
 
 /** A draft's pages, scenes, and words: from its text, never returned. */
 function figures(
