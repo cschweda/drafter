@@ -1,5 +1,5 @@
 // Report a problem and Suggest an idea (Help): the links the dialog opens, built from what the
-// writer typed. Drafter has no server and keeps no token, so it never posts anything. It opens
+// writer typed. Drafter keeps no GitHub token, so it never posts an issue itself. It opens
 // GitHub's new-issue page with the writer's text filled in, and the writer reviews it and submits
 // it there (a free GitHub account), or emails it from their own email app. Nothing else goes in:
 // never the script, its title, a file name, or a note. Pure, so test/report-issue.test.ts runs it.

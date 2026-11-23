@@ -1,9 +1,25 @@
 import { renderTablePdf } from '@drafter/render-pdf';
 import { PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
+import { widestLines } from '../src/table';
 import { documentFonts, extract, rowText } from './helpers';
 
 const head = { title: 'Props', date: '9 November 2026', columns: ['Item', 'Scene', 'Notes'] };
+
+describe('a table of very many rows', () => {
+  it('has its columns measured without handing every row to one call (red/blue audit, W16)', () => {
+    const rows = Array.from({ length: 200_000 }, (_, i) => [
+      `r${i}`,
+      i === 7 ? 'the\nwidest one' : 'b',
+    ]);
+    const widths = widestLines(
+      { columns: ['A', 'Bee'], rows },
+      (s) => s.length * 2,
+      (s) => s.length,
+    );
+    expect(widths).toEqual([7, 10]);
+  });
+});
 
 describe('renderTablePdf', () => {
   it('is landscape, with the title and date in the header and every cell present', async () => {

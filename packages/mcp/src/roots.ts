@@ -28,6 +28,49 @@ export function hiddenBelow(real: string, root: string, platform: NodeJS.Platfor
 }
 
 /**
+ * Folders that hold everyone's files, or every drive: as much a whole drive as `/` is. The data
+ * volume is on this list by name, since macOS gives it the device `/` has.
+ */
+const TOO_BROAD = new Set([
+  '/Users',
+  '/home',
+  '/Volumes',
+  '/mnt',
+  '/media',
+  '/run/media',
+  '/System/Volumes',
+  '/System/Volumes/Data',
+  '/System/Volumes/Data/Users',
+  '/System/Volumes/Data/home',
+  '/System/Volumes/Data/Volumes',
+]);
+
+/**
+ * Whether a folder is as much as a whole drive though it isn't `/`: one of the folders that hold
+ * every user's files or every drive, by its real path. The path's root alone caught only `/`
+ * (red/blue audit of 23 November 2026, M5).
+ */
+export async function wholeVolume(real: string, platform: NodeJS.Platform): Promise<boolean> {
+  return platform !== 'win32' && TOO_BROAD.has(real);
+}
+
+/**
+ * Whether a folder is where a drive, a share, or a disk image is mounted: on another device than
+ * the folder that holds it. Not refused, since a drive kept for scripts or a share named Scripts
+ * is a fair choice and the folder above it would read straight through anyway; the server says
+ * so when it starts (the audit of that audit).
+ */
+export async function mountPoint(real: string, platform: NodeJS.Platform): Promise<boolean> {
+  if (platform === 'win32') return false;
+  try {
+    const [here, above] = await Promise.all([stat(real), stat(posix.dirname(real))]);
+    return here.dev !== above.dev;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Each folder's real path, checked to be a folder and not a whole drive. A folder that is, or is
  * inside, another one given is the same root, so it is dropped: every file has one name. Names are
  * the folder's own; when two are alike (in any case), the second is "Scripts (2)", the third
@@ -47,7 +90,7 @@ export async function resolveRoots(
     } catch {
       throw new StartError(`${folder} isn’t a folder.`);
     }
-    if (path.parse(real).root === real)
+    if (path.parse(real).root === real || (await wholeVolume(real, platform)))
       throw new StartError(`Choose a folder, not a whole drive: ${folder}.`);
     reals.push(real);
   }

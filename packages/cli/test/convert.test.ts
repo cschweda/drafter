@@ -4,6 +4,7 @@
 import { execFileSync } from 'node:child_process';
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -487,4 +488,56 @@ describe('drafter convert', () => {
     expect(readme).toMatch(/### `drafter convert <path\.\.\.> \[options\]`/);
     for (const flag of ['--out', '--force', '--recursive']) expect(readme).toContain(flag);
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'never writes through a folder link in the output folder',
+    async () => {
+      // Red/blue audit, 2026-11-23 (C2): a link planted in the output folder, named as a folder of
+      // the source, led the file outside it.
+      const base = dir();
+      mkdirSync(join(base, 'src', 'sub'), { recursive: true });
+      mkdirSync(join(base, 'out'));
+      mkdirSync(join(base, 'outside'));
+      writeFileSync(join(base, 'outside', 'victim.fountain'), 'KEEP');
+      copyFileSync(repo('samples/fdx/short-film.fdx'), join(base, 'src', 'sub', 'victim.fdx'));
+      symlinkSync(join(base, 'outside'), join(base, 'out', 'sub'));
+      const result = await drafter(
+        'convert',
+        join(base, 'src'),
+        '--recursive',
+        '--out',
+        join(base, 'out'),
+        '--force',
+      );
+      expect(result.err + result.out).toMatch(/outside the output folder/);
+      expect(readFileSync(join(base, 'outside', 'victim.fountain'), 'utf8')).toBe('KEEP');
+      expect(readdirSync(join(base, 'outside'))).toEqual(['victim.fountain']);
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'makes no folder through a folder link in the output folder',
+    async () => {
+      // The audit of that audit: no file went out, but the folders for it were made there first.
+      const base = dir();
+      mkdirSync(join(base, 'src', 'sub', 'deeper', 'more'), { recursive: true });
+      mkdirSync(join(base, 'out'));
+      mkdirSync(join(base, 'outside'));
+      copyFileSync(
+        repo('samples/fdx/short-film.fdx'),
+        join(base, 'src', 'sub', 'deeper', 'more', 'victim.fdx'),
+      );
+      symlinkSync(join(base, 'outside'), join(base, 'out', 'sub'));
+      const result = await drafter(
+        'convert',
+        join(base, 'src'),
+        '--recursive',
+        '--out',
+        join(base, 'out'),
+        '--force',
+      );
+      expect(result.err + result.out).toMatch(/outside the output folder/);
+      expect(readdirSync(join(base, 'outside'))).toEqual([]);
+    },
+  );
 });

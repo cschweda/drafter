@@ -270,7 +270,7 @@ export const PACKAGES: readonly PackageNote[] = [
  * with one plain line on what it does for Drafter. docs/DEPENDENCIES.md has why each is allowed.
  */
 export const DEPENDENCY_NOTES: Readonly<Record<string, string>> = {
-  nuxt: 'Builds drafter.dev as a set of static files, with nothing running on a server.',
+  nuxt: 'Builds drafter.dev as a set of static files; the one thing that runs on a server is the small function that passes on a report sent by email.',
   vue: 'Draws the app’s screens and keeps them up to date as you write.',
   'vue-router': 'Gives the app and each help page an address of its own.',
   '@nuxt/ui': 'The menus, dialogs, tabs, and command palette.',
@@ -403,13 +403,13 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     plain: [
       {
         kind: 'p',
-        text: 'Drafter is a web app that runs entirely in your browser, or in a window of its own on the desktop. There is no server behind it and no account to make: once the page has loaded, everything happens on your device, and your script never leaves it.',
+        text: 'Drafter is a web app that runs entirely in your browser, or in a window of its own on the desktop. No server works on your script and there is no account to make: once the page has loaded, everything happens on your device, and your script never leaves it.',
       },
     ],
     details: [
       {
         kind: 'p',
-        text: 'drafter.dev is a set of static files: HTML, JavaScript, CSS, fonts, and dictionaries, built with Nuxt and Vue and served by Netlify. Nothing on the site runs code for you or stores anything. It is written in TypeScript, and every part of it, down to the Fountain parser, is Drafter’s own, written from public specifications (the clean-room rule, below).',
+        text: 'drafter.dev is a set of static files: HTML, JavaScript, CSS, fonts, and dictionaries, built with Nuxt and Vue and served by Netlify. Nothing on the site stores anything, and the only code it runs for you is a small function that passes on a report you choose to send by email. It is written in TypeScript, and every part of it, down to the Fountain parser, is Drafter’s own, written from public specifications (the clean-room rule, below).',
       },
     ],
   },
@@ -425,7 +425,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     details: [
       {
         kind: 'p',
-        text: 'One repository holds them all as pnpm workspaces: the engine packages in `packages/` (published as `@drafter/*`), the app in `apps/web`, and the desktop app in `apps/desktop`. Only `@drafter/cm-fountain` knows about CodeMirror, and only it and `@drafter/render-html` touch a web page; the rest run anywhere Node does, which is how the command line uses them.',
+        text: 'One repository holds them all as pnpm workspaces: the engine packages in `packages/` (named `@drafter/*` inside the repository, and not published under those names), the app in `apps/web`, and the desktop app in `apps/desktop`. Only `@drafter/cm-fountain` knows about CodeMirror, and only it and `@drafter/render-html` touch a web page; the rest run anywhere Node does, which is how the command line uses them.',
       },
       { kind: 'diagram', diagram: PACKAGE_DIAGRAM },
       {
@@ -634,7 +634,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
           '**The trap documents** are 294 broken and hostile files, each with the one outcome it must have, sent through every way a file comes in: opening and dropping in the browser and the desktop app, `drafter convert` and `drafter build`, the files kept beside a script, Drafter for Claude, and Classic Mode.',
           '**Time limits.** A test with a limit in its name (“within a second”) fails if Drafter is too slow, a keystroke has a budget in a real browser, and `pnpm bench` times the parser and the layout on long scripts.',
           '**While a change is made,** its tests are written first where they can be: a test that fails, then the code that makes it pass.',
-          '**On every pull request,** `.github/workflows/checks.yml` runs the linter (Biome), the build, every package’s type check and tests, the trap documents, the web app’s type check and tests, the desktop shell’s tests, a check of the Docker image, and the browser tests in Chromium on macOS and on Linux, split across eight runners. All of it must pass before a change is merged. Tests with a time limit are skipped there, as GitHub’s shared runners are slower.',
+          '**On every pull request,** `.github/workflows/checks.yml` runs the linter (Biome), the build, every package’s type check and tests, the trap documents, the web app’s type check and tests, the desktop shell’s tests, a check of the Docker image, and the browser tests in Chromium on macOS and on Linux, split across eight runners. All of it is meant to pass before a change is merged; nothing on GitHub enforces that yet, so the checks are read before each merge. Tests with a time limit are skipped there, as GitHub’s shared runners are slower.',
           '**Before a release,** the release gates run every test once, with its time limits, in all five browser setups, on a real computer. Then the desktop workflow builds the Linux and Windows apps and tests them on GitHub’s computers, and runs Drafter for Claude the way an AI app starts it.',
           '**What tests can’t do.** Passing tests show that what they check is right, not that nothing is wrong. A test that sometimes fails for no clear reason is rerun and looked into, not switched off. Each big change is also tried by hand before it ships, and the screen-reader checks are done by a person.',
         ],

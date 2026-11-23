@@ -1,7 +1,9 @@
-import { mkdirSync, symlinkSync } from 'node:fs';
-import { join, parse } from 'node:path';
+import { mkdirSync, mkdtempSync, symlinkSync } from 'node:fs';
+import { realpath } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, parse } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { resolveRoots, StartError } from '../src/roots';
+import { resolveRoots, StartError, wholeVolume } from '../src/roots';
 import { put, tempFolder } from './temp';
 
 const platform = process.platform;
@@ -86,4 +88,25 @@ describe('resolveRoots', () => {
     );
     await expect(resolveRoots([t, drive], platform)).rejects.toBeInstanceOf(StartError);
   });
+
+  it.skipIf(platform === 'win32')(
+    'refuses a folder that is a whole volume, or everyone’s files',
+    async () => {
+      // Red/blue audit, 2026-11-23 (M5): only `/` was refused.
+      const { homedir } = await import('node:os');
+      const everyone = dirname(await realpath(homedir()));
+      await expect(resolveRoots([everyone], platform)).rejects.toThrow(/not a whole drive/);
+      expect(await wholeVolume('/Volumes', platform)).toBe(true);
+      expect(await wholeVolume('/home', platform)).toBe(true);
+      // The data volume is everyone's files under another name, on the same device as `/`.
+      expect(await wholeVolume('/System/Volumes/Data', platform)).toBe(true);
+      expect(await wholeVolume('/System/Volumes/Data/Users', platform)).toBe(true);
+      expect(await wholeVolume('/System/Volumes/Data/home', platform)).toBe(true);
+      expect(await wholeVolume('/run/media', platform)).toBe(true);
+      // An ordinary folder, on the device of the folder that holds it.
+      const t = mkdtempSync(join(tmpdir(), 'drafter-roots-'));
+      mkdirSync(join(t, 'Scripts'));
+      expect(await wholeVolume(await realpath(join(t, 'Scripts')), platform)).toBe(false);
+    },
+  );
 });

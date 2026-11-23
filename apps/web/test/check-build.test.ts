@@ -10,6 +10,7 @@ import {
   LICENCE_FILES,
   MARKDOWN_MARKERS,
   REQUIRED_FILES,
+  testBuildProblem,
 } from '../scripts/check-build.mjs';
 
 async function site(files: Record<string, string>) {
@@ -367,5 +368,27 @@ describe('checking what the app’s shell fetches early', () => {
     expect(problems).toMatch(/markdown\.worker-AbC1\.js/);
     expect(problems).toMatch(/c\.js/);
     expect(problems).toMatch(/d\.js/);
+  });
+});
+
+describe('a test build', () => {
+  test('is refused with anything that marks a build the public gets', () => {
+    expect(testBuildProblem({})).toBeNull();
+    expect(
+      testBuildProblem({ DRAFTER_ANALYTICS: 'plausible', DRAFTER_REPORTS: 'email' }),
+    ).toBeNull();
+    // The browser tests' own build: the test module, and Netlify's headers, and nothing else.
+    expect(testBuildProblem({ DRAFTER_TEST_MODULES: '1', NETLIFY: 'true' })).toBeNull();
+    for (const mark of [
+      { DRAFTER_ANALYTICS: 'plausible' },
+      { DRAFTER_REPORTS: 'email' },
+      { CONTEXT: 'production' },
+      { GITHUB_REF: 'refs/tags/v0.28.0' },
+    ]) {
+      expect(
+        testBuildProblem({ DRAFTER_TEST_MODULES: '1', ...mark }),
+        JSON.stringify(mark),
+      ).toMatch(/test build/);
+    }
   });
 });

@@ -4,7 +4,7 @@ import { type Doc, parse, print } from '@drafter/fountain';
 import { builtins } from '@drafter/templates';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { FdxError, fromFdx, toFdx, XmlError } from '../src';
+import { FdxError, fromFdx, fromOsf, toFdx, XmlError } from '../src';
 import { HANG_MS, MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 const screenplay = builtins['us-screenplay'];
@@ -438,6 +438,37 @@ describe('fromFdx: unmapped content', () => {
     const text = fromFdx(fdx(P('Cast List', 'ODILE') + P('Cast List', 'INT. NOT A SCENE'))).text;
     expect(kinds(parse(text))).toEqual(['action', 'action']);
   });
+});
+
+describe('fromFdx: hostile and odd text (red/blue audit, 2026-11-23)', () => {
+  it('reads a tab in text outside a Text run, in a Final Draft file and a Fade In one (W10)', () => {
+    const bare = (body: string) =>
+      `<?xml version="1.0"?><FinalDraft DocumentType="Script" Version="5"><Content>${body}</Content></FinalDraft>`;
+    expect(fromFdx(bare('<Paragraph Type="Action">a&#9;b</Paragraph>')).text).toContain('a');
+    expect(() =>
+      fromFdx(bare('a\tb<Paragraph Type="Action"><Text>x</Text></Paragraph>')),
+    ).not.toThrow();
+    expect(() =>
+      fromOsf(
+        '<document><paragraphs><para><text>x</text></para><extra>a\tb</extra></paragraphs></document>',
+      ),
+    ).not.toThrow();
+  });
+
+  it(
+    'flattens a note of spaces in time that grows with its length (W5)',
+    () => {
+      const spaces = (n: number) => fdx(P('Action', `a [[${' '.repeat(n)}]] b`));
+      expect(scaling(spaces, fromFdx, 20_000).growth).toBeLessThan(MAX_GROWTH);
+      const heading = (n: number) => fdx(P('Scene Heading', `INT. A [[${' '.repeat(n)}]]`));
+      expect(scaling(heading, fromFdx, 20_000).growth).toBeLessThan(MAX_GROWTH);
+      // A note's line breaks are still made single spaces.
+      expect(fromFdx(fdx(P('Action', 'a [[one  \n\n  two\nthree]] b'))).text).toBe(
+        'a [[one two three]] b\n',
+      );
+    },
+    SCALING_TIMEOUT,
+  );
 });
 
 describe("fromFdx: Drafter's own marks", () => {

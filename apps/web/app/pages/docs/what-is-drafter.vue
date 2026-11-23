@@ -262,8 +262,8 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
       <ul>
         <li><strong>No account.</strong> Nothing to sign up for, and nothing to sign in to.</li>
         <li>
-          <strong>No server keeping your scripts.</strong> drafter.dev is a static site: it has no
-          server that could receive your script. Your work stays on your device, in the files you
+          <strong>No server keeping your scripts.</strong> drafter.dev sends the app to your browser and keeps nothing: no
+          server is ever sent your script. Your work stays on your device, in the files you
           save and in Drafter’s autosave in your browser.
         </li>
         <li>

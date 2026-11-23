@@ -330,8 +330,9 @@ useDocsHead({
       keeps it, and the rest are numbered by their place, so two scenes can share a number).
       <strong>Title page</strong>: Full, Title and author only (the title, the credit, the authors,
       and the source, without your contact details or the date), or None. <strong>Include notes
-      (Markdown, HTML, and EPUB)</strong>: Leave out (the usual) or Include, for the Markdown, HTML,
-      and EPUB exports alone.
+      (Markdown, HTML, EPUB, and Final Draft)</strong>: Leave out (the usual) or Include, for those
+      four exports alone. With Leave out, a Final Draft file also leaves out the title-page lines
+      that never print, such as Notes and Copyright.
     </p>
     <p>
       <strong>Let Drafter reopen this file (includes the full script, notes and all)</strong>, for

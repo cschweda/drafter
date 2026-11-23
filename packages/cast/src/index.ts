@@ -11,6 +11,7 @@ export { type GridModel, gridModel } from './grid';
 export {
   matchNames,
   type NameMap,
+  type NameNode,
   type NameStart,
   nameMap,
   spellings,

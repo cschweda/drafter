@@ -82,6 +82,16 @@ export function createReportHandler({
     if (req.method !== 'POST') return json(405, { error: 'Use POST.' });
     if (!ready) return json(503, { error: 'Reports by email aren’t set up yet.' });
 
+    // Only this site's own page, sending JSON. A page on another site can make a visitor's browser
+    // post plain text anywhere with no leave asked; a JSON body needs this site's leave, which it
+    // never gives (no CORS headers), and a browser always names the page it posts from.
+    const type = (req.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+    if (type !== 'application/json') return json(415, { error: 'That wasn’t a report.' });
+    const origin = req.headers.get('origin');
+    if (origin !== null && origin !== new URL(req.url).origin) {
+      return json(403, { error: 'Reports come from Drafter’s own page.' });
+    }
+
     const raw = await req.text();
     if (raw.length > MAX_BODY) return json(413, { error: 'The report is too long.' });
     let body;
@@ -131,7 +141,10 @@ export function createReportHandler({
 
     const label = kind === 'problem' ? 'Problem' : 'Idea';
     const first = (kind === 'problem' ? f.happened : f.idea).split('\n')[0];
-    const subject = `[Drafter] ${label}: ${f.title || first}`.slice(0, 200);
+    // One line: a line break in the title has no place in a subject.
+    const subject = `[Drafter] ${label}: ${f.title || first}`
+      .replace(/[\s\p{Cc}\u2028\u2029]+/gu, ' ')
+      .slice(0, 200);
     const sections =
       kind === 'problem'
         ? [

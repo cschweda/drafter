@@ -11,6 +11,16 @@ import { type IsWord, mentions, type Presence, sceneBlocks } from './presence';
 // answers. One pass over the speeches, one scan of each scene's action, then sums.
 
 /** A speaking character. */
+/** The most characters in a scene for it to count towards who shares scenes with whom. */
+export const MAX_PAIRED = 200;
+
+/**
+ * The most pairs counted over the whole script. A scene's cap alone leaves many scenes that are
+ * each just under it: a long file of them would still hold pairs without end. An ordinary script
+ * uses a few thousand; once this is spent, later scenes add nothing to who shares scenes with whom.
+ */
+export const PAIR_BUDGET = 1_000_000;
+
 export interface Character {
   /** The name in capitals: names that differ only in case are one character. */
   key: string;
@@ -173,9 +183,17 @@ export function castOf(
   const paged = strip.unit === 'pages' && index.scenes.every((scene) => scene.pages !== null);
   const eighthsOf = (s: number) => index.scenes[s]?.pages?.eighths ?? 0;
 
-  // Who shares scenes with whom: one count per pair in each scene.
+  // Who shares scenes with whom: one count per pair in each scene. A scene with a crowd in it is
+  // left out: its pairs are the square of the crowd (three thousand speakers in one scene, a
+  // file of 32 KB, made nine million entries and ran a reader out of memory; red/blue audit of
+  // 23 November 2026, M1), and a scene everyone is in says little about who plays opposite whom.
+  // The whole script has a budget too (`PAIR_BUDGET`).
   const shared: Array<Map<number, number>> = characters.map(() => new Map());
+  let pairsLeft = PAIR_BUDGET;
   for (const here of present) {
+    if (here.length > MAX_PAIRED) continue;
+    pairsLeft -= here.length * (here.length - 1);
+    if (pairsLeft < 0) break;
     for (const { row: a } of here) {
       const counts = shared[a] as Map<number, number>;
       for (const { row: b } of here) if (a !== b) counts.set(b, (counts.get(b) ?? 0) + 1);

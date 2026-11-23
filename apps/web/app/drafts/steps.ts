@@ -10,6 +10,7 @@ import {
   scenePrints,
   sketchOf,
   type WorkKind,
+  withoutTrailingSpaces,
 } from '@drafter/history';
 import { documentWords, markdownProse, wordsIn } from '../markdown/words';
 import { hashText } from '../storage/hash';
@@ -79,7 +80,7 @@ function sectionUnits(source: string): Unit[] {
     const words = (body.match(WORD) ?? []).map((w) => w.toLowerCase());
     return {
       print: {
-        hash: hash53(`${level}\n${all.replace(/[ \t]+$/gm, '')}`),
+        hash: hash53(`${level}\n${withoutTrailingSpaces(all)}`),
         headingKey: level === 0 ? '\u0000' : headingKey(title),
         heading: title,
         ...sketchOf(words),

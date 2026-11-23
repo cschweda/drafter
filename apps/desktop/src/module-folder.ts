@@ -110,6 +110,105 @@ function isOrigin(value: string): boolean {
   }
 }
 
+/**
+ * A character that can't be seen, or that turns the text round: a control character (a line break
+ * among them), a zero-width space, a soft hyphen, a word joiner, a direction mark or override. A
+ * name and a description need none, and each is a way to forge what the writer reads. The joiners
+ * some scripts and emoji are written with (U+200C, U+200D) are not among them.
+ */
+const UNSEEN =
+  /[\p{Cc}\u00ad\u061c\u115f\u1160\u200b\u200e\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\u3164\ufeff\uffa0]/u;
+/** A space that isn't the plain one: narrower, wider, or unbreaking, and so easy to miss or to forge with. */
+const ODD_SPACE = /[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/u;
+/**
+ * A joiner (U+200C, U+200D) beside a Latin, Cyrillic, or Greek letter: those alphabets are never
+ * written with one, so there it only splits a word unseen.
+ */
+const JOINER = /[\u200c\u200d]/gu;
+const STRAY_JOINER =
+  /[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}][\u200c\u200d]|[\u200c\u200d][\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}]/u;
+/**
+ * Letters and signs drawn to look like plain capitals and small letters: small capitals and the
+ * phonetic alphabets, the later Latin extensions, and letters in circles, squares, and brackets.
+ */
+const DRESSED =
+  /[\u0180-\u02af\u1d00-\u1dbf\u2460-\u24ff\ua720-\ua7ff\uab30-\uab6f\u{1f100}-\u{1f1ff}]/u;
+/** The alphabets whose letters pass for one another's. */
+const ALPHABETS = [
+  /\p{Script=Latin}/u,
+  /\p{Script=Cyrillic}/u,
+  /\p{Script=Greek}/u,
+  /\p{Script=Cherokee}/u,
+  /\p{Script=Canadian_Aboriginal}/u,
+];
+/** What a letter or a figure is read as, where it isn't itself. */
+const READ_AS: Readonly<Record<string, string>> = {
+  0: 'o',
+  1: 'l',
+  2: 'z',
+  3: 'e',
+  4: 'a',
+  5: 's',
+  6: 'g',
+  7: 't',
+  8: 'b',
+  9: 'g',
+  đ: 'd',
+  ð: 'd',
+  ł: 'l',
+  ø: 'o',
+  ı: 'i',
+};
+
+/**
+ * A name's words as a reader takes them in: accents off, joiners out, a capital inside a word
+ * starting a new one (DrafterPro), and figures as the letters they pass for.
+ */
+const wordsOf = (name: string): string[] =>
+  name
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(JOINER, '')
+    .replace(/(\p{Ll})(\p{Lu})/gu, '$1 $2')
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((word) => word !== '')
+    .map((word) => Array.from(word, (char) => READ_AS[char] ?? char).join(''));
+
+/** Whether the words spell `drafter`: as one that starts with it, or letter by letter in a row. */
+function saysDrafter(words: readonly string[]): boolean {
+  let spelled = '';
+  for (const word of words) {
+    if (word.startsWith('drafter')) return true;
+    spelled = word.length === 1 ? spelled + word : '';
+    if (spelled.includes('drafter')) return true;
+  }
+  return false;
+}
+
+/**
+ * Why a module's name can't stand, or undefined. The name heads the module's questions and its
+ * notices, so it must not read as the app's own (red/blue audit of 23 November 2026, D3, and the
+ * audit of it): not behind an unseen character, not in letters dressed as others, not a word
+ * spelled across two alphabets, and not a word that is or starts with "Drafter", with accents,
+ * figures, a capital mid-word, or spaces between its letters. A name in another alphabet, or one
+ * that only ends in the letters (Redrafter), is the module's own.
+ */
+function nameProblem(name: string): string | undefined {
+  if (UNSEEN.test(name) || STRAY_JOINER.test(name)) {
+    return 'its name holds a character that can’t be seen';
+  }
+  if (ODD_SPACE.test(name)) return 'its name holds a space that isn’t a plain one';
+  if (DRESSED.test(name)) return 'its name uses letters made to look like others';
+  for (const word of name.split(/[^\p{L}\p{M}\p{N}]+/u)) {
+    if (ALPHABETS.filter((alphabet) => alphabet.test(word)).length > 1) {
+      return 'a word of its name mixes two alphabets';
+    }
+  }
+  if (saysDrafter(wordsOf(name))) return 'its name can’t be “Drafter” or start a word with it';
+  return undefined;
+}
+
 /** Why `value` is not a module.json, or undefined when it is one. */
 export function manifestProblem(value: unknown): string | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -121,8 +220,10 @@ export function manifestProblem(value: unknown): string | undefined {
   }
   if (!isText(m.name)) return 'its module.json has no name';
   if (m.name.length > LIMITS.name) return `its name is longer than ${LIMITS.name} characters`;
-  if (/^\s*drafter\b/i.test(m.name)) return 'its name can’t be “Drafter” or start with it';
+  const named = nameProblem(m.name);
+  if (named) return named;
   if (!isText(m.description)) return 'its module.json has no description';
+  if (UNSEEN.test(m.description)) return 'its description holds a character that can’t be seen';
   if (m.description.length > LIMITS.description) {
     return `its description is longer than ${LIMITS.description} characters`;
   }

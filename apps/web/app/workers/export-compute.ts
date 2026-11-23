@@ -6,6 +6,7 @@ import {
   paginate,
   type SceneNumbering,
   type TitlePageMode,
+  titleKeyPrints,
   titlePageFor,
 } from '@drafter/layout';
 import {
@@ -621,7 +622,19 @@ export function createExporter(
     const parsed = parse(source);
     const doc = { ...parsed, titlePage: titlePageFor(parsed.titlePage, options.titlePage) };
     // Notes go into a Final Draft file only when Include notes says so: Final Draft prints them.
-    if (kind === 'fdx') return { data: toFdx(doc, template, { notes: options.notes }) };
+    if (kind === 'fdx') {
+      // With the notes left out, so is every title-page line the page doesn't print (Notes,
+      // Copyright, a key of the writer's own): the file would otherwise show a reader what the
+      // PDF never does (red/blue audit of 23 November 2026, P4).
+      const page =
+        options.notes === 'leave-out' && doc.titlePage
+          ? {
+              ...doc.titlePage,
+              fields: doc.titlePage.fields.filter((field) => titleKeyPrints(field.key)),
+            }
+          : doc.titlePage;
+      return { data: toFdx({ ...doc, titlePage: page }, template, { notes: options.notes }) };
+    }
     if (kind === 'md') {
       const { sceneNumbers, notes } = options;
       const index = sceneIndex(doc, template);

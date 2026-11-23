@@ -315,7 +315,28 @@ export function pairRows(rows: readonly DiffRow[], from: number, to: number): Sp
 }
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
-const HEADING = /^ {0,3}(#{1,3})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/;
+const OPENING = /^ {0,3}(#{1,3})(?=[ \t]|$)/;
+const blank = (char: string | undefined) => char === ' ' || char === '\t';
+
+/**
+ * A heading line's title (`## Words ##`), or null when the line isn't a heading of level 1 to 3.
+ * Read by hand: one pattern for the words, the spaces after them, and the closing marks tried a
+ * long run of spaces every way it split (the audit of the red/blue audit of 23 November 2026, W7).
+ */
+function headingTitle(line: string): string | null {
+  const open = OPENING.exec(line);
+  if (!open) return null;
+  const start = open[0].length;
+  let end = line.length;
+  while (end > start && blank(line[end - 1])) end--;
+  // Closing marks: a run of `#` at the end, with a space before it.
+  let marks = end;
+  while (marks > start && line[marks - 1] === '#') marks--;
+  if (marks < end && marks > start && blank(line[marks - 1])) end = marks;
+  // An empty heading has an empty title; `### ###` is all closing marks.
+  const title = line.slice(start, end).trim();
+  return /^#+$/.test(title) ? '' : title;
+}
 
 /**
  * The lines of a Markdown text that start a heading of level 1 to 3, with its text, skipping fenced
@@ -342,11 +363,8 @@ export function markdownAnchors(text: string): Anchor[] {
       fence = open[1];
       return;
     }
-    const heading = HEADING.exec(line);
-    if (!heading) return;
-    // An empty heading has an empty title; `### ###` is all closing marks.
-    const title = (heading[2] ?? '').trim();
-    anchors.push({ line: i, title: /^#+$/.test(title) ? '' : title });
+    const title = headingTitle(line);
+    if (title !== null) anchors.push({ line: i, title });
   });
   return anchors;
 }

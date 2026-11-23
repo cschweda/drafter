@@ -27,7 +27,7 @@ import type { DesktopRef } from '../storage/desktop-files';
 import { useFiles } from '../storage/files';
 import { getHandle, kindOf, type Project } from '../storage/projects';
 import { useScript } from '../storage/script';
-import { titleFor } from '../storage/text';
+import { fileNameFor, titleFor } from '../storage/text';
 import {
   type BesideFolder,
   type BesideNames,
@@ -103,7 +103,8 @@ function namesFor(project: Project, text: string): BesideNames | null {
   const title = titleFor(kindOf(project), text, project.title || 'Untitled');
   return (
     (project.fileName ? besideNames(project.fileName) : null) ??
-    besideNames(`${title}${ext}`) ??
+    // A title is cleaned as a download's name is: nothing unseen, no device's name.
+    besideNames(fileNameFor(title, ext)) ??
     besideNames(`Untitled${ext}`)
   );
 }

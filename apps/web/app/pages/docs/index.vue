@@ -80,8 +80,9 @@ const about: Record<string, string> = {
       <strong>Suggest an idea…</strong> (in the search too, and in About). Write a title and a few
       lines, and the dialog shows exactly what will be sent, with your version info if you leave it
       on. <strong>Open on GitHub</strong> opens GitHub’s new-issue page with it all filled in, and you
-      submit it there. That needs a free GitHub account. Drafter sends nothing itself, and never
-      includes your script.
+      submit it there. That needs a free GitHub account. On drafter.dev, <strong>Send email</strong>
+      sends the same report to the maintainer for you. Nothing is sent until you choose one of them,
+      and a report never includes your script.
     </p>
     <p>
       Your report is never lost. <strong>Copy report</strong>, <strong>Write an email</strong>, and
@@ -90,8 +91,8 @@ const about: Record<string, string> = {
       on this device until you choose <strong>Clear</strong>.
     </p>
     <p>
-      No GitHub account, or offline? Copy it, or email cschweda@gmail.com. An email goes from your
-      own email app; Drafter itself sends nothing. For a security problem, please
+      No GitHub account, or offline? Copy it, or email cschweda@gmail.com. With <strong>Write an email</strong>, it goes
+      from your own email app. For a security problem, please
       don’t open a public issue:
       <a
         href="https://github.com/cschweda/drafter/blob/main/SECURITY.md#reporting-a-problem"

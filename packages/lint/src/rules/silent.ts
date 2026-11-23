@@ -83,7 +83,11 @@ export const transitionTrailingSpace: Rule = {
       if (!line || line.transparent) continue;
       const raw = line.raw.endsWith('\r') ? line.raw.slice(0, -1) : line.raw;
       // Spaces and tabs only: a stray carriage return is a line ending, and not this rule's.
-      const kept = raw.replace(/[ \t]+$/, '');
+      // Walked back from the end: a pattern for the trailing run started again from every space
+      // of a long run in the middle of the line (red/blue audit of 23 November 2026, W3).
+      let end = raw.length;
+      while (end > 0 && (raw[end - 1] === ' ' || raw[end - 1] === '\t')) end--;
+      const kept = raw.slice(0, end);
       if (kept.length === raw.length || !kept.endsWith('TO:')) continue;
       if (!HAS_UPPER.test(kept) || HAS_LOWER.test(kept)) continue;
       const change: TextChange = {

@@ -3,6 +3,7 @@ import { lint } from '@drafter/lint';
 import { describe, expect, test } from 'vitest';
 import { expandOutline, STAGE_STUB, STUB_HEADING, scriptFromMarkdown } from '../src';
 import { apply, headings, indexOf, screenplay, stagePlay } from './helpers';
+import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 const expand = (source: string, range?: { from: number; to: number }) => {
   const { doc, template } = indexOf(source);
@@ -131,4 +132,41 @@ describe('scriptFromMarkdown', () => {
   test('has no title without a first-line heading', () => {
     expect(scriptFromMarkdown('- One.\n').title).toBeNull();
   });
+});
+
+describe('scriptFromMarkdown on hostile lines (red/blue audit, 2026-11-23, W8)', () => {
+  test('reads a heading as it always did, closing marks and all', () => {
+    const body = (line: string) => scriptFromMarkdown(`# T\n\n${line}\n`).body;
+    const cases: Array<[string, string]> = [
+      ['## Act one', '## Act one'],
+      ['## Act one ##', '## Act one'],
+      ['## Act one##', '## Act one'],
+      ['##   spaced   ', '## spaced'],
+      ['## a #b', '## a #b'],
+      ['## a # #', '## a #'],
+      ['###### deep ######   ', '###### deep'],
+    ];
+    for (const [line, section] of cases) {
+      expect(body(line).split('\n'), line).toContain(section);
+    }
+    // Nothing but marks is no section at all.
+    expect(body('## ##')).not.toMatch(/^## /m);
+  });
+
+  test(
+    'takes time that grows with a line’s length',
+    () => {
+      for (const make of [
+        (n: number) => `# T\n\n## a${' '.repeat(n)}b\n`,
+        (n: number) => `# T\n\n## ${'#'.repeat(n)}\n`,
+        (n: number) => `# T\n\n${'!['.repeat(n / 2)}\n`,
+        (n: number) => `# T\n\n${'[a] '.repeat(n / 4)}](x)\n`,
+        (n: number) => `# T\n\na${' '.repeat(n)}b\n`,
+      ]) {
+        const { growth } = scaling(make, (text) => scriptFromMarkdown(text), 4000);
+        expect(growth).toBeLessThan(MAX_GROWTH);
+      }
+    },
+    SCALING_TIMEOUT,
+  );
 });

@@ -55,7 +55,7 @@ The editor stays on the left and can't be closed. To just write, turn on focus m
 ## Principles
 
 1. **The source is the truth.** A `.fountain` file is the whole project. Anything Drafter adds, such as scene colors, a script dictionary, or revision marks, is stored in Fountain syntax or in a single metadata block at the end of the file that other Fountain tools ignore. The file stays readable in Beat, Highland, Slugline, BetterFountain, or any text editor.
-2. **Local-first, offline-first.** Your work lives in files on your own disk, with a recovery copy in your browser. Drafter is a static site: nothing to pay for, nothing to log into, nothing that can be shut off.
+2. **Local-first, offline-first.** Your work lives in files on your own disk, with a recovery copy in your browser. Drafter runs in your browser from a static site: nothing to pay for, nothing to log into, and nothing whose shutting off could take your work.
 3. **Formats are templates, and templates are data.** US screenplay, stage play, sitcom, radio drama: each is a declarative JSON template that the engine applies. You can add your own.
 
 ## What makes it different
@@ -97,7 +97,7 @@ The README's opening, as it read at v0.23.2, before it was cut down to one list.
 - **Instant.** [drafter.dev](https://drafter.dev) opens straight into a script, and the desktop app starts the same way. No installer is needed to begin, and no setup.
 - **Free, really. There's no catch.** No price, no trial, no subscription, no "free tier" with the good parts locked away, no ads, and nothing collected about you to sell. Drafter isn't a business: it's made by one writer, for writers, and given away. The production features professionals need are in it too.
 - **Open.** The code is MIT-licensed and on GitHub, and your script is a plain `.fountain` text file you own, so a lapsed licence can never lock you out of your own work.
-- **Private.** No cookies, no tracking of you, and no telemetry; drafter.dev counts visits with Plausible, with no cookies, and the desktop app has no analytics at all. Your script never leaves your device: Drafter has no server that could receive it. See [Privacy](https://drafter.dev/docs/privacy/).
+- **Private.** No cookies, no tracking of you, and no telemetry; drafter.dev counts visits with Plausible, with no cookies, and the desktop app has no analytics at all. Your script never leaves your device: no server is ever sent it. See [Privacy](https://drafter.dev/docs/privacy/).
 - **Works offline.** Once it has loaded, Drafter runs with no connection, on a plane or a train.
 - **No forced updates.** The web app updates when you reload, or the next time you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
 - **Built for working writers, free.** Production features, the kind a script needs once it's greenlit, are in the free app: colored revision sets with marks in the margin, locked pages (12A) and scene numbers, OMITTED scenes, revised pages to send out, a breakdown report, and sides for actors. There is no paid version, and there won't be one.

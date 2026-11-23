@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
+import { readFile, realpath, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { MAX_SCRIPT_BYTES } from '@drafter/archive';
@@ -51,13 +51,32 @@ const nodeIO = (): IO => ({
  * scripts, and templates can come from anyone, and a raw escape sequence in
  * one could restyle, retitle, or rewrite the user's terminal.
  */
-function inert(text: string): string {
+export function inert(text: string): string {
   let out = '';
   for (const char of text) {
-    const c = char.charCodeAt(0);
+    const c = char.codePointAt(0) as number;
+    // And what can reorder or split the line a message is on, or sit in it unseen: the direction
+    // marks, overrides, and isolates, the line and paragraph separators, the zero-width space and
+    // its kin, the tag characters, and half of a pair (red/blue audit of 23 November 2026, C5).
+    // The two joiners stay: emoji and some scripts are written with them.
     const control =
-      (c < 0x20 && c !== 0x09 && c !== 0x0a && c !== 0x0c) || (c >= 0x7f && c <= 0x9f);
-    out += control ? `\\u${c.toString(16).padStart(4, '0')}` : char;
+      (c < 0x20 && c !== 0x09 && c !== 0x0a && c !== 0x0c) ||
+      (c >= 0x7f && c <= 0x9f) ||
+      c === 0x061c ||
+      c === 0x200b ||
+      c === 0x200e ||
+      c === 0x200f ||
+      (c >= 0x2028 && c <= 0x202e) ||
+      (c >= 0x2060 && c <= 0x2064) ||
+      (c >= 0x2066 && c <= 0x2069) ||
+      c === 0xfeff ||
+      (c >= 0xd800 && c <= 0xdfff) ||
+      (c >= 0xe0000 && c <= 0xe007f);
+    out += !control
+      ? char
+      : c > 0xffff
+        ? `\\u{${c.toString(16)}}`
+        : `\\u${c.toString(16).padStart(4, '0')}`;
   }
   return out;
 }
@@ -189,6 +208,9 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 }
 
 async function build(input: string, options: BuildOptions, io: IO): Promise<number> {
+  if (options.storyAtlas !== undefined && options.storyMap !== undefined) {
+    throw new CliError('--story-map is the old name of --story-atlas: give one of them');
+  }
   if (options.storyAtlas === undefined && options.storyMap !== undefined) {
     options.storyAtlas = options.storyMap;
   }
@@ -214,10 +236,41 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
     );
   }
   const source = resolve(io.cwd, input);
+  // The same file, however it is named: by another case on a disk that folds case, or by a link.
+  // Comparing the two paths as written let `--txt SCRIPT.FOUNTAIN` write over `script.fountain`
+  // (red/blue audit of 23 November 2026, C1).
+  const sameFile = async (a: string, b: string) => {
+    if (a === b) return true;
+    const [one, two] = await Promise.all(
+      [a, b].map((path) => stat(path, { bigint: true }).catch(() => null)),
+    );
+    return one !== null && two !== null && one.dev === two.dev && one.ino === two.ino;
+  };
+  // Where a file will really be: its folder with every link followed, and its own name. Two
+  // outputs named through a link and without one are one file (the audit of that audit, C4).
+  const placeOf = async (path: string) =>
+    join(await realpath(dirname(path)).catch(() => dirname(path)), basename(path));
+  const given = typeof options.template === 'string' ? resolve(io.cwd, options.template) : null;
+  const targets: string[] = [];
+  const places = new Set<string>();
   for (const [, target] of outputs) {
-    if (target !== '-' && resolve(io.cwd, target) === source) {
-      throw new CliError(`won't write over the input, ${input}`);
+    if (target === '-') continue;
+    const path = resolve(io.cwd, target);
+    if (await sameFile(path, source)) throw new CliError(`won't write over the input, ${input}`);
+    // A template named as a file, that is: a built-in's name is no file.
+    if (
+      given !== null &&
+      (await stat(given).catch(() => null))?.isFile() &&
+      (await sameFile(path, given))
+    ) {
+      throw new CliError(`won't write over the template, ${options.template}`);
     }
+    const place = await placeOf(path);
+    let twice = places.has(place);
+    for (const other of targets) twice ||= await sameFile(path, other);
+    if (twice) throw new CliError(`won't write two outputs to one file, ${target}`);
+    places.add(place);
+    targets.push(path);
   }
 
   const { doc, template, layout, header, text, bytes } = await load(input, options, io);
@@ -229,6 +282,7 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
   for (const problem of problemsOf(doc, layout)) {
     if (problem.severity !== 'info') io.err(`${describe(input, at, problem)}\n`);
   }
+  const done: string[] = [];
   for (const [kind, target] of outputs) {
     const data =
       kind === 'pdf'
@@ -250,6 +304,17 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
             : kind === 'txt'
               ? renderText(layout, template)
               : `${JSON.stringify(toJSON(doc), null, 2)}\n`;
+    // One more look, now that the earlier outputs are there: on a disk that folds case, `a.out`
+    // and `A.OUT` are one file, and nothing says so until the first is written.
+    if (target !== '-') {
+      const path = resolve(io.cwd, target);
+      for (const other of done) {
+        if (await sameFile(path, other)) {
+          throw new CliError(`won't write two outputs to one file, ${target}`);
+        }
+      }
+      done.push(path);
+    }
     await emit(target, data, io);
   }
   const written = outputs.map(([, target]) => (target === '-' ? 'standard output' : target));

@@ -1,6 +1,7 @@
 {
   "name": "@drafter/production",
   "version": "0.27.4",
+  "private": true,
   "description": "Production for Drafter: locked pages and scene numbers, and colored revision sets, kept in the script's own file.",
   "license": "MIT",
   "type": "module",

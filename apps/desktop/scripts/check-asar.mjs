@@ -91,6 +91,34 @@ export function checkListing(listing, options = {}) {
 }
 
 /**
+ * Text only a test build of the web app holds (apps/web/scripts/check-build.mjs has the same
+ * list): the test module's button and command, and the two probes. The desktop tests build the
+ * web app with them in (`DRAFTER_TEST_MODULES=1`, which `build-web.mjs` passes through), so a
+ * package made in a shell where that is still set would ship them; a package never may (red/blue
+ * audit of 23 November 2026, S7, and the audit of it).
+ */
+export const FIXTURE_MARKERS = [
+  'Count scenes',
+  'Fixture: add a note',
+  'drafterHistoryProbe',
+  'drafterCastProbe',
+];
+
+/**
+ * The packed web app's scripts that hold a test build's text.
+ * @param {string[]} paths the package's paths, without a leading slash
+ * @param {(path: string) => string} read a packed file's text
+ */
+export function fixtureLeaks(paths, read) {
+  return paths
+    .filter((path) => path.startsWith('web/') && /\.(?:js|mjs|html)$/.test(path))
+    .filter((path) => {
+      const text = read(path);
+      return FIXTURE_MARKERS.some((marker) => text.includes(marker));
+    });
+}
+
+/**
  * The names of the packages the app needs at run time: its `dependencies`, and theirs, found as Node
  * would find them from each package's own folder.
  * @param {string} manifest the app's package.json
@@ -132,6 +160,19 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     dictionaries: existsSync(new URL('../dictionaries/', import.meta.url)),
     runtime: runtimeClosure(fileURLToPath(new URL('../package.json', import.meta.url))),
   });
+  const packed = listing.map((path) => path.replace(/^[\\/]/, '').replaceAll('\\', '/'));
+  const files = packed.filter((path) => {
+    try {
+      return !asar.statFile(file, path).files;
+    } catch {
+      return false;
+    }
+  });
+  for (const path of fixtureLeaks(files, (path) => asar.extractFile(file, path).toString('utf8'))) {
+    problems.push(
+      `${path}: holds the test module, so this is a test build and must not be packaged`,
+    );
+  }
   if (problems.length > 0) {
     for (const problem of problems) console.error(`::error::${problem}`);
     process.exit(1);

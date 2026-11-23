@@ -156,7 +156,7 @@ function breaks(text: string, fromEnd: boolean): number {
  */
 export function putBackChanges(nowText: string, place: Place, sceneText: string): TextChange[] {
   const br = lineBreakOf(nowText);
-  const scene = sceneText.replace(/\s+$/, '').replace(/\r?\n/g, br);
+  const scene = sceneText.trimEnd().replace(/\r?\n/g, br);
   const at = place.side === 'end' ? endOfBody(nowText) : place.at;
   const before = nowText.slice(0, at);
   const after = nowText.slice(at);

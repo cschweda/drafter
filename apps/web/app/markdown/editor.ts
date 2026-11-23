@@ -8,7 +8,14 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view';
-import { isEmphasisMark, MAX_MARKS, MAX_NESTING } from './depth';
+import {
+  isEmphasisMark,
+  isOpener,
+  MAX_MARKS,
+  MAX_NESTING,
+  MAX_OPENERS,
+  OPENER_BUDGET,
+} from './depth';
 
 // The Source pane's mode for a Markdown document: CodeMirror's general-purpose Markdown grammar
 // (a Lezer grammar, which is outside Plan 2's "no Lezer grammar" rule: that rule is about
@@ -135,16 +142,52 @@ export function markdownMode(): Extension {
   ];
 }
 
-/** Whether a paragraph's text has more than MAX_MARKS emphasis marks, worked out once per paragraph. */
-const dense = new WeakMap<object, boolean>();
-function isDense(cx: { text: string }): boolean {
-  let known = dense.get(cx);
+/** A run of spaces or tabs longer than this is plain text: no line break is that far behind them. */
+const MAX_SPACE_RUN = 1000;
+const SPACE = 32;
+const TAB = 9;
+const OPEN = 91;
+const CLOSE = 93;
+const LESS = 60;
+
+/** What a paragraph is crowded with, worked out once per paragraph. */
+interface Crowded {
+  /** More than MAX_MARKS emphasis marks. */
+  marks: boolean;
+  /** More than MAX_MARKS brackets. */
+  brackets: boolean;
+  /** A run of spaces or tabs longer than MAX_SPACE_RUN. */
+  spaces: boolean;
+  /** More than MAX_OPENERS of `<!` and `<?`. */
+  openers: boolean;
+}
+const crowded = new WeakMap<object, Crowded>();
+function crowdedOf(cx: { text: string }): Crowded {
+  let known = crowded.get(cx);
   if (known === undefined) {
     let marks = 0;
-    for (let i = 0; i < cx.text.length && marks <= MAX_MARKS; i++)
-      if (isEmphasisMark(cx.text.charCodeAt(i))) marks++;
-    known = marks > MAX_MARKS;
-    dense.set(cx, known);
+    let brackets = 0;
+    let run = 0;
+    let longest = 0;
+    let openers = 0;
+    for (let i = 0; i < cx.text.length; i++) {
+      const code = cx.text.charCodeAt(i);
+      if (code === LESS && isOpener(cx.text, i)) openers++;
+      if (code === SPACE || code === TAB) {
+        if (++run > longest) longest = run;
+        continue;
+      }
+      run = 0;
+      if (isEmphasisMark(code)) marks++;
+      else if (code === OPEN || code === CLOSE) brackets++;
+    }
+    known = {
+      marks: marks > MAX_MARKS,
+      brackets: brackets > MAX_MARKS,
+      spaces: longest > MAX_SPACE_RUN,
+      openers: openers > MAX_OPENERS || openers * cx.text.length > OPENER_BUDGET,
+    };
+    crowded.set(cx, known);
   }
   return known;
 }
@@ -153,16 +196,33 @@ function isDense(cx: { text: string }): boolean {
  * In a paragraph with more than MAX_MARKS `*` and `_`, they are plain text: the grammar's emphasis
  * work grows with their number squared, and 160 KB of `*_` held the page for 14 seconds, again on
  * every reload (red/blue audit, 2026-11-03). Taking each mark as one plain character, before the
- * grammar's own emphasis parser sees it, keeps that paragraph linear; every other paragraph is
- * highlighted as before.
+ * grammar's own parsers see it, keeps that paragraph linear; every other paragraph is highlighted
+ * as before. The same for a paragraph crowded with brackets, whose link parser looks back through
+ * them, and for one with a very long run of spaces, where each space looked ahead for the line
+ * break that would make a hard break of it: 160 KB of spaces took 16 seconds (red/blue audit of
+ * 23 November 2026, W2). And for one with more than MAX_OPENERS of `<!` and `<?`: each that
+ * never closes looked to the paragraph's end (the audit of that audit).
  */
 const plainWhenDense = {
   parseInline: [
     {
       name: 'PlainWhenDense',
-      before: 'Emphasis',
-      parse: (cx: { text: string; offset: number }, next: number, pos: number) =>
-        isEmphasisMark(next) && isDense(cx) ? pos + 1 : -1,
+      before: 'Escape',
+      parse: (cx: { text: string; offset: number }, next: number, pos: number) => {
+        const isSpace = next === SPACE || next === TAB;
+        const isBracket = next === OPEN || next === CLOSE;
+        const isLess = next === LESS;
+        if (!isSpace && !isBracket && !isLess && !isEmphasisMark(next)) return -1;
+        const what = crowdedOf(cx);
+        const plain = isSpace
+          ? what.spaces
+          : isBracket
+            ? what.brackets
+            : isLess
+              ? what.openers
+              : what.marks;
+        return plain ? pos + 1 : -1;
+      },
     },
   ],
 };

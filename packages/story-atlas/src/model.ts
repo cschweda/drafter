@@ -333,10 +333,18 @@ export function buildStoryAtlas(input: MapInput): StoryAtlas {
 
   // Acts: a scene before the first act is Act 1's.
   const sections = topSections(index);
+  // The last act that starts before `block`, by halving: the acts are in the script's order, and
+  // a look through all of them for each scene took the square of a long script's acts (red/blue
+  // audit of 23 November 2026, M2).
   const actIndexOf = (block: number) => {
-    let at = 0;
-    for (let a = 0; a < sections.length; a++) if ((sections[a] as Section).block < block) at = a;
-    return at;
+    let low = 0;
+    let high = sections.length - 1;
+    while (low < high) {
+      const middle = (low + high + 1) >> 1;
+      if ((sections[middle] as Section).block < block) low = middle;
+      else high = middle - 1;
+    }
+    return low;
   };
 
   // A play's settings (Call 16): "The same" takes the scene before's.
@@ -401,8 +409,14 @@ export function buildStoryAtlas(input: MapInput): StoryAtlas {
     };
   });
 
+  // Each act's scenes, gathered in one pass: asking every act to look through every scene took
+  // the two multiplied (the audit of the red/blue audit of 23 November 2026, M2).
+  const byAct: number[][] = sections.map(() => []);
+  scenes.forEach((scene, s) => {
+    if (scene.act !== null) byAct[scene.act - 1]?.push(s);
+  });
   const acts: MapAct[] = sections.map((section, a) => {
-    const mine = scenes.flatMap((scene, s) => (scene.act === a + 1 ? [s] : []));
+    const mine = byAct[a] as number[];
     return {
       n: a + 1,
       title: actTitle(section),

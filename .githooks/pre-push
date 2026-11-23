@@ -1,6 +1,6 @@
 #!/bin/sh
 # Rejects a push unless at least one of the commits being pushed updates
-# CHANGELOG.md. Enable once per clone:  git config core.hooksPath .githooks
+# CHANGELOG.md. Installed by `pnpm install` (scripts/git-hooks.mjs copies it into Git's hooks folder)
 #
 # Git feeds one line per ref on stdin:
 #   <local ref> <local sha> <remote ref> <remote sha>

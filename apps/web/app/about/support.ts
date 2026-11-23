@@ -22,7 +22,9 @@ function page(address: string | undefined, host: string, fits: RegExp): string |
   try {
     const url = new URL(address);
     const plain = url.protocol === 'https:' && url.host === host && !url.search && !url.hash;
-    return plain && fits.test(url.pathname) && url.href === address ? address : undefined;
+    // Written as exactly that, so with no name before the host and no bare `?` or `#` after it.
+    const written = address === `https://${host}${url.pathname}`;
+    return plain && written && fits.test(url.pathname) ? address : undefined;
   } catch {
     return undefined;
   }

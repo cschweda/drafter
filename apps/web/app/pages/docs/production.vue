@@ -136,7 +136,9 @@ useDocsHead({
     <pre><code>.OMITTED #12#</code></pre>
     <p>
       The number stays, the page keeps its place, and the scene’s text is cut from the script.
-      Drafter first takes a snapshot, so the scene is kept in History and in your cuts.
+      Drafter first takes a snapshot, so the scene is kept in History and in your cuts. While the
+      revision is open, the scene’s text is also still in the file itself, in the long line at its
+      end (<a href="#long-line">below</a>): cut from the pages, not from what you send.
     </p>
 
     <h2 id="warnings">Warnings in the Problems pane</h2>
@@ -166,6 +168,14 @@ useDocsHead({
       draw the marks. It is in the file, not just on your computer, so the marks look the same on
       any computer that opens the script, and after the file travels by email. Other apps skip the
       block. Please leave it alone.
+    </p>
+    <p>
+      <strong>That line holds everything the script held then, so it travels with the file:</strong>
+      a scene you have cut or omitted since, and its notes, can be read by anyone you send the
+      <code>.fountain</code> file to, a copy made with Export → Fountain, or an HTML or EPUB made
+      with Let Drafter reopen this file. A PDF, a Final Draft file, plain text, and Markdown never
+      carry it. To send the script without it, send one of those, or open the next revision set
+      (the line is replaced with the script as it stands then) or unlock the script first.
     </p>
 
     <h2 id="unlock">Unlocking and clearing marks</h2>

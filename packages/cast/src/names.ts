@@ -100,16 +100,38 @@ export interface Spelling extends Phrase {
 }
 
 /**
- * The spellings that start with one word: the one-word names, and the longer ones by their second
- * word, longest first. A word many names start with (`THE`) costs one lookup of the next word,
- * not a try of every name.
+ * The spellings that start with one word: the one-word names, and the longer ones down a tree of
+ * the words that follow. A word many names start with (`THE`), or two words (`THE OLD`), costs
+ * one lookup of the next word, never a try of every name.
  */
 export interface NameStart {
   alone: Spelling[];
-  next: Map<string, Spelling[]>;
+  next: Map<string, NameNode>;
 }
 
-/** Each spelling by its first word, then by its second. */
+/**
+ * The longer spellings that reach this word by one way: those ending at it, and the rest by their
+ * next step. Every spelling here has the same words and the same marks between them, so the first
+ * is the one found.
+ */
+export interface NameNode {
+  ends: Spelling[];
+  next: Map<string, NameNode>;
+}
+
+/**
+ * A step of the tree: a word and the marks before it (`DR. VOSS` and `DR VOSS` part ways here, so
+ * names alike in their words never have to be tried one by one).
+ */
+export const stepKey = (gap: string, word: string): string => `${gap}\u0000${word}`;
+
+/**
+ * The most words a name is looked for by. No one is called more, and a name of thousands of the
+ * same word made every place that word stood a walk of thousands of steps.
+ */
+export const MAX_NAME_WORDS = 12;
+
+/** Each spelling by its first word, then word by word. */
 export type NameMap = Map<string, NameStart>;
 
 /** The map of every spelling of `names` by first word; `word` says the name is an ordinary word. */
@@ -117,36 +139,40 @@ export function nameMap(names: ReadonlyArray<{ name: string; word: boolean }>): 
   const map: NameMap = new Map();
   names.forEach(({ name, word }, character) => {
     for (const phrase of phrases(name, word)) {
+      if (phrase.words.length > MAX_NAME_WORDS) continue;
       const first = phrase.words[0] as string;
       let start = map.get(first);
       if (!start) {
         start = { alone: [], next: new Map() };
         map.set(first, start);
       }
-      const second = phrase.words[1];
-      if (second === undefined) {
+      if (phrase.words.length === 1) {
         start.alone.push({ ...phrase, character });
         continue;
       }
-      let list = start.next.get(second);
-      if (!list) {
-        list = [];
-        start.next.set(second, list);
+      let level = start.next;
+      let node: NameNode | undefined;
+      for (let k = 1; k < phrase.words.length; k++) {
+        const key = stepKey(phrase.gaps[k] as string, phrase.words[k] as string);
+        node = level.get(key);
+        if (!node) {
+          node = { ends: [], next: new Map() };
+          level.set(key, node);
+        }
+        level = node.next;
       }
-      list.push({ ...phrase, character });
+      // In the order the names came, so of two spelled alike the first is the one found.
+      (node as NameNode).ends.push({ ...phrase, character });
     }
   });
-  // Stable, so names of one length keep the order they came in.
-  for (const start of map.values()) {
-    for (const list of start.next.values()) list.sort((a, b) => b.words.length - a.words.length);
-  }
   return map;
 }
 
 /**
  * Calls `found` with the character and the offset in `text` of every name in it, in order. One
- * pass over the words: at each, the names starting with it and the word after are tried longest
- * first, then the one-word names; a match goes on past its last word, so ANN LEE is never also ANN.
+ * pass over the words: at each, the tree is followed as far as the words go, the longest name
+ * that fits is taken, then the one-word names; a match goes on past its last word, so ANN LEE is
+ * never also ANN.
  */
 export function matchNames(
   text: string,
@@ -161,9 +187,17 @@ export function matchNames(
     const start = map.get(here.word);
     let length = 0;
     if (start) {
-      const after = words[i + 1];
-      const longer = after ? start.next.get(after.word) : undefined;
-      const match = longer?.find((s) => fits(words, i, s)) ?? start.alone[0];
+      let match: Spelling | undefined;
+      let level = start.next;
+      const last = Math.min(words.length, i + MAX_NAME_WORDS);
+      for (let k = i + 1; k < last; k++) {
+        const token = words[k] as Token;
+        const node = level.get(stepKey(token.gap, token.word));
+        if (!node) break;
+        match = node.ends[0] ?? match;
+        level = node.next;
+      }
+      match ??= start.alone[0];
       if (match) {
         found(match.character, here.at);
         length = match.words.length;
@@ -171,13 +205,4 @@ export function matchNames(
     }
     i += Math.max(1, length);
   }
-}
-
-function fits(words: readonly Token[], i: number, spelling: Spelling): boolean {
-  if (i + spelling.words.length > words.length) return false;
-  for (let k = 1; k < spelling.words.length; k++) {
-    const token = words[i + k] as Token;
-    if (token.word !== spelling.words[k] || token.gap !== spelling.gaps[k]) return false;
-  }
-  return true;
 }

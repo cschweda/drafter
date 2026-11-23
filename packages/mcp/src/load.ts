@@ -314,12 +314,20 @@ export async function load(path: string, ctx: ToolContext): Promise<Loaded> {
   if (cached) return { ...cached, file };
 
   afterCheck?.();
+  ctx.cache.makeRoom(file.size);
   // Judged by what is inside, in Open's order, whatever the name says.
   const inside = await readInside(file, name);
   parses++;
   const loaded = inside.markdown
     ? loadMarkdown(file, format, inside.content, inside.text)
     : loadScript(file, format, inside.content, inside.text, inside.notes, options.wordsPerMinute);
-  ctx.cache.set(file.real, file.size, file.mtimeMs, loaded);
+  // Charged by the text that was parsed, not the file's size: a packed file holds far more.
+  ctx.cache.set(
+    file.real,
+    file.size,
+    file.mtimeMs,
+    loaded,
+    Math.max(file.size, inside.text.length),
+  );
   return loaded;
 }

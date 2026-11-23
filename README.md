@@ -42,7 +42,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 - **Free, with no catch.** No price, no trial, no subscription, no locked "free tier", and no ads. Drafter isn't a business: one writer makes it, for writers, and gives it away. There is no paid version, and there won't be one.
 - **No login, ever.** No sign-up, no sign-in, no licence key, no activation. Close it, open it tomorrow, and you're back in your script.
-- **Private.** No cookies, no tracking of you, no telemetry. Drafter has no server that could receive your script, so it never leaves your device. The website counts page visits with cookie-free [Plausible](https://plausible.io/privacy-focused-web-analytics); **the desktop app has no analytics at all.** [Privacy](#privacy-your-script-stays-with-you), below, has the details.
+- **Private.** No cookies, no tracking of you, no telemetry. No server is ever sent your script, so it never leaves your device. The website counts page visits with cookie-free [Plausible](https://plausible.io/privacy-focused-web-analytics); **the desktop app has no analytics at all.** [Privacy](#privacy-your-script-stays-with-you), below, has the details.
 - **Open.** The code is MIT-licensed. Your script is a plain `.fountain` text file you own, which any app can open and which will still open in fifty years. A lapsed licence can never lock you out of your own work.
 - **Instant, and offline.** No installer or setup is needed to begin. Once it has loaded, Drafter runs with no connection, on a plane or a train.
 - **No forced updates.** The web app updates when you reload, or the next time you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
@@ -53,7 +53,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 Writers worry, rightly, about a script getting out before it's ready. Drafter is built so it can't, and an [audit](docs/privacy-audit-2026-11-03.md) checks it.
 
-- **Nothing in the cloud.** No server stores anything about your script, at drafter.dev or anywhere else: not its text, its title, its length, or its name. drafter.dev is a set of static files that sends the app to your browser. It has no database, no accounts, and nowhere to upload to. The desktop app has no server at all.
+- **Nothing in the cloud.** No server stores anything about your script, at drafter.dev or anywhere else: not its text, its title, its length, or its name. drafter.dev is a set of static files that sends the app to your browser, and one small function that passes on a report you choose to send by email. It has no database, no accounts, and nowhere to upload a script to. The desktop app has no server at all.
 - **Kept on your device only.** Your script lives in the files you save, plus Drafter's autosave, its history, drafts, and cuts. In the web app those are in your browser's own storage (IndexedDB) on this device, and in the desktop app in its folder on your computer. Drafts and cuts are also plain files beside your script.
 - **No AI.** Drafter has no AI in it: no AI service, no model, and nothing that reads your script to suggest, summarize, or learn from it. Your words never train anything. If you want your own AI app to read your scripts, [Drafter for Claude](https://drafter.dev/docs/drafter-for-claude/) is a separate program you set up yourself. It reads only the folders you name, and Drafter never starts it.
 - **It leaves only when you send it.** A file you share, a report you open on GitHub, an email you write: those go because you chose them, and only what you see goes.
@@ -64,8 +64,9 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 |---|---|---|---|
 | The app, its fonts, and its dictionaries | drafter.dev itself (or your own server, if you [host it](#self-hosted)) | When the page loads, and when it checks for a new version | No |
 | A count of page visits ([Plausible](https://drafter.dev/docs/privacy/#analytics): privacy-first, no cookies, no ads; only to see the basic traffic, for future improvements) | plausible.io | drafter.dev only: each page view and the time on it, each address cut before any `?` or `#`; no clicks, downloads, or forms | No. The desktop app and self-hosted copies don't have it |
-| A check for a new version | GitHub | The desktop app, when it starts; you can turn it off in Settings | No. GitHub sees your IP address, version, and system |
+| A check for a new version, and the update | GitHub | The desktop app, when it starts; you can turn it off in Settings. The AppImage and the Windows app then download the update in the background | No. GitHub sees your IP address, version, and system |
 | A report or an idea | GitHub, or your email app | Only when you click **Open on GitHub** or **Write an email** | Only what you typed and saw |
+| A report or an idea, sent by email for you | drafter.dev's own function, which hands it to [Resend](https://resend.com) to deliver to the maintainer | drafter.dev only: when you click **Send email**. Opening the report dialog asks that function once whether email is set up, and sends nothing else | Only what you typed and saw, and your reply address if you gave one. The function sees your internet address, as any server does, and counts reports from it for a minute |
 | A tip, if you choose to leave one | Ko-fi | Only when you follow the link on the [Support page](https://drafter.dev/docs/support/) | No |
 | A module you add yourself | The addresses it names | Desktop app only, and only once you agree to them | It can, so add only modules you trust ([more](https://drafter.dev/docs/privacy/#modules)) |
 
@@ -148,25 +149,24 @@ The [Technical details](docs/technical-details.md#security) give the specifics.
 
 Every audit of Drafter, newest first. The newest is in full; each earlier one is kept here in a line, with its full report in [`docs/`](docs/AUDITS.md).
 
-**Newest: [red/blue team audit, 3 November 2026](docs/redblue-audit-2026-11-03.md).** Four red-team attackers each took one area (the web app and its file formats, the desktop app, the supply chain and release, and privacy) and tried to break it. A blue team then checked each finding, fixed what was real with a test that fails without the fix, and left only GitHub and npm settings for the maintainer. **No attack ran code from a script, a file, or an export, got past the security policy, or reached the network from a page.**
+**Newest: [red/blue team audit, 23 November 2026](docs/redblue-audit-2026-11-23.md).** Five red-team attackers each took one area (the web app and its file formats, the desktop app, the supply chain and release, privacy, and, for the first time, Drafter for Claude with the command line and Classic Mode) and tried to break it, proving each weakness by running it where they could. A blue team checked every finding and fixed what was real, with a test that fails without the fix wherever the fix is in code, and a second team then audited the findings and the fixes, which sent two dozen of them back to be done properly. **No attack ran code from a script, a file, or an export, reached the network from a page, or read a file the writer hadn't chosen.** What broke was mostly small hostile files that froze the editor or a tool.
 
 | | Severity | Finding | Mitigation | Status |
 |---|---|---|---|---|
-| P1 | High | Final Draft exports carried notes and synopses as printed text, even with notes left out | Leave out now leaves them all out; Include says they print | Fixed |
-| D1 | High | A compromised desktop page could hand the browser an address holding the script, past every network block | Only Drafter's own links open at once; any other site asks you first | Fixed |
-| S1 | High | One stolen credential could push a release, with no tag or branch protection | 7-day waits on new dependencies; tag and branch rulesets and a release environment are for the maintainer | Maintainer |
-| W1 | Medium | 160 KB of `*_` in a Markdown file froze the tab, again on every reload | Past 4,000 marks in a paragraph, they're plain text | Fixed |
-| W2 | Medium | The same file stalled the Preview and every export after it | That paragraph is refused before parsing, with a trap document to hold it | Fixed |
-| P2 | Medium | The script's title goes into the browser's history and tab sync | Settings → Hide the script's title in the tab | Mitigated |
-| P3 | Medium | The Story Atlas's logline and synopses went into the browser's form history | `autocomplete="off"` on every text field, with a test | Fixed |
-| P4 | Medium | Plausible's script could read the page, and the policy allowed all of plausible.io | The policy allows one script and one address; the help says what can't be checked | Mitigated |
-| S2 | Medium | `drafter build` wrote through a planted link, overwriting a file outside the folder | Written beside and renamed, so a link is replaced | Fixed |
-| D2 | Low–Medium | A page could open a hidden window with the app's bridge | New windows always get the app's own chrome | Fixed |
-| S3–S5, W3–W4, P5–P7, D3 | Low | One huge file broke Drafter for Claude's listing; PR checks unenforced; Docker cached 404s; a template named `constructor` broke Cuts; a slow spellcheck on hyphen chains; cuts in shared folders; EPUB ids linking blind copies; a help line | Each fixed with a test, or warned about in the help; a download handler deferred | Fixed (D3 deferred) |
-| W5–W6, S6–S8, D4, P8 | Info | Extra addresses in a contact link, prototype lookups, a loose release check, ignore rules, and smaller notes | Fixed or recorded in [DEFERRED](docs/DEFERRED.md) | Fixed / recorded |
+| S1 | High | A pull request could run code on the maintainer's machine when checked out, through the tracked Git hooks folder | The hook is copied into Git's own folder; Git no longer reads the tracked one | Fixed |
+| S2 | High | One stolen credential could still push a release (open since 3 November) | Branch and tag rulesets, a release environment, and immutable releases are for the maintainer | Maintainer |
+| P1 | Medium | A locked script's file carries its text as it stood before the revision, scenes since cut included | The Production help page and the reopenable export's hint say so, and how to send a script without it | Documented |
+| P2 | Medium | Remove from this browser left the script's file name and its folder's handle | Removed with the script; a test fails on any row left | Fixed |
+| P3 | Medium | Privacy statements had become untrue since reports by email | The README and five help pages say what is sent, to whom, and when | Fixed |
+| S3 | Medium | A release build restored caches that other code can write | A release is built with no cache | Fixed |
+| W1–W6, M1–M3 | Medium | Nine small files froze the editor, an export, or Drafter for Claude: a note of spaces, a crowded scene, nested brackets, and others, each costing the square or the cube of its size | Each is linear now, or refused past a limit no real document reaches | Fixed |
+| D1, D3, C1–C3, K1, K2, M4, M5, W7–W16, P4–P7, S5–S8 | Low | A trusted site took any address; a module could pose as Drafter; the command line could write over its input; Classic Mode's settings block could be deleted; a Final Draft export showed title-page lines that never print; and smaller ones | Each fixed; those in code, with a test | Fixed |
+| D2, D5, S4 | Low | Two desktop findings that need a running app to prove, and a diagram script outside the lockfile | Recorded in [DEFERRED](docs/DEFERRED.md) | Deferred |
+| D4 | Low | Two scripts whose names clean to the same thing share drafts beside the file | Accepted, and the comment that overstated the guarantee corrected | Accepted |
 
 **Earlier audits:**
 
+- **[Red/blue team audit, 3 November 2026](docs/redblue-audit-2026-11-03.md):** four attackers, one area each. No attack ran code or reached the network from a page. Fixed: Final Draft exports that carried notes as printed text, a desktop page that could hand the browser an address holding the script, a file that froze the Markdown editor, and smaller ones.
 - **[Privacy audit, 3 November 2026](docs/privacy-audit-2026-11-03.md):** nothing about a script is stored in the cloud, and there's no AI. A writing session in three browsers on live drafter.dev sent the script in no request. One leak was fixed the same day: on drafter.dev, a report's text could reach the analytics.
 - **[Security audit, 1 November 2026](docs/security-audit-2026-11-01.md):** the first formal audit. No exploitable hole and nothing leaves the device. Fixed: private vulnerability reporting, the desktop's drop grant, Nuxt 4.6.3, and Dependabot.
 - **[Clean-room audit, 22 November 2026](docs/clean-room-audit-2026-11-22.md):** no copied code, no screenwriting package or converter, no file from another app. Fixed: a film reference back in a test, three small values that had come from a real Final Draft sample, and records that had fallen behind.
@@ -235,7 +235,7 @@ Sources: each maker's own pricing, features, and help pages (Final Draft, Writer
 
 **On the web:** open [drafter.dev](https://drafter.dev) and write, on a computer or a phone, offline once it has loaded. Chrome and Edge save straight back to your file; other browsers download a copy ([Storage and browsers](docs/DEVELOPMENT.md#storage-and-browsers)). Install it as an app from the address bar to keep it in your Dock or Start menu.
 
-**On the desktop:** the same editor in a window of its own, built with Electron. It always saves in place, keeps its autosave in its own folder where no browser can delete it (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`), opens a `.fountain` file with a double-click, and asks **Save**, **Don't Save**, or **Cancel** before closing. It works offline. Its only network request is one update check at start, which you can turn off in Settings, and it never installs an update by itself. [Drafter on the web and on the desktop](docs/web-and-desktop.md) compares the two.
+**On the desktop:** the same editor in a window of its own, built with Electron. It always saves in place, keeps its autosave in its own folder where no browser can delete it (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`), opens a `.fountain` file with a double-click, and asks **Save**, **Don't Save**, or **Cancel** before closing. It works offline. Its only network requests are to GitHub, for updates: a check at start, which you can turn off in Settings, and, for the AppImage and the Windows app, the update itself, downloaded in the background. It never installs an update by itself. [Drafter on the web and on the desktop](docs/web-and-desktop.md) compares the two.
 
 ### Windows
 

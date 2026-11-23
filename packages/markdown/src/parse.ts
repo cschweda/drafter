@@ -16,7 +16,7 @@ import type { MdNode } from './types';
 export class MarkedTooDensely extends Error {
   constructor() {
     super(
-      `This document has a paragraph with too many marks to read: more than ${MAX_MARKS.toLocaleString('en-US')} of * and _, or ${MAX_BRACKETS.toLocaleString('en-US')} of ] with no [.`,
+      'This document has too many marks to read: thousands of * and _, of brackets, of underlined headings, or of HTML comments that never close.',
     );
     this.name = 'MarkedTooDensely';
   }

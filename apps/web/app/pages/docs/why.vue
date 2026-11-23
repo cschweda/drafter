@@ -213,7 +213,7 @@ function parts(cell: string): Part[] {
       </li>
       <li>
         <strong>Private.</strong> No cookies, no tracking of you, and no telemetry. Your script
-        never leaves your device: Drafter has no server that could receive it. See
+        never leaves your device: no server is ever sent it. See
         <a href="/docs/privacy/">Privacy</a>.
       </li>
       <li>
