@@ -3,7 +3,7 @@
 Drafter's second adversarial audit. Five red-team attackers each took one part of Drafter and tried to break it. Each had read the [red/blue audit of 3 November](redblue-audit-2026-11-03.md), the [security audit of 1 November](security-audit-2026-11-01.md), and the [privacy audit of 3 November](privacy-audit-2026-11-03.md), so each looked for what those had missed and checked that their fixes still hold. Each had to prove a weakness by running an attack where it could, say plainly where it could not, and report the attacks that failed. A blue team then:
 
 - checked each finding against the code;
-- fixed what was real, with a test that fails without the fix;
+- fixed what was real, with a test that fails without the fix wherever the fix is in code a test can reach;
 - left for the maintainer only what is a repository setting, or a choice that is theirs.
 
 A second team then audited the findings and the fixes; its result is [at the end](#the-audit-of-this-audit).
@@ -11,7 +11,7 @@ A second team then audited the findings and the fixes; its result is [at the end
 **Date:** 2026-11-23
 **Red team:** five AI agents (Claude), working read-only on the code but for throwaway proof-of-concept tests they deleted. No pushes, no publishing, and no requests to anyone but plain reads of drafter.dev's public files and of this repository's public settings.
 **Blue team:** an AI agent (Claude), who checked and fixed.
-**Code audited:** `staging` at `433eb449` (v0.27.4 and the tip jar) with the work then pending for v0.28.0: the guard tests, the save state in the status bar, and the Story Atlas rename (`audit/red-blue-2026-11-23` at `41944a71`).
+**Code audited:** `staging` at `433eb449` (v0.27.4 and the tip jar) with the work then pending for v0.28.0: the guard tests, the save state in the status bar, the Story Atlas rename, and a count of conversions that was dropped the same day (`audit/red-blue-2026-11-23` at `41944a71`). **The fixes are on a branch from `433eb449`**, not from that audited tree: they were written and tested without the pending work, and meet it when both are merged into `staging`. So this record says "Story Atlas" where the fix branch's own code still says "story map".
 **Overall result:** **PASS WITH FINDINGS.**
 
 - **No attack ran code from a script, a file, or an export**, made file content into markup, got past the security policy, or reached the network from a page.
@@ -28,23 +28,23 @@ A second team then audited the findings and the fixes; its result is [at the end
 | **W** The web app and its formats | Every way a hostile file gets in or out; the app's own pages, storage, and file names | 20 (6 medium, 10 low, 4 info) |
 | **D** The desktop app | The custom protocol, trusted addresses, every channel from the page, modules, updates | 6 (5 low, 1 info) |
 | **S** The supply chain and release | Workflows, caches, dependencies, the published package, hooks | 12 (2 high, 1 medium, 5 low, 4 info) |
-| **P** Privacy | Every network path, every export's contents, what stays on the device, the claims | 8 (3 medium, 3 low, 2 info) |
+| **P** Privacy | Every network path, every export's contents, what stays on the device, the claims | 8 (3 medium, 4 low, 1 info) |
 | **M, C, K** Drafter for Claude, the command line, Classic Mode | Never audited before: paths, limits, read-only, private text; overwrites; the settings block | 18 (3 medium, 7 low, 8 info) |
 
 ## Findings and mitigations
 
-"Fixed" means changed in the code or the documents with this audit, with a test where the finding is in code. Severity is the red team's.
+"Fixed" means changed in the code or the documents with this audit. A fix in code has a test that fails without it; a fix in a workflow, a manifest, the lockfile, or a document (S3, S5, S6, S8, S12, P3, P5, P6) has none, and is marked so. Severity is the red team's.
 
 ### Medium and high
 
 | ID | Finding | What an attacker gained | Outcome |
 |---|---|---|---|
-| S1 (high) | Git was pointed at the tracked `.githooks/` folder, so it ran whatever hook the branch being checked out held | Code on the maintainer's machine, beside their tokens, from a pull request merely checked out | **Fixed.** `pnpm install` copies the one hook into Git's own folder and unsets the path. Proven both ways in a throwaway repository |
+| S1 (high) | Git was pointed at the tracked `.githooks/` folder, so it ran whatever hook the branch being checked out held | Code on the maintainer's machine, beside their tokens, from a pull request merely checked out | **Fixed.** `pnpm install` copies the one hook into Git's own folder and unsets the path, and stops with an error if the path is still set where it can't reach (a global or per-worktree setting). A test tries it in a throwaway repository. **Until this is on every branch**, `pnpm install` on a branch with the old script sets the path again for the whole clone: it happened once during this audit, and was undone |
 | S2 (high, conditional; open since 3 November) | No branch or tag protection, no release environment, releases that can be altered, a wide token | With one stolen credential: a release to every desktop user | **For the maintainer** (below) |
-| S3 | A release build restored its toolchain cache from `main`'s scope, by prefix; electron-builder trusts a restored folder by file count | A backdoor in installers that the tagged source doesn't show | **Fixed.** A tag's build uses no cache, and no build matches a cache by prefix |
+| S3 | A release build restored its toolchain cache from `main`'s scope, by prefix; electron-builder trusts a restored folder by file count | A backdoor in installers that the tagged source doesn't show | **Fixed** (no test: a workflow). A tag's build uses no cache, and no build matches a cache by prefix. Not yet run on a tag: the expression that turns the cache off is read from the action's documentation, not seen working |
 | P1 | A locked script's file carries the whole text as it stood when the revision began, compressed in the settings block: scenes since cut or omitted, and their notes. So do Export → Fountain and a reopenable HTML or EPUB | Whoever is sent the file can read what the writer deleted | **Said plainly** (the maintainer's choice, 23 November): the Production help page, under Omit scene and under the long line, and the reopenable export's hint say that the file carries scenes since cut, and how to send a script without them. A copy without the revision's history is a later feature |
 | P2 | Remove from this browser left the script's file name, its folder's handle, and two more rows | The next person at the browser learns the name and may reopen the folder | **Fixed.** A test fails on any row that names a removed script |
-| P3 | Since reports by email (v0.26.2), drafter.dev has one server function and a second outside service; the README's "all of it" table and seven other statements said otherwise | Nothing; the statements were false | **Fixed** in the README, Privacy, Why, What is Drafter?, Help, and Technical details |
+| P3 | Since reports by email (v0.26.2), drafter.dev has one server function and a second outside service; the README's "all of it" table and seven other statements said otherwise | Nothing; the statements were false | **Fixed** in the README, Privacy, Why, What is Drafter?, Help, and Technical details, and, after the audit of this audit, in the issue template, four more statements, and five code comments. The pages now also say that the function counts reports from an internet address for a minute, and that Resend keeps the email |
 | W1 | A note of three thousand spaces: the pattern for a person's note tried the run every way it split in three | A 3 KB file held lint for 15 seconds at every pass | **Fixed.** The name in that pattern can't start or end on a space |
 | W2 | The Source pane's Markdown grammar took the square of a run of spaces, and of a paragraph's brackets | 160 KB held the page for 16 seconds, again on reload | **Fixed.** Such a paragraph's spaces and brackets are plain text |
 | W3 | Lint's rule for a transition with a trailing space scanned with a pattern anchored at the end | A 200 KB line: 14 seconds after each pause in typing | **Fixed.** Walked back from the end |
@@ -58,14 +58,14 @@ A second team then audited the findings and the fixes; its result is [at the end
 
 | ID | Finding | Outcome |
 |---|---|---|
-| S5 | The docs said the pull request checks are required; nothing on GitHub enforces it. They named two Windows installers where there is one | **Fixed** in the docs; enforcing it is S2 |
-| S6 | The 23 workspace packages were publishable under `@drafter/*`, a scope on npm that isn't this project's, and the docs named `npx @drafter/cli` | **Fixed.** All are `private`; the docs say the name is still to be chosen |
-| S7 | A build made with the test module is checked against its own flag, so the flag left set in a release shell would pass | **Fixed.** Refused with anything that marks a public build |
-| S8 | `@nuxt/schema` 4.6.2 (GHSA-mjrq-cffv-q4qc, the dev server) still in the lockfile | **Fixed.** Overridden to 4.6.4 |
+| S5 | The docs said the pull request checks are required; nothing on GitHub enforces it. They named two Windows installers where there is one | **Fixed** in the docs (the development notes, and after the audit of this audit the Technical details page); enforcing it is S2 |
+| S6 | The 23 workspace packages were publishable under `@drafter/*`, a scope on npm that isn't this project's, and the docs named `npx @drafter/cli` | **Fixed** (no test: manifests). All are `private`; five documents that said they are published under `@drafter/*` are corrected |
+| S7 | A build made with the test module is checked against its own flag, so the flag left set in a release shell would pass | **Fixed.** Refused with anything that marks a public build, and a packaged desktop app that holds the test module is refused by the package check. A build deployed by hand is not checked by anything |
+| S8 | `@nuxt/schema` 4.6.2 (GHSA-mjrq-cffv-q4qc, the dev server) still in the lockfile | **Fixed** (no test: the lockfile). Overridden to 4.6.4 |
 | S4 | `pnpm diagrams` runs `npx` on a package outside the lockfile and the release-age wait | **Deferred**, in [DEFERRED](DEFERRED.md) |
 | P4 | A Final Draft file with Title page: Full held the title page's lines that never print (Notes, Copyright, a key of the writer's own) | **Fixed.** They go only with Include notes |
-| P5 | The notes option named three exports; Final Draft is a fourth that obeys it | **Fixed** in the option's label and the help |
-| P6 | The README said the desktop app's only request is one update check; it also downloads the update | **Fixed.** The Privacy page's wording |
+| P5 | The notes option named three exports; Final Draft is a fourth that obeys it | **Fixed** in the option's label and the help (wording; the browser tests read the label) |
+| P6 | The README said the desktop app's only request is one update check; it also downloads the update | **Fixed.** The Privacy page's wording, and the download is in both lists of everything that uses the network |
 | P7, W11 | The report function took a cross-site plain-text post | **Fixed.** JSON only, and only from its own origin |
 | W7 | Scene history, Cuts, and draft steps took the square of a run of spaces or dots | **Fixed.** Tests hold the new trimming to exactly what the patterns gave |
 | W8 | Screenplay from outline took the cube of a heading's run of spaces, and the square of a line of brackets | **Fixed** |
@@ -75,9 +75,9 @@ A second team then audited the findings and the fixes; its result is [at the end
 | W13, W14 | A download's name kept direction overrides and zero-width characters, could be a name Windows keeps for a device, and could run to 489 bytes | **Fixed.** `cleanWorkName`, which names drafts beside a file after the writer's own file, is unchanged (it is mirrored in the desktop app, and the name is the writer's) |
 | W15 | The breakdown's CSV guarded a formula only at a field's start, and didn't quote a semicolon or a tab | **Fixed** |
 | W16 | The breakdown's PDF ran out of stack at 130,000 rows | **Fixed** |
-| D1 | Seven whole sites, and every page of this repository on GitHub, opened in the browser with no question, whatever the address carried | **Fixed.** Trusted only for an address shaped like Drafter's own links: short, no query, nothing encoded. A test reads every such link from the web app |
-| D3 | A module could still be named "Drafter" behind an unseen character, a look-alike letter, or another word | **Fixed** |
-| D4 | Two scripts in one folder whose names clean to the same thing share drafts and cuts | **Accepted.** It takes such a pair and a compromised page; refusing every name that isn't clean would take drafts beside the file from a script with a colon in its name. The comment that overstated the guarantee is corrected |
+| D1 | Seven whole sites, and every page of this repository on GitHub, opened in the browser with no question, whatever the address carried | **Fixed.** Trusted only for an address shaped like Drafter's own links: written exactly, at most 160 characters, no query, nothing encoded, one slash at a time. The report for a new issue is trusted with the fields and the length the app's own report uses, and an email to the maintainer at the length the app writes, with a one-line subject. What remains: about 140 characters of plain text per opened address can still reach one of the seven sites' logs with no question. A test reads every such link from the web app |
+| D3 | A module could still be named "Drafter" behind an unseen character, a look-alike letter, or another word | **Fixed**, in three passes: accents and figures are folded, dressed letters (small capitals, circled) and a word across two alphabets are refused, as are a joiner beside a Latin letter and an odd space, and the name may not be or start a word with "Drafter". What remains: a near-miss ("Drafler"), and a name wholly in another alphabet |
+| D4 | Two scripts in one folder whose names clean to the same thing share drafts and cuts. So, by design, do a script and a document with one name (`Boca.fountain`, `Boca.md`): a work keeps its drafts when its kind changes | **Accepted.** It takes such files side by side and a compromised page; refusing every name that isn't clean would take drafts beside the file from a script with a colon in its name. The comment that overstated the guarantee is corrected, twice |
 | D2 | The 3 November hidden-window fix doesn't pin the window's position (not proven) | **Deferred**, in DEFERRED: it needs a running desktop app |
 | D5 | The refusing proxy leaves Chromium's implicit loopback bypass (not proven) | **Deferred**, in DEFERRED: the same |
 | M4 | Past a folder link that leads out, a file that isn't there was answered differently from one that is | **Fixed** |
@@ -92,7 +92,9 @@ A second team then audited the findings and the fixes; its result is [at the end
 
 Fixed: C4 (two outputs to one file are refused), C5 (direction overrides and line separators are shown as other control characters are), S12 (a branch trigger for a branch that no longer exists), W17 (the tip jar's address must be written exactly), W20 (a note category named for an `Object` property).
 
-Recorded and left: S9 (`drafter-mcp@0.0.0-stage` is not deprecated, and no provenance is published: for the maintainer), S10 (a dismissal note for an alert since withdrawn), S11 (the Buy Me a Coffee address in `FUNDING.yml` is the maintainer's, kept out of the app by their choice), P8 (small inconsistencies), W18 (the report's rate limit falls back to a header only where Netlify gives no address), W19 (full-width formula characters), D6 (a module's network consent is the page's word), M6 (a folder whose name starts with a dot lists and then refuses), M7 (a prototype lookup in the SDK), M8 (a forged cuts file's heading), C6 (`--template` echoes a file's first bytes in its error), K3 (a constant cost on very long lines), K4 (what the `classic` trap entry point doesn't press).
+Fixed after the audit of this audit: S10 (the note in DEFERRED on dismissed advisories now says the `deepmerge` one was withdrawn).
+
+Recorded and left: S9 (`drafter-mcp@0.0.0-stage` is not deprecated, and no provenance is published: for the maintainer), S11 (the Buy Me a Coffee address in `FUNDING.yml` is the maintainer's, kept out of the app by their choice), P8 (small inconsistencies), W18 (the report's rate limit falls back to a header only where Netlify gives no address), W19 (full-width formula characters), D6 (a module's network consent is the page's word), M6 (a folder whose name starts with a dot lists and then refuses), M7 (a prototype lookup in the SDK), M8 (a forged cuts file's heading), C6 (`--template` echoes a file's first bytes in its error), K3 (a constant cost on very long lines), K4 (what the `classic` trap entry point doesn't press).
 
 ## Attacks that failed, and the defence that held
 
@@ -114,9 +116,17 @@ The red team's reports list these in full; the main ones:
 
 ## Changed with this audit
 
-The fixes are on `fix/redblue-2026-11-23`. Tests added: 39, in the web app, the desktop app, and twelve packages; each code fix has one that fails without it. Three of the limits were tightened again after an automated review of the commits: the cast's pair count got a budget for the whole script as well as each scene, the cache is charged by the text parsed and not by a file's size on disk, and an underlined heading is counted inside a block quote.
+The fixes are on `fix/redblue-2026-11-23`. Tests added in the first pass: 39, in the web app, the desktop app, and twelve packages. Each fix in code has one that fails without it; the fixes in workflows, manifests, the lockfile, and documents have none. Three of the limits were tightened again after an automated review of the commits: the cast's pair count got a budget for the whole script as well as each scene, the cache is charged by the text parsed and not by a file's size on disk, and an underlined heading is counted inside a block quote.
 
-Not run with this audit: the desktop app itself (D2 and D5 are deferred for that reason), and a browser on the red team's timings, which were measured in Node on the functions the page calls.
+Not run with this audit:
+
+- the desktop app itself (D2 and D5 are deferred for that reason);
+- a browser on the red team's timings, which were measured in Node on the functions the page calls;
+- a release build from a tag, so the change that turns its caches off (S3) has never executed;
+- the report function on Netlify, whose new checks are tested against the handler alone;
+- the fixes together with the pending work the red team read (above).
+
+The browser tests for the parts of the app the fixes touch were run in all five browsers.
 
 ## The audit of this audit
 
