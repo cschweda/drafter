@@ -1,5 +1,5 @@
 // The editor's right-click menu: spelling (the suggestions for a misspelled word, and Add to
-// Dictionary), then Use in story map and Never use in story map on a speech (story-map design
+// Dictionary), then Use in Story Atlas and Never use in Story Atlas on a speech (story-atlas design
 // §3.1, Call 6), then Cut, Copy, Paste, and Select All. Electron shows no context menu of its own, so
 // without this a right-click did nothing and a misspelling could only be fixed by typing. The
 // template is built here, without Electron, from what Chromium says about the click
@@ -21,7 +21,7 @@ export interface ContextActions {
   addWord(word: string): void;
 }
 
-/** Use in story map and Never use in story map, for the speech under the click. */
+/** Use in Story Atlas and Never use in Story Atlas, for the speech under the click. */
 export interface SpeechActions {
   use(): void;
   never(): void;
@@ -50,8 +50,8 @@ export function contextMenuTemplate(
   const flags = params.editFlags;
   if (params.isEditable && speech) {
     items.push(
-      { label: 'Use in story map', click: () => speech.use() },
-      { label: 'Never use in story map', click: () => speech.never() },
+      { label: 'Use in Story Atlas', click: () => speech.use() },
+      { label: 'Never use in Story Atlas', click: () => speech.never() },
       { type: 'separator' },
     );
   }

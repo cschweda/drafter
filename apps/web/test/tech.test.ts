@@ -211,8 +211,8 @@ describe('directUses', () => {
     expect(edges).toBeLessThan(PACKAGES.reduce((n, p) => n + p.uses.length, 0));
     // A drawing that stays readable: 32 lines since the CLI writes the HTML export too, and one
     // more since the draft and cuts files (history reads Markdown's metadata comment), and two more
-    // since the story map (the app and the CLI both make one), and three more since Drafter for
-    // Claude (drafter-mcp reads archives, drafts and cuts, problems, and the story map), and one more
+    // since the Story Atlas (the app and the CLI both make one), and three more since Drafter for
+    // Claude (drafter-mcp reads archives, drafts and cuts, problems, and the Story Atlas), and one more
     // since the novel (it reads Markdown's metadata comment), and one more since the app's Outline
     // for a novel, and one more since Drafter for Claude reads a novel's parts, chapters, and
     // sections, and one more since the manuscript's Word file (render-docx zips with the archive's

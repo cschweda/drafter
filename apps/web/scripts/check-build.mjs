@@ -78,10 +78,10 @@ export const REQUIRED_FILES = [
   'fonts/liberation-serif/LiberationSerif-Italic.ttf',
   'fonts/liberation-serif/LiberationSerif-Bold.ttf',
   'fonts/liberation-serif/LiberationSerif-BoldItalic.ttf',
-  'fonts/story-map/Anton-Regular.woff2',
-  'fonts/story-map/Archivo-Regular.woff2',
-  'fonts/story-map/Archivo-SemiBold.woff2',
-  'fonts/story-map/CourierPrime-Regular.woff2',
+  'fonts/story-atlas/Anton-Regular.woff2',
+  'fonts/story-atlas/Archivo-Regular.woff2',
+  'fonts/story-atlas/Archivo-SemiBold.woff2',
+  'fonts/story-atlas/CourierPrime-Regular.woff2',
 ];
 
 /**

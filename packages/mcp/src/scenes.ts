@@ -1,4 +1,4 @@
-// Naming a scene (§3): by its place in order (counting from 1, as Story map numbers scenes), by
+// Naming a scene (§3): by its place in order (counting from 1, as Story Atlas numbers scenes), by
 // its written scene number (`7A`, from `#7A#`), or by words from its heading. Order comes first,
 // then written numbers, then heading words. A Markdown document's sections are its scenes.
 import type { Loaded } from './load';

@@ -309,7 +309,7 @@ const FLOOD = `Title: Z${'\u0301'.repeat(200_000)}\n\nINT. HALL - DAY\n\nA${'\u0
 const LONG = `INT. ${'VERY '.repeat(40_000)}LONG HALL - DAY\n\n${'W'.repeat(200_000)}\nA lever waits.\n`;
 const ZW = '\u200b\u200d\ufeff';
 
-// For the story map (Task 7): sizes a story map must draw in time, with every name escaped.
+// For the Story Atlas (Task 7): sizes a Story Atlas must draw in time, with every name escaped.
 /** A speaker with a 100,000-character name, introduced in capitals and speaking in three scenes. */
 const HUGE_NAME = (() => {
   const name = `QUILL${'LONGNAME'.repeat(12_500)}`;
@@ -699,27 +699,27 @@ const FOUNTAIN_TRAPS: Trap[] = [
     expect: { 'web-open': refused(SAYS.ole) },
   },
   {
-    id: 'fountain-story-map-hostile',
+    id: 'fountain-story-atlas-hostile',
     format: 'fountain',
-    name: 'story-map-hostile.fountain',
+    name: 'story-atlas-hostile.fountain',
     tests:
-      'Markup, `]]>`, `</style>`, `</title>`, bidi overrides, U+2028, and a 5,000-character name in the title, logline, contact, names, places, summaries, a marked line, an edited hook from the metadata block, and threads stay text in the story map.',
-    bytes: file('fountain/story-map-hostile.fountain'),
-    expect: { 'web-open': opens(text('fountain/story-map-hostile.fountain')) },
+      'Markup, `]]>`, `</style>`, `</title>`, bidi overrides, U+2028, and a 5,000-character name in the title, logline, contact, names, places, summaries, a marked line, an edited hook from the metadata block, and threads stay text in the Story Atlas.',
+    bytes: file('fountain/story-atlas-hostile.fountain'),
+    expect: { 'web-open': opens(text('fountain/story-atlas-hostile.fountain')) },
     inert: true,
   },
   {
-    id: 'fountain-story-map-huge-name',
+    id: 'fountain-story-atlas-huge-name',
     format: 'fountain',
     name: 'huge-name.fountain',
     tests:
-      'A leading character with a 100,000-character name is drawn in the story map in time, whole and escaped.',
+      'A leading character with a 100,000-character name is drawn in the Story Atlas in time, whole and escaped.',
     bytes: () => enc(HUGE_NAME),
     expect: { 'web-open': opens(HUGE_NAME) },
     inert: true,
   },
   {
-    id: 'fountain-story-map-long-line',
+    id: 'fountain-story-atlas-long-line',
     format: 'fountain',
     name: 'long-line.fountain',
     tests:
@@ -729,11 +729,11 @@ const FOUNTAIN_TRAPS: Trap[] = [
     inert: true,
   },
   {
-    id: 'fountain-story-map-said-often',
+    id: 'fountain-story-atlas-said-often',
     format: 'fountain',
     name: 'said-often.fountain',
     tests:
-      'One name said 50,000 times in a paragraph, and speaking 1,000 times, makes a story map in linear time.',
+      'One name said 50,000 times in a paragraph, and speaking 1,000 times, makes a Story Atlas in linear time.',
     bytes: () => enc(SAID_OFTEN),
     expect: { 'web-open': opens(SAID_OFTEN) },
     inert: true,

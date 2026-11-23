@@ -298,7 +298,7 @@ function start() {
   let closing: Closing | null = null;
 
   // The right-click menu asks the editor's page which speech is under a click (a few ms; none after
-  // 200), for Use in story map and Never use in story map (context-menu.ts).
+  // 200), for Use in Story Atlas and Never use in Story Atlas (context-menu.ts).
   const speech = speechAsker((id, x, y) => {
     const contents = main?.webContents;
     if (contents && !contents.isDestroyed()) contents.send(CHANNELS.editorSpeechAt, id, x, y);

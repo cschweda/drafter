@@ -83,13 +83,13 @@ describe('contextMenuTemplate', () => {
   });
 });
 
-describe('Use and Never use in story map', () => {
-  test('a speech under the click adds Use and Never use in story map above Cut', () => {
+describe('Use and Never use in Story Atlas', () => {
+  test('a speech under the click adds Use and Never use in Story Atlas above Cut', () => {
     const speech = { use: vi.fn(), never: vi.fn() };
     const items = contextMenuTemplate(params(), actions(), speech);
     expect(labels(items)).toEqual([
-      'Use in story map',
-      'Never use in story map',
+      'Use in Story Atlas',
+      'Never use in Story Atlas',
       '—',
       'cut',
       'copy',
@@ -111,8 +111,8 @@ describe('Use and Never use in story map', () => {
       'the',
       'Add to Dictionary',
       '—',
-      'Use in story map',
-      'Never use in story map',
+      'Use in Story Atlas',
+      'Never use in Story Atlas',
       '—',
     ]);
     // Not outside an editable place.
@@ -124,12 +124,12 @@ describe('Use and Never use in story map', () => {
           speech,
         ),
       ),
-    ).not.toContain('Use in story map');
+    ).not.toContain('Use in Story Atlas');
   });
 
   test('no speech, no items', () => {
     expect(labels(contextMenuTemplate(params(), actions(), null))).not.toContain(
-      'Use in story map',
+      'Use in Story Atlas',
     );
   });
 });

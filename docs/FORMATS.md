@@ -33,7 +33,7 @@ The file you open is never changed. Text that Fountain has no element for (hidde
 | **Revised pages** (`.pdf`) | A locked script only: the pages the open revision changed (or every revision's, or a page range), at their locked labels, with the revision's asterisks and a header such as "Blue Revision — 12 November 2026"; an optional tint of the revision's paper color (none for White). Its choices are in its own dialog. |
 | **Breakdown** (`.csv`, `.pdf`) | One row per scene, in script order: Scene, INT/EXT, Location, Time, Pages (in eighths), Page, Cast (first those who speak in the scene, then those named in its action; only characters who speak somewhere in the script), Synopsis. The CSV is UTF-8 with a header row and RFC 4180 quoting; a cell starting with `=`, `+`, `-`, or `@` gets a leading apostrophe so a spreadsheet shows it as text; import Pages as Text, as some spreadsheets read 3/8 as a date. The PDF is the same table on a landscape page. |
 | **Sides** (`.pdf`) | One actor's pages: every page a ticked scene is on, at its locked label, with the other scenes on those pages crossed out, and the open revision's marks. |
-| **Story map** (`.html`) | One dark, picture-first page of a screenplay or stage play for someone who doesn't read scripts: its shape, its people, every scene so far with a line or two of dialogue, and what is still to write. No JavaScript, no network, no notes; it never carries the script, so Drafter can't reopen it. Its choices are in its own dialog, not in Export options. See the [Story map help page](https://drafter.dev/docs/story-map/). |
+| **Story Atlas** (`.html`) | One dark, picture-first page of a screenplay or stage play for someone who doesn't read scripts: its shape, its people, every scene so far with a line or two of dialogue, and what is still to write. No JavaScript, no network, no notes; it never carries the script, so Drafter can't reopen it. Its choices are in its own dialog, not in Export options. See the [Story Atlas help page](https://drafter.dev/docs/story-atlas/). |
 
 Final Draft is a trademark of its owner. Drafter reads and writes its file format so a script can move between the two apps, and isn't connected with or endorsed by Final Draft.
 
@@ -49,7 +49,7 @@ The same code runs in a terminal ([Developing Drafter](DEVELOPMENT.md#developmen
 drafter build script.fountain --pdf script.pdf     # a PDF; --txt for plain text
 drafter build script.fountain --html script.html   # one HTML page, pages and reading view, to open anywhere
 drafter build script.fountain --html script.html --reopenable   # with the script inside, for Drafter to reopen
-drafter build script.fountain --story-map map.html  # a story map; --status finished or in-progress
+drafter build script.fountain --story-atlas map.html  # a Story Atlas; --status finished or in-progress
 drafter convert script.html                        # the script back out of a reopenable export
 drafter convert MyScript.fdx                      # MyScript.fountain, beside it
 drafter convert ~/Scripts                         # every .fdx, .highland, and .fadein in the folder

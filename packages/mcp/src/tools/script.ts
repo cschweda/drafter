@@ -8,7 +8,7 @@ import type { Doc } from '@drafter/fountain';
 import { lint } from '@drafter/lint';
 import { wordsIn } from '@drafter/markdown';
 import { bodyEnd, type Speech, startsScene } from '@drafter/outline';
-import { openTodos, topSections } from '@drafter/story-map';
+import { openTodos, topSections } from '@drafter/story-atlas';
 import * as z from 'zod/v4';
 import { argsHash, type CursorAt, makeCursor, readCursor } from '../cursor';
 import { ABOUT, type Include, type LeftOut } from '../envelope';

@@ -46,11 +46,11 @@ import { renderManuscriptDocx } from '@drafter/render-docx';
 import { renderDocumentHtml, renderScriptHtml } from '@drafter/render-html-file';
 import { MANUSCRIPT_FONT_FILES, renderManuscriptPdf } from '@drafter/render-pdf';
 import {
-  buildStoryMap,
-  renderStoryMap,
-  type StoryMapFonts,
-  storyMapMeta,
-} from '@drafter/story-map';
+  buildStoryAtlas,
+  renderStoryAtlas,
+  type StoryAtlasFonts,
+  storyAtlasMeta,
+} from '@drafter/story-atlas';
 import { builtins, type Template } from '@drafter/templates';
 import { JSDOM } from 'jsdom';
 import { currentWriter, readModulesFolder } from '../../../apps/desktop/src/module-folder';
@@ -137,8 +137,8 @@ export interface Answer {
   cli?: { code: number; out: string; err: string };
   /** Drafter's HTML export of the opened text, for an inert trap; null when the export refuses it. */
   html?: string | null;
-  /** The opened text's story map, for an inert trap. */
-  storyMap?: string;
+  /** The opened text's Story Atlas, for an inert trap. */
+  storyAtlas?: string;
   /** For `mcp`: every call's result, and every network or process call that was tried (none). */
   mcp?: { results: McpResult[]; calls: string[]; guard: string[] };
   /** For `novel`: what was found in Open's text, and whether a move was made. */
@@ -301,8 +301,8 @@ function exported(text: string, markdown: boolean): string | null {
   }
 }
 
-/** Stand-ins that start as WOFF2 does, each face its own: the story map checks only the kind. */
-const MAP_FONTS: StoryMapFonts = {
+/** Stand-ins that start as WOFF2 does, each face its own: the Story Atlas checks only the kind. */
+const MAP_FONTS: StoryAtlasFonts = {
   anton: new Uint8Array([0x77, 0x4f, 0x46, 0x32, 1]),
   archivo: new Uint8Array([0x77, 0x4f, 0x46, 0x32, 2]),
   archivoSemiBold: new Uint8Array([0x77, 0x4f, 0x46, 0x32, 3]),
@@ -316,15 +316,15 @@ function titleField(doc: ReturnType<typeof parse>, key: string): string | null {
 }
 
 /**
- * The opened text's story map, as a writer would make it with every choice that carries their own
+ * The opened text's Story Atlas, as a writer would make it with every choice that carries their own
  * words on: the title page's logline, its contact (Your contact on), and the metadata block's
  * planned length and edited hooks.
  */
-function storyMapOf(text: string): string {
+function storyAtlasOf(text: string): string {
   const doc = parse(text);
-  const meta = storyMapMeta(doc.meta);
+  const meta = storyAtlasMeta(doc.meta);
   const template = builtins['us-screenplay'] as Template;
-  const map = buildStoryMap({
+  const map = buildStoryAtlas({
     doc,
     template,
     layout: paginate(doc, template),
@@ -343,7 +343,7 @@ function storyMapOf(text: string): string {
       title: 'Trap',
     },
   });
-  return renderStoryMap({ map, fonts: MAP_FONTS, lang: 'en', generator: 'Drafter traps' });
+  return renderStoryAtlas({ map, fonts: MAP_FONTS, lang: 'en', generator: 'Drafter traps' });
 }
 
 async function drafter(cwd: string, args: string[]) {
@@ -708,7 +708,7 @@ async function work(job: Job): Promise<Omit<Answer, 'ms' | 'kept'>> {
     const happened = await readPackage(job.format, job.bytes);
     if (!job.inert || happened.kind !== 'opened') return { happened };
     const html = exported(happened.text, job.format === 'markdown');
-    return { happened, html, storyMap: storyMapOf(happened.text) };
+    return { happened, html, storyAtlas: storyAtlasOf(happened.text) };
   }
   if (job.kind === 'cli') {
     const cli = await drafter(job.cwd, job.args);

@@ -66,7 +66,7 @@ import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen, pickAndOpenAs } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
-import { markSpeech, speechAt } from '~/story-map/quote-marks';
+import { markSpeech, speechAt } from '~/story-atlas/quote-marks';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
 import { showInInspector, type TabId, WIDE_QUERY } from '~/utils/panes';
 import { type Behavior, quietly, type When } from './behavior';
@@ -254,7 +254,7 @@ export function registerBuiltinCommands(): void {
   });
 
   /**
-   * Use in story map and Never use in story map (story-map design §3.1, Call 6): a `[[Quote]]` or
+   * Use in Story Atlas and Never use in Story Atlas (story-atlas design §3.1, Call 6): a `[[Quote]]` or
    * `[[No quote]]` mark on the speech holding the cursor, as one undo. Off where the cursor isn't
    * in a speech (or is in dual dialogue, which is never a line on its own).
    */
@@ -268,8 +268,8 @@ export function registerBuiltinCommands(): void {
       if (changes.length > 0 && !applyTextChanges(view, changes)) return;
       void sayElement(
         mark === 'quote'
-          ? 'This line will be in the story map.'
-          : 'This line won’t be in the story map.',
+          ? 'This line will be in the Story Atlas.'
+          : 'This line won’t be in the Story Atlas.',
       );
     },
   });
@@ -817,8 +817,8 @@ export function registerBuiltinCommands(): void {
     'make-lyric': fountain(forceKind('lyric')),
     'mark-setup': mark('Setup'),
     'mark-payoff': mark('Payoff'),
-    'story-map-use-line': markLine('quote'),
-    'story-map-never-line': markLine('no-quote'),
+    'story-atlas-use-line': markLine('quote'),
+    'story-atlas-never-line': markLine('no-quote'),
     'dual-dialogue': fountain(toggleDual),
     'wrap-in-note': fountain(wrapInNote),
     'cut-to-boneyard': fountain(wrapInBoneyard),

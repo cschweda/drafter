@@ -185,7 +185,7 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
         <li>
           <strong>The features that matter.</strong> Industry-standard pages, stage plays, an
           outline and index cards, notes, version history and Compare, numbered drafts, character
-          and scene stats, a story map to send to anyone, offline spellcheck, focus mode, goals and
+          and scene stats, a Story Atlas to send to anyone, offline spellcheck, focus mode, goals and
           sprints, and a dark theme.
         </li>
       </ul>
@@ -238,11 +238,11 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <a :href="help('help-drafts-and-cuts')">Drafts and cuts</a>
         </li>
         <li>
-          <strong>A story map to send to anyone.</strong> One page that shows someone who doesn’t
+          <strong>A Story Atlas to send to anyone.</strong> One page that shows someone who doesn’t
           read scripts the whole story so far: its shape, its people, and every scene in order, with
           a few lines of dialogue and what is still to write. It opens on a phone, has no code,
           fetches nothing, and never includes your notes.
-          <a :href="help('help-story-map')">Story map</a>
+          <a :href="help('help-story-atlas')">Story Atlas</a>
         </li>
       </ul>
       <h3 id="production">For a script going into production</h3>

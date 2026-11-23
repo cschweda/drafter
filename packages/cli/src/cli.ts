@@ -13,16 +13,16 @@ import { type FontStyle, kindLine, renderScriptHtml, stylesUsed } from '@drafter
 import { FONT_FILES, type FontSet, renderPdf } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
 import {
-  buildStoryMap,
+  buildStoryAtlas,
   type MapStatus,
-  renderStoryMap,
-  STORY_MAP_FONT_FILES,
-  type StoryMapFace,
-  type StoryMapFonts,
-  storyMapMeta,
-} from '@drafter/story-map';
+  renderStoryAtlas,
+  STORY_ATLAS_FONT_FILES,
+  type StoryAtlasFace,
+  type StoryAtlasFonts,
+  storyAtlasMeta,
+} from '@drafter/story-atlas';
 import { builtins, loadTemplate, type Template, TemplateError } from '@drafter/templates';
-import { Command, CommanderError } from 'commander';
+import { Command, CommanderError, Option } from 'commander';
 import pkg from '../package.json' with { type: 'json' };
 import { ConvertError, type ConvertOptions, convert } from './convert';
 
@@ -72,6 +72,8 @@ interface BuildOptions {
   txt?: string;
   json?: string;
   html?: string;
+  storyAtlas?: string;
+  /** The old name of `storyAtlas` (before v0.28.0), still taken. */
   storyMap?: string;
   status?: string;
   template?: string;
@@ -112,7 +114,7 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 
   const program = new Command('drafter')
     .description(
-      'Lays out Fountain screenplays and stage plays, and writes them as PDF, HTML, a story map, text, or JSON; converts Final Draft, Highland, and Fade In files to Fountain.',
+      'Lays out Fountain screenplays and stage plays, and writes them as PDF, HTML, a Story Atlas, text, or JSON; converts Final Draft, Highland, and Fade In files to Fountain.',
     )
     .version(pkg.version)
     .exitOverride()
@@ -122,7 +124,7 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
   program
     .command('build')
     .description(
-      'Lay out a script and write it as PDF, HTML, a story map (a picture of the script for anyone), fixed-width text, or JSON.',
+      'Lay out a script and write it as PDF, HTML, a Story Atlas (a picture of the script for anyone), fixed-width text, or JSON.',
     )
     .argument('<input>', 'the .fountain file')
     .option('--pdf <file>', "write a PDF (with no output named, the input's name ending in .pdf)")
@@ -136,13 +138,15 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
       '--reopenable',
       'let Drafter reopen the HTML page: it carries the full script, notes and all',
     )
+    // The Story Atlas was the story map until v0.28.0: the old flag still works, and isn't listed.
+    .addOption(new Option('--story-map <file>').hideHelp())
     .option(
-      '--story-map <file>',
-      'write a story map: one picture-first HTML page of the script so far, to send to anyone (your notes left out; synopses and setups and payoffs shown)',
+      '--story-atlas <file>',
+      'write a Story Atlas: one picture-first HTML page of the script so far, to send to anyone (your notes left out; synopses and setups and payoffs shown)',
     )
     .option(
       '--status <in-progress|finished>',
-      "the story map's status (without it, finished when nothing is left to write)",
+      "the Story Atlas's status (without it, finished when nothing is left to write)",
     )
     .option('--template <id|file>', templateHelp)
     .option('--scene-numbers', 'print scene numbers')
@@ -185,16 +189,19 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 }
 
 async function build(input: string, options: BuildOptions, io: IO): Promise<number> {
-  const outputs: Array<['pdf' | 'txt' | 'json' | 'html' | 'storyMap', string]> = [];
-  for (const kind of ['pdf', 'html', 'storyMap', 'txt', 'json'] as const) {
+  if (options.storyAtlas === undefined && options.storyMap !== undefined) {
+    options.storyAtlas = options.storyMap;
+  }
+  const outputs: Array<['pdf' | 'txt' | 'json' | 'html' | 'storyAtlas', string]> = [];
+  for (const kind of ['pdf', 'html', 'storyAtlas', 'txt', 'json'] as const) {
     const target = options[kind];
     if (target !== undefined) outputs.push([kind, target]);
   }
   if (options.reopenable && options.html === undefined) {
     throw new CliError('--reopenable needs --html: only the HTML page can carry the script');
   }
-  if (options.status !== undefined && options.storyMap === undefined) {
-    throw new CliError('--status needs --story-map: only a story map has a status');
+  if (options.status !== undefined && options.storyAtlas === undefined) {
+    throw new CliError('--status needs --story-atlas: only a Story Atlas has a status');
   }
   const status = statusOf(options.status);
   if (outputs.length === 0) outputs.push(['pdf', defaultPdf(input)]);
@@ -238,8 +245,8 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
               options.reopenable ? text : undefined,
               header,
             )
-          : kind === 'storyMap'
-            ? await storyMapHtml(input, doc, template, layout, text, status, io)
+          : kind === 'storyAtlas'
+            ? await storyAtlasHtml(input, doc, template, layout, text, status, io)
             : kind === 'txt'
               ? renderText(layout, template)
               : `${JSON.stringify(toJSON(doc), null, 2)}\n`;
@@ -296,7 +303,7 @@ function titleField(doc: Doc, key: string): string {
   );
 }
 
-/** `--status`: in progress or finished, else none (the story map's own default). */
+/** `--status`: in progress or finished, else none (the Story Atlas's own default). */
 function statusOf(status: string | undefined): MapStatus | null {
   if (status === undefined) return null;
   if (status === 'in-progress' || status === 'finished') return status;
@@ -325,11 +332,11 @@ function draftOf(doc: Doc, text: string): { number: number; id: string } {
 }
 
 /**
- * The story map (story-map design §10.1): the dialog's defaults (summaries, lines, and threads in;
+ * The Story Atlas (story-atlas design §10.1): the dialog's defaults (summaries, lines, and threads in;
  * contact off), the planned length and edited hooks from the metadata block, the logline from the
  * title page, a page a minute, and "updated" the file's last change. It never carries the script.
  */
-async function storyMapHtml(
+async function storyAtlasHtml(
   input: string,
   doc: Doc,
   template: Template,
@@ -338,7 +345,7 @@ async function storyMapHtml(
   status: MapStatus | null,
   io: IO,
 ): Promise<string> {
-  const { plannedPages, hooks } = storyMapMeta(doc.meta);
+  const { plannedPages, hooks } = storyAtlasMeta(doc.meta);
   let updated: number | null = null;
   try {
     updated = (await stat(resolve(io.cwd, input))).mtimeMs;
@@ -346,7 +353,7 @@ async function storyMapHtml(
     // Gone since it was read: no date.
   }
   const logline = titleField(doc, 'logline');
-  const map = buildStoryMap({
+  const map = buildStoryAtlas({
     doc,
     template,
     layout,
@@ -366,9 +373,9 @@ async function storyMapHtml(
       title: titleField(doc, 'title') || basename(input, extname(input)),
     },
   });
-  return renderStoryMap({
+  return renderStoryAtlas({
     map,
-    fonts: await loadStoryMapFonts(),
+    fonts: await loadStoryAtlasFonts(),
     lang: 'en',
     generator: `Drafter ${pkg.version}`,
   });
@@ -489,17 +496,17 @@ async function loadFonts(): Promise<FontSet> {
   ) as unknown as FontSet;
 }
 
-/** Anton, Archivo, and Courier Prime, from `@drafter/story-map`'s `fonts/` folder. */
-async function loadStoryMapFonts(): Promise<StoryMapFonts> {
-  const faces = Object.keys(STORY_MAP_FONT_FILES) as StoryMapFace[];
+/** Anton, Archivo, and Courier Prime, from `@drafter/story-atlas`'s `fonts/` folder. */
+async function loadStoryAtlasFonts(): Promise<StoryAtlasFonts> {
+  const faces = Object.keys(STORY_ATLAS_FONT_FILES) as StoryAtlasFace[];
   const files = await Promise.all(
     faces.map((face) =>
-      readFile(require.resolve(`@drafter/story-map/fonts/${STORY_MAP_FONT_FILES[face]}`)),
+      readFile(require.resolve(`@drafter/story-atlas/fonts/${STORY_ATLAS_FONT_FILES[face]}`)),
     ),
   );
   return Object.fromEntries(
     faces.map((face, k) => [face, new Uint8Array(files[k] as Buffer)]),
-  ) as StoryMapFonts;
+  ) as StoryAtlasFonts;
 }
 
 async function emit(target: string, data: string | Uint8Array, io: IO) {
