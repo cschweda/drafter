@@ -155,6 +155,19 @@ onBeforeUnmount(() => {
   }
 }
 /* A phone: the dot alone, a 24px target, named as on a wide screen. */
+/* Under 1280px the bar is short of room (the search gives way there): the dot alone, in a place
+   its size, with the word in its tooltip and its name. */
+@media (max-width: 1279.98px) {
+  .ghost,
+  .unsaved {
+    justify-content: center;
+    width: 24px;
+    padding: 0;
+  }
+  .word {
+    display: none;
+  }
+}
 @media (max-width: 639.98px) {
   /* A phone's bar has no room to keep empty: a place held here pushed File off an iPhone's bar.
      The dot takes its 24px when it comes, as before. */

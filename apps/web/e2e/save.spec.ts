@@ -14,12 +14,14 @@ import {
   watchAlerts,
 } from './fs-stub';
 import {
+  downloadOf,
   expectSaved,
   expectUnsaved,
   openSettings,
   pressToolbarButton,
   saveState,
   settingsDialog,
+  takeSaveName,
 } from './modules';
 import { roomForSaveAndExport } from './viewport';
 
@@ -335,7 +337,7 @@ test.describe('saving where the browser can’t save in place', () => {
 
     const download = page.waitForEvent('download');
     await saveButton(page).click();
-    const file = await download;
+    const file = await downloadOf(page, download);
     expect(file.suggestedFilename()).toBe('Untitled Screenplay.fountain');
     const path = await file.path();
     const { readFile } = await import('node:fs/promises');
@@ -403,6 +405,7 @@ test.describe('saving where the browser can’t save in place', () => {
       page.evaluate(() => (window as unknown as { __heard: string[] }).__heard.length);
     await page.keyboard.insertText('ONE');
     await page.keyboard.press('ControlOrMeta+s');
+    await takeSaveName(page);
     await expect.poll(heard).toBe(1);
     await page.keyboard.insertText(' TWO');
     await page.keyboard.press('ControlOrMeta+s');
@@ -410,6 +413,38 @@ test.describe('saving where the browser can’t save in place', () => {
     await page.reload();
     await expect(editor(page)).toContainText('TWO');
     await expect(page.locator('[data-save-state] [role="status"]')).toHaveText('');
+  });
+
+  test('asks what to call a script the first time it is saved, and not again', async ({ page }) => {
+    await start(page);
+    await chooseNew(page, 'New screenplay');
+    await page.keyboard.insertText('ONE');
+    await page.keyboard.press('ControlOrMeta+s');
+    // The name it would have, selected to type over; nothing is saved until it is answered.
+    const ask = page.getByRole('dialog', { name: 'Save', exact: true });
+    const name = ask.getByRole('textbox', { name: 'File name' });
+    await expect(name).toBeFocused();
+    await expect(name).toHaveValue('Untitled Screenplay.fountain');
+    // Cancel saves nothing, and the script still has no file.
+    await page.keyboard.press('Escape');
+    await expect(ask).toBeHidden();
+    await expectUnsaved(page);
+    expect((await mine(page))?.fileName).toBeUndefined();
+    // A name of the writer's own.
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(name).toBeFocused();
+    const first = page.waitForEvent('download');
+    await page.keyboard.insertText('The Lamp');
+    await page.keyboard.press('Enter');
+    expect((await first).suggestedFilename()).toBe('The Lamp.fountain');
+    await expectSaved(page);
+    // The next Save keeps that name and asks nothing.
+    await editor(page).click();
+    await page.keyboard.insertText(' TWO');
+    const second = page.waitForEvent('download');
+    await page.keyboard.press('ControlOrMeta+s');
+    expect((await second).suggestedFilename()).toBe('The Lamp.fountain');
+    await expect(ask).toBeHidden();
   });
 
   test('downloads a sample under its title and makes it the writer’s own', async ({
@@ -420,7 +455,7 @@ test.describe('saving where the browser can’t save in place', () => {
     await start(page);
     const download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
-    expect((await download).suggestedFilename()).toBe('The Call.fountain');
+    expect((await downloadOf(page, download)).suggestedFilename()).toBe('The Call.fountain');
     await expectSaved(page);
     await expect.poll(async () => (await stored(page)).length).toBe(2);
     expect((await mine(page))?.fileName).toBe('The Call.fountain');
@@ -443,7 +478,7 @@ test.describe('saving where the browser can’t save in place', () => {
 
     const download = page.waitForEvent('download');
     await saveButton(page).click();
-    await download;
+    await downloadOf(page, download);
     await expectSaved(page);
     await expect(page).toHaveTitle('Untitled Screenplay — Drafter');
     // The status bar names the file, and says when it was saved only in the tooltip.
@@ -487,12 +522,12 @@ test.describe('saving where the browser can’t save in place', () => {
     // From the editor.
     let download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
-    await download;
+    await downloadOf(page, download);
     // From a toolbar button.
     await openButton(page).focus();
     download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
-    await download;
+    await downloadOf(page, download);
     // From the status bar's button, and as Save As, which asks for the name first.
     await status(page).locator('.history-button').focus();
     await page.keyboard.press('ControlOrMeta+Shift+s');
@@ -501,7 +536,7 @@ test.describe('saving where the browser can’t save in place', () => {
     ).toBeFocused();
     download = page.waitForEvent('download');
     await page.keyboard.press('Enter');
-    await download;
+    await downloadOf(page, download);
     expect(await prevented()).toEqual([true, true, true]);
   });
 
@@ -513,7 +548,7 @@ test.describe('saving where the browser can’t save in place', () => {
     await page.keyboard.insertText('A');
     const download = page.waitForEvent('download');
     await saveButton(page).click();
-    await download;
+    await downloadOf(page, download);
     await expectSaved(page);
     expect(await violations(page)).toEqual([]);
     await typeAtEnd(page, 'B');
@@ -595,7 +630,7 @@ test.describe('the unsaved indicator', () => {
     }
     const download = page.waitForEvent('download');
     await unsaved(page).click();
-    await download;
+    await downloadOf(page, download);
     await expect(unsaved(page)).toHaveCount(0);
     await expect(justSaved(page)).toBeVisible();
     if (isMobile) {
@@ -638,7 +673,7 @@ test.describe('the unsaved indicator', () => {
     expect(await places()).toEqual(clean);
     const download = page.waitForEvent('download');
     await unsaved(page).click();
-    await download;
+    await downloadOf(page, download);
     await expect(justSaved(page)).toBeVisible();
     expect(await places()).toEqual(clean);
     await expect(justSaved(page)).toHaveCount(0, { timeout: 4000 });
@@ -652,7 +687,7 @@ test.describe('the unsaved indicator', () => {
     await page.keyboard.insertText('X');
     let download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
-    await download;
+    await downloadOf(page, download);
     await expect(justSaved(page)).toBeVisible();
     expect(await justSaved(page).evaluate((el) => getComputedStyle(el).animationName)).not.toBe(
       'none',
@@ -661,7 +696,7 @@ test.describe('the unsaved indicator', () => {
     await typeAtEnd(page, 'Y');
     download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
-    await download;
+    await downloadOf(page, download);
     await expect(justSaved(page)).toBeVisible();
     expect(await justSaved(page).evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
     await expect(justSaved(page)).toHaveCount(0, { timeout: 4000 });
@@ -686,7 +721,7 @@ test.describe('the unsaved indicator', () => {
     expect(await heard()).toEqual([]);
     const download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
-    await download;
+    await downloadOf(page, download);
     await expect.poll(heard).toEqual(['Saved']);
   });
 
@@ -708,7 +743,7 @@ test.describe('the unsaved indicator', () => {
     expect(Buffer.compare(await ico.body(), await plainIco.body())).not.toBe(0);
     const download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
-    await download;
+    await downloadOf(page, download);
     await expect(page).toHaveTitle('Untitled Screenplay — Drafter');
     await expect.poll(() => icons(page)).toEqual(clean);
   });

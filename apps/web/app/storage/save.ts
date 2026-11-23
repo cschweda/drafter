@@ -22,13 +22,16 @@ import { inTurn, whenIdle } from './turn';
 export const saveAsQuestion = ref<{
   /** The name suggested: the script's file, or its title's. */
   name: string;
+  /** Save of a script with no file yet asked, not Save As: the dialog says "Save". */
+  first: boolean;
   answer(name: string | null): void;
 } | null>(null);
 
-function askFileName(name: string): Promise<string | null> {
+function askFileName(name: string, first: boolean): Promise<string | null> {
   return new Promise((resolve) => {
     saveAsQuestion.value = {
       name,
+      first,
       answer: (typed) => {
         saveAsQuestion.value = null;
         resolve(typed);
@@ -159,10 +162,13 @@ async function run(ask: boolean): Promise<'saved' | 'cancelled'> {
 
   if (!files.canSaveInPlace) {
     // A browser that saves by downloading has no picker to type a name into, so Save As asks for
-    // one itself: a version kept under a name of its own, beside the one saved before.
+    // one itself: a version kept under a name of its own, beside the one saved before. So does the
+    // first Save of a script with no file (the maintainer, 2026-11-23: "I should be given the
+    // option to change the default filename"), as the picker does where there is one; after it,
+    // Save downloads under that name without asking.
     let fileName = name;
-    if (ask) {
-      const typed = await askFileName(name);
+    if (ask || !bound) {
+      const typed = await askFileName(name, !ask);
       if (typed === null) return 'cancelled';
       fileName = downloadName(typed, markdown ? '.md' : '.fountain');
     }

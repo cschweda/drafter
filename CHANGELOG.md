@@ -15,6 +15,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **Saving no longer moves the top bar.** "Unsaved" and "Saved" came and went beside the title, and every button after them shifted each time. That place is now always the same size, filled or empty, so nothing in the bar moves. On a phone-width screen, where the bar has no room to hold empty, the dot still takes its place when it appears.
 - **After a save, the status bar says where it went:** "Saved to The Call.fountain", for a moment. The top bar used to say only "Saved", which didn't tell a script saved to a file from one kept only in the browser.
+- **In Safari and Firefox, the first Save asks what to call the file.** Those browsers save by downloading and have no save dialog, so Drafter used to download a new script under its title without asking; only Save As asked. Now the first Save of a script with no file asks for its name, with the title's suggested, and Save keeps that name from then on. Chrome, Edge, and the desktop app already asked, in their own dialog.
+- **Between 640 and 1280 pixels wide the top bar shows the unsaved dot without the word,** so the place it holds doesn't take room from the search.
 - **A save dialog the browser refuses to open is no longer silent.** Drafter says the dialog didn't open and that nothing was saved.
 
 ## [0.27.3] - 2026-11-22

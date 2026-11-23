@@ -4,6 +4,7 @@ import { expect, type Page, test } from './fixtures';
 import { removePickers } from './fs-stub';
 import {
   chooseExport,
+  downloadOf,
   editor,
   expectSaved,
   runCommand,
@@ -74,7 +75,7 @@ async function showScript(page: Page) {
 async function save(page: Page) {
   const download = page.waitForEvent('download');
   await saveButton(page).click();
-  await download;
+  await downloadOf(page, download);
   await expectSaved(page);
 }
 
@@ -311,7 +312,7 @@ test.describe('Show changes on the Script pane', () => {
     const pdf = async () => {
       const download = page.waitForEvent('download');
       await chooseExport(page, 'PDF');
-      return readFile(await (await download).path());
+      return readFile(await (await downloadOf(page, download)).path());
     };
     const off = await pdf();
     await showScript(page);
