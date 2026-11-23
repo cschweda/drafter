@@ -229,6 +229,19 @@ export const textOf = (page: Page) =>
       .join('\n'),
   );
 
+/**
+ * Lets the fixture module's waiting run go on (app/modules/fixture.ts, "… after a pause"), once
+ * it is waiting: the test has done what it meant to do meanwhile.
+ */
+export async function releaseFixture(page: Page) {
+  const waiting = () =>
+    page.evaluate(
+      () =>
+        (window as unknown as { __drafterFixtureWaiting?: number }).__drafterFixtureWaiting ?? 0,
+    );
+  await expect.poll(waiting).toBeGreaterThan(0);
+  await page.evaluate(() => window.dispatchEvent(new Event('drafter-fixture-go')));
+
 /** Save's question where saving downloads: the first Save of a script with no file asks its name. */
 const saveName = (page: Page) => page.getByRole('dialog', { name: 'Save', exact: true });
 
@@ -263,6 +276,7 @@ export async function takeSaveName(page: Page) {
   await expect(saveName(page).getByRole('textbox', { name: 'File name' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(saveName(page)).toBeHidden();
+
 }
 
 /** Opens the palette from the keyboard and runs the command called `title`. */

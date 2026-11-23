@@ -44,6 +44,29 @@ const FixtureSettings: Component = {
   },
 };
 
+/**
+ * The fixture's wait, which ends when the test says so (`drafter-fixture-go` on the window): a
+ * test does what it means to do while the run waits, however slow the machine, and then lets it
+ * go (`releaseFixture` in e2e/modules.ts). A wait of a fixed time lost that race on a slow
+ * runner: the run finished before the test had switched scripts, and reported the wrong thing.
+ * `__drafterFixtureWaiting` counts the runs waiting, so the test knows one is. It gives up after
+ * thirty seconds, so a run nobody lets go still ends.
+ */
+function released(): Promise<void> {
+  const page = window as unknown as { __drafterFixtureWaiting?: number };
+  return new Promise((resolve) => {
+    const done = () => {
+      window.removeEventListener('drafter-fixture-go', done);
+      clearTimeout(timer);
+      page.__drafterFixtureWaiting = (page.__drafterFixtureWaiting ?? 1) - 1;
+      resolve();
+    };
+    const timer = setTimeout(done, 30_000);
+    window.addEventListener('drafter-fixture-go', done);
+    page.__drafterFixtureWaiting = (page.__drafterFixtureWaiting ?? 0) + 1;
+  });
+}
+
 export const fixture: ScriptModule = {
   id: 'fixture',
   name: 'Fixture',
@@ -79,11 +102,12 @@ export const fixture: ScriptModule = {
     {
       // A run that waits, as one that asks a server would: for the tests of what happens if the
       // script changed, or the module was turned off, while it waited.
+      // It waits for the test's word, not for a time: see `released`.
       id: 'add-note-later',
       title: 'Fixture: add a note after a pause',
       group: 'Edit',
       async run() {
-        await new Promise((resolve) => setTimeout(resolve, 1200));
+        await released();
         const at = ctx.cursor();
         const reported = ctx.setProblems([
           { message: 'Added later', from: 0, to: 0, severity: 'info' },
@@ -99,7 +123,7 @@ export const fixture: ScriptModule = {
       title: 'Fixture: put in a long note after a pause',
       group: 'Edit',
       async run() {
-        await new Promise((resolve) => setTimeout(resolve, 1200));
+        await released();
         const at = ctx.cursor();
         ctx.applyChanges([{ from: at, to: at, insert: `[[${'A long note. '.repeat(24)}]]` }]);
       },
