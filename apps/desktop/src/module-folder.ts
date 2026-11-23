@@ -110,6 +110,22 @@ function isOrigin(value: string): boolean {
   }
 }
 
+/**
+ * A control or format character: a line break, a zero-width space, a direction override. A name
+ * and a description need none, and each is a way to forge what the writer reads (a second line,
+ * a word that isn't where it seems).
+ */
+const UNSEEN = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+const LATIN = /\p{Script=Latin}/u;
+const LOOKALIKE = /[\p{Script=Cyrillic}\p{Script=Greek}]/u;
+
+/** A name as a reader takes it in: compatibility forms folded, and only its letters and digits. */
+const asRead = (name: string) =>
+  name
+    .normalize('NFKC')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .toLowerCase();
+
 /** Why `value` is not a module.json, or undefined when it is one. */
 export function manifestProblem(value: unknown): string | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -121,8 +137,14 @@ export function manifestProblem(value: unknown): string | undefined {
   }
   if (!isText(m.name)) return 'its module.json has no name';
   if (m.name.length > LIMITS.name) return `its name is longer than ${LIMITS.name} characters`;
-  if (/^\s*drafter\b/i.test(m.name)) return 'its name can’t be “Drafter” or start with it';
+  // The name heads the module's questions and its notices, so it must not read as the app's own
+  // (red/blue audit, 2026-11-23, D3): not behind an unseen character, a mark, or another word,
+  // and not spelled with another alphabet's look-alike letters.
+  if (UNSEEN.test(m.name)) return 'its name holds a character that can’t be seen';
+  if (LATIN.test(m.name) && LOOKALIKE.test(m.name)) return 'its name must keep to one alphabet';
+  if (asRead(m.name).includes('drafter')) return 'its name can’t be “Drafter” or hold it';
   if (!isText(m.description)) return 'its module.json has no description';
+  if (UNSEEN.test(m.description)) return 'its description holds a character that can’t be seen';
   if (m.description.length > LIMITS.description) {
     return `its description is longer than ${LIMITS.description} characters`;
   }

@@ -139,6 +139,20 @@ describe('manifestProblem', () => {
       [{ ...MANIFEST, name: 'Drafter' }, /name can’t be “Drafter”/],
       [{ ...MANIFEST, name: 'Drafter Helper' }, /name can’t be “Drafter”/],
       [{ ...MANIFEST, name: 'drafter' }, /name can’t be “Drafter”/],
+      // However it is dressed (red/blue audit, 2026-11-23, D3): unseen characters before it, a
+      // look-alike letter, a word or a mark in front, a line break, or another script's letters.
+      [{ ...MANIFEST, name: '\u200bDrafter' }, /name can’t be “Drafter”|name holds a character/],
+      [{ ...MANIFEST, name: '\u202eDrafter' }, /name can’t be “Drafter”|name holds a character/],
+      [{ ...MANIFEST, name: 'Dr\u0430fter' }, /name can’t be “Drafter”|one alphabet/],
+      [{ ...MANIFEST, name: 'Drafter_Update' }, /name can’t be “Drafter”/],
+      [{ ...MANIFEST, name: 'The Drafter app' }, /name can’t be “Drafter”/],
+      [{ ...MANIFEST, name: '\u{1F512} Drafter' }, /name can’t be “Drafter”/],
+      [{ ...MANIFEST, name: 'Tidy\n\nDrafter' }, /name holds a character/],
+      [{ ...MANIFEST, name: 'D r a f t e r' }, /name can’t be “Drafter”/],
+      [
+        { ...MANIFEST, description: 'Tidies.\nDrafter: update now' },
+        /description holds a character/,
+      ],
       [{ ...MANIFEST, description: 3 }, /has no description/],
       [{ ...MANIFEST, description: 'x'.repeat(401) }, /description is longer than 400/],
       [{ ...MANIFEST, permissions: undefined }, /no permissions/],
