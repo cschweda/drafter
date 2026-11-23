@@ -257,7 +257,7 @@ describe('undo and redo onto a made line', () => {
 
   test('Enter at a speech line’s start, undo, redo, leave', () => {
     const back = apply(apply(keys(editing('JUNE\n|Hello.'), 'Enter'), undo), redo);
-    // History maps the cursor past the line it opened before it, and takes no filter.
+    // HiStory Atlases the cursor past the line it opened before it, and takes no filter.
     expect(render(back)).toBe('JUNE\n\n|Hello.');
     expect(click(back, 0).sliceDoc()).toBe('JUNE\nHello.');
   });

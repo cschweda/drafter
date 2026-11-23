@@ -99,13 +99,13 @@ export interface DesktopMenuBridge {
 }
 
 /**
- * The editor's right-click menu (story-map design §3.1): the desktop app asks which speech is
- * under a right-click, and runs Use in story map or Never use in story map on it.
+ * The editor's right-click menu (story-atlas design §3.1): the desktop app asks which speech is
+ * under a right-click, and runs Use in Story Atlas or Never use in Story Atlas on it.
  */
 export interface DesktopEditorBridge {
   /**
    * `answer(x, y)` gives the editor offset of a point (in the window's CSS pixels) that is in a
-   * speech the story map can use, or null. Returns the function that stops answering.
+   * speech the Story Atlas can use, or null. Returns the function that stops answering.
    */
   onSpeechAt(answer: (x: number, y: number) => number | null): () => void;
   /** Calls `run` with the offset `onSpeechAt` answered, and the mark chosen in the menu. */
@@ -209,7 +209,7 @@ export interface DesktopBridge {
   files: DesktopFilesBridge;
   /** The menu bar. */
   menu: DesktopMenuBridge;
-  /** The editor's right-click menu (a desktop app from before the story map has none). */
+  /** The editor's right-click menu (a desktop app from before the Story Atlas has none). */
   editor?: DesktopEditorBridge;
   /**
    * Calls `onPath` with the path of each script the system asks Drafter to open: named on the

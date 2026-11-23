@@ -1,5 +1,5 @@
 // Whole percents for a share of the whole (seeing-the-script design §4.3): the Stats tab's
-// Characters table, Scaffold, and the story map round with this one function, so they agree.
+// Characters table, Scaffold, and the Story Atlas round with this one function, so they agree.
 
 /**
  * Whole percents of `amounts`' total, by largest remainder, so they add up to 100: each is rounded

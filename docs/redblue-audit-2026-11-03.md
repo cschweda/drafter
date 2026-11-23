@@ -37,7 +37,7 @@ Status: **Fixed** (in code, with a test), **Mitigated** (the risk is cut and the
 | W1 | Medium | A Markdown file of about 160 KB of `*_` froze the editor's tab for over 14 seconds, and again on every reload, since Drafter reopens the last document. | In a paragraph with more than 4,000 `*` or `_`, the Source pane's grammar reads them as plain text. That paragraph stays linear, and every other paragraph is highlighted as before. A test parses the attack in under 2 seconds; without the fix it took 25.9. | Fixed |
 | W2 | Medium | The same file stalled the Preview, and every later export, which queue behind one another, until a reload (micromark took over a minute). | `parseMarkdown` refuses a paragraph with more than 4,000 `*` or `_`, or 4,000 `]` with no `[`, before parsing, as it already refused a document nested too deeply. The Preview says why, and exports say so too. A new trap, `md-emphasis-quadratic`, holds it. A deadline on each export job is deferred. | Fixed |
 | P2 | Medium | The script's title is the tab's title, so the browser keeps it in its history and can sync open tabs to Google, Microsoft, Apple, or Mozilla, after Remove from this browser too. | A setting, **Hide the script's title in the tab**: the tab and the window say only "Drafter". The Privacy help page says what the browser keeps on its own. | Mitigated |
-| P3 | Medium | The Story map's logline, greeting, explanation, and contact, and the synopsis fields in the Outline and on cards, went into the browser's form history. That outlasts Remove from this browser and can sync. | `autocomplete="off"` on each, and a test that scans every component and fails on any text field without it. | Fixed |
+| P3 | Medium | The Story Atlas's logline, greeting, explanation, and contact, and the synopsis fields in the Outline and on cards, went into the browser's form history. That outlasts Remove from this browser and can sync. | `autocomplete="off"` on each, and a test that scans every component and fails on any text field without it. | Fixed |
 | P4 | Medium | On drafter.dev, Plausible's script runs in the editor's page. If plausible.io or the script were compromised, it could read the page and post it to plausible.io, which the security policy allowed whole. | The policy now names only Plausible's one script file and its one event address. A real browser check showed a send to any other plausible.io address refused. The help says plainly that Drafter can't check Plausible's own code, and that the desktop app has none. Serving a reviewed copy from drafter.dev would close the rest; the maintainer kept Plausible on every page. | Mitigated |
 | S2 | Medium | `drafter build` followed a link planted where its PDF goes (`script.pdf -> ../elsewhere`), and overwrote the file outside the folder. Proved. | The output is written beside the target and then renamed over it, so a link is replaced, never written through. Tested: it fails before the fix and passes after. | Fixed |
 | D2 | Low–Medium | A page could open an app window that was hidden, see-through, and unfocusable, with the app's full bridge. | A new app window always gets the app's own chrome: shown, solid, focusable, and centred. Tested. | Fixed |
@@ -48,9 +48,9 @@ Status: **Fixed** (in code, with a test), **Mitigated** (the risk is cut and the
 | W4 | Low | The spellcheck's word splitter took time in a hyphen chain's length squared (`a-a-a-…`), pinning a core. | Each run's compound is worked out once and shared. Tested as linear. | Fixed |
 | P5 | Low | Every cut is kept, including text pasted by mistake and deleted, and there's no way to delete a cut. In a shared Dropbox, Drive, or OneDrive folder, others can read it. | The help warns about shared folders. A Delete this cut action is deferred. | Mitigated |
 | P6 | Low | One EPUB identifier linked every copy of a script, so a blind contest copy could be tied to the named one, or to a guessed author. | An EPUB with no title page gets a new random identifier. Tested. | Fixed |
-| P7 | Low | The command line's help said the Story map leaves notes out; it shows synopses and setups and payoffs. | The help says exactly what it shows. | Fixed |
+| P7 | Low | The command line's help said the Story Atlas leaves notes out; it shows synopses and setups and payoffs. | The help says exactly what it shows. | Fixed |
 | D3 | Low | The desktop app has no `will-download` handler, so a page can start a download with a name it chose (a Save box still asks). | Deferred: a handler that refuses downloads from pages, once it's clear no feature uses one. | Deferred |
-| W5 | Info | A Story map contact could carry another address (`me@x.co,spy@evil.co`, or encoded). | `,`, `;`, and `%` are refused in a contact. Tested. | Fixed |
+| W5 | Info | A Story Atlas contact could carry another address (`me@x.co,spy@evil.co`, or encoded). | `,`, `;`, and `%` are refused in a contact. Tested. | Fixed |
 | W6 | Info | A scene's color note naming `constructor` read the object's prototype (harmless: invalid CSS). | The lookup takes only Drafter's own colors. | Fixed |
 | S6 | Info | `publish.sh` accepted any desktop run on a branch named like the tag. | It takes only a push of the tag, at the tag's own commit. Checked against v0.25.0's real run. | Fixed |
 | S7 | Info | `.gitignore` didn't cover signing keys and credentials. | `*.p12`, `*.pfx`, `*.pem`, `*.key`, `.npmrc`, and `electron-builder.env` are ignored. | Fixed |
@@ -94,7 +94,7 @@ Status: **Fixed** (in code, with a test), **Mitigated** (the risk is cut and the
 - **`publish.sh`:** byte for byte with the Release's file, with `--ignore-scripts`.
 
 **Privacy**
-- **What exports carry:** PDF metadata is only the title, creator, and producer. HTML and Story map exports fetch nothing. Notes stay out of PDF, plain text, and Markdown when left out.
+- **What exports carry:** PDF metadata is only the title, creator, and producer. HTML and Story Atlas exports fetch nothing. Notes stay out of PDF, plain text, and Markdown when left out.
 - **Analytics:** Plausible's page address can't carry script data, since there are no dynamic routes or history changes. Scroll depth leaks nothing, as the page height is fixed.
 - **Headers:** live drafter.dev sends `Referrer-Policy: no-referrer` and COOP.
 - **Storage:** separate for each origin. The unsaved-text stash is cleared after it's written. Remove from this browser clears every store.
@@ -120,7 +120,7 @@ All on the `redblue-audit` branch, with a `CHANGELOG.md` entry for each:
 - **Command line:** `packages/cli/src/cli.ts` (S2, P7).
 - **Drafter for Claude:** `packages/mcp/src/inside.ts` (S3).
 - **Docker:** `apps/web/scripts/caddyfile.mjs` (S5).
-- **Lookups and the contact link:** `packages/history/src/print.ts` (W3), `apps/web/app/outline/labels.ts` (W6), `packages/story-map/src/mailto.ts` (W5).
+- **Lookups and the contact link:** `packages/history/src/print.ts` (W3), `apps/web/app/outline/labels.ts` (W6), `packages/story-atlas/src/mailto.ts` (W5).
 - **Spellcheck:** `packages/spell/src/tokens.ts` (W4).
 - **Settings and fields:** the Hide the title setting (P2), and `autocomplete="off"` with its test (P3).
 - **Security policy:** `apps/web/scripts/csp.mjs` (P4).

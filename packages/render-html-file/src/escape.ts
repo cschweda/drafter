@@ -55,7 +55,7 @@ const VOID = new Set(['br', 'hr', 'img', 'meta', 'link', 'wbr', 'col', 'source']
 /** A name as the file's own code writes one; an optional prefix is for the EPUB's `epub:type`. */
 const NAME = /^[a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?$/;
 
-/** SVG's attributes spelled in camel case that the story map's charts write; no other. */
+/** SVG's attributes spelled in camel case that the Story Atlas's charts write; no other. */
 const SVG_CAMEL = new Set(['viewBox', 'preserveAspectRatio', 'pathLength']);
 
 /**

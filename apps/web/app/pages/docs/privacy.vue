@@ -335,9 +335,9 @@ useDocsHead({
             <td></td>
           </tr>
           <tr>
-            <th scope="row">Story map</th>
-            <td>What a story map shows: short summaries, a few lines, hooks, and thread names</td>
-            <td>Your Setup and Payoff names only, as the story map shows them</td>
+            <th scope="row">Story Atlas</th>
+            <td>What a Story Atlas shows: short summaries, a few lines, hooks, and thread names</td>
+            <td>Your Setup and Payoff names only, as the Story Atlas shows them</td>
             <td>Numbers</td>
           </tr>
           <tr>

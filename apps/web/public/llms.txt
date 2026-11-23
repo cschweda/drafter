@@ -14,7 +14,7 @@ Drafter is made by Christopher Schweda and is MIT-licensed. It is free with no c
 - [Production](https://drafter.dev/docs/production/): locked pages and scene numbers, colored revisions with marks, A-pages, A-scenes, and OMITTED scenes
 - [Saving and your browser](https://drafter.dev/docs/saving/): where a script is kept, saving to files, and exports
 - [Drafts and cuts](https://drafter.dev/docs/drafts-and-cuts/): numbered drafts, and every cut kept beside the script
-- [Story map](https://drafter.dev/docs/story-map/): a visual page of a script to send to anyone
+- [Story Atlas](https://drafter.dev/docs/story-atlas/): a visual page of a script to send to anyone
 - [Drafter for Claude](https://drafter.dev/docs/drafter-for-claude/): an optional, read-only MCP server that lets your own AI app read folders you name
 - [Self-hosting](https://drafter.dev/docs/self-hosting/): running the web app from your own computer or server with Docker
 - [Keyboard shortcuts](https://drafter.dev/docs/shortcuts/): every key

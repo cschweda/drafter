@@ -256,8 +256,8 @@ describe('checking the files the build must have', () => {
     }
     expect(REQUIRED_FILES).toContain('licenses/nspell.txt');
     expect(REQUIRED_FILES).toContain('licenses/is-buffer.txt');
-    // Every typeface's licence, which the OFL asks to travel with the fonts: the story map's
-    // Anton and Archivo too, since every story map carries them.
+    // Every typeface's licence, which the OFL asks to travel with the fonts: the Story Atlas's
+    // Anton and Archivo too, since every Story Atlas carries them.
     expect(REQUIRED_FILES).toContain('fonts/courier-prime/OFL.txt');
     expect(REQUIRED_FILES).toContain('fonts/inter-tight/OFL.txt');
     expect(REQUIRED_FILES).toContain('fonts/anton/OFL.txt');
@@ -271,14 +271,14 @@ describe('checking the files the build must have', () => {
     for (const style of ['Regular', 'Italic', 'Bold', 'BoldItalic']) {
       expect(REQUIRED_FILES).toContain(`fonts/liberation-serif/LiberationSerif-${style}.ttf`);
     }
-    // The story map's four faces, which its export fetches and embeds.
+    // The Story Atlas's four faces, which its export fetches and embeds.
     for (const face of [
       'Anton-Regular',
       'Archivo-Regular',
       'Archivo-SemiBold',
       'CourierPrime-Regular',
     ]) {
-      expect(REQUIRED_FILES).toContain(`fonts/story-map/${face}.woff2`);
+      expect(REQUIRED_FILES).toContain(`fonts/story-atlas/${face}.woff2`);
     }
     // The licences of the two packages inside Drafter for Claude, which the Licences page links.
     expect(REQUIRED_FILES).toContain('licenses/modelcontextprotocol-server.txt');

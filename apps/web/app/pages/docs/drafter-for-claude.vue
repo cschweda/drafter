@@ -237,7 +237,7 @@ const checkWindows = `certutil -hashfile drafter-mcp-${VERSION}.js SHA256`;
       <li><strong>List drafts</strong> and <strong>Compare drafts:</strong> your frozen drafts, and what changed between two of them, or a draft and now.</li>
       <li><strong>List cuts:</strong> what you cut, when, from where, and its text.</li>
       <li><strong>Search scripts:</strong> plain words, never a pattern, across one script or all of them.</li>
-      <li><strong>Story map:</strong> the Story map’s facts, as data.</li>
+      <li><strong>Story Atlas:</strong> the Story Atlas’s facts, as data.</li>
       <li>
         <strong>Series overview:</strong> up to 30 scripts together: every character and the
         episodes they are in, their ages, names that look like spellings of each other, and places.
@@ -336,7 +336,7 @@ const checkWindows = `certutil -hashfile drafter-mcp-${VERSION}.js SHA256`;
     </p>
     <p>
       <strong>Left out unless you ask:</strong> your notes (<code>[[…]]</code>, scene fields,
-      setups and payoffs, and to-dos among them, except the setup and payoff names a story map
+      setups and payoffs, and to-dos among them, except the setup and payoff names a Story Atlas
       shows) and the boneyard (<code>/* … */</code>). Ask
       Claude to “include my notes” and it asks Drafter for them; every answer says how many it left
       out. <strong>Never handed over:</strong> Drafter’s own data at the end of a script, your title

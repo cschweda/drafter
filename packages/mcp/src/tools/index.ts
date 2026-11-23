@@ -5,7 +5,7 @@ import type { LoadCache } from '../cache';
 import type { Include } from '../envelope';
 import type { Loaded } from '../load';
 import type { WorkerData } from '../pool';
-import { searchScripts, seriesOverview, storyMap } from './across';
+import { searchScripts, seriesOverview, storyAtlas } from './across';
 import { compareDraftsTool, listCutsTool, listDraftsTool } from './history';
 import { listScripts } from './list';
 import { characterLines, readScene, scriptOverview } from './script';
@@ -19,7 +19,7 @@ export type ToolName =
   | 'compare_drafts'
   | 'list_cuts'
   | 'search_scripts'
-  | 'story_map'
+  | 'story_atlas'
   | 'series_overview';
 
 export type { Loaded } from '../load';
@@ -54,6 +54,6 @@ export const TOOLS: ReadonlyArray<ToolDef<any, any>> = [
   compareDraftsTool,
   listCutsTool,
   searchScripts,
-  storyMap,
+  storyAtlas,
   seriesOverview,
 ];

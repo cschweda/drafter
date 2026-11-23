@@ -91,7 +91,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
     title: 'Drafts and cuts',
     section: 'writing',
   },
-  { id: 'help-story-map', path: '/docs/story-map', title: 'Story map', section: 'writing' },
+  { id: 'help-story-atlas', path: '/docs/story-atlas', title: 'Story Atlas', section: 'writing' },
   {
     id: 'help-drafter-for-claude',
     path: '/docs/drafter-for-claude',
@@ -302,10 +302,10 @@ export const COMMAND_DATA: readonly CommandData[] = [
     group: 'File',
     keywords: ['e-book', 'ebook', 'e-reader', 'tablet'],
   },
-  // A picture of the script for a non-writer (story-map design §1.1): its dialog, then one page.
+  // A picture of the script for a non-writer (story-atlas design §1.1): its dialog, then one page.
   {
-    id: 'export-story-map',
-    title: 'Export as Story map…',
+    id: 'export-story-atlas',
+    title: 'Export as Story Atlas…',
     group: 'File',
     icon: 'i-lucide-map',
     keywords: ['visual', 'teaser', 'share', "what I'm writing"],
@@ -651,9 +651,9 @@ export const COMMAND_DATA: readonly CommandData[] = [
   fountain('wrap-in-note', 'Wrap in a note', 'Mod-/'),
   fountain('mark-setup', 'Mark a setup'),
   fountain('mark-payoff', 'Mark a payoff'),
-  // The story map's lines of dialogue (story-map design §3.1, Call 6): the speech at the cursor.
-  fountain('story-map-use-line', 'Use in story map'),
-  fountain('story-map-never-line', 'Never use in story map'),
+  // The Story Atlas's lines of dialogue (story-atlas design §3.1, Call 6): the speech at the cursor.
+  fountain('story-atlas-use-line', 'Use in Story Atlas'),
+  fountain('story-atlas-never-line', 'Never use in Story Atlas'),
   fountain('cut-to-boneyard', 'Cut to the boneyard', 'Mod-Shift-/'),
 
   // Edit, the element bar's buttons for a Markdown document (the design, §5)

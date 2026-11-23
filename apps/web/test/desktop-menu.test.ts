@@ -391,7 +391,7 @@ describe('Export options in the desktop menus', () => {
       'export-md',
       'export-html',
       'export-epub',
-      'export-story-map',
+      'export-story-atlas',
       'export-fountain',
       'export-txt',
       'export-fdx',

@@ -183,7 +183,7 @@ export default defineNuxtConfig({
           replacement: `${PACKAGES}/markdown/src/$1.ts`,
         },
         {
-          find: /^@drafter\/(archive|cast|cm-fountain|compare|fdx|fountain|history|layout|lint|markdown|notes|novel|outline|render-docx|render-html|render-html-file|render-pdf|render-text|spell|story-map|templates|production)$/,
+          find: /^@drafter\/(archive|cast|cm-fountain|compare|fdx|fountain|history|layout|lint|markdown|notes|novel|outline|render-docx|render-html|render-html-file|render-pdf|render-text|spell|story-atlas|templates|production)$/,
           replacement: `${PACKAGES}/$1/src/index.ts`,
         },
       ],
@@ -192,13 +192,25 @@ export default defineNuxtConfig({
   // The editor runs in the browser; `/` is prerendered as a shell that
   // carries the metadata and the loading template's description. The help pages (`/docs/...`,
   // Phase 1 design §4.5) are prerendered with their content, so they read without JavaScript.
-  routeRules: { '/': { ssr: false }, '/docs/**': { prerender: true, ssr: true } },
+  routeRules: {
+    '/': { ssr: false },
+    '/docs/**': { prerender: true, ssr: true },
+    // The Story Atlas was the story map until v0.28.0: its old address still leads to it.
+    '/docs/story-map': { redirect: '/docs/story-atlas/' },
+  },
   // Always plain static files in .output/public. On Netlify, Nitro would
   // otherwise pick its netlify-static preset and write dist/ instead, which
   // netlify.toml's publish directory and scripts/csp.mjs don't read.
   nitro: {
     preset: 'static',
-    prerender: { routes: ['/docs', ...HELP_PAGES.map((page) => page.path), DOWNLOAD_PAGE.path] },
+    prerender: {
+      routes: [
+        '/docs',
+        ...HELP_PAGES.map((page) => page.path),
+        DOWNLOAD_PAGE.path,
+        '/docs/story-map',
+      ],
+    },
   },
   hooks: {
     // The desktop build has no PWA module, so the plugin that registers its worker (and imports

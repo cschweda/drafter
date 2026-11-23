@@ -1,6 +1,6 @@
 import { savedText } from '@drafter/cm-fountain';
 import { type ManuscriptDetails, resolveDetails } from '@drafter/novel';
-import type { MapOptions } from '@drafter/story-map';
+import type { MapOptions } from '@drafter/story-atlas';
 import type { Template } from '@drafter/templates';
 import { ref } from 'vue';
 import { buildInfo } from '../about/info';
@@ -43,8 +43,8 @@ import { whenIdle } from './turn';
  * Markdown, written in the worker) are a screenplay's or a stage play's; a Markdown document's are
  * `pdf` (drawn in Inter Tight, Markdown PDF design), `html` (the document as the Preview draws
  * it, in one page), `epub` (the same, as an e-book), `md` (its own text), and `txt` (the same
- * text, as a plain text file). `story-map` (story-map design) is a script's too, but made after
- * its dialog (`exportStoryMap`), so it isn't one of `EXPORTS`' files. `manuscript-pdf` and
+ * text, as a plain text file). `story-atlas` (story-atlas design) is a script's too, but made after
+ * its dialog (`exportStoryAtlas`), so it isn't one of `EXPORTS`' files. `manuscript-pdf` and
  * `manuscript-docx` (a novel's standard manuscript, as a PDF and as a Word file) are a novel's
  * alone, made after their dialog (`exportManuscript`), so they aren't either; nor is
  * `revised-pdf`, a locked script's revised pages, made after its dialog (`exportRevisedPages`).
@@ -57,7 +57,7 @@ export type ExportKind =
   | 'txt'
   | 'md'
   | 'fdx'
-  | 'story-map'
+  | 'story-atlas'
   | 'manuscript-pdf'
   | 'manuscript-docx'
   | 'revised-pdf'
@@ -120,7 +120,7 @@ const MIME: Record<ExportKind, string> = {
   txt: 'text/plain',
   md: 'text/markdown',
   fdx: 'application/xml',
-  'story-map': 'text/html',
+  'story-atlas': 'text/html',
   'manuscript-pdf': 'application/pdf',
   'manuscript-docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'revised-pdf': 'application/pdf',
@@ -136,7 +136,7 @@ const EXTENSION = {
   txt: '.txt',
   md: '.md',
   fdx: '.fdx',
-  'story-map': '.html',
+  'story-atlas': '.html',
   'manuscript-pdf': '.pdf',
   'manuscript-docx': '.docx',
   'revised-pdf': '.pdf',
@@ -148,7 +148,7 @@ const EXTENSION = {
 /** What a save picker offers each kind as, where it isn't the kind itself. */
 const PICKER_KIND = {
   md: 'markdown',
-  'story-map': 'html',
+  'story-atlas': 'html',
   'manuscript-pdf': 'pdf',
   'manuscript-docx': 'docx',
   'revised-pdf': 'pdf',
@@ -162,7 +162,7 @@ const pickerKind = (kind: ExportKind): FileKind =>
 
 /** The words a kind's name adds after the title, before its extension. */
 const NAME_SUFFIX: Partial<Record<ExportKind, string>> = {
-  'story-map': ' – story map',
+  'story-atlas': ' – Story Atlas',
   'manuscript-pdf': ' – manuscript',
   'manuscript-docx': ' – manuscript',
   'sides-pdf': ' – Sides',
@@ -171,7 +171,7 @@ const NAME_SUFFIX: Partial<Record<ExportKind, string>> = {
 };
 
 /**
- * "Signal Hill – story map.html" (design §1.1) and "The Salt Road – manuscript.pdf" (or `.docx`),
+ * "Signal Hill – Story Atlas.html" (design §1.1) and "The Salt Road – manuscript.pdf" (or `.docx`),
  * and "The Hall – Blue revised pages.pdf" (`set`, the open revision's name); the other kinds are
  * the title and the extension.
  */
@@ -208,8 +208,8 @@ function notFor(kind: ExportKind, markdown: boolean, novel: boolean): string | n
   if (markdown && kind === 'fountain') {
     return 'Only a screenplay or a stage play exports as a Fountain file.';
   }
-  if (markdown && kind === 'story-map') {
-    return 'Only a screenplay or a stage play makes a story map.';
+  if (markdown && kind === 'story-atlas') {
+    return 'Only a screenplay or a stage play makes a Story Atlas.';
   }
   if (markdown && isBreakdown(kind)) {
     return 'Only a screenplay or a stage play has a breakdown.';
@@ -236,12 +236,12 @@ function withOptions(
   options: ExportOptions,
   locked: boolean,
 ): string {
-  // A story map has its own choices, in its dialog, and never carries the script (Call 20). A
+  // A Story Atlas has its own choices, in its dialog, and never carries the script (Call 20). A
   // Fountain file is the script's text as written: the options shape how it is drawn, not the text.
   // A manuscript's details are its dialog's, and the toast names no options for it either.
   // Revised pages have theirs in their dialog too.
   if (
-    kind === 'story-map' ||
+    kind === 'story-atlas' ||
     kind === 'fountain' ||
     isManuscript(kind) ||
     kind === 'revised-pdf' ||
@@ -313,8 +313,8 @@ function requestFor(
   },
 ): ExportRequest {
   const { kind } = asked;
-  // Made by `storyMapRequest`, after its dialog's changes.
-  if (kind === 'story-map') throw new Error('A story map is made from its dialog.');
+  // Made by `storyAtlasRequest`, after its dialog's changes.
+  if (kind === 'story-atlas') throw new Error('A Story Atlas is made from its dialog.');
   // Made by `run` with its dialog's details.
   if (isManuscript(kind)) throw new Error('A manuscript is made from its dialog.');
   if (kind === 'revised-pdf') throw new Error('Revised pages are made from their dialog.');
@@ -369,20 +369,20 @@ function requestFor(
 }
 
 /**
- * A story map's part of an export (`exportStoryMap`): the text changes its dialog asked for, made
+ * A Story Atlas's part of an export (`exportStoryAtlas`): the text changes its dialog asked for, made
  * after the picker (it needs the click) and before the page is made; and the page's options, from
  * the text as it then is. `write` answers what the toast adds after "Exported …." ('' for nothing).
  */
-export interface StoryMapJob {
+export interface StoryAtlasJob {
   /** The dialog's choices, so two different maps are never joined as one export. */
   key: string;
   write(): string;
   options(source: string, title: string): Promise<MapOptions>;
 }
 
-/** What an export after a dialog brings: a story map's job, or a manuscript's details. */
+/** What an export after a dialog brings: a Story Atlas's job, or a manuscript's details. */
 interface FromDialog {
-  job?: StoryMapJob;
+  job?: StoryAtlasJob;
   details?: ManuscriptDetails;
   /** Revised pages' choices, from their dialog. */
   revised?: RevisedPagesChoice;
@@ -473,7 +473,7 @@ async function run(
       target = await files.pickToSave(name, pickerKind(kind));
       if (!target) return 'cancelled';
     }
-    // A story map's text changes, after the picker and before the page (one undo).
+    // A Story Atlas's text changes, after the picker and before the page (one undo).
     const after = job ? job.write() : '';
     let data: Uint8Array | string;
     let missing: string[] = [];
@@ -491,13 +491,13 @@ async function run(
       const project = script.project.value;
       const projectId = project?.id;
       // "Let Drafter reopen this file": the text as Save would write it, line breaks and BOM too.
-      // Never a story map's: it never carries the script (Call 20); nor a manuscript's.
+      // Never a Story Atlas's: it never carries the script (Call 20); nor a manuscript's.
       const embed =
         options.reopenable && !job && !isManuscript(kind)
           ? encodeFile(source, project?.lineBreak ?? '\n', project?.bom ?? false)
           : undefined;
       const request: ExportRequest = job
-        ? await storyMapRequest(asked, job, source, template, title)
+        ? await storyAtlasRequest(asked, job, source, template, title)
         : kind === 'sides-pdf' && sides
           ? {
               kind,
@@ -567,16 +567,16 @@ async function run(
   }
 }
 
-/** A story map's request: the text as it is after its changes, never with the script inside. */
-async function storyMapRequest(
+/** A Story Atlas's request: the text as it is after its changes, never with the script inside. */
+async function storyAtlasRequest(
   asked: Asked,
-  job: StoryMapJob,
+  job: StoryAtlasJob,
   source: string,
   template: Template,
   title: string,
 ): Promise<ExportRequest> {
   return {
-    kind: 'story-map',
+    kind: 'story-atlas',
     source,
     template,
     title,
@@ -626,8 +626,8 @@ interface Asked {
   lang: Settings['spellLanguage'];
   /** The script's own page rate, for an HTML file's running time. */
   minutesPerPage: number;
-  /** A story map's choices (`StoryMapJob.key`); '' for the other kinds. */
-  storyMap: string;
+  /** A Story Atlas's choices (`StoryAtlasJob.key`); '' for the other kinds. */
+  storyAtlas: string;
   /** A manuscript's details, as JSON, so two with other details are never joined; '' otherwise. */
   manuscript: string;
   /** Revised pages' choices, as JSON, likewise; '' otherwise. */
@@ -638,7 +638,7 @@ interface Asked {
 
 function askedFor(
   kind: ExportKind,
-  job?: StoryMapJob,
+  job?: StoryAtlasJob,
   details?: ManuscriptDetails,
   revised?: RevisedPagesChoice,
   sides?: SidesChoice,
@@ -660,7 +660,7 @@ function askedFor(
     paper: settings.value.markdownPaper,
     lang: settings.value.spellLanguage,
     minutesPerPage: ratesOf(project).minutesPerPage,
-    storyMap: job?.key ?? '',
+    storyAtlas: job?.key ?? '',
     manuscript: details === undefined ? '' : JSON.stringify(details),
     revised: revised === undefined ? '' : JSON.stringify(revised),
     sides: sides === undefined ? '' : JSON.stringify(sides),
@@ -681,18 +681,18 @@ let last: { asked: Asked; done: Promise<'saved' | 'cancelled'> } | undefined;
  * for after the options changed is its own too).
  */
 export function exportScript(
-  kind: Exclude<ExportKind, 'story-map' | 'manuscript-pdf' | 'manuscript-docx' | 'revised-pdf'>,
+  kind: Exclude<ExportKind, 'story-atlas' | 'manuscript-pdf' | 'manuscript-docx' | 'revised-pdf'>,
 ): Promise<'saved' | 'cancelled'> {
   return queued(askedFor(kind));
 }
 
 /**
- * Exports the open script's story map (story-map design §7), after its dialog: the picker, then
+ * Exports the open script's Story Atlas (story-atlas design §7), after its dialog: the picker, then
  * `job`'s text changes, then the page, in the same turn as the other exports, with the same
  * progress bar and toast.
  */
-export function exportStoryMap(job: StoryMapJob): Promise<'saved' | 'cancelled'> {
-  return queued(askedFor('story-map', job), { job });
+export function exportStoryAtlas(job: StoryAtlasJob): Promise<'saved' | 'cancelled'> {
+  return queued(askedFor('story-atlas', job), { job });
 }
 
 /**

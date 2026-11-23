@@ -106,7 +106,7 @@ export const transitionTrailingSpace: Rule = {
 /**
  * title-key-not-printed: the title page prints Title, Credit, Author, Source, Contact, and Draft
  * date. Any other key (Copyright, Notes, Revision, one of the writer's own) is kept in the file
- * and printed nowhere. `Logline` is Drafter's own, for the story map, so it is left alone.
+ * and printed nowhere. `Logline` is Drafter's own, for the Story Atlas, so it is left alone.
  */
 export const titleKeyNotPrinted: Rule = {
   id: 'title-key-not-printed',

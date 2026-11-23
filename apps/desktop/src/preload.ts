@@ -161,7 +161,7 @@ const bridge: DesktopBridge = {
     },
   },
   // The right-click menu: main asks which speech is under a click (the page answers at once, from
-  // the editor), and sends back the story-map item chosen for it.
+  // the editor), and sends back the story-atlas item chosen for it.
   editor: {
     onSpeechAt(answer) {
       const listener = (_event: unknown, id: unknown, x: unknown, y: unknown) => {
