@@ -99,6 +99,34 @@ describe('what the writer does (§8.4)', () => {
     expect(metaOf(keys(opened, ' */'))).toEqual(META);
   });
 
+  test('a block laid out another way is protected under an open comment too', () => {
+    // The audit of that audit: the parser reads all of these as the settings, and each lost its
+    // protection once `/*` was typed above it.
+    const json = '{"v":1,"template":"stage-play"}';
+    const spread = `{\n"v":1,${'\n'.repeat(70)}"template":"stage-play"\n}`;
+    for (const block of [
+      `/* drafter\n${json}*/`,
+      `/* drafter\n${json} */`,
+      `  /* drafter\n${json}\n*/`,
+      `/* drafter\n${json}\n  */`,
+      `/* drafter\n${spread}\n*/`,
+    ]) {
+      const start = play(`One.|\n\n${block}\n`);
+      expect(metaOf(start), block).toEqual(META);
+      const opened = keys(start, ' /*');
+      expect(protectedRange(opened), block).not.toBeNull();
+      expect(keys(all(opened), 'Backspace').sliceDoc(), block).toContain(block.trimStart());
+    }
+    // Not a block: one with text after it, one whose inside isn't settings, one mid-line.
+    for (const not of [
+      `/* drafter\n${json}\n*/ and more`,
+      '/* drafter\nnot settings\n*/',
+      `Text /* drafter\n${json}\n*/`,
+    ]) {
+      expect(protectedRange(keys(play(`One.|\n\n${not}\n`), ' /*')), not).toBeNull();
+    }
+  });
+
   test('a line moved or copied down onto the block stays where it is', () => {
     // Red/blue audit, 2026-11-23 (K2): with the block straight under a line, Alt+Down left a
     // stray `/* drafter` line above the writer's, which made the line a comment.

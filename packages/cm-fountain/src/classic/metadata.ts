@@ -27,6 +27,8 @@ import { classicTidied } from './marks';
 // is the backstop, and what's typed where no line stands above it gets one.
 
 /** Where text can start: a byte-order mark stays first. */
+const OPENER = '/* drafter';
+
 const firstColumn = (doc: Text) => (doc.line(1).text.startsWith(BOM) ? 1 : 0);
 
 /** The block's line, and the line breaks just before it that keep it a block of its own: up to two. */
@@ -38,37 +40,42 @@ function blockStart(doc: Text, span: Span): { line: Line; from: number } {
   return { line, from: before.number === 1 ? 0 : before.from - 1 };
 }
 
-/** The settings block is a few lines; its opening line is looked for no further up than this. */
-const BLOCK_LINES = 64;
+/** The settings block is small; its opening line is looked for no further from the end than this. */
+const BLOCK_REACH = 16_384;
 
 /**
- * The block by its text alone, at the foot of the file: a line `/* drafter`, then lines with no
- * `*/ ` in them, then a line that is one, with only blank lines after. For when the parser doesn't
- * read it as the settings: a comment opened above it (`; /*` typed anywhere, or the Wall's close
- * deleted) makes everything below one boneyard, and the block was then the writer's to delete with
- * the rest (red/blue audit of 23 November 2026, K1). It is the same block, and comes back as the
- * settings when the comment is closed.
+ * The block by its text alone, at the foot of the file, found as the parser finds it: the last
+ * `/* drafter` that starts a line (after any indent) and ends it, then settings that read as
+ * JSON, then the first `*/ ` after them, with nothing but space after that. For when the parser
+ * doesn't read it as the settings: a comment opened above it (`; /*` typed anywhere, or the Wall's
+ * close deleted) makes everything below one boneyard, and the block was then the writer's to
+ * delete with the rest (red/blue audit of 23 November 2026, K1; laid out any other way than
+ * Drafter writes it, it still was, until the audit of that audit). It is the same block, and
+ * comes back as the settings when the comment is closed.
  */
 function writtenBlock(doc: Text): Span | null {
-  let last = doc.lines;
-  while (last >= 1 && isBlank(doc.line(last).text)) last--;
-  if (last < 2) return null;
-  const end = doc.line(last);
-  if (end.text.trimEnd() !== '*/') return null;
-  for (let n = last - 1; n >= Math.max(1, last - BLOCK_LINES); n--) {
-    const { text, from } = doc.line(n);
-    if (text.includes('*/')) return null;
-    if (text !== '/* drafter') continue;
-    // Only one whose settings still read: a damaged block is the writer's to mend or delete.
-    try {
-      const settings: unknown = JSON.parse(doc.sliceString(doc.line(n + 1).from, end.from));
-      if (typeof settings !== 'object' || settings === null || Array.isArray(settings)) return null;
-    } catch {
-      return null;
-    }
-    return { from, to: end.from + 2 };
+  const base = Math.max(0, doc.length - BLOCK_REACH);
+  const tail = doc.sliceString(base);
+  const body = tail.trimEnd();
+  if (!body.endsWith('*/')) return null;
+  const open = body.lastIndexOf(OPENER);
+  if (open < 0) return null;
+  // Alone on its line but for an indent, and the line ends with it.
+  const lineStart = body.lastIndexOf('\n', open) + 1;
+  if (lineStart === 0 && base > 0) return null;
+  if (body.slice(lineStart, open).trim() !== '') return null;
+  const after = body.slice(open + OPENER.length).match(/^[ \t]*\r?\n/);
+  if (!after) return null;
+  const inside = body.slice(open + OPENER.length + after[0].length, body.length - 2);
+  if (inside.includes('*/')) return null;
+  // Only one whose settings still read: a damaged block is the writer's to mend or delete.
+  try {
+    const settings: unknown = JSON.parse(inside);
+    if (typeof settings !== 'object' || settings === null || Array.isArray(settings)) return null;
+  } catch {
+    return null;
   }
-  return null;
+  return { from: base + open, to: base + body.length };
 }
 
 /** The block to protect: the one `parse` reads as `doc.meta`, or the one written at the foot. */
