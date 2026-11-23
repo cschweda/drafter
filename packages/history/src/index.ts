@@ -56,6 +56,7 @@ export {
   type SnapshotScenes,
   scenePrints,
   sketchOf,
+  withoutTrailingSpaces,
 } from './print';
 export { type NowScene, type Place, putBackChanges, putBackPlace } from './put-back';
 export { type SceneVersion, sceneVersions, type VersionRow } from './versions';

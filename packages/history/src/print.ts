@@ -87,22 +87,37 @@ export function templateOf(doc: Doc): Template {
  * read as `-`, whitespace collapsed, and trailing punctuation dropped.
  */
 export function headingKey(heading: string): string {
-  return heading
-    .toUpperCase()
-    .replace(/\s*#[^#\s]*#\s*$/u, '')
+  // Each end is trimmed by walking back from it, never with a pattern anchored at the end: on a
+  // long run of spaces or dots in the middle of a heading, such a pattern started again from every
+  // character of the run (red/blue audit of 23 November 2026, W7).
+  let key = heading.toUpperCase().trimEnd();
+  const number = /#[^#\s]*#$/u.exec(key);
+  if (number) key = key.slice(0, number.index).trimEnd();
+  key = key
     .replace(/[‐‑‒–—―]/gu, '-')
     .replace(/\s+/gu, ' ')
-    .trim()
-    .replace(/[.,;:!?]+$/u, '')
     .trim();
+  return withoutTrailing(key, '.,;:!?').trim();
+}
+
+/** `text` without the run of `chars` at its end. */
+export function withoutTrailing(text: string, chars: string): string {
+  let end = text.length;
+  while (end > 0 && chars.includes(text[end - 1] as string)) end--;
+  return end === text.length ? text : text.slice(0, end);
+}
+
+/** `text` with the spaces and tabs off the end of each line. */
+export function withoutTrailingSpaces(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => withoutTrailing(line, ' \t'))
+    .join('\n');
 }
 
 /** A scene's source as hashed: `\r\n` as `\n`, trailing spaces off each line, no trailing blank lines. */
 function normalized(source: string): string {
-  return source
-    .replace(/\r\n?/g, '\n')
-    .replace(/[ \t]+$/gm, '')
-    .replace(/\n+$/, '');
+  return withoutTrailing(withoutTrailingSpaces(source.replace(/\r\n?/g, '\n')), '\n');
 }
 
 /**
