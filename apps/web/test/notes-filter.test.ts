@@ -6,7 +6,7 @@ import { describe, expect, test } from 'vitest';
 import { categoriesInUse, type NoteFilter, notesShown, openCount } from '../app/notes/filter';
 
 // The Notes tab's groups and filters (Phase 2 design §8): every note and boneyard but the scene
-// fields and Beat Board cards, grouped, then filtered by category, person, status, scene, and text.
+// fields and Wall cards, grouped, then filtered by category, person, status, scene, and text.
 
 const SCRIPT = [
   'INT. HALL - DAY',

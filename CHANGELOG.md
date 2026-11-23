@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **The third clean-room audit, and its fixes** ([the audit](docs/clean-room-audit-2026-11-22.md)). It found no copied code, no screenwriting package or converter, and no file from another app. Fixed: a film reference that had come back in the layout tests; three small values in the Final Draft import's tests and notes that had come from a real sample, now invented; and records that had fallen behind (`DEPENDENCIES.md`, the clean-room rules, three plans). `.gitignore` now keeps any real Final Draft file out of `samples/fdx/`. Nothing a writer sees changes.
+- **The planned canvas of idea cards is now called the Wall.** Its working name turned out to be the name of a Final Draft feature. Living documents and code comments use the new name, and the block that will hold its cards in a script is `/* the wall`; no released version ever wrote the old marker, so no file changes meaning.
+
 ## [0.27.3] - 2026-11-22
 
 **The cursor stays where you left it.** Three faults a writer could meet are fixed: the cursor could jump to the top of the script when the palette or a dialog closed on a busy page, so the next thing typed went in there; a dialog asked for again the moment it closed could fail to open; and focus could be left on nothing after the tour. All three were found while hunting a fault in the test browser, which is also dealt with: the checks no longer have a page stop dead about one run in fifty.
@@ -89,7 +94,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **A line that starts with `#` or `=` inside a speech or a paragraph.** Fountain reads it as a section or a synopsis, which doesn't print, so `#1 is the best.` under a character's name vanished and cut the speech in two. Drafter warns, and its fix puts a backslash first.
   - **A title-page key that doesn't print.** The title page prints Title, Credit, Author, Source, Contact, and Draft date. Copyright, Notes, Revision, and any key of your own stay in the file and print nowhere; each is now listed, as advice.
   - **`CUT TO:` with a space after it.** That space makes the line action, which is Fountain's rule and easy to do by accident. Drafter points it out, and its fix removes the space.
-- **A name you force with `@` prints as you typed it.** `@McCLANE` now prints McCLANE on the page and in the PDF, as Fountain intends; it used to print MCCLANE. Every other name still prints in capitals. A script opened from Final Draft keeps its names in capitals, as Final Draft printed them.
+- **A name you force with `@` prints as you typed it.** `@McBRIDE` now prints McBRIDE on the page and in the PDF, as Fountain intends; it used to print MCBRIDE. Every other name still prints in capitals. A script opened from Final Draft keeps its names in capitals, as Final Draft printed them.
 - **`\#` and `\=` at the start of a line print the mark.** Until now nothing could make a line of dialogue start with `#` or `=`.
 - **No line of a paragraph is left alone at a page break.** A paragraph of action that crosses a page now keeps at least two lines at the foot of one page and two at the head of the next; one too short for that moves to the next page whole, with its scene heading if it has one. A line of action used to be left behind by itself. A speech that splits with (MORE) now stops on a line that ends a sentence when there is one within two lines of where it would have stopped. A script with locked pages keeps its pages as they are.
 - **`drafter check` lists everything the Problems pane does.** It used to run none of the pane's rules, so it could say "no problems" about a script the app had warnings for.

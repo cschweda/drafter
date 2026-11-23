@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **Clean room** (recorded 2026-11-23; the maintainer confirmed the session worked under it): built from the industry's conventions, the Fountain specification, and Drafter's own packages. No other app's code, screens, or text; no Final Draft structure that isn't in a real file the maintainer supplied; fixtures and sample text are original. See [the clean-room rules](../clean-room.md).
 - Every paged export of a locked script prints the locked labels (12A, 13-14) and A-scene numbers exactly as the Script pane shows them; one function computes both (spec §7.2: "every export read[s] the label").
 - The full PDF's Export option is **Revision marks: open set / none**, default the open set; with marks on, the header shows the open set's name and date (spec §8).
 - Revised-pages header: **"Blue Revision — 12 November 2026"** at the top right, on the page-number line's next line, or the production's own header text when set (spec §8); the date is written out as `D Month YYYY` (the app's existing `longDate` in `apps/web/app/whats-new/`).

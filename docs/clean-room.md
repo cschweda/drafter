@@ -14,8 +14,10 @@ Drafter's permitted sources:
 | Industry formatting conventions for screenplays and stage plays | Margins, indents, `(MORE)` and `(CONT'D)`, title pages, and the rest of what a page looks like |
 | General software engineering | Parsing, line breaking, pagination, and browser storage, all common knowledge |
 | `.fdx` files a user owns, read as plain XML | Final Draft import and export (Phase 2): built from the structure description and hand-made fixtures, tested on a synthetic set written by hand, and checked against Final Draft 13's own sample scripts; more real files welcome |
-| Public descriptions of the `.highland` and `.fadein` packages and the published Open Screenplay Format specification, and files a user owns | Highland and Fade In import (v0.19.0), built from the descriptions and synthetic fixtures; real files not yet checked. The sources, with their URLs and the dates they were read, are in [`DECISIONS.md`](DECISIONS.md) |
+| Public descriptions of the `.highland` and `.fadein` packages and the published Open Screenplay Format specification, and files a user owns | Highland and Fade In import (v0.19.0), built from the descriptions and synthetic fixtures; one real `.highland` file checked (the maker's own published sample, its structure only), no real `.fadein` yet. The sources, with their URLs and the dates they were read, are in [`DECISIONS.md`](DECISIONS.md) |
 | PKWARE's APPNOTE.TXT, the zip format's published description | The read-only zip reader in `@drafter/archive` |
+| ECMA-376 (Office Open XML), the published standard for WordprocessingML | The manuscript's Word file, written by hand in `@drafter/render-docx` |
+| The public Model Context Protocol specification and its SDK's documentation | Drafter for Claude (`drafter-mcp`) |
 | Other applications, used as a writer uses them | Their documentation, and comparing their output with Drafter's |
 | [Courier Prime](https://fonts.google.com/specimen/Courier+Prime) | The typeface: a font under the SIL Open Font License, not code |
 
@@ -23,7 +25,7 @@ Excluded:
 
 - **The source code of other screenwriting applications and Fountain libraries**: Beat, Final Draft, Trelby, Scrite, BetterFountain, afterwriting, Highland, Slugline, Fade In, and any other. Not to copy, not to adapt, and not to read for ideas.
 - **Their packages as dependencies.** Drafter installs no Fountain parser and no screenwriting library. [`docs/DEPENDENCIES.md`](DEPENDENCIES.md) lists every dependency and why it's there.
-- **Their test suites, sample files, and scripts.** Every fixture in this repository was written for it.
+- **Their test suites, sample files, and scripts.** None is ever committed, copied, or used as a source of text or values. The one permitted use of a sample is the one below: a file the maintainer owns or the app's maker publishes, read locally for its structure. Every fixture in this repository was written for it.
 
 ## Why it works
 
@@ -51,10 +53,12 @@ The rule doesn't end with Phase 0. It covers every contributor, every package, a
   - The `.fdx` import and export were built from the published description of the file's XML structure in the technical design, and from hand-made fixtures.
   - A synthetic test set covers the format's structure: a short film, edge cases, a revised draft, and a stage play, written by hand with original text and invented values, from the element names the technical design documents, without consulting any real `.fdx` file, Final Draft, or converter; and a generated 120-page feature. Two of them are in [`samples/fdx/`](../samples/fdx/) to try Open on.
   - Import has been checked against real files, Final Draft 13's own Outline, Script, and Shooting Script samples (their structure only; nothing from them is in the repository), and fixed where it differed. More real files are welcome, and a round trip through Final Draft itself is still to come.
+  - **Only real files count as evidence of the format.** A specification written by an AI assistant is not a source: one was offered in November 2026, contradicted the real files, and was set aside unused. What isn't in a real file the maintainer supplies isn't built (Final Draft's revisions and locked pages, for one).
+  - **A real file gives structure, never content.** No name, line, label, or color value from one goes into code, tests, or documents; examples are invented. The real samples sit in `samples/fdx/`, which `.gitignore` closes to everything but Drafter's own synthetic files.
 - **Highland and Fade In support comes from public descriptions**, not from another program's converter, zip, or XML code:
   - The Highland import was built from the app maker's public description of the `.highland` package and the TextBundle specification; the Fade In import from the published Open Screenplay Format example documents and public descriptions of the `.fadein` package; the zip reader from APPNOTE.TXT. [`DECISIONS.md`](DECISIONS.md) names each source and when it was read.
   - Every fixture is synthetic, a zip made in the tests with original text, and no other repository's test files were used.
-  - No real `.highland` or `.fadein` file has been checked yet. When the maintainer supplies one, it is read locally through `DRAFTER_REAL_FILES`, only its structure is written down, and it is never committed (`.gitignore` holds `*.highland` and `*.fadein`); see [`DEFERRED.md`](DEFERRED.md).
+  - One real `.highland` file has been checked: on 2026-10-30 the maintainer supplied Highland's own published sample screenplay, and only its structure was written down (see [`DEFERRED.md`](DEFERRED.md)). No real `.fadein` file has been checked yet. When the maintainer supplies one, it is read locally through `DRAFTER_REAL_FILES`, only its structure is written down, and it is never committed (`.gitignore` holds `*.highland` and `*.fadein`); see [`DEFERRED.md`](DEFERRED.md).
 - **Dependencies stay out of the domain.** No Fountain parsers and no screenwriting libraries, ever. A new dependency gets an entry in `docs/DEPENDENCIES.md` first, saying why it's needed and confirming it isn't screenwriting-related.
 - **Test content stays original.** Write new fixtures. Don't paste scenes from real scripts, published or not; screenplays are almost never in the public domain.
 - **AI coding assistants follow the same rule.** They've learned from a great deal of public code. If you use one, give it the clean-room instructions (the [Phase 0 kickoff prompt](drafter-phase0-kickoff-prompt.md) shows how), and review what it writes as you would any other contribution.
@@ -63,7 +67,7 @@ The rule doesn't end with Phase 0. It covers every contributor, every package, a
 
 **The short version: Drafter uses ordinary open-source libraries, but no code from any other screenwriting or playwriting application, and no Fountain library.**
 
-Drafter has been audited against these rules twice. [Audits](AUDITS.md) lists every audit, newest first.
+Drafter has been audited against these rules three times. [Audits](AUDITS.md) lists every audit, newest first.
 
 **1 November 2026** ([the full audit](clean-room-audit-2026-11-01.md)): everything added since the first audit, v0.3.1 to v0.24.0, on `main` at commit `aa6a817`, and the Story map plan about to merge. It found:
 

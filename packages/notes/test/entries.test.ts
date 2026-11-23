@@ -40,11 +40,11 @@ describe('noteEntries', () => {
     expect(entries[2]?.note).toBeNull();
   });
 
-  test('leaves out the metadata block and the Beat Board block', () => {
+  test('leaves out the metadata block and the Wall block', () => {
     const source = [
       'Tom sits. [[mine]]',
       '',
-      '/* beat board',
+      '/* the wall',
       '[[Card: 1]]',
       '*/',
       '',
