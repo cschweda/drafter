@@ -372,6 +372,9 @@ test.describe('script modules', () => {
     await turnOnFixture(page);
     await runCommand(page, 'Fixture: add a note after a pause');
     await runCommand(page, 'New stage play');
+    // Opening a script takes a moment (it is made in the database first), and until it is open
+    // the run is still in its own script: the test waits for the new one before letting it go.
+    await expect(page.getByRole('banner')).toContainText('Untitled Play');
     await releaseFixture(page);
     await expect(
       page.getByRole('status').filter({ hasText: 'Later: reported false, changed false' }),
@@ -389,6 +392,7 @@ test.describe('script modules', () => {
     await runCommand(page, 'Fixture: add a note after a pause');
     await openSettings(page);
     await fixtureSwitch(page).click();
+    await expect(fixtureSwitch(page)).not.toBeChecked();
     await closeSettings(page);
     await releaseFixture(page);
     await expect(
