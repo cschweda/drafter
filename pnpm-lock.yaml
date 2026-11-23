@@ -146,9 +146,9 @@ importers:
       '@drafter/spell':
         specifier: workspace:*
         version: link:../../packages/spell
-      '@drafter/story-map':
+      '@drafter/story-atlas':
         specifier: workspace:*
-        version: link:../../packages/story-map
+        version: link:../../packages/story-atlas
       '@drafter/templates':
         specifier: workspace:*
         version: link:../../packages/templates
@@ -257,9 +257,9 @@ importers:
       '@drafter/render-text':
         specifier: workspace:*
         version: link:../render-text
-      '@drafter/story-map':
+      '@drafter/story-atlas':
         specifier: workspace:*
-        version: link:../story-map
+        version: link:../story-atlas
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
@@ -419,9 +419,9 @@ importers:
       '@drafter/outline':
         specifier: workspace:*
         version: link:../outline
-      '@drafter/story-map':
+      '@drafter/story-atlas':
         specifier: workspace:*
-        version: link:../story-map
+        version: link:../story-atlas
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
@@ -620,7 +620,7 @@ importers:
         specifier: 2.1.6
         version: 2.1.6
 
-  packages/story-map:
+  packages/story-atlas:
     dependencies:
       '@drafter/cast':
         specifier: workspace:*

@@ -320,7 +320,7 @@ The maintainer answered the open questions the next day, and the fixes went in w
 | Finding 2: `DEPENDENCIES.md` | | The two rows, six edges, and the font are added |
 | Findings 3, 4, 7, 9: the rules file | | Corrected: the Highland file that was checked, the rule against AI-written specifications, ECMA-376 and the MCP specification as sources, and the wording on sample files |
 
-Not done: the guard tests this audit recommends (a film-reference check, a size and marker check for tracked `.fdx` files, and a script that cross-checks `DEPENDENCIES.md`). The three replaced values remain in the repository's history, which is not rewritten.
+The guard tests this audit recommends were added on 2026-11-23 (`packages/fdx/test/clean-room.test.ts`): a film-reference check, a size and folder check for tracked `.fdx` files, and a cross-check of `DEPENDENCIES.md` against the packages. The three replaced values remain in the repository's history, which is not rewritten.
 
 ## What an audit like this cannot prove
 

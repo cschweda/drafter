@@ -70,7 +70,7 @@ describe('the server', () => {
       'compare_drafts',
       'list_cuts',
       'search_scripts',
-      'story_map',
+      'story_atlas',
       'series_overview',
     ]);
   });

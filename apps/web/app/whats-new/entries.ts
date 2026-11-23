@@ -45,6 +45,15 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.28.0-story-atlas',
+    date: '2026-11-23',
+    version: '0.28.0',
+    kind: 'Improved',
+    title: 'The story map is now the Story Atlas',
+    text: 'The page that shows a script at a glance to someone who doesn’t read scripts has a name of its own: Export → Story Atlas. Nothing else about it changes, and your scripts keep their planned length and character lines.',
+    link: { href: '/docs/story-atlas/', label: 'Story Atlas' },
+  },
+  {
     id: 'v0.27.4-save-says-where',
     date: '2026-11-23',
     version: '0.27.4',
@@ -298,7 +307,7 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
     kind: 'New',
     title: 'Story map: a picture of your script to send to anyone',
     text: 'Export → Story map… makes one page that shows a non-writer your story’s shape, its people, and every scene so far, with a few lines of dialogue. It works on a phone and holds no notes.',
-    link: { href: '/docs/story-map/', label: 'Story map' },
+    link: { href: '/docs/story-atlas/', label: 'Story Atlas' },
     banner: true,
   },
 

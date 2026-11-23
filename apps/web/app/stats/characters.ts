@@ -2,7 +2,7 @@ import { type Cast, shares } from '@drafter/cast';
 import { lengthLabel, lengthWords } from '~/outline/labels';
 import { pageSeconds, type Rates, shortTime, timeWords } from './time-format';
 
-// Moved to @drafter/cast for the story map; re-exported so the app's imports still read it here.
+// Moved to @drafter/cast for the Story Atlas; re-exported so the app's imports still read it here.
 export { shares };
 
 // The Stats tab's Characters table (seeing-the-script design §4.3): a row per speaking character,

@@ -83,10 +83,10 @@ function chooseOptions() {
   commandById('export-options')?.run();
 }
 
-/** The story map asks a few things first, in its own dialog (story-map design §7). */
-function chooseStoryMap() {
+/** The Story Atlas asks a few things first, in its own dialog (story-atlas design §7). */
+function chooseStoryAtlas() {
   close(true);
-  commandById('export-story-map')?.run();
+  commandById('export-story-atlas')?.run();
 }
 
 /** The treatment asks a question first, in its own dialog (Phase 2 design §6.4). */
@@ -151,9 +151,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerdown)
       <button type="button" class="item" @click="choose('epub')">
         <UIcon name="i-lucide-book" class="icon" />EPUB (.epub)
       </button>
-      <!-- A picture of a script for a non-writer: one page, after its dialog (story-map design §1.1). -->
-      <button v-if="kind !== 'markdown'" type="button" class="item" @click="chooseStoryMap">
-        <UIcon name="i-lucide-map" class="icon" />Story map (.html)…
+      <!-- A picture of a script for a non-writer: one page, after its dialog (story-atlas design §1.1). -->
+      <button v-if="kind !== 'markdown'" type="button" class="item" @click="chooseStoryAtlas">
+        <UIcon name="i-lucide-map" class="icon" />Story Atlas (.html)…
       </button>
       <!-- A copy of the script's own text; the script stays on its own file (Save As moves it). -->
       <button v-if="kind !== 'markdown'" type="button" class="item" @click="choose('fountain')">

@@ -77,7 +77,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/render-pdf',
       '@drafter/render-text',
       '@drafter/spell',
-      '@drafter/story-map',
+      '@drafter/story-atlas',
       '@drafter/templates',
     ],
   },
@@ -100,7 +100,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/render-html-file',
       '@drafter/render-pdf',
       '@drafter/render-text',
-      '@drafter/story-map',
+      '@drafter/story-atlas',
       '@drafter/templates',
     ],
   },
@@ -120,7 +120,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/notes',
       '@drafter/novel',
       '@drafter/outline',
-      '@drafter/story-map',
+      '@drafter/story-atlas',
       '@drafter/templates',
     ],
   },
@@ -168,8 +168,8 @@ export const PACKAGES: readonly PackageNote[] = [
     uses: ['@drafter/fountain', '@drafter/outline', '@drafter/templates'],
   },
   {
-    name: '@drafter/story-map',
-    does: 'The Story map: one dark page, with no script, that shows someone who doesn’t read scripts the whole story so far: its shape, its acts and scenes, its places and people, a few lines of dialogue, and the gaps still to write.',
+    name: '@drafter/story-atlas',
+    does: 'The Story Atlas: one dark page, with no script, that shows someone who doesn’t read scripts the whole story so far: its shape, its acts and scenes, its places and people, a few lines of dialogue, and the gaps still to write.',
     uses: [
       '@drafter/cast',
       '@drafter/fountain',
@@ -489,7 +489,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     plain: [
       {
         kind: 'p',
-        text: 'Exporting turns your script into a PDF to print or send, a web page that opens anywhere, an e-book, a story map to send to anyone, plain text, Markdown, or a Final Draft file. It happens to one side, like the page layout, so the editor stays free while a long script is drawn, and a bar shows how far it has got.',
+        text: 'Exporting turns your script into a PDF to print or send, a web page that opens anywhere, an e-book, a Story Atlas to send to anyone, plain text, Markdown, or a Final Draft file. It happens to one side, like the page layout, so the editor stays free while a long script is drawn, and a bar shows how far it has got.',
       },
     ],
     details: [
@@ -500,7 +500,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
           '**The export worker** (`export.worker.ts`) parses the script and, for a PDF or plain text, lays it out again with the same engine as the Script pane, then hands the pages to a renderer. It reports how far it has got, at most ten times a second, for the toast’s progress bar.',
           '**PDF** is `@drafter/render-pdf`, with `pdf-lib`, embedding Courier Prime, the font the Script pane shows. A Markdown document’s PDF is set in Inter Tight, with Courier Prime for code.',
           '**HTML and EPUB** are `@drafter/render-html-file`, which writes the file as text with no browser, so the command line’s `--html` makes the same page. The HTML page holds everything it needs: one stylesheet, one small script, and Courier Prime as base64 in only the styles the script uses, under a content security policy that lets it load nothing at all. It opens on the printed pages, placed from the same layout as the Script pane, with a Reading view beside them, and works with JavaScript off. The EPUB is the Reading view as an e-book (or the document), one chapter per act or `#` heading, zipped by `@drafter/archive`’s own small writer; its identifier is the script’s, so a new export replaces the old book. A 120-page script’s page is about 0.9 MB, written in under 20 ms. With **Let Drafter reopen this file**, either one also carries the script’s exact text: base64 in a `<script type="text/plain">` that no browser runs, or one more file in the e-book. Open finds it with `@drafter/archive` and reads it only as text.',
-          '**The story map** is `@drafter/story-map`, made in the export worker after its dialog, and by the command line’s `--story-map`. `buildStoryMap` turns what Drafter already works out (the scene index, the pages, the cast, and the Setup and Payoff notes) into a plain model of acts, scenes, places, people, lines of dialogue, and gaps; `renderStoryMap` draws it as one HTML string, with hand-built SVG charts, each with a table, and Anton, Archivo, and Courier Prime as base64 (about 89 KB). The page has no JavaScript at all: no `<script>`, no event attribute, and no style attribute, under a content security policy with no `script-src` that lets it load nothing but its own fonts and images. Everything the writer wrote is escaped, and no regular expression that reads their text can backtrack. A 120-page script’s page is about 250 KB. It never carries the script or any note but a Setup or Payoff label.',
+          '**The Story Atlas** is `@drafter/story-atlas`, made in the export worker after its dialog, and by the command line’s `--story-atlas`. `buildStoryAtlas` turns what Drafter already works out (the scene index, the pages, the cast, and the Setup and Payoff notes) into a plain model of acts, scenes, places, people, lines of dialogue, and gaps; `renderStoryAtlas` draws it as one HTML string, with hand-built SVG charts, each with a table, and Anton, Archivo, and Courier Prime as base64 (about 89 KB). The page has no JavaScript at all: no `<script>`, no event attribute, and no style attribute, under a content security policy with no `script-src` that lets it load nothing but its own fonts and images. Everything the writer wrote is escaped, and no regular expression that reads their text can backtrack. A 120-page script’s page is about 250 KB. It never carries the script or any note but a Setup or Payoff label.',
           '**Plain text** is `@drafter/render-text`: the same pages as fixed-width text. **Final Draft** is `@drafter/fdx`, which writes the XML itself, and reads `.fdx` files too.',
           '**Markdown** is `@drafter/outline`’s: the title, sections, and scenes as headings, a speech as the name in bold over its lines, and every line escaped so nothing in it reads as Markdown it wasn’t. A Markdown document’s Markdown file is its own text.',
           '**Export options** are each script’s own: scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none), and, for a Markdown, HTML, or EPUB file, notes (left out or included). They are kept with the script’s record in the browser, never in the script’s text.',

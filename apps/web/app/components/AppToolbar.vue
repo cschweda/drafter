@@ -138,9 +138,9 @@ const saveItems = computed<DropdownMenuItem[][]>(() => [
 const production = useProduction();
 const exportIds = computed(() => {
   const ids = EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].flatMap((kind) =>
-    // A script's story map follows its EPUB, as in the Export menu (story-map design §1.1).
+    // A script's Story Atlas follows its EPUB, as in the Export menu (story-atlas design §1.1).
     kind === 'epub' && editor.kind.value !== 'markdown'
-      ? [`export-${kind}`, 'export-story-map']
+      ? [`export-${kind}`, 'export-story-atlas']
       : [`export-${kind}`],
   );
   // A novel's manuscript, as a PDF or a Word file, ends the exports; only a novel has it.

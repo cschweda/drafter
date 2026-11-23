@@ -54,7 +54,7 @@ export const HELP_MENU_ICONS: Record<string, string> = {
   'help-production': 'i-lucide-clapperboard',
   'help-saving': 'i-lucide-save',
   'help-drafts-and-cuts': 'i-lucide-git-commit-vertical',
-  'help-story-map': 'i-lucide-map',
+  'help-story-atlas': 'i-lucide-map',
   'help-drafter-for-claude': 'i-lucide-plug',
   'help-self-hosting': 'i-lucide-server',
   'help-shortcuts': 'i-lucide-keyboard',

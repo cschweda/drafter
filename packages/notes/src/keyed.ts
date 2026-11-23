@@ -244,7 +244,7 @@ export function normalizeLabel(label: string): string {
   return label.toLowerCase().replace(/\s+/gu, ' ').trim();
 }
 
-/** A note that is one of Drafter's whole-body marks (story-map design §3.1, §5.1). */
+/** A note that is one of Drafter's whole-body marks (story-atlas design §3.1, §5.1). */
 export type WholeMark = 'quote' | 'no-quote' | 'interval' | 'no-interval';
 
 const WHOLE_MARKS: ReadonlyMap<string, WholeMark> = new Map([

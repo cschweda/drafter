@@ -63,16 +63,16 @@ import {
 } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
 import {
-  buildStoryMap,
+  buildStoryAtlas,
   type MapOptions,
   type QuoteCandidate,
   quoteCandidates,
-  renderStoryMap,
-  STORY_MAP_FONT_FILES,
-  type StoryMapFace,
-  type StoryMapFonts,
-  storyMapMeta,
-} from '@drafter/story-map';
+  renderStoryAtlas,
+  STORY_ATLAS_FONT_FILES,
+  type StoryAtlasFace,
+  type StoryAtlasFonts,
+  storyAtlasMeta,
+} from '@drafter/story-atlas';
 import type { Paper, Template } from '@drafter/templates';
 import {
   type ProgressReporter,
@@ -194,11 +194,11 @@ export type ExportRequest =
       embed?: string;
     }
   /**
-   * A story map (story-map design §10): the page the dialog's choices make. Never `embed`: a story
+   * A Story Atlas (story-atlas design §10): the page the dialog's choices make. Never `embed`: a story
    * map never carries the script, whatever "Let Drafter reopen this file" says (Call 20).
    */
   | {
-      kind: 'story-map';
+      kind: 'story-atlas';
       source: string;
       template: Template;
       title: string;
@@ -206,8 +206,8 @@ export type ExportRequest =
       generator: string;
       options: MapOptions;
     }
-  /** What the Make a story map dialog shows (`StoryMapPicks`, as JSON). */
-  | { kind: 'story-map-picks'; source: string; template: Template; options: MapOptions }
+  /** What the Make a Story Atlas dialog shows (`StoryAtlasPicks`, as JSON). */
+  | { kind: 'story-atlas-picks'; source: string; template: Template; options: MapOptions }
   /**
    * A locked script's revised pages (production design §8): the pages `which` chooses, as they
    * print in the full PDF (the export options' scene numbers), with the marks of the open set or of
@@ -280,13 +280,13 @@ interface ManuscriptRequest<K extends 'manuscript-pdf' | 'manuscript-docx'> {
 }
 
 /**
- * The Make a story map dialog's quick look (design §7): the lines of dialogue the page would use,
+ * The Make a Story Atlas dialog's quick look (design §7): the lines of dialogue the page would use,
  * each with its speaker, the next line in its scene for Pick another (`next`, null with none),
  * and every line its scene offers (`choices`, in order, the pick among them; never a `[[No quote]]`
  * one); each lead's hook, as found (`found`) and as the metadata block has it edited (`hook`);
  * and whether any gap was found (the status's default, Call 18).
  */
-export interface StoryMapPicks {
+export interface StoryAtlasPicks {
   quotes: Array<
     QuoteCandidate & {
       speaker: string;
@@ -318,8 +318,8 @@ export interface ExportProgress {
 const FONT_FOLDER = '/fonts/courier-prime/';
 /** Where the app serves Inter Tight's four static styles, for a Markdown document's PDF. */
 const DOCUMENT_FONT_FOLDER = '/fonts/inter-tight/';
-/** Where the app serves the story map's four WOFF2 faces (`@drafter/story-map`'s `fonts/`). */
-const STORY_MAP_FONT_FOLDER = '/fonts/story-map/';
+/** Where the app serves the Story Atlas's four WOFF2 faces (`@drafter/story-atlas`'s `fonts/`). */
+const STORY_ATLAS_FONT_FOLDER = '/fonts/story-atlas/';
 /** Where the app serves each manuscript font's four styles: Liberation Serif for Times, else Courier Prime. */
 const MANUSCRIPT_FONT_FOLDER: Record<ManuscriptFont, string> = {
   times: '/fonts/liberation-serif/',
@@ -390,28 +390,31 @@ export async function fetchManuscriptFonts(
   return Object.fromEntries(loaded) as ManuscriptFontSet;
 }
 
-/** Fetches Anton, Archivo (two weights), and Courier Prime for a story map, from the app's own origin. */
-export async function fetchStoryMapFonts(
+/** Fetches Anton, Archivo (two weights), and Courier Prime for a Story Atlas, from the app's own origin. */
+export async function fetchStoryAtlasFonts(
   fetcher: (url: string) => Promise<Response> = (url) => fetch(url),
-): Promise<StoryMapFonts> {
-  const faces = Object.keys(STORY_MAP_FONT_FILES) as StoryMapFace[];
+): Promise<StoryAtlasFonts> {
+  const faces = Object.keys(STORY_ATLAS_FONT_FILES) as StoryAtlasFace[];
   const loaded = await Promise.all(
     faces.map(
       async (face) =>
-        [face, await fontFile(fetcher, STORY_MAP_FONT_FOLDER, STORY_MAP_FONT_FILES[face])] as const,
+        [
+          face,
+          await fontFile(fetcher, STORY_ATLAS_FONT_FOLDER, STORY_ATLAS_FONT_FILES[face]),
+        ] as const,
     ),
   );
-  return Object.fromEntries(loaded) as StoryMapFonts;
+  return Object.fromEntries(loaded) as StoryAtlasFonts;
 }
 
 /**
- * The dialog's picks (`StoryMapPicks`) for `source`: the model as the page would draw it with every
+ * The dialog's picks (`StoryAtlasPicks`) for `source`: the model as the page would draw it with every
  * line of dialogue in and no hook edited, so the dialog shows what was found.
  */
-function storyMapPicks(source: string, template: Template, options: MapOptions): StoryMapPicks {
+function storyAtlasPicks(source: string, template: Template, options: MapOptions): StoryAtlasPicks {
   const doc = parse(source);
   const layout = paginate(doc, template, { sceneNumbers: 'none' });
-  const map = buildStoryMap({
+  const map = buildStoryAtlas({
     doc,
     template,
     layout,
@@ -429,7 +432,7 @@ function storyMapPicks(source: string, template: Template, options: MapOptions):
     const next = choices.length > 1 ? (choices[(at + 1) % choices.length]?.cue ?? null) : null;
     return [{ ...pick, speaker: map.characters[quote.character]?.name ?? '', next, choices }];
   });
-  const edited = storyMapMeta(doc.meta).hooks;
+  const edited = storyAtlasMeta(doc.meta).hooks;
   const hooks = map.characters
     .filter((c) => c.lead)
     .map((c) => ({
@@ -494,8 +497,8 @@ function once<T>(load: () => Promise<T>): () => Promise<T> {
  * worker never throws. With `onProgress`, each export says how far it is as it goes: unknown
  * while it fetches, parses, and (for a script) lays out; by blocks and pages as it lays out and
  * draws a PDF; unknown again while pdf-lib saves; and 1 at the end. Plain text, Final Draft,
- * Markdown, HTML, and EPUB files are quick: unknown, then 1. A story map is the model of the script
- * (`@drafter/story-map`) drawn as one page with its own fonts, loaded once; its dialog's picks are
+ * Markdown, HTML, and EPUB files are quick: unknown, then 1. A Story Atlas is the model of the script
+ * (`@drafter/story-atlas`) drawn as one page with its own fonts, loaded once; its dialog's picks are
  * the same model, as JSON. A novel's manuscript is its text parsed as a document's PDF is, read as
  * a book (`@drafter/novel`), and drawn as a PDF in the one font it asked for (each font loaded once,
  * by the first manuscript in it), or written as a Word file, which embeds no fonts.
@@ -503,12 +506,12 @@ function once<T>(load: () => Promise<T>): () => Promise<T> {
 export function createExporter(
   loadFonts: () => Promise<FontSet> = fetchFonts,
   loadDocumentFonts: () => Promise<DocumentFontSet> = fetchDocumentFonts,
-  loadStoryMapFonts: () => Promise<StoryMapFonts> = fetchStoryMapFonts,
+  loadStoryAtlasFonts: () => Promise<StoryAtlasFonts> = fetchStoryAtlasFonts,
   loadManuscriptFonts: (font: ManuscriptFont) => Promise<ManuscriptFontSet> = fetchManuscriptFonts,
 ) {
   const fontsOnce = once(loadFonts);
   const documentFontsOnce = once(loadDocumentFonts);
-  const storyMapFontsOnce = once(loadStoryMapFonts);
+  const storyAtlasFontsOnce = once(loadStoryAtlasFonts);
   const manuscriptFontsOnce: Record<ManuscriptFont, () => Promise<ManuscriptFontSet>> = {
     times: once(() => loadManuscriptFonts('times')),
     courier: once(() => loadManuscriptFonts('courier')),
@@ -516,21 +519,21 @@ export function createExporter(
   const parserOnce = once(() => import('../markdown/parse'));
 
   async function exportOne(request: ExportRequest, report: ProgressReporter): Promise<ExportReply> {
-    if (request.kind === 'story-map-picks') {
+    if (request.kind === 'story-atlas-picks') {
       return {
-        data: JSON.stringify(storyMapPicks(request.source, request.template, request.options)),
+        data: JSON.stringify(storyAtlasPicks(request.source, request.template, request.options)),
       };
     }
-    if (request.kind === 'story-map') {
+    if (request.kind === 'story-atlas') {
       const { source, template, options } = request;
       const doc = parse(source);
       // The page's own numbering, never the export options' (design §8).
       const layout = paginate(doc, template, { sceneNumbers: 'none' });
-      const map = buildStoryMap({ doc, template, layout, options });
+      const map = buildStoryAtlas({ doc, template, layout, options });
       return {
-        data: renderStoryMap({
+        data: renderStoryAtlas({
           map,
-          fonts: await storyMapFontsOnce(),
+          fonts: await storyAtlasFontsOnce(),
           lang: request.lang,
           generator: request.generator,
         }),

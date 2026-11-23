@@ -81,10 +81,10 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 - **Shape the story.** **Outline** (scenes and sections as a tree, with synopses, colors, running times, and a treatment export) and **Cards**, both rearranged by drag or keys. **Notes**, with categories, readers' names, and open or resolved status. Scene goals, setups and payoffs, and the **Structure strip**, a band of blocks above the panes to click and go.
 - **Look back.** **History**, with every version restorable in one undo. **Compare**, with a GitHub-style view of what changed. **Show changes**, marked on the pages, and the history of one scene.
 - **Drafts and Cuts.** Start a new draft when you choose: Draft 01, Draft 02, each kept for good with an ID of its own, to read, compare, or restore, and **Draft by draft** to see how the work changed. **Cuts** keeps everything you cut, a scene, a speech, or a paragraph, to browse for ideas, copy, or put back. Both sit as plain files beside your script.
-- **Story map.** One dark page that answers "What are you writing?" in pictures, to send to anyone: the story's shape, its people, and every scene so far, with a few lines of dialogue and what is still to write. It opens on a phone, runs no code, and never includes your notes.
+- **Story Atlas.** One dark page that answers "What are you writing?" in pictures, to send to anyone: the story's shape, its people, and every scene so far, with a few lines of dialogue and what is still to write. It opens on a phone, runs no code, and never includes your notes.
 - **Drafter for Claude.** Let Claude (or another AI app you use) read the scripts, drafts, and cuts in folders you choose, for storyboards, notes, and insights across a series. Drafter itself never calls an AI. [Setting it up](https://drafter.dev/docs/drafter-for-claude/).
 - **See the script.** **Scaffold** follows your cursor and shows who is in the scene, where, and for how long, with a page for each character and place. The **Stats tab** has each character's screen time and dialogue share, and a character-by-scene grid that shows who vanishes for 20 pages. Running times by scene and act, at your own minutes a page or from the dialogue.
-- **Files and formats.** Real `.fountain` files, saved straight back in Chrome and Edge, autosaved in the browser as you type. Final Draft, Highland, Fade In, and Markdown in; PDF, Final Draft, Markdown, plain text, HTML, EPUB, and a story map out, and for a production, revised pages, a breakdown (CSV or PDF), and sides. See [Formats](#formats).
+- **Files and formats.** Real `.fountain` files, saved straight back in Chrome and Edge, autosaved in the browser as you type. Final Draft, Highland, Fade In, and Markdown in; PDF, Final Draft, Markdown, plain text, HTML, EPUB, and a Story Atlas out, and for a production, revised pages, a breakdown (CSV or PDF), and sides. See [Formats](#formats).
 - **Make it yours.** A calm dark theme by default, or light, or one that follows your system. Paper pages or a dark page for night, five text sizes, and optional script modules. Below 1024 pixels, one pane at a time, made for a phone.
 - **Get started.** A guided tour on a first visit, a **guided first screenplay** and **stage play** that teach each element as you read, sample scripts under **Help**, and help pages.
 - **Desktop.** Apps for Windows and Linux, and a Mac build, that always save in place and open a `.fountain` file with a double-click.
@@ -297,7 +297,7 @@ The first run builds the app, which takes a few minutes. Then open `http://local
 Fountain is where you write. Everything else is a door in or a door out.
 
 - **In:** Fountain (`.fountain`, `.txt`) opens as it is. Final Draft (`.fdx`), Highland (`.highland`), and Fade In (`.fadein`) open as a new script. Markdown (`.md`) opens as a document, or as a screenplay; a **Novel** is a Markdown file that names its template in a trailing comment, so it opens in any Markdown app too. Drafter's own HTML and EPUB exports open again when saved with **Let Drafter reopen this file**. Anything else (Word, RTF, PDF, other web pages and e-books, an image) is refused, with a sentence saying what to do instead.
-- **Out:** PDF, Final Draft (`.fdx`), Markdown, plain text, Fountain, a typeset PDF of a Markdown document, a novel's standard **manuscript** as a PDF or a Word file, a self-contained web page (HTML), an e-book (EPUB), and a **story map**, one picture-first HTML page of the script or play for someone who doesn't read scripts, with no code and no notes in it. For a locked script, the **revised pages** (PDF), a **breakdown** of every scene (CSV or PDF), and **sides** for an actor (PDF). Export options per script set the scene numbers, the title page, whether your notes go along, and which revision marks print.
+- **Out:** PDF, Final Draft (`.fdx`), Markdown, plain text, Fountain, a typeset PDF of a Markdown document, a novel's standard **manuscript** as a PDF or a Word file, a self-contained web page (HTML), an e-book (EPUB), and a **Story Atlas**, one picture-first HTML page of the script or play for someone who doesn't read scripts, with no code and no notes in it. For a locked script, the **revised pages** (PDF), a **breakdown** of every scene (CSV or PDF), and **sides** for an actor (PDF). Export options per script set the scene numbers, the title page, whether your notes go along, and which revision marks print.
 - **Beside your script:** a drafts folder (`Boca drafts/Boca – Draft 01.fountain`, each draft a complete Fountain or Markdown file) and a cuts file (`Boca.fountain.cuts.md`, plain Markdown), written by the desktop app and by Chrome and Edge once you allow the folder; elsewhere, a zip to download.
 
 The file you open is never changed, and no words go missing silently: text Fountain has no element for comes in as a note, listed in Problems.
@@ -306,7 +306,7 @@ The same code runs in a terminal:
 
 ```sh
 drafter build script.fountain --pdf script.pdf     # a PDF; --txt for plain text, --html for a web page
-drafter build script.fountain --story-map map.html # a story map, to send to anyone
+drafter build script.fountain --story-atlas map.html # a Story Atlas, to send to anyone
 drafter convert ~/Scripts                          # every .fdx, .highland, and .fadein in the folder, to Fountain
 ```
 
@@ -319,7 +319,7 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 - The engine, the web app with its accessibility pass, and desktop apps for Linux and Windows, plus a Mac build.
 - Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, and HTML and EPUB export.
 - **Drafts and Cuts** (v0.24.0): numbered drafts, and a permanent file of everything you cut.
-- **Story map** (v0.24.1): a visual page of your script to send to anyone.
+- **Story Atlas** (v0.24.1): a visual page of your script to send to anyone.
 - **Drafter for Claude** (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose.
 - **Self-hosting** with Docker (v0.24.3).
 - **Classic Mode** (v0.25.0): type a script with Enter and Tab, over a file that stays Fountain.

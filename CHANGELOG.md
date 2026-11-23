@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **The story map is now the Story Atlas.** Its old name was also the name of a feature in Final Draft and in another writing tool, so Drafter's page for someone who doesn't read scripts has a name of its own. Nothing about it changes but the name: it is still Export → Story Atlas, the page is the same, and a script's planned length and edited character lines are kept (the name they are stored under in the file is unchanged, so an older Drafter still reads them). The old help address leads to the new one, and the command line's `--story-map` still works beside `--story-atlas`. In Drafter for Claude the tool is `story_atlas`. Dated records (earlier audits, this changelog's history) keep the old name.
+- **Three checks the clean-room audits asked for now run with the tests:** no film reference in any source, test, fixture, or sample; no Final Draft file committed that is large or outside a fixture folder; and `docs/DEPENDENCIES.md` naming every package and each thing it depends on. Each catches something an audit had found by hand more than once.
+
 ### Security
 
 - **The second red/blue audit, and its fixes** ([the audit](docs/redblue-audit-2026-11-23.md)). Five attackers took one area each: the web app and its formats, the desktop app, the supply chain and release, privacy, and, for the first time, Drafter for Claude with the command line and Classic Mode. No attack ran code from a file or an export, reached the network from a page, or read a file you hadn't chosen. A second team then audited the fixes and sent two dozen back to be done properly. Fixed, with a test wherever the fix is in code:
