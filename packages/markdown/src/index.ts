@@ -3,8 +3,11 @@ export {
   DEEP_BRACKETS,
   denseMarks,
   isEmphasisMark,
+  isOpener,
   MAX_BRACKETS,
   MAX_MARKS,
+  MAX_OPENERS,
+  MAX_OPENERS_IN_ALL,
   MAX_UNDERLINED,
 } from './marks';
 export {

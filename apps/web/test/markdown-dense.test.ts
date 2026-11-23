@@ -51,6 +51,17 @@ test.each([
   expect(took).toBeLessThan(3000);
 });
 
+// The audit of that audit: an HTML opener that never closes looked to the paragraph's end each
+// time, and 1.3 MB of them held the page for half a minute.
+test.each([
+  ['processing instructions that never close', 'x <? '],
+  ['declarations that never close', 'x <!A '],
+])('a paragraph of 640 KB of %s parses at once', (_name, unit) => {
+  const { took, whole } = parsed(unit.repeat(640_000 / unit.length), 60_000);
+  expect(whole).toBe(true);
+  expect(took).toBeLessThan(3000);
+});
+
 test('an ordinary paragraph keeps its links and its line breaks', () => {
   const { names } = parsed('A [link](https://example.com) and a break,  \nthen more.\n', 1000);
   expect(names.has('Link')).toBe(true);

@@ -25,6 +25,14 @@ export const DEEP_BRACKETS = 32;
  * same audit); headings written with `#` don't. A real document has a few dozen.
  */
 export const MAX_UNDERLINED = 2000;
+/**
+ * The most HTML openers (`<!` and `<?`: a comment, a declaration, a processing instruction, a
+ * CDATA section) one paragraph may hold, and the whole document. One that never closes sends the
+ * parser to the paragraph's end to look, each time: 80 KB of `x <!A ` held micromark for 26
+ * seconds (the audit of the red/blue audit of 23 November 2026, W6). A real document has a few.
+ */
+export const MAX_OPENERS = 1000;
+export const MAX_OPENERS_IN_ALL = 8000;
 
 const STAR = 42;
 const UNDERSCORE = 95;
@@ -37,6 +45,16 @@ const TAB = 9;
 const EQUALS = 61;
 const HYPHEN = 45;
 const QUOTE = 62;
+const LESS = 60;
+const BANG = 33;
+const QUERY = 63;
+
+/** Whether `source` has an HTML opener at `i`: `<!` or `<?`. */
+export function isOpener(source: string, i: number): boolean {
+  if (source.charCodeAt(i) !== LESS) return false;
+  const next = source.charCodeAt(i + 1);
+  return next === BANG || next === QUERY;
+}
 
 /** Whether `code` is an emphasis mark, `*` or `_`. */
 export const isEmphasisMark = (code: number): boolean => code === STAR || code === UNDERSCORE;
@@ -44,7 +62,8 @@ export const isEmphasisMark = (code: number): boolean => code === STAR || code =
 /**
  * Whether some paragraph of `source` (text between blank lines) holds more than MAX_MARKS
  * emphasis marks, MAX_BRACKETS closing brackets with nothing open, or as many that close a deeply
- * nested one; or the whole of it more than MAX_UNDERLINED underlined headings. One pass, no
+ * nested one, or more than MAX_OPENERS HTML openers; or the whole of it more than MAX_UNDERLINED
+ * underlined headings or MAX_OPENERS_IN_ALL openers. One pass, no
  * regular expression.
  */
 export function denseMarks(source: string): boolean {
@@ -53,6 +72,8 @@ export function denseMarks(source: string): boolean {
   let stray = 0;
   let deep = 0;
   let underlined = 0;
+  let openers = 0;
+  let allOpeners = 0;
   let lineBlank = true;
   // Whether the line before this one had text, and what this line is made of so far: only `=` or
   // only `-` (0 while it is still blank, -1 once it holds anything else).
@@ -66,6 +87,7 @@ export function denseMarks(source: string): boolean {
       open = 0;
       stray = 0;
       deep = 0;
+      openers = 0;
     }
     textAbove = !lineBlank;
     lineBlank = true;
@@ -88,6 +110,9 @@ export function denseMarks(source: string): boolean {
       }
     }
     if (isEmphasisMark(code) && ++marks > MAX_MARKS) return true;
+    if (code === LESS && isOpener(source, i)) {
+      if (++openers > MAX_OPENERS || ++allOpeners > MAX_OPENERS_IN_ALL) return true;
+    }
     if (code === OPEN) open++;
     else if (code === CLOSE) {
       if (open > DEEP_BRACKETS && ++deep > MAX_BRACKETS) return true;

@@ -4,6 +4,8 @@ import {
   denseMarks,
   MAX_BRACKETS,
   MAX_MARKS,
+  MAX_OPENERS,
+  MAX_OPENERS_IN_ALL,
   MAX_UNDERLINED,
   MarkedTooDensely,
   parseMarkdown,
@@ -58,6 +60,24 @@ describe('a paragraph with too many marks', () => {
     // And each paragraph is counted alone.
     const half = nested(DEEP_BRACKETS + MAX_BRACKETS / 2 + 10);
     expect(denseMarks(`${half}\n\n${half}`)).toBe(false);
+  });
+
+  it('refuses a paragraph of thousands of HTML openers that never close (the audit of W6)', () => {
+    // `<!A`, `<?`, `<![CDATA[`, and `<!--` each made the parser look to the paragraph's end for
+    // the close: 80 KB of `x <!A ` held it for 26 seconds.
+    for (const opener of ['<!A', '<?', '<![CDATA[', '<!--']) {
+      const many = (n: number) => `x ${opener} `.repeat(n);
+      expect(denseMarks(many(MAX_OPENERS)), opener).toBe(false);
+      expect(denseMarks(many(MAX_OPENERS + 1)), opener).toBe(true);
+      expect(() => parseMarkdown(many(13_000)), opener).toThrow(MarkedTooDensely);
+    }
+    // Each paragraph alone, up to a count for the whole document.
+    const para = `${'x <!A '.repeat(MAX_OPENERS)}\n\n`;
+    expect(denseMarks(para.repeat(MAX_OPENERS_IN_ALL / MAX_OPENERS))).toBe(false);
+    expect(denseMarks(para.repeat(MAX_OPENERS_IN_ALL / MAX_OPENERS + 1))).toBe(true);
+    // Comments that close, and tags, are read as before.
+    expect(parseMarkdown('<!-- a --> text\n\n'.repeat(500)).type).toBe('root');
+    expect(denseMarks('a < b and c <d> '.repeat(50_000))).toBe(false);
   });
 
   it('refuses a document of thousands of underlined headings (W6)', () => {

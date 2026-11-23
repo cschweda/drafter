@@ -8,7 +8,7 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view';
-import { isEmphasisMark, MAX_MARKS, MAX_NESTING } from './depth';
+import { isEmphasisMark, isOpener, MAX_MARKS, MAX_NESTING, MAX_OPENERS } from './depth';
 
 // The Source pane's mode for a Markdown document: CodeMirror's general-purpose Markdown grammar
 // (a Lezer grammar, which is outside Plan 2's "no Lezer grammar" rule: that rule is about
@@ -141,6 +141,7 @@ const SPACE = 32;
 const TAB = 9;
 const OPEN = 91;
 const CLOSE = 93;
+const LESS = 60;
 
 /** What a paragraph is crowded with, worked out once per paragraph. */
 interface Crowded {
@@ -150,6 +151,8 @@ interface Crowded {
   brackets: boolean;
   /** A run of spaces or tabs longer than MAX_SPACE_RUN. */
   spaces: boolean;
+  /** More than MAX_OPENERS of `<!` and `<?`. */
+  openers: boolean;
 }
 const crowded = new WeakMap<object, Crowded>();
 function crowdedOf(cx: { text: string }): Crowded {
@@ -159,8 +162,10 @@ function crowdedOf(cx: { text: string }): Crowded {
     let brackets = 0;
     let run = 0;
     let longest = 0;
+    let openers = 0;
     for (let i = 0; i < cx.text.length; i++) {
       const code = cx.text.charCodeAt(i);
+      if (code === LESS && isOpener(cx.text, i)) openers++;
       if (code === SPACE || code === TAB) {
         if (++run > longest) longest = run;
         continue;
@@ -173,6 +178,7 @@ function crowdedOf(cx: { text: string }): Crowded {
       marks: marks > MAX_MARKS,
       brackets: brackets > MAX_MARKS,
       spaces: longest > MAX_SPACE_RUN,
+      openers: openers > MAX_OPENERS,
     };
     crowded.set(cx, known);
   }
@@ -187,7 +193,8 @@ function crowdedOf(cx: { text: string }): Crowded {
  * as before. The same for a paragraph crowded with brackets, whose link parser looks back through
  * them, and for one with a very long run of spaces, where each space looked ahead for the line
  * break that would make a hard break of it: 160 KB of spaces took 16 seconds (red/blue audit of
- * 23 November 2026, W2).
+ * 23 November 2026, W2). And for one with more than MAX_OPENERS of `<!` and `<?`: each that
+ * never closes looked to the paragraph's end (the audit of that audit).
  */
 const plainWhenDense = {
   parseInline: [
@@ -197,9 +204,16 @@ const plainWhenDense = {
       parse: (cx: { text: string; offset: number }, next: number, pos: number) => {
         const isSpace = next === SPACE || next === TAB;
         const isBracket = next === OPEN || next === CLOSE;
-        if (!isSpace && !isBracket && !isEmphasisMark(next)) return -1;
+        const isLess = next === LESS;
+        if (!isSpace && !isBracket && !isLess && !isEmphasisMark(next)) return -1;
         const what = crowdedOf(cx);
-        const plain = isSpace ? what.spaces : isBracket ? what.brackets : what.marks;
+        const plain = isSpace
+          ? what.spaces
+          : isBracket
+            ? what.brackets
+            : isLess
+              ? what.openers
+              : what.marks;
         return plain ? pos + 1 : -1;
       },
     },
