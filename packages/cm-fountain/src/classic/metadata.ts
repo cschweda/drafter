@@ -54,6 +54,10 @@ const BLOCK_REACH = 16_384;
  * comes back as the settings when the comment is closed.
  */
 function writtenBlock(doc: Text): Span | null {
+  // First the cheap look, made on every change: the last line with anything on it ends the block.
+  let last = doc.lines;
+  while (last >= 1 && isBlank(doc.line(last).text)) last--;
+  if (last < 1 || !doc.line(last).text.trimEnd().endsWith('*/')) return null;
   const base = Math.max(0, doc.length - BLOCK_REACH);
   const tail = doc.sliceString(base);
   const body = tail.trimEnd();
