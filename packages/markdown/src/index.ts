@@ -1,5 +1,12 @@
 export { containerDepth, MAX_NESTING } from './depth';
-export { denseMarks, isEmphasisMark, MAX_BRACKETS, MAX_MARKS } from './marks';
+export {
+  DEEP_BRACKETS,
+  denseMarks,
+  isEmphasisMark,
+  MAX_BRACKETS,
+  MAX_MARKS,
+  MAX_UNDERLINED,
+} from './marks';
 export {
   appendMarkdownMeta,
   commentJson,

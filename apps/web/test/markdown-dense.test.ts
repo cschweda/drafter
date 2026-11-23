@@ -37,3 +37,22 @@ test('another paragraph after a dense one is still highlighted', () => {
   const { names } = parsed(`${'*_'.repeat(80_000)}\n\nA *quiet* line.\n`, 20_000);
   expect(names.has('Emphasis')).toBe(true);
 });
+
+// Red/blue audit of 23 November 2026 (W2): the same grammar still took the square of a paragraph's
+// length on a long run of spaces (each one looked ahead for a line break) and on brackets.
+test.each([
+  ['a long run of spaces', (n: number) => `a${' '.repeat(n)}b\n`],
+  ['unclosed links', (n: number) => '[a]('.repeat(n / 4)],
+  ['open brackets, then closing ones', (n: number) => `${'['.repeat(n / 2)}${']'.repeat(n / 2)}`],
+  ['bracketed words', (n: number) => '[a] '.repeat(n / 4)],
+])('a paragraph of 160 KB of %s parses at once', (_name, make) => {
+  const { took, whole } = parsed(make(160_000), 30_000);
+  expect(whole).toBe(true);
+  expect(took).toBeLessThan(3000);
+});
+
+test('an ordinary paragraph keeps its links and its line breaks', () => {
+  const { names } = parsed('A [link](https://example.com) and a break,  \nthen more.\n', 1000);
+  expect(names.has('Link')).toBe(true);
+  expect(names.has('HardBreak')).toBe(true);
+});
