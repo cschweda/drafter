@@ -523,6 +523,8 @@ test.describe('the About menu', () => {
       /^Privacy/,
       /^Third-party licences/,
       /^Technical details/,
+      // The tip jar, when the build has its address (app/about/support.ts).
+      /^Support Drafter/,
       /^Report a problem…/,
       /^Suggest an idea…/,
       /^Copy technical details/,
