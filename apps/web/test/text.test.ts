@@ -89,6 +89,53 @@ describe('fileNameFor', () => {
     expect(fileNameFor('a'.repeat(200), '.md')).toBe(`${'a'.repeat(120)}.md`);
   });
 
+  test('knows a device’s name with anything after a dot, and its odd spellings (the audit of W14)', () => {
+    for (const name of [
+      'CON.txt',
+      'NUL.tar',
+      'COM1.backup',
+      'CON .x',
+      'COM\u00b9',
+      'LPT\u00b2.a',
+      'CONIN$',
+      'conout$',
+    ]) {
+      expect(fileNameFor(name, '.pdf'), name).toBe(`_${name}.pdf`);
+    }
+    expect(fileNameFor('Contact.txt', '.pdf')).toBe('Contact.txt.pdf');
+    expect(fileNameFor('COM10', '.pdf')).toBe('COM10.pdf');
+  });
+
+  test('a name of only what can’t be seen is Untitled, and real titles keep their joiners (W13)', () => {
+    for (const unseen of [
+      '\u3164',
+      '\u115f',
+      '\u1160',
+      '\u2800',
+      '\uffa0',
+      '\u034f',
+      '\ufe0f',
+      '\u180b',
+      '\u200d',
+      '\u{e0067}\u{e007f}',
+    ]) {
+      expect(fileNameFor(unseen, '.pdf'), JSON.stringify(unseen)).toBe('Untitled.pdf');
+      expect(fileNameFor(`a${unseen}\u3164b`, '.pdf').includes('\u3164')).toBe(false);
+    }
+    // Persian with its zero-width non-joiner, a family emoji, and a flag made of tag characters.
+    const persian = '\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645';
+    expect(fileNameFor(persian, '.md')).toBe(`${persian}.md`);
+    const family = '\u{1f468}\u200d\u{1f469}\u200d\u{1f467} Family';
+    expect(fileNameFor(family, '.md')).toBe(`${family}.md`);
+    const scotland = '\u{1f3f4}\u{e0067}\u{e0062}\u{e0073}\u{e0063}\u{e0074}\u{e007f}';
+    expect(fileNameFor(`${scotland} Play`, '.md')).toBe(`${scotland} Play.md`);
+    // Tag characters with no flag before them are unseen text, and go.
+    expect(fileNameFor('a\u{e0041}\u{e0042}b', '.md')).toBe('ab.md');
+    // A long title in a script of three bytes a character keeps 80 of them, not 66.
+    expect(Array.from(fileNameFor('\u5b57'.repeat(120), '.md')).length).toBe(80 + 3);
+    expect(fileNameFor('\u0436'.repeat(130), '.md')).toBe(`${'\u0436'.repeat(120)}.md`);
+  });
+
   test('makes a safe file name', () => {
     expect(fileNameFor('Small Hours', '.fountain')).toBe('Small Hours.fountain');
     expect(fileNameFor('A/B\\C:D*E?F"G<H>I|J', '.pdf')).toBe('ABCDEFGHIJ.pdf');
@@ -103,11 +150,11 @@ describe('fileNameFor', () => {
     expect(fileNameFor('a\u0000b\nc', '.fountain')).toBe('abc.fountain');
   });
 
-  test('cuts at 120 characters, and at 200 bytes, without splitting a surrogate pair', () => {
-    // An emoji is four bytes: fifty of them are the 200 a name is allowed.
+  test('cuts at 120 characters, and at 240 bytes, without splitting a surrogate pair', () => {
+    // An emoji is four bytes: sixty of them are the 240 a name is allowed.
     const name = fileNameFor('😀'.repeat(200), '.fountain');
-    expect(name).toBe(`${'😀'.repeat(50)}.fountain`);
-    expect(fileNameFor('é'.repeat(200), '.fountain')).toBe(`${'é'.repeat(100)}.fountain`);
+    expect(name).toBe(`${'😀'.repeat(60)}.fountain`);
+    expect(fileNameFor('é'.repeat(200), '.fountain')).toBe(`${'é'.repeat(120)}.fountain`);
   });
 });
 

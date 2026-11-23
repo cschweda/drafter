@@ -93,15 +93,47 @@ export function fileBaseName(name: string | undefined): string {
   return base.trim() || 'Untitled';
 }
 
-// What a file name can't hold, and what can't be seen in one: every control character, and the
+// What a file name can't hold, and what can't be seen in one: every control character, the
 // format characters (zero-width ones, and the direction overrides, which made a name read
-// backward or end in a false extension; red/blue audit of 23 November 2026, W13).
-const UNSAFE = /[/\\:*?"<>|\p{Cc}\p{Cf}\u2028\u2029]/gu;
+// backward or end in a false extension; red/blue audit of 23 November 2026, W13), and the
+// letters and marks that draw nothing (the Hangul fillers, the blank Braille cell, the combining
+// grapheme joiner, the Mongolian selectors). Two kinds of format character stay, where a real
+// title needs them: the joiners (U+200C, U+200D: Persian, a family emoji), and the tag characters
+// that follow a black flag and make it Scotland's or Wales's.
+const UNSAFE =
+  /[/\\:*?"<>|\p{Cc}\p{Cf}\u2028\u2029\u034f\u115f\u1160\u180b-\u180f\u2800\u3164\uffa0]/u;
+const JOINER = /[\u200c\u200d]/u;
+const TAG = /[\u{e0020}-\u{e007f}]/u;
+const FLAG = '\u{1f3f4}';
+/** What draws nothing alone: a name made only of these is no name. */
+const DRAWS_NOTHING = /[\s\u200c\u200d\ufe00-\ufe0f\u{e0020}-\u{e007f}]/gu;
 const MAX_NAME = 120;
-/** Under the 255 bytes most disks allow a name, with room for the extension and a "(2)". */
-const MAX_NAME_BYTES = 200;
-/** The names Windows keeps for devices, whatever follows the dot: a file can't have one. */
-const DEVICE = /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9])$/i;
+/**
+ * Under the 255 bytes most disks allow a name, with room for the extension and a " (2)": 120
+ * letters of two bytes each, 80 of three.
+ */
+const MAX_NAME_BYTES = 240;
+/**
+ * The names Windows keeps for devices, whatever follows the first dot (`NUL.tar.gz` is `NUL`), with
+ * the superscript digits it takes for 1 to 3, and the two console names.
+ */
+const DEVICE =
+  /^(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3]|conin\$|conout\$)$/iu;
+
+/** `title` without what a name can't hold or show, one character at a time. */
+function seen(title: string): string {
+  let out = '';
+  let flag = false;
+  for (const char of title) {
+    if (TAG.test(char)) {
+      if (flag) out += char;
+      continue;
+    }
+    flag = char === FLAG;
+    if (JOINER.test(char) || !UNSAFE.test(char)) out += char;
+  }
+  return out;
+}
 
 /**
  * A file name: the title without `/ \ : * ? " < > |`, control characters, and characters that
@@ -111,9 +143,19 @@ const DEVICE = /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9])$/i;
  */
 export function fileNameFor(
   title: string,
-  extension: '.fountain' | '.md' | '.pdf' | '.html' | '.epub' | '.txt' | '.fdx' | '.docx' | '.csv',
+  extension:
+    | '.fountain'
+    | '.md'
+    | '.pdf'
+    | '.html'
+    | '.epub'
+    | '.txt'
+    | '.fdx'
+    | '.docx'
+    | '.csv'
+    | '.zip',
 ): string {
-  const cleaned = title.replace(UNSAFE, '').replace(/\s+/g, ' ').trim();
+  const cleaned = seen(title).replace(/\s+/g, ' ').trim();
   // Cut by code point, so an emoji is never split, and to a length in bytes a disk allows: 120
   // emoji are 480 bytes (the same audit, W14).
   const encoder = new TextEncoder();
@@ -124,6 +166,9 @@ export function fileNameFor(
     if (bytes > MAX_NAME_BYTES) break;
     cut += char;
   }
-  const name = cut.replace(/^[.\s]+|[.\s]+$/g, '');
-  return (DEVICE.test(name) ? `_${name}` : name || 'Untitled') + extension;
+  let name = cut.replace(/^[.\s]+|[.\s]+$/g, '');
+  if (name.replace(DRAWS_NOTHING, '') === '') name = '';
+  // The part before the first dot is what Windows goes by, spaces after it or not.
+  const stem = name.split('.')[0]?.trim() ?? '';
+  return (DEVICE.test(stem) ? `_${name}` : name || 'Untitled') + extension;
 }

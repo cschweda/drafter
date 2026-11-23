@@ -99,18 +99,25 @@ const needsQuotes = /[",;\t\r\n]/;
  * one of the first four after a semicolon or a tab, where a spreadsheet that splits on those
  * would start a cell with it (red/blue audit of 23 November 2026, W15).
  */
-const formulaStart = /^[=+\-@\t\r]|[;\t][ ]*[=+\-@]/;
+const formulaStart = /^[=+\-@\uff1d\uff0b\uff0d\uff20\t\r]/;
+/**
+ * The same signs after a semicolon or a tab inside a field. The `'` goes in front of the sign
+ * itself: a reader that splits on `;` or a tab starts a cell there, where the field's own quote
+ * is far behind and holds nothing together (the audit of that audit).
+ */
+const formulaInside = /([;\t] *)(?=[=+\-@\uff1d\uff0b\uff0d\uff20])/g;
 
 /**
  * Rows as CSV (RFC 4180): a field with a comma, a semicolon, a tab, a quote (doubled), or a line
  * break is quoted;
  * lines end `\r\n`, the last too. Text, UTF-8 without a byte order mark. A field that starts with
- * `=`, `+`, `-`, `@`, a tab, or a carriage return gets a `'` in front first, so a spreadsheet shows
+ * `=`, `+`, `-`, `@` (or the full-width form of one), a tab, or a carriage return gets a `'` in front first, so a spreadsheet shows
  * it as text and never runs a formula a script planted in a heading, a cue, or a synopsis.
  */
 export function toCsv(rows: readonly (readonly string[])[]): string {
   const field = (raw: string) => {
-    const f = formulaStart.test(raw) ? `'${raw}` : raw;
+    const inside = raw.replace(formulaInside, "$1'");
+    const f = formulaStart.test(raw) ? `'${inside}` : inside;
     return needsQuotes.test(f) ? `"${f.replaceAll('"', '""')}"` : f;
   };
   return rows.map((row) => `${row.map(field).join(',')}\r\n`).join('');

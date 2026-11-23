@@ -6,6 +6,7 @@ import { type ZipWriteEntry, zipStored } from '@drafter/archive';
 import { cutsFile, draftFile, type WorkKind } from '@drafter/history';
 import { entryOf, listCuts } from '../cuts/store';
 import { draftText, listDrafts } from '../drafts/store';
+import { fileNameFor } from '../storage/text';
 import { type BesideNames, draftName, factsOf } from './beside';
 
 /**
@@ -38,4 +39,5 @@ export async function exportDraftsAndCuts(
 }
 
 /** The zip's own name: `Boca drafts and cuts.zip`. */
-export const exportName = (names: BesideNames): string => `${names.work} drafts and cuts.zip`;
+export const exportName = (names: BesideNames): string =>
+  fileNameFor(`${names.work} drafts and cuts`, '.zip');

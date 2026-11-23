@@ -2,7 +2,7 @@
 import type { NoteEntry } from '@drafter/notes';
 import type { Scene } from '@drafter/outline';
 import type { DropdownMenuItem } from '@nuxt/ui';
-import { hasStatus } from '~/notes/filter';
+import { hasStatus, swatchOf } from '~/notes/filter';
 import { sceneNumber } from '~/outline/labels';
 
 // One row of the Notes list (Phase 2 design §8): a listbox option named by what it says, its
@@ -152,11 +152,7 @@ function onEditFocusout(event: FocusEvent) {
             type="button"
             class="chip"
             tabindex="-1"
-            :style="{
-              '--swatch': Object.hasOwn(props.swatches, category)
-                ? props.swatches[category]
-                : 'transparent',
-            }"
+            :style="{ '--swatch': swatchOf(props.swatches, category) }"
             :aria-label="`Category ${category}`"
             @click.stop
           >

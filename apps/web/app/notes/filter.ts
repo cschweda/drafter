@@ -47,6 +47,15 @@ export interface NoteRowModel {
 }
 
 /** Whether a note has a status to resolve (controller ruling 2): the writer's own, or a person's. */
+/**
+ * A category's swatch, or `transparent` for one with none. By its own entry only: a category a
+ * writer named `constructor` or `toString` is not the object's (red/blue audit of 23 November
+ * 2026, W20).
+ */
+export function swatchOf(swatches: Readonly<Record<string, string>>, category: string): string {
+  return Object.hasOwn(swatches, category) ? (swatches[category] as string) : 'transparent';
+}
+
 export function hasStatus(note: KeyedNote | null): note is KeyedNote {
   const kind = note?.head?.kind;
   return note !== null && (kind === undefined || kind === 'category' || kind === 'person');

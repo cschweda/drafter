@@ -55,6 +55,25 @@ function wrap(text: string, max: number, fit: (s: string) => number): string[] {
 }
 
 /**
+ * Each column's widest line: its heading in bold, and every line of every row's cell. Found with
+ * a loop: handing every row to `Math.max` at once ran out of stack at 130,000 rows (red/blue
+ * audit of 23 November 2026, W16).
+ */
+export function widestLines(
+  table: { columns: readonly string[]; rows: readonly (readonly string[])[] },
+  fitBold: (text: string) => number,
+  fitRegular: (text: string) => number,
+): number[] {
+  return table.columns.map((name, c) => {
+    let width = fitBold(name);
+    for (const row of table.rows) {
+      for (const line of (row[c] ?? '').split(/\r?\n/)) width = Math.max(width, fitRegular(line));
+    }
+    return width;
+  });
+}
+
+/**
  * Draws a table as a landscape PDF (production design §9): `<title> — <date>` in bold at the top,
  * the column header (bold, repeated on every page), then the rows in the Markdown PDF's regular
  * face. Columns are as wide as their longest cell (measured), at least 40 pt, fitted to the page
@@ -78,15 +97,7 @@ export async function renderTablePdf(
   const fitBold = (s: string) => measure.width(s, 'textBold', SIZE);
 
   const total = page.width - 2 * MARGIN;
-  // Each column's widest line, found with a loop: handing every row to `Math.max` at once ran out
-  // of stack at 130,000 rows (red/blue audit of 23 November 2026, W16).
-  const widest = table.columns.map((name, c) => {
-    let width = fitBold(name);
-    for (const row of table.rows) {
-      for (const line of (row[c] ?? '').split(/\r?\n/)) width = Math.max(width, fitRegular(line));
-    }
-    return width;
-  });
+  const widest = widestLines(table, fitBold, fitRegular);
   const natural = widest.map((w) => Math.max(w + 2 * PAD, MIN_COLUMN));
   const sum = natural.reduce((a, b) => a + b, 0);
   // Scale to the page; a column keeps its minimum while the others give way, and if the minimums
