@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **The third clean-room audit, and its fixes** ([the audit](docs/clean-room-audit-2026-11-22.md)). It found no copied code, no screenwriting package or converter, and no file from another app. Fixed: a film reference that had come back in the layout tests; three small values in the Final Draft import's tests and notes that had come from a real sample, now invented; and records that had fallen behind (`DEPENDENCIES.md`, the clean-room rules, three plans). `.gitignore` now keeps any real Final Draft file out of `samples/fdx/`. Nothing a writer sees changes.
+- **The planned canvas of idea cards is now called the Wall.** Its working name turned out to be the name of a Final Draft feature. Living documents and code comments use the new name, and the block that will hold its cards in a script is `/* the wall`; no released version ever wrote the old marker, so no file changes meaning.
+
 ### Fixed
 
 - **Seven browser tests raced a clock.** The test fixture's module that "adds a note after a pause" waited 1.2 seconds, and each test had that long to switch scripts, open a dialog or edit the text before the run went on. On a slow runner the test lost: the run finished first and reported the wrong thing (`modules.spec.ts:367` failed four times that way on the Linux checks, once on the release's own pull request). The fixture now waits for the test's word, and the test gives it once what it meant to do is done. For developers. One of the seven then failed once on macOS a new way: it let the run go while the next script was still being opened (a script is made in the database first), so the run finished in the old one. That test now waits for the new script, and the one that turns the module off waits for the switch to show it.
@@ -93,7 +98,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - **A line that starts with `#` or `=` inside a speech or a paragraph.** Fountain reads it as a section or a synopsis, which doesn't print, so `#1 is the best.` under a character's name vanished and cut the speech in two. Drafter warns, and its fix puts a backslash first.
   - **A title-page key that doesn't print.** The title page prints Title, Credit, Author, Source, Contact, and Draft date. Copyright, Notes, Revision, and any key of your own stay in the file and print nowhere; each is now listed, as advice.
   - **`CUT TO:` with a space after it.** That space makes the line action, which is Fountain's rule and easy to do by accident. Drafter points it out, and its fix removes the space.
-- **A name you force with `@` prints as you typed it.** `@McCLANE` now prints McCLANE on the page and in the PDF, as Fountain intends; it used to print MCCLANE. Every other name still prints in capitals. A script opened from Final Draft keeps its names in capitals, as Final Draft printed them.
+- **A name you force with `@` prints as you typed it.** `@McBRIDE` now prints McBRIDE on the page and in the PDF, as Fountain intends; it used to print MCBRIDE. Every other name still prints in capitals. A script opened from Final Draft keeps its names in capitals, as Final Draft printed them.
 - **`\#` and `\=` at the start of a line print the mark.** Until now nothing could make a line of dialogue start with `#` or `=`.
 - **No line of a paragraph is left alone at a page break.** A paragraph of action that crosses a page now keeps at least two lines at the foot of one page and two at the head of the next; one too short for that moves to the next page whole, with its scene heading if it has one. A line of action used to be left behind by itself. A speech that splits with (MORE) now stops on a line that ends a sentence when there is one within two lines of where it would have stopped. A script with locked pages keeps its pages as they are.
 - **`drafter check` lists everything the Problems pane does.** It used to run none of the pane's rules, so it could say "no problems" about a script the app had warnings for.

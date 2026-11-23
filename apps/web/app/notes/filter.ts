@@ -8,7 +8,7 @@ import {
 import type { Scene, SceneIndex } from '@drafter/outline';
 
 // What the Notes tab lists (Phase 2 design §8): every note and boneyard but the scene fields and
-// Beat Board cards, in a group, narrowed by category, person, status, scene, and text. Pure.
+// Wall cards, in a group, narrowed by category, person, status, scene, and text. Pure.
 
 export type NoteGroup = 'all' | 'mine' | 'readers' | 'setups' | 'boneyard';
 

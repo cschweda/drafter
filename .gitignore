@@ -13,6 +13,13 @@ dist/
 # Tests
 coverage/
 
+# Real Final Draft files, read for their structure only, are never committed (docs/clean-room.md).
+# Only Drafter's own synthetic samples are.
+samples/fdx/*
+!samples/fdx/README.md
+!samples/fdx/short-film.fdx
+!samples/fdx/stage-play.fdx
+
 # Scripts built from the samples and fixtures
 samples/*.pdf
 fixtures/**/*.pdf

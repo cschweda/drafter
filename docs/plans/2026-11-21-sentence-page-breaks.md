@@ -27,10 +27,11 @@ switch, and finds only a hole in the plaster where it
 used to be. He waits.
 ```
 
-That is what a reader of a script expects, and what Final Draft does by default (its files carry `BreakDialogueAndActionAtSentences="Yes"`).
+That is what a reader of a script expects, and what Final Draft does by default.
 
 ## 2. Decisions already made
 
+- **Clean room** (recorded 2026-11-23; the maintainer confirmed the session worked under it): built from the convention that a page ends at a sentence, as the maintainer described it, and Drafter's own packages. No other app's code, screens, or text; no Final Draft structure that isn't in a real file the maintainer supplied; fixtures and sample text are original. See [the clean-room rules](../clean-room.md).
 1. **Scripts that are already locked keep their pages exactly.** Their page starts are converted when the script is read; nobody is asked to lock again (§5).
 2. **Unlocked scripts repaginate, with no setting.** Breaks move, and a script's length can change by a page. It is the engine's behaviour, like the widow and orphan rule in v0.27.1, not an option. Confirmed 2026-11-21 (§9).
 3. **Action and dialogue both, two lines at least on each side, and today's rule when no sentence fits** (§3).

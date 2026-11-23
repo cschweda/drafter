@@ -207,9 +207,9 @@ describe('sceneIndex', () => {
     );
   });
 
-  test('leaves the metadata block and the beat board out of the last scene', () => {
+  test('leaves the metadata block and the wall out of the last scene', () => {
     const source =
-      'INT. A - DAY\n\nOne.\n\n/* beat board\n= An idea.\n*/\n\n/* drafter\n{"v":1}\n*/\n';
+      'INT. A - DAY\n\nOne.\n\n/* the wall\n= An idea.\n*/\n\n/* drafter\n{"v":1}\n*/\n';
     const { doc, index } = indexOf(source);
     const [a] = index.scenes;
     expect(doc.source.slice(a?.span.from, a?.span.to)).toBe('INT. A - DAY\n\nOne.');

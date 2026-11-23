@@ -25,7 +25,7 @@ const firstLine = (block: Block) => block.lines[0]?.raw.trimStart() ?? '';
 
 /**
  * The number of blocks that belong to the script's body: the metadata block (the last block, a
- * `/* drafter` boneyard) and a Beat Board block just before it (`/* beat board`) are left out,
+ * `/* drafter` boneyard) and a Wall block just before it (`/* the wall`) are left out,
  * so no scene or section ever holds them (§5.5, §5.6).
  */
 export function bodyEnd(doc: Doc): number {
@@ -34,7 +34,7 @@ export function bodyEnd(doc: Doc): number {
   const last = blocks[end - 1];
   if (last?.kind === 'boneyard' && firstLine(last).startsWith('/* drafter')) end--;
   const board = blocks[end - 1];
-  if (board?.kind === 'boneyard' && firstLine(board).startsWith('/* beat board')) end--;
+  if (board?.kind === 'boneyard' && firstLine(board).startsWith('/* the wall')) end--;
   return end;
 }
 
