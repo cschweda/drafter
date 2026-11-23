@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { HELP_PAGES } from '~/commands/data';
+import { SUPPORT_ON, SUPPORT_PAGE, SUPPORT_ROUTES } from '~/about/support';
+import { HELP_PAGES, helpHref } from '~/commands/data';
 
 definePageMeta({ layout: 'docs' });
 
@@ -10,6 +11,9 @@ useDocsHead({
   description:
     'Your script stays with you: nothing about it is stored in the cloud, no AI reads it, and it never leaves your device unless you send it. Audited 3 November 2026.',
 });
+
+/** Where the Support page's links go: the sites named in what uses the network. */
+const SUPPORT_PROVIDERS = SUPPORT_ROUTES.sponsor ? 'Ko-fi and GitHub' : 'Ko-fi';
 </script>
 
 <template>
@@ -57,6 +61,10 @@ useDocsHead({
       Plausible’s count of page visits (<a href="#analytics">below</a>); in the desktop app, a check
       with GitHub for a new version when it starts, which you can turn off in Settings; and the links
       and reports you click. None of it carries your script.
+    </p>
+    <p v-if="SUPPORT_ON">
+      The <a :href="helpHref(SUPPORT_PAGE)">Support page</a> links to {{ SUPPORT_PROVIDERS }}.
+      Nothing is sent there unless you follow a link.
     </p>
     <p>
       <strong>The audit.</strong> On 3 November 2026 Drafter was audited for exactly this: every line

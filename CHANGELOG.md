@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Support Drafter, a tip jar.** A new help page, in the About menu and the palette ("tip", "sponsor" and "donate" find it), for anyone who would like to say thanks: one button, **Leave a tip**, which opens the maintainer's page on Ko-fi, where a card, Apple Pay, Google Pay or PayPal is enough and no account is needed. Drafter is free and every part of it stays free; nothing changes whether you tip or not, there is nothing for people who do, and nothing in Drafter ever asks: no banner, no reminder, no word of it on the writing screen. Both the page and Drafter itself load nothing from Ko-fi and send it nothing: it is a link, listed with everything else that uses the network in the README and on the Privacy page. A build without the maintainer's Ko-fi address (`app/about/support.ts`) has no such page. In the desktop app the button opens that one address in your browser without asking, as Drafter's other links do, and any other address on the same site is still asked about. The README's own line, and the Sponsor button on GitHub, name Buy Me a Coffee as well. The design is `docs/drafter-support-page-design.md`.
+
 ## [0.27.4] - 2026-11-23
 
 **Save says where it went, and a script comes back from Final Draft.** Saving no longer moves anything in the top bar, the status bar says which file a save went to, and Safari and Firefox ask what to call a script the first time it is saved. A script exported as a Final Draft file, opened there, and saved now comes back with its sections, synopses, notes, and title page: found by sending real files through Final Draft 13 and reading what came back. Also here: the third clean-room audit and its fixes.

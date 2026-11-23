@@ -2,6 +2,7 @@ import { realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SUPPORT_ON, SUPPORT_PAGE } from './app/about/support';
 import { DOWNLOAD_PAGE, HELP_PAGES } from './app/commands/data';
 import { findDuplicateIds, moduleFolders, moduleIconNames } from './scripts/modules.mjs';
 import { PLAUSIBLE_INIT, PLAUSIBLE_SRC } from './scripts/plausible.mjs';
@@ -201,6 +202,13 @@ export default defineNuxtConfig({
     prerender: { routes: ['/docs', ...HELP_PAGES.map((page) => page.path), DOWNLOAD_PAGE.path] },
   },
   hooks: {
+    // A build without the maintainer's Ko-fi page has no Support page (app/about/support.ts): its
+    // route is taken out, so nothing prerenders it and its address is a 404 like any other.
+    'pages:extend'(pages) {
+      if (SUPPORT_ON) return;
+      const at = pages.findIndex((page) => page.path === SUPPORT_PAGE.path);
+      if (at >= 0) pages.splice(at, 1);
+    },
     // The desktop build has no PWA module, so the plugin that registers its worker (and imports
     // the module's `virtual:pwa-register`) is left out.
     'app:resolve'(app) {
