@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **Three checks the clean-room audits asked for now run with the tests:** no film reference in any source, test, fixture, or sample; no Final Draft file committed that is large or outside a fixture folder; and `docs/DEPENDENCIES.md` naming every package and each thing it depends on. Each catches something an audit had found by hand more than once.
+
 ## [0.27.4] - 2026-11-23
 
 **Save says where it went, and a script comes back from Final Draft.** Saving no longer moves anything in the top bar, the status bar says which file a save went to, and Safari and Firefox ask what to call a script the first time it is saved. A script exported as a Final Draft file, opened there, and saved now comes back with its sections, synopses, notes, and title page: found by sending real files through Final Draft 13 and reading what came back. Also here: the third clean-room audit and its fixes.
