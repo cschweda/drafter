@@ -2,6 +2,17 @@ import { describe, expect, test } from 'vitest';
 import { SUPPORT_LINKS, supportRoutes } from '../app/about/support';
 
 describe('supportRoutes', () => {
+  test('takes only the address as it would be written, with no name in it and no stray mark (W17)', () => {
+    for (const kofi of [
+      'https://user:pw@ko-fi.com/someone',
+      'https://user@ko-fi.com/someone',
+      'https://ko-fi.com/someone?',
+      'https://ko-fi.com/someone#',
+    ]) {
+      expect(supportRoutes({ kofi }), kofi).toEqual({});
+    }
+  });
+
   test('gives both routes for a Ko-fi page and a GitHub Sponsors page', () => {
     expect(
       supportRoutes({

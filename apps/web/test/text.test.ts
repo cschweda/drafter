@@ -69,6 +69,26 @@ describe('titleOf', () => {
 });
 
 describe('fileNameFor', () => {
+  test('takes out what can’t be seen or would turn the name round (red/blue audit, W13)', () => {
+    expect(fileNameFor('invoice\u202efdp.exe', '.fountain')).toBe('invoicefdp.exe.fountain');
+    expect(fileNameFor('\u202e', '.fountain')).toBe('Untitled.fountain');
+    expect(fileNameFor('\u2066x\u2069', '.pdf')).toBe('x.pdf');
+    expect(fileNameFor('a\u0085b\u200bc\u2028d', '.txt')).toBe('abcd.txt');
+  });
+
+  test('never makes a name Windows keeps for a device, or one too long for a disk (W14)', () => {
+    for (const name of ['CON', 'nul', 'COM1', 'lpt9', 'Aux', 'PRN']) {
+      expect(fileNameFor(name, '.fountain'), name).toBe(`_${name}.fountain`);
+    }
+    expect(fileNameFor('aux.', '.fountain')).toBe('_aux.fountain');
+    expect(fileNameFor('CONSOLE', '.fountain')).toBe('CONSOLE.fountain');
+    const long = fileNameFor('\u{1F3AC}'.repeat(120), '.fountain');
+    expect(new TextEncoder().encode(long).length).toBeLessThanOrEqual(255);
+    // Whole characters only, and an ordinary long title is still 120 characters.
+    expect(long.endsWith('\u{1F3AC}.fountain')).toBe(true);
+    expect(fileNameFor('a'.repeat(200), '.md')).toBe(`${'a'.repeat(120)}.md`);
+  });
+
   test('makes a safe file name', () => {
     expect(fileNameFor('Small Hours', '.fountain')).toBe('Small Hours.fountain');
     expect(fileNameFor('A/B\\C:D*E?F"G<H>I|J', '.pdf')).toBe('ABCDEFGHIJ.pdf');
@@ -83,9 +103,11 @@ describe('fileNameFor', () => {
     expect(fileNameFor('a\u0000b\nc', '.fountain')).toBe('abc.fountain');
   });
 
-  test('cuts at 120 characters without splitting a surrogate pair', () => {
+  test('cuts at 120 characters, and at 200 bytes, without splitting a surrogate pair', () => {
+    // An emoji is four bytes: fifty of them are the 200 a name is allowed.
     const name = fileNameFor('😀'.repeat(200), '.fountain');
-    expect(name).toBe(`${'😀'.repeat(120)}.fountain`);
+    expect(name).toBe(`${'😀'.repeat(50)}.fountain`);
+    expect(fileNameFor('é'.repeat(200), '.fountain')).toBe(`${'é'.repeat(100)}.fountain`);
   });
 });
 

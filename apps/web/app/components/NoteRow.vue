@@ -152,7 +152,11 @@ function onEditFocusout(event: FocusEvent) {
             type="button"
             class="chip"
             tabindex="-1"
-            :style="{ '--swatch': props.swatches[category] ?? 'transparent' }"
+            :style="{
+              '--swatch': Object.hasOwn(props.swatches, category)
+                ? props.swatches[category]
+                : 'transparent',
+            }"
             :aria-label="`Category ${category}`"
             @click.stop
           >

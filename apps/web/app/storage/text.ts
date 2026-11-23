@@ -93,12 +93,19 @@ export function fileBaseName(name: string | undefined): string {
   return base.trim() || 'Untitled';
 }
 
-// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this removes.
-const UNSAFE = /[/\\:*?"<>|\u0000-\u001f\u007f]/g;
+// What a file name can't hold, and what can't be seen in one: every control character, and the
+// format characters (zero-width ones, and the direction overrides, which made a name read
+// backward or end in a false extension; red/blue audit of 23 November 2026, W13).
+const UNSAFE = /[/\\:*?"<>|\p{Cc}\p{Cf}\u2028\u2029]/gu;
 const MAX_NAME = 120;
+/** Under the 255 bytes most disks allow a name, with room for the extension and a "(2)". */
+const MAX_NAME_BYTES = 200;
+/** The names Windows keeps for devices, whatever follows the dot: a file can't have one. */
+const DEVICE = /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9])$/i;
 
 /**
- * A file name: the title without `/ \ : * ? " < > |` and control characters,
+ * A file name: the title without `/ \ : * ? " < > |`, control characters, and characters that
+ * can't be seen, never a name Windows keeps for a device,
  * without leading or trailing dots and spaces, at most 120 characters, plus the
  * extension. A title with nothing left is "Untitled".
  */
@@ -107,8 +114,16 @@ export function fileNameFor(
   extension: '.fountain' | '.md' | '.pdf' | '.html' | '.epub' | '.txt' | '.fdx' | '.docx' | '.csv',
 ): string {
   const cleaned = title.replace(UNSAFE, '').replace(/\s+/g, ' ').trim();
-  // Cut by code point, so an emoji is never split.
-  const cut = Array.from(cleaned).slice(0, MAX_NAME).join('');
+  // Cut by code point, so an emoji is never split, and to a length in bytes a disk allows: 120
+  // emoji are 480 bytes (the same audit, W14).
+  const encoder = new TextEncoder();
+  let cut = '';
+  let bytes = 0;
+  for (const char of Array.from(cleaned).slice(0, MAX_NAME)) {
+    bytes += encoder.encode(char).length;
+    if (bytes > MAX_NAME_BYTES) break;
+    cut += char;
+  }
   const name = cut.replace(/^[.\s]+|[.\s]+$/g, '');
-  return (name || 'Untitled') + extension;
+  return (DEVICE.test(name) ? `_${name}` : name || 'Untitled') + extension;
 }

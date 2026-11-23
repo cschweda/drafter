@@ -141,7 +141,8 @@ export function createReportHandler({
 
     const label = kind === 'problem' ? 'Problem' : 'Idea';
     const first = (kind === 'problem' ? f.happened : f.idea).split('\n')[0];
-    const subject = `[Drafter] ${label}: ${f.title || first}`.slice(0, 200);
+    // One line: a line break in the title has no place in a subject.
+    const subject = `[Drafter] ${label}: ${f.title || first}`.replace(/\s+/g, ' ').slice(0, 200);
     const sections =
       kind === 'problem'
         ? [

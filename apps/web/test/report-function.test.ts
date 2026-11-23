@@ -43,6 +43,12 @@ const problem = {
 };
 
 describe('the report function', () => {
+  test('keeps a title’s line breaks out of the subject (red/blue audit, W12)', async () => {
+    const { post, sent } = setup();
+    await post({ ...problem, title: 'Hello\nBcc: victim@x.co\n\nbody' }, '2.2.2.2');
+    expect(sent().subject).toBe('[Drafter] Problem: Hello Bcc: victim@x.co body');
+  });
+
   test('takes a report only from its own page, as JSON', async () => {
     // Red/blue audit, 2026-11-23 (P7): another site's page could make a visitor's browser post a
     // plain-text body here, which needs no permission from this site, and mail would go out.
