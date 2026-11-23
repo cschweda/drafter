@@ -589,9 +589,10 @@ test('says so when the browser refuses to open its save dialog', async ({ page, 
 });
 
 // The save state in the top bar (fresh-look Task 6; the maintainer, 2026-10-31): a red dot and
-// "Unsaved" right after the title while there are changes, which saves when clicked, in a place
-// that is the same size filled or empty; for a moment after a save the status bar says where it
-// went (a phone, with no status bar, shows a check). The tab's icon gets the same red dot.
+// "Unsaved" in the status bar while there are changes, which saves when clicked, and for a moment
+// after a save where it went; the top bar shows nothing, so nothing in it moves. A phone has no
+// status bar: the dot is in the top bar there, and a check after a save. The tab's icon gets the
+// same red dot.
 test.describe('the unsaved indicator', () => {
   const unsaved = (page: Page) => page.getByRole('button', { name: 'Unsaved changes — Save' });
   const justSaved = (page: Page) => page.locator('[data-just-saved]');
@@ -623,10 +624,14 @@ test.describe('the unsaved indicator', () => {
     });
     expect(order).toBe(true);
     if (isMobile) {
-      // A phone: the dot alone.
+      // A phone has no status bar: the dot alone, in the top bar.
       await expect(unsaved(page).locator('.word')).toBeHidden();
+      expect(await unsaved(page).evaluate((el) => !!el.closest('header.toolbar'))).toBe(true);
     } else {
+      // In the status bar; the top bar shows nothing.
       await expect(unsaved(page)).toHaveText('Unsaved');
+      expect(await unsaved(page).evaluate((el) => !!el.closest('.status-bar'))).toBe(true);
+      await expect(page.locator('header.toolbar [data-save-state] button')).toHaveCount(0);
     }
     const download = page.waitForEvent('download');
     await unsaved(page).click();

@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- **"Unsaved" is in the status bar.** The red dot and "Unsaved", which saves when clicked, now sit at the foot of the window beside "Saved to …", and the top bar shows no save state at all, so nothing in it ever moves. A phone-width screen has no status bar, and keeps the dot in the top bar.
 - **The story map is now the Story Atlas.** Its old name was also the name of a feature in Final Draft and in another writing tool, so Drafter's page for someone who doesn't read scripts has a name of its own. Nothing about it changes but the name: it is still Export → Story Atlas, the page is the same, and a script's planned length and edited character lines are kept (the name they are stored under in the file is unchanged, so an older Drafter still reads them). The old help address leads to the new one, and the command line's `--story-map` still works beside `--story-atlas`. In Drafter for Claude the tool is `story_atlas`. Dated records (earlier audits, this changelog's history) keep the old name.
 - **Three checks the clean-room audits asked for now run with the tests:** no film reference in any source, test, fixture, or sample; no Final Draft file committed that is large or outside a fixture folder; and `docs/DEPENDENCIES.md` naming every package and each thing it depends on. Each catches something an audit had found by hand more than once.
 

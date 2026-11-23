@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { structureOf } from '@drafter/cm-fountain';
+import { formatKeys, isApple } from '~/commands/keys';
 import { commandById } from '~/commands/registry';
 import { draftName } from '~/drafts/labels';
 import { useDrafts } from '~/drafts/use-drafts';
@@ -25,7 +26,7 @@ import { showStats } from '~/stats/tab';
 import { useRates } from '~/stats/timing';
 import { useWritingStats } from '~/stats/writing';
 import { openError } from '~/storage/open';
-import { justSaved, readOnlyHint, savedFile, saveError } from '~/storage/save';
+import { justSaved, readOnlyHint, save, savedFile, saveError } from '~/storage/save';
 import { blankError, kindError, type RecoveryState, useScript } from '~/storage/script';
 import { useStorageNotice } from '~/storage/storage-notice';
 
@@ -38,7 +39,8 @@ import { useStorageNotice } from '~/storage/storage-notice';
 // Below 640px the bar is hidden, but for what can't wait: the recovery copy's warning, an error,
 // a running sprint, and the Counts panel opened from the palette.
 const { element, kind, template } = useEditor();
-const { project, ready } = useScript();
+const { project, ready, dirty: unsaved } = useScript();
+const saveKeys = formatKeys('Mod-s', isApple());
 const { count } = useProblems();
 const { steady } = useCounts();
 const { words: markdownWords } = useMarkdown();
@@ -303,8 +305,21 @@ const urgent = computed(
           <UIcon name="i-lucide-triangle-alert" class="icon" />
           {{ RECOVERY[warning].label }}
         </button>
-        <!-- Where the save went, for a moment after it (the maintainer, 2026-11-23): last on this
-             side, so nothing beside it moves when it comes and goes. -->
+        <!-- The save state (the maintainer, 2026-11-23: a status message belongs down here, so the
+             top bar never moves): "Unsaved", which saves, while there are changes; then where the
+             save went, for a moment. Last on this side, so nothing beside it moves as it changes. -->
+        <button
+          v-if="unsaved && wide"
+          type="button"
+          class="unsaved item wide-only"
+          aria-label="Unsaved changes — Save"
+          :title="`Unsaved changes. Save (${saveKeys})`"
+          data-item="unsaved"
+          @click="save().catch(() => {})"
+        >
+          <span class="dot" aria-hidden="true" />
+          Unsaved
+        </button>
         <span
           v-if="justSaved && wide"
           class="saved-to item wide-only"
@@ -448,6 +463,28 @@ const urgent = computed(
 .recovery.warn:hover,
 .recovery.warn[aria-expanded="true"] {
   background: var(--warn-hover);
+}
+.unsaved {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.unsaved:hover {
+  color: var(--text);
+}
+/* The favicon's dot, in the same red (public/favicon-unsaved.svg). */
+.unsaved .dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--unsaved);
 }
 .saved-to {
   display: inline-flex;

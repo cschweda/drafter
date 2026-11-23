@@ -59,7 +59,9 @@ test.describe('on a wide screen', () => {
     expect(outside).toEqual([]);
   });
 
-  test('repeats nothing the top bar or the Inspector says', async ({ page }) => {
+  test('repeats nothing the top bar or the Inspector says, and holds the save state', async ({
+    page,
+  }) => {
     await start(page);
     // The sample, with the Script in the Inspector: its header has the page.
     await showView(page, 'Script');
@@ -67,11 +69,15 @@ test.describe('on a wide screen', () => {
     await expect(status(page)).not.toContainText(/Page \d+ of \d+/);
     // The top bar's chip says it is a sample; the bar doesn't.
     await expect(status(page)).not.toContainText(/sample/i);
-    // The save state is the top bar's.
+    // The save state is the status bar's, and the top bar says none of it (the maintainer,
+    // 2026-11-23: a status message belongs in the status bar, so the top bar never moves).
     await setText(page, 'INT. ROOM - DAY\n\nA change.\n');
-    await expect(page.locator('[data-save-state="unsaved"]')).toBeVisible();
-    // (Its file item says there is no file yet: that is the file, not the save state.)
-    await expect(status(page)).not.toContainText(/Unsaved|Saved/);
+    await expect(page.locator('[data-save-state]')).toHaveAttribute('data-save-state', 'unsaved');
+    await expect(status(page).getByRole('button', { name: 'Unsaved changes — Save' })).toHaveText(
+      'Unsaved',
+    );
+    await expect(page.locator('header.toolbar')).not.toContainText(/Unsaved|Saved/);
+    // What a screen reader hears of a save is said once, by the top bar's hidden region.
     await expect(status(page).locator('[role="status"]')).toHaveCount(0);
   });
 
