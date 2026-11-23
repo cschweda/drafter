@@ -27,18 +27,41 @@ export function hiddenBelow(real: string, root: string, platform: NodeJS.Platfor
   return below.split(sep).some((part) => part.startsWith('.'));
 }
 
-/** Folders that hold everyone's files, or every drive: as much a whole drive as `/` is. */
-const TOO_BROAD = new Set(['/Users', '/home', '/Volumes', '/mnt', '/media', '/System/Volumes']);
+/**
+ * Folders that hold everyone's files, or every drive: as much a whole drive as `/` is. The data
+ * volume is on this list by name, since macOS gives it the device `/` has.
+ */
+const TOO_BROAD = new Set([
+  '/Users',
+  '/home',
+  '/Volumes',
+  '/mnt',
+  '/media',
+  '/run/media',
+  '/System/Volumes',
+  '/System/Volumes/Data',
+  '/System/Volumes/Data/Users',
+  '/System/Volumes/Data/home',
+  '/System/Volumes/Data/Volumes',
+]);
 
 /**
- * Whether a folder is a whole volume though it isn't `/`: a drive mounted somewhere
- * (`/Volumes/Work`, `/System/Volumes/Data`), which is on another device than the folder that
- * holds it, or one of the folders that hold every user's files. The path's root alone caught only
- * `/` (red/blue audit of 23 November 2026, M5).
+ * Whether a folder is as much as a whole drive though it isn't `/`: one of the folders that hold
+ * every user's files or every drive, by its real path. The path's root alone caught only `/`
+ * (red/blue audit of 23 November 2026, M5).
  */
 export async function wholeVolume(real: string, platform: NodeJS.Platform): Promise<boolean> {
+  return platform !== 'win32' && TOO_BROAD.has(real);
+}
+
+/**
+ * Whether a folder is where a drive, a share, or a disk image is mounted: on another device than
+ * the folder that holds it. Not refused, since a drive kept for scripts or a share named Scripts
+ * is a fair choice and the folder above it would read straight through anyway; the server says
+ * so when it starts (the audit of that audit).
+ */
+export async function mountPoint(real: string, platform: NodeJS.Platform): Promise<boolean> {
   if (platform === 'win32') return false;
-  if (TOO_BROAD.has(real)) return true;
   try {
     const [here, above] = await Promise.all([stat(real), stat(posix.dirname(real))]);
     return here.dev !== above.dev;

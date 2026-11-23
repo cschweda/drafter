@@ -109,11 +109,27 @@ export interface NameStart {
   next: Map<string, NameNode>;
 }
 
-/** The longer spellings that reach this word: those ending at it, and the rest by their next word. */
+/**
+ * The longer spellings that reach this word by one way: those ending at it, and the rest by their
+ * next step. Every spelling here has the same words and the same marks between them, so the first
+ * is the one found.
+ */
 export interface NameNode {
   ends: Spelling[];
   next: Map<string, NameNode>;
 }
+
+/**
+ * A step of the tree: a word and the marks before it (`DR. VOSS` and `DR VOSS` part ways here, so
+ * names alike in their words never have to be tried one by one).
+ */
+export const stepKey = (gap: string, word: string): string => `${gap}\u0000${word}`;
+
+/**
+ * The most words a name is looked for by. No one is called more, and a name of thousands of the
+ * same word made every place that word stood a walk of thousands of steps.
+ */
+export const MAX_NAME_WORDS = 12;
 
 /** Each spelling by its first word, then word by word. */
 export type NameMap = Map<string, NameStart>;
@@ -123,6 +139,7 @@ export function nameMap(names: ReadonlyArray<{ name: string; word: boolean }>): 
   const map: NameMap = new Map();
   names.forEach(({ name, word }, character) => {
     for (const phrase of phrases(name, word)) {
+      if (phrase.words.length > MAX_NAME_WORDS) continue;
       const first = phrase.words[0] as string;
       let start = map.get(first);
       if (!start) {
@@ -136,7 +153,7 @@ export function nameMap(names: ReadonlyArray<{ name: string; word: boolean }>): 
       let level = start.next;
       let node: NameNode | undefined;
       for (let k = 1; k < phrase.words.length; k++) {
-        const key = phrase.words[k] as string;
+        const key = stepKey(phrase.gaps[k] as string, phrase.words[k] as string);
         node = level.get(key);
         if (!node) {
           node = { ends: [], next: new Map() };
@@ -172,10 +189,12 @@ export function matchNames(
     if (start) {
       let match: Spelling | undefined;
       let level = start.next;
-      for (let k = i + 1; k < words.length; k++) {
-        const node = level.get((words[k] as Token).word);
+      const last = Math.min(words.length, i + MAX_NAME_WORDS);
+      for (let k = i + 1; k < last; k++) {
+        const token = words[k] as Token;
+        const node = level.get(stepKey(token.gap, token.word));
         if (!node) break;
-        match = node.ends.find((s) => fits(words, i, s)) ?? match;
+        match = node.ends[0] ?? match;
         level = node.next;
       }
       match ??= start.alone[0];
@@ -186,13 +205,4 @@ export function matchNames(
     }
     i += Math.max(1, length);
   }
-}
-
-function fits(words: readonly Token[], i: number, spelling: Spelling): boolean {
-  if (i + spelling.words.length > words.length) return false;
-  for (let k = 1; k < spelling.words.length; k++) {
-    const token = words[i + k] as Token;
-    if (token.word !== spelling.words[k] || token.gap !== spelling.gaps[k]) return false;
-  }
-  return true;
 }

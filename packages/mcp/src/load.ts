@@ -314,6 +314,7 @@ export async function load(path: string, ctx: ToolContext): Promise<Loaded> {
   if (cached) return { ...cached, file };
 
   afterCheck?.();
+  ctx.cache.makeRoom(file.size);
   // Judged by what is inside, in Open's order, whatever the name says.
   const inside = await readInside(file, name);
   parses++;

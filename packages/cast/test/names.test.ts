@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { matchNames, nameMap, spellings, tokens } from '../src/names';
+import { matchNames, nameMap, spellings, stepKey, tokens } from '../src/names';
 
 /** Invented words from a seeded generator (Marsaglia's xorshift). */
 function invented(seed: number) {
@@ -62,12 +62,14 @@ describe('names', () => {
     ]);
     // By first word, then word by word; a one-word name stands alone.
     expect(map.get('ANN')?.alone.map((s) => s.character)).toEqual([0]);
-    const lee = map.get('ANN')?.next.get('LEE');
+    const lee = map.get('ANN')?.next.get(stepKey('', 'LEE'));
     expect(lee?.ends.map((s) => s.words.join(' '))).toEqual(['ANN LEE']);
-    expect(lee?.next.get('ROSS')?.ends.map((s) => s.words.join(' '))).toEqual(['ANN LEE ROSS']);
-    const mixed = map.get('Ann')?.next.get('Lee');
+    expect(lee?.next.get(stepKey('', 'ROSS'))?.ends.map((s) => s.words.join(' '))).toEqual([
+      'ANN LEE ROSS',
+    ]);
+    const mixed = map.get('Ann')?.next.get(stepKey('', 'Lee'));
     expect(mixed?.ends.map((s) => s.character)).toEqual([1]);
-    expect(mixed?.next.get('Ross')?.ends.map((s) => s.character)).toEqual([3]);
+    expect(mixed?.next.get(stepKey('', 'Ross'))?.ends.map((s) => s.character)).toEqual([3]);
     const found: Array<[number, number]> = [];
     const text = 'ANN LEE waves. ANN waves back. Ann Lee laughs. ANN. LEE. DR VOSS, DR. VOSS.';
     matchNames(text, map, (character, at) => found.push([character, at]));
@@ -124,5 +126,16 @@ describe('names', () => {
         `matchNames, 1,000 THE names, ${text.length} characters, best of 7: ${slow.toFixed(2)} ms (one name: ${fast.toFixed(2)} ms)`,
       );
     }
+  });
+
+  test('a name of more words than anyone is called is not looked for', () => {
+    const many = Array.from({ length: 13 }, () => 'A').join(' ');
+    const map = nameMap([
+      { name: many, word: false },
+      { name: 'ANN LEE', word: false },
+    ]);
+    const found: number[] = [];
+    matchNames(`${many} and ANN LEE`, map, (character) => found.push(character));
+    expect(found).toEqual([1]);
   });
 });

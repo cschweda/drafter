@@ -5,7 +5,8 @@
 export const CACHE_MAX = 20;
 
 /**
- * The most source text the cache holds, in bytes of the files it was parsed from. A parsed script
+ * The most source text the cache holds, in characters of the text that was parsed (for a plain
+ * file, about its size; for a packed one, many times it). A parsed script
  * takes many times its file's size in memory, so a count alone let twenty long scripts (twelve of
  * 700 KB were enough) fill the reader's 512 MB, and a folder of them could never be searched
  * (red/blue audit of 23 November 2026, M3).
@@ -55,6 +56,18 @@ export class LoadCache<T> {
       this.#entries.size > 1 &&
       (this.#entries.size > this.#max || this.#bytes > this.#maxBytes)
     ) {
+      const oldest = this.#entries.keys().next().value as string;
+      this.#bytes -= (this.#entries.get(oldest) as { cost: number }).cost;
+      this.#entries.delete(oldest);
+    }
+  }
+
+  /**
+   * Drops the oldest until `cost` more would fit: called before a file is parsed, so the most held
+   * at once is the limit, not the limit and the file being parsed.
+   */
+  makeRoom(cost: number): void {
+    while (this.#entries.size > 0 && this.#bytes + cost > this.#maxBytes) {
       const oldest = this.#entries.keys().next().value as string;
       this.#bytes -= (this.#entries.get(oldest) as { cost: number }).cost;
       this.#entries.delete(oldest);

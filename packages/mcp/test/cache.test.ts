@@ -52,4 +52,23 @@ describe('the parse cache', () => {
     expect(cache.get('/huge', 11, 3)).toBeUndefined();
     expect(cache.bytes).toBe(0);
   });
+
+  it('makes room before a file is parsed, so the peak is the limit and not the limit and a file', () => {
+    // The audit of the red/blue audit of 23 November 2026 (M3).
+    const cache = new LoadCache<string>(20, 100);
+    cache.set('/a', 40, 1, 'a');
+    cache.set('/b', 40, 1, 'b');
+    cache.makeRoom(50);
+    expect(cache.bytes).toBe(40);
+    expect(cache.get('/a', 40, 1)).toBeUndefined();
+    expect(cache.get('/b', 40, 1)).toBe('b');
+    cache.makeRoom(500);
+    expect(cache.size).toBe(0);
+  });
+
+  it('a page of a search parses no more than the cache holds', async () => {
+    const { PAGE_PARSE_BYTES } = await import('../src/names');
+    const { CACHE_MAX_BYTES } = await import('../src/cache');
+    expect(PAGE_PARSE_BYTES).toBeLessThanOrEqual(CACHE_MAX_BYTES);
+  });
 });

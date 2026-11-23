@@ -19,4 +19,32 @@ describe('names that share their first two words', () => {
     },
     SCALING_TIMEOUT,
   );
+
+  // Names alike in their words and different in the marks between them (A.B, A-B, A.-B …).
+  const MARKS = ['.', '-', ',', ';'];
+  const gap = (k: number) => Array.from(k.toString(4), (d) => MARKS[Number(d)]).join('');
+  const marked = (n: number) =>
+    `INT. HALL - DAY\n\n${Array.from({ length: n }, (_, k) => `A${gap(k)} B\nHello.\n`).join('\n')}\n${'A B '.repeat(n)}\n`;
+
+  test(
+    'and so are names that differ only in the marks between their words',
+    () => {
+      const { growth } = scaling(marked, (source) => build(source), 1000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
+
+  /** One cue of `n` words, all the same, and lines of that word one time fewer. */
+  const long = (n: number) =>
+    `INT. HALL - DAY\n\n${'A '.repeat(n).trim()}\nHello.\n\n${'A '.repeat(n - 1)}\n\n${'A '.repeat(n - 1)}\n`;
+
+  test(
+    'and so is a name of very many words',
+    () => {
+      const { growth } = scaling(long, (source) => build(source), 2000);
+      expect(growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
 });

@@ -208,6 +208,19 @@ describe('pathProblem and resolvePath', () => {
     expect(await refusal(resolvePath('Scripts/Private/no/such', roots, platform, 'folder'))).toBe(
       OUTSIDE,
     );
+    // With a part added after it, too: "part of its path isn't a folder" for the file that is
+    // there, and "outside" for the one that isn't, said the same thing (the audit of that audit).
+    expect(
+      await refusal(resolvePath('Scripts/Private/diary.fountain/x', roots, platform, 'file')),
+    ).toBe(OUTSIDE);
+    expect(
+      await refusal(resolvePath('Scripts/Private/nothing.fountain/x', roots, platform, 'file')),
+    ).toBe(OUTSIDE);
+    // A link that leads nowhere says nothing of whether what it names is there.
+    symlinkSync(join(t, 'nowhere', 'gone.fountain'), join(t, 'Scripts', 'dangling.fountain'));
+    expect(await refusal(resolvePath('Scripts/dangling.fountain', roots, platform, 'file'))).toBe(
+      OUTSIDE,
+    );
     // A link that stays inside is the file it leads to.
     symlinkSync(
       join(t, 'Scripts', 'Signal Hill', '101.fountain'),

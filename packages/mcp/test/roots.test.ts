@@ -98,6 +98,11 @@ describe('resolveRoots', () => {
       await expect(resolveRoots([everyone], platform)).rejects.toThrow(/not a whole drive/);
       expect(await wholeVolume('/Volumes', platform)).toBe(true);
       expect(await wholeVolume('/home', platform)).toBe(true);
+      // The data volume is everyone's files under another name, on the same device as `/`.
+      expect(await wholeVolume('/System/Volumes/Data', platform)).toBe(true);
+      expect(await wholeVolume('/System/Volumes/Data/Users', platform)).toBe(true);
+      expect(await wholeVolume('/System/Volumes/Data/home', platform)).toBe(true);
+      expect(await wholeVolume('/run/media', platform)).toBe(true);
       // An ordinary folder, on the device of the folder that holds it.
       const t = mkdtempSync(join(tmpdir(), 'drafter-roots-'));
       mkdirSync(join(t, 'Scripts'));
