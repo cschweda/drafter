@@ -155,7 +155,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 |---|---|---|---|---|
 | S1 | High | A pull request could run code on the maintainer's machine when checked out, through the tracked Git hooks folder | The hook is copied into Git's own folder; Git no longer reads the tracked one | Fixed |
 | S2 | High | One stolen credential could still push a release (open since 3 November) | Branch and tag rulesets, a release environment, and immutable releases are for the maintainer | Maintainer |
-| P1 | Medium | A locked script's file carries its text as it stood before the revision, scenes since cut included | To say so, or to strip it from exported copies, is the maintainer's choice | Maintainer |
+| P1 | Medium | A locked script's file carries its text as it stood before the revision, scenes since cut included | The Production help page and the reopenable export's hint say so, and how to send a script without it | Documented |
 | P2 | Medium | Remove from this browser left the script's file name and its folder's handle | Removed with the script; a test fails on any row left | Fixed |
 | P3 | Medium | Privacy statements had become untrue since reports by email | The README and five help pages say what is sent, to whom, and when | Fixed |
 | S3 | Medium | A release build restored caches that other code can write | A release is built with no cache | Fixed |

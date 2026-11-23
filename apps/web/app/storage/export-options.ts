@@ -50,7 +50,7 @@ export function exportOptionsOf(
 export const REOPEN_LABEL =
   'Let Drafter reopen this file (includes the full script, notes and all)';
 export const REOPEN_HINT =
-  'For the HTML and EPUB exports. The file carries your full script as you wrote it, notes, boneyard, and all, even when the notes option leaves them off the page, so anyone you send it to can read them. Drafter can only reopen HTML or EPUB files it saved itself, with this turned on: not files from other apps or sites, and not Drafter exports made with it off.';
+  'For the HTML and EPUB exports. The file carries your full script as you wrote it, notes, boneyard, and all, even when the notes option leaves them off the page, so anyone you send it to can read them. For a script with a revision open, that includes the script as it stood when the revision began, scenes you have since cut or omitted among them. Drafter can only reopen HTML or EPUB files it saved itself, with this turned on: not files from other apps or sites, and not Drafter exports made with it off.';
 
 type RevisionMarks = NonNullable<ExportOptions['revisionMarks']>;
 
