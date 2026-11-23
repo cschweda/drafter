@@ -55,7 +55,7 @@ The editor stays on the left and can't be closed. To just write, turn on focus m
 ## Principles
 
 1. **The source is the truth.** A `.fountain` file is the whole project. Anything Drafter adds, such as scene colors, a script dictionary, or revision marks, is stored in Fountain syntax or in a single metadata block at the end of the file that other Fountain tools ignore. The file stays readable in Beat, Highland, Slugline, BetterFountain, or any text editor.
-2. **Local-first, offline-first.** Your work lives in files on your own disk, with a recovery copy in your browser. Drafter is a static site: nothing to pay for, nothing to log into, nothing that can be shut off.
+2. **Local-first, offline-first.** Your work lives in files on your own disk, with a recovery copy in your browser. Drafter runs in your browser from a static site: nothing to pay for, nothing to log into, and nothing whose shutting off could take your work.
 3. **Formats are templates, and templates are data.** US screenplay, stage play, sitcom, radio drama: each is a declarative JSON template that the engine applies. You can add your own.
 
 ## What makes it different

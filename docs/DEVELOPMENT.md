@@ -54,7 +54,7 @@ How the two formats differ:
 
 ## Packages
 
-The engine is a set of framework-free TypeScript packages, published as `@drafter/*`. Only `cm-fountain` depends on CodeMirror. Two packages touch the DOM (`render-html` builds it, and `cm-fountain` drives CodeMirror's view); the rest run anywhere Node does.
+The engine is a set of framework-free TypeScript packages, named `@drafter/*` inside the repository (they are private: the `@drafter` scope on npm is not this project's). Only `cm-fountain` depends on CodeMirror. Two packages touch the DOM (`render-html` builds it, and `cm-fountain` drives CodeMirror's view); the rest run anywhere Node does.
 
 | Package | What it does | Phase |
 |---|---|---|
@@ -113,7 +113,7 @@ A `templates/` folder for community templates, as plain JSON, is planned.
 | Offline | Progressive Web App |
 | Spellcheck | nspell with offline Hunspell dictionaries |
 | Tests | Vitest and fast-check for the engine, Playwright for the app |
-| Deploy | Static site on Netlify |
+| Deploy | Static site on Netlify, with one function for reports sent by email |
 
 ## Storage and browsers
 

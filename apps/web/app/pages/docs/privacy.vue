@@ -35,7 +35,8 @@ const SUPPORT_PROVIDERS = SUPPORT_ROUTES.sponsor ? 'Ko-fi and GitHub' : 'Ko-fi';
       <li>
         <strong>Nothing in the cloud.</strong> No server stores anything about your script: not its
         text, its title, its length, or its name. drafter.dev is a set of files that sends the app to
-        your browser, with no database, no accounts, and nowhere to upload to. The desktop app has no
+        your browser, and one small function that passes on a report you choose to send by email,
+        with no database, no accounts, and nowhere to upload a script to. The desktop app has no
         server at all.
       </li>
       <li>
@@ -59,7 +60,8 @@ const SUPPORT_PROVIDERS = SUPPORT_ROUTES.sponsor ? 'Ko-fi and GitHub' : 'Ko-fi';
       <strong>What does use the network, all of it:</strong> loading Drafter from drafter.dev (the
       app, its fonts, and its dictionaries all come from drafter.dev itself); on drafter.dev only,
       Plausible’s count of page visits (<a href="#analytics">below</a>); in the desktop app, a check
-      with GitHub for a new version when it starts, which you can turn off in Settings; the links
+      with GitHub for a new version when it starts, which you can turn off in Settings, and for
+      the AppImage and the Windows app the update itself, downloaded in the background; the links
       you click; and a report, if you choose to send one (on drafter.dev, Send email passes it
       through drafter.dev to Resend, a mail service). None of it carries your script.
     </p>
@@ -204,10 +206,12 @@ const SUPPORT_PROVIDERS = SUPPORT_ROUTES.sponsor ? 'Ko-fi and GitHub' : 'Ko-fi';
       you. <strong>Send email</strong>, offered on drafter.dev only, sends that same report, and the
       reply address if you typed one, to drafter.dev’s own small server function, which emails it
       to Drafter’s maker through Resend, an email service. It is the one time Drafter itself sends
-      something you wrote, and it happens only when you press the button. The function keeps
-      nothing; your address is used only to reply. The desktop app and a self-hosted copy don’t
+      something you wrote, and it happens only when you press the button. The function stores
+      nothing: to keep a flood of reports out, it counts for a minute how many came from each
+      internet address, in memory, and your reply address is used only to reply. Resend, which
+      delivers the email, keeps a record of it as any mail service does. The desktop app and a self-hosted copy don’t
       offer it. While the dialog is open on drafter.dev, it asks that function once whether email
-      is set up, a request that carries nothing about you. Your script is never included: not its text, its title, its
+      is set up, a request that carries nothing you typed. Your script is never included: not its text, its title, its
       file name, or your notes. <strong>Include technical details</strong> adds only what
       <strong>About → Copy technical details</strong> copies, and you can turn it off: Drafter’s
       version, which app this is, the system and browser, the language, the screen and window

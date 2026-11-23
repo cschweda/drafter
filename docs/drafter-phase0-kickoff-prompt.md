@@ -187,7 +187,7 @@ Fixture content must be original and short; placeholder names and nonsense dialo
 - When the design documents contradict each other, `drafter-technical-design.md` wins; note the contradiction in `docs/DECISIONS.md`.
 - No TODOs left in code. Anything deferred goes in `docs/DEFERRED.md` with the phase it belongs to.
 - Commit after each package with a Conventional Commits message such as `feat(fountain): parse dual dialogue`. No AI co-author trailers.
-- Every commit that changes behavior also adds an entry under `[Unreleased]` in `CHANGELOG.md`; the pre-push hook rejects any push without one. Add `"prepare": "git config core.hooksPath .githooks"` to the root `package.json` so fresh clones get the hook.
+- Every commit that changes behavior also adds an entry under `[Unreleased]` in `CHANGELOG.md`; the pre-push hook rejects any push without one. Add a `prepare` script to the root `package.json` so fresh clones get the hook. (As first written this pointed Git at the folder with `core.hooksPath`; since 23 November 2026 `scripts/git-hooks.mjs` copies the hook in, because a tracked hooks folder runs a checked-out branch's hooks. Never set that path.)
 - Don't push; the maintainer pushes.
 - Do not add a web app, a worker, a renderer for HTML, FDX, spellcheck, lint, or outline operations. Those are later phases and have their own prompts.
 

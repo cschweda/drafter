@@ -20,7 +20,7 @@ import { emailReady, reportPayload, sendReport } from '~/report/send';
 import { writeClipboard } from '~/utils/clipboard';
 
 // About → Report a problem… and Suggest an idea… (also in the palette, About, and the desktop app's
-// Help menu). Drafter has no server and keeps no token, so it never sends anything: the writer
+// Help menu). Drafter keeps no GitHub token, and sends nothing until the writer chooses: the writer
 // fills in a few fields, sees exactly what will go, and Open on GitHub opens GitHub's new-issue
 // page with that text filled in (a new tab; the desktop app's system browser), where they review
 // it and submit it with their own account. Copy, and an email from their own email app, are the

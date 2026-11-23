@@ -146,7 +146,8 @@ const SWITCHES: Switch[] = [
       'When Drafter starts, look on GitHub for a newer version, and say when one is out. Nothing from your scripts is sent. On a Mac, Drafter can’t update itself yet: build the new version the way you built this one.',
   },
 ];
-// The desktop check is the one request the desktop app makes; the web has no such setting.
+// The desktop's update check (and the update it may then download) is all the desktop app asks
+// the network for; the web has no such setting.
 // Known only in the browser, after the page is up, so the prerendered page and hydration agree.
 const onDesktop = ref(false);
 const onMac = ref(false);

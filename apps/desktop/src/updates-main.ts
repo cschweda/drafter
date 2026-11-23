@@ -82,7 +82,7 @@ export function setUpUpdates(
     async createUpdater() {
       if (mode === 'mac') {
         // A session of its own, as electron-updater's is: the default session's backstop and proxy
-        // (network.ts, webrtc.ts) are for pages, and this is the app's one request.
+        // (network.ts, webrtc.ts) are for pages, and this is the app's own.
         const net = session.fromPartition('drafter-update-check');
         return new ReleaseCheck({
           feed: hook.feed ?? MAC_FEED,

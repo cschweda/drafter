@@ -120,7 +120,7 @@ drafter/
 └── docs/
 ```
 
-Build with pnpm workspaces; publish the packages under `@drafter/*` on npm so the engine has a life outside the app.
+Build with pnpm workspaces; the packages are named `@drafter/*` in the workspace, so the engine has a life outside the app. (They are not published under those names: the `@drafter` scope on npm is not this project's.)
 
 ---
 

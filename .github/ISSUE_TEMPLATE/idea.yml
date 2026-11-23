@@ -8,7 +8,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the idea. Drafter is free for good, with no accounts and no server, so ideas
+        Thanks for the idea. Drafter is free for good, with no accounts and no server that is ever sent a script, so ideas
         that need one may not fit, but every idea is read.
   - type: textarea
     id: idea

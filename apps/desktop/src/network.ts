@@ -1,4 +1,5 @@
-// A backstop for the rule that the desktop app makes one request of its own, the update check
+// A backstop for the rule that the desktop app asks the network for one thing of its own, an update
+// (the check, and for the AppImage and Windows the download)
 // (Plan 6's Global Constraints): the page's CSP (`connect-src 'self'`) already keeps it to
 // app://drafter/, and this cancels any web or socket request a page makes anyway. The main
 // process's own requests (the update check, Task 6) come from no page and are left alone; so is

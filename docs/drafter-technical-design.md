@@ -721,7 +721,7 @@ Fixtures are written for this project. Scripts under copyright are not included;
 - Workers are built by Vite from `new Worker(new URL('./layout.worker.ts', import.meta.url), { type: 'module' })`.
 - PWA via `@vite-pwa/nuxt`: precache the app shell, fonts, and `en_US` dictionary; network-first for nothing (there is no network).
 - Netlify publishes `.output/public`, which Nitro's `static` preset writes. The preset is pinned because on Netlify Nitro would otherwise pick `netlify-static`, which writes `dist/`. `_headers`, written after the build by `apps/web/scripts/csp.mjs`, sets the CSP. There's no `_redirects`: Netlify serves `404.html` by itself. No functions directory exists.
-- CLI (`packages/cli`) wraps `fountain` + `layout` + `render-pdf` with Node's `fs`; published as `@drafter/cli` so `npx @drafter/cli build script.fountain` works without the web app.
+- CLI (`packages/cli`) wraps `fountain` + `layout` + `render-pdf` with Node's `fs`; to be published so one `npx` command builds a script without the web app (under a name still to be chosen: the `@drafter` scope on npm is not this project's, and the workspace packages are private).
 
 ---
 
