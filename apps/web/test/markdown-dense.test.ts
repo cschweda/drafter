@@ -62,6 +62,12 @@ test.each([
   expect(took).toBeLessThan(3000);
 });
 
+test('a few hundred such openers in a very long paragraph parse at once too', () => {
+  const { took, whole } = parsed(`${'word '.repeat(120_000)}${'x <!A '.repeat(900)}`, 60_000);
+  expect(whole).toBe(true);
+  expect(took).toBeLessThan(3000);
+});
+
 test('an ordinary paragraph keeps its links and its line breaks', () => {
   const { names } = parsed('A [link](https://example.com) and a break,  \nthen more.\n', 1000);
   expect(names.has('Link')).toBe(true);

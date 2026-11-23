@@ -72,9 +72,14 @@ describe('a paragraph with too many marks', () => {
       expect(() => parseMarkdown(many(13_000)), opener).toThrow(MarkedTooDensely);
     }
     // Each paragraph alone, up to a count for the whole document.
-    const para = `${'x <!A '.repeat(MAX_OPENERS)}\n\n`;
-    expect(denseMarks(para.repeat(MAX_OPENERS_IN_ALL / MAX_OPENERS))).toBe(false);
-    expect(denseMarks(para.repeat(MAX_OPENERS_IN_ALL / MAX_OPENERS + 1))).toBe(true);
+    const para = `${'x <!A '.repeat(100)}\n\n`;
+    expect(denseMarks(para.repeat(MAX_OPENERS_IN_ALL / 100))).toBe(false);
+    expect(denseMarks(para.repeat(MAX_OPENERS_IN_ALL / 100 + 1))).toBe(true);
+    // A few hundred in a very long paragraph cost as much: what counts is how far each looks.
+    const spread = `${'word '.repeat(20_000)}${'x <!A '.repeat(500)}`;
+    expect(denseMarks(spread)).toBe(true);
+    expect(denseMarks(`${'word '.repeat(20_000)}\n\n${'x <!A '.repeat(500)}`)).toBe(false);
+    expect(denseMarks(`${'word '.repeat(200_000)}x <!-- a --> y`)).toBe(false);
     // Comments that close, and tags, are read as before.
     expect(parseMarkdown('<!-- a --> text\n\n'.repeat(500)).type).toBe('root');
     expect(denseMarks('a < b and c <d> '.repeat(50_000))).toBe(false);

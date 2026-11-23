@@ -9,6 +9,7 @@ export {
   MAX_OPENERS,
   MAX_OPENERS_IN_ALL,
   MAX_UNDERLINED,
+  OPENER_BUDGET,
 } from './marks';
 export {
   appendMarkdownMeta,

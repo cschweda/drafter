@@ -33,6 +33,13 @@ export const MAX_UNDERLINED = 2000;
  */
 export const MAX_OPENERS = 1000;
 export const MAX_OPENERS_IN_ALL = 8000;
+/**
+ * And the most looking they may cost: a paragraph's openers times its length, and that summed
+ * over the document. A few hundred openers in a paragraph of a megabyte look as far as thousands
+ * in a short one.
+ */
+export const OPENER_BUDGET = 20_000_000;
+export const OPENER_BUDGET_IN_ALL = 40_000_000;
 
 const STAR = 42;
 const UNDERSCORE = 95;
@@ -74,6 +81,15 @@ export function denseMarks(source: string): boolean {
   let underlined = 0;
   let openers = 0;
   let allOpeners = 0;
+  let length = 0;
+  let looked = 0;
+  // A paragraph ends: what its openers cost, against the paragraph's budget and the document's.
+  const endParagraph = () => {
+    const cost = openers * length;
+    looked += cost;
+    length = 0;
+    return cost > OPENER_BUDGET || looked > OPENER_BUDGET_IN_ALL;
+  };
   let lineBlank = true;
   // Whether the line before this one had text, and what this line is made of so far: only `=` or
   // only `-` (0 while it is still blank, -1 once it holds anything else).
@@ -83,6 +99,7 @@ export function denseMarks(source: string): boolean {
     // A line of only `=`, or only `-`, straight under a line of text, underlines it as a heading.
     if (textAbove && rule > 0 && ++underlined > MAX_UNDERLINED) return true;
     if (lineBlank) {
+      if (endParagraph()) return true;
       marks = 0;
       open = 0;
       stray = 0;
@@ -96,6 +113,7 @@ export function denseMarks(source: string): boolean {
   };
   for (let i = 0; i < source.length; i++) {
     const code = source.charCodeAt(i);
+    length++;
     if (code === LF || code === CR) {
       // CRLF is one line ending, as the parsers read it: two would make every line look blank.
       if (code === CR && source.charCodeAt(i + 1) === LF) i++;
@@ -120,5 +138,5 @@ export function denseMarks(source: string): boolean {
       else if (++stray > MAX_BRACKETS) return true;
     }
   }
-  return endLine();
+  return endLine() || endParagraph();
 }

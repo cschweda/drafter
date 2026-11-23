@@ -6,4 +6,5 @@ export {
   MAX_MARKS,
   MAX_NESTING,
   MAX_OPENERS,
+  OPENER_BUDGET,
 } from '@drafter/markdown';

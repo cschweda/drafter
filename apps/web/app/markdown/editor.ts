@@ -8,7 +8,14 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view';
-import { isEmphasisMark, isOpener, MAX_MARKS, MAX_NESTING, MAX_OPENERS } from './depth';
+import {
+  isEmphasisMark,
+  isOpener,
+  MAX_MARKS,
+  MAX_NESTING,
+  MAX_OPENERS,
+  OPENER_BUDGET,
+} from './depth';
 
 // The Source pane's mode for a Markdown document: CodeMirror's general-purpose Markdown grammar
 // (a Lezer grammar, which is outside Plan 2's "no Lezer grammar" rule: that rule is about
@@ -178,7 +185,7 @@ function crowdedOf(cx: { text: string }): Crowded {
       marks: marks > MAX_MARKS,
       brackets: brackets > MAX_MARKS,
       spaces: longest > MAX_SPACE_RUN,
-      openers: openers > MAX_OPENERS,
+      openers: openers > MAX_OPENERS || openers * cx.text.length > OPENER_BUDGET,
     };
     crowded.set(cx, known);
   }
