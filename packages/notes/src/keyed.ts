@@ -57,8 +57,13 @@ const MAX_HEAD = 40;
 /** A head's characters: a letter, then letters, spaces, and `' ’ . - ? !`. */
 const HEAD = /^\p{L}[\p{L}\p{M} '’.\-?!]*$/u;
 
-/** `Name on “quote”:` (straight or curly quotes), up to and including the colon. */
-const ON = /^[ \t]*([^\r\n:]*?)[ \t]+on[ \t]+["“]([^"”\r\n]*)["”][ \t]*:/u;
+/**
+ * `Name on “quote”:` (straight or curly quotes), up to and including the colon. The name starts
+ * and ends on something that isn't a space, so the spaces around it are matched one way only: with
+ * a name that could be spaces, a note of three thousand of them was tried every way they split in
+ * three, and held the editor for fifteen seconds (red/blue audit of 23 November 2026, W1).
+ */
+const ON = /^[ \t]*([^\s:](?:[^\r\n:]*?[^\s:])?)[ \t]+on[ \t]+["“]([^"”\r\n]*)["”][ \t]*:/u;
 
 /** `#word` at a word's start: a letter, then letters, digits, or hyphens. */
 const TAG = /(?<![\p{L}\p{M}\p{N}_#])#(\p{L}[\p{L}\p{M}\p{N}-]*)/gu;
@@ -282,8 +287,12 @@ export function safeBody(text: string): string {
 
 /** One line of the writer's words, safe to put anywhere in Fountain: no line break, no note or boneyard opener. */
 export function safeLine(text: string): string {
-  return text
-    .replace(/\s*\r?\n\s*/g, ' / ')
+  // Line by line, and not with one pattern over the spaces around each break: on a long run of
+  // spaces with no break in it, that pattern started again from every space (the same audit, W8).
+  const lines = text.split(/\r?\n/).map((line) => line.trim());
+  // Blank lines between two lines make one break, as the pattern's run of spaces did.
+  const kept = lines.filter((line, i) => line !== '' || i === 0 || i === lines.length - 1);
+  return (lines.length > 1 ? kept.join(' / ') : text)
     .replace(/\[(?=\[)/g, '[ ')
     .replace(/\/(?=\*)/g, '/ ')
     .replace(/\*(?=\/)/g, '* ')
