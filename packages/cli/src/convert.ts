@@ -263,6 +263,22 @@ async function convertOne(job: Job, read: ScriptRead, force: boolean): Promise<O
   if (new TextEncoder().encode(text).byteLength > MAX_SCRIPT_BYTES) {
     return { kind: 'refused', reason: 'the script in it is larger than 5 MB' };
   }
+  // Before any folder is made: where the part of the path that is already there really leads.
+  if (job.outDir !== undefined) {
+    const out = await realpath(job.outDir).catch(() => null);
+    let there = dirname(job.target);
+    let real: string | null = null;
+    while (real === null && there !== dirname(there)) {
+      real = await realpath(there).catch(() => null);
+      if (real === null) there = dirname(there);
+    }
+    if (out === null || real === null || !(real === out || real.startsWith(out + sep))) {
+      return {
+        kind: 'refused',
+        reason: `${dirname(job.targetShown)} leads outside the output folder`,
+      };
+    }
+  }
   try {
     await mkdir(dirname(job.target), { recursive: true });
   } catch (error) {

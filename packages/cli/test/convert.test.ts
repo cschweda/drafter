@@ -514,4 +514,30 @@ describe('drafter convert', () => {
       expect(readdirSync(join(base, 'outside'))).toEqual(['victim.fountain']);
     },
   );
+
+  it.skipIf(process.platform === 'win32')(
+    'makes no folder through a folder link in the output folder',
+    async () => {
+      // The audit of that audit: no file went out, but the folders for it were made there first.
+      const base = dir();
+      mkdirSync(join(base, 'src', 'sub', 'deeper', 'more'), { recursive: true });
+      mkdirSync(join(base, 'out'));
+      mkdirSync(join(base, 'outside'));
+      copyFileSync(
+        repo('samples/fdx/short-film.fdx'),
+        join(base, 'src', 'sub', 'deeper', 'more', 'victim.fdx'),
+      );
+      symlinkSync(join(base, 'outside'), join(base, 'out', 'sub'));
+      const result = await drafter(
+        'convert',
+        join(base, 'src'),
+        '--recursive',
+        '--out',
+        join(base, 'out'),
+        '--force',
+      );
+      expect(result.err + result.out).toMatch(/outside the output folder/);
+      expect(readdirSync(join(base, 'outside'))).toEqual([]);
+    },
+  );
 });

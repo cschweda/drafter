@@ -1,4 +1,12 @@
-import { copyFileSync, existsSync, linkSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  linkSync,
+  mkdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { inert } from '../src/cli';
@@ -128,6 +136,60 @@ describe('drafter build', () => {
     expect(result.code).toBe(1);
     expect(result.err).toMatch(/two outputs/);
     expect(existsSync(out)).toBe(false);
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    "won't write two outputs to one file under two names",
+    async () => {
+      // The audit of the red/blue audit of 23 November 2026 (C4): the names were compared as
+      // written, the mistake C1 fixed for the input.
+      mkdirSync(join(dir(), 'real2'));
+      symlinkSync(join(dir(), 'real2'), join(dir(), 'link2'));
+      const result = await drafter(
+        'build',
+        short,
+        '--txt',
+        join(dir(), 'real2', 'x.out'),
+        '--json',
+        join(dir(), 'link2', 'x.out'),
+      );
+      expect(result.code).toBe(1);
+      expect(result.err).toMatch(/two outputs/);
+      // An output that is already there, named a second time by a link to it.
+      const there = join(dir(), 'there.out');
+      writeFileSync(there, 'old');
+      linkSync(there, join(dir(), 'again.out'));
+      const second = await drafter(
+        'build',
+        short,
+        '--txt',
+        there,
+        '--json',
+        join(dir(), 'again.out'),
+      );
+      expect(second.code).toBe(1);
+      expect(second.err).toMatch(/two outputs/);
+      expect(readFileSync(there, 'utf8')).toBe('old');
+    },
+  );
+
+  it("won't write over the template it was given", async () => {
+    const template = join(dir(), 'tpl.json');
+    writeFileSync(template, '{"id":"mine"}');
+    const result = await drafter('build', short, '--template', template, '--json', template);
+    expect(result.code).toBe(1);
+    expect(result.err).toMatch(/won't write over the template/);
+    expect(readFileSync(template, 'utf8')).toBe('{"id":"mine"}');
+  });
+
+  it('shows what can’t be seen in a message as its code', () => {
+    expect(inert('a\u200bb\u061cc\ufeffd\u200ee\u{e0001}f\ud800g')).toBe(
+      'a\\u200bb\\u061cc\\ufeffd\\u200ee\\u{e0001}f\\ud800g',
+    );
+    // A joiner inside an emoji or a script that is written with one stays.
+    expect(inert('\u{1f468}\u200d\u{1f469} \u0915\u094d\u200d\u0937')).toBe(
+      '\u{1f468}\u200d\u{1f469} \u0915\u094d\u200d\u0937',
+    );
   });
 
   it('shows a script’s direction overrides and line separators, as its other controls', () => {
