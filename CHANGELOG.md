@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **Seven browser tests raced a clock.** The test fixture's module that "adds a note after a pause" waited 1.2 seconds, and each test had that long to switch scripts, open a dialog or edit the text before the run went on. On a slow runner the test lost: the run finished first and reported the wrong thing (`modules.spec.ts:367` failed four times that way on the Linux checks, once on the release's own pull request). The fixture now waits for the test's word, and the test gives it once what it meant to do is done. For developers.
+
 ## [0.27.3] - 2026-11-22
 
 **The cursor stays where you left it.** Three faults a writer could meet are fixed: the cursor could jump to the top of the script when the palette or a dialog closed on a busy page, so the next thing typed went in there; a dialog asked for again the moment it closed could fail to open; and focus could be left on nothing after the tour. All three were found while hunting a fault in the test browser, which is also dealt with: the checks no longer have a page stop dead about one run in fifty.

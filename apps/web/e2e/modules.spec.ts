@@ -16,6 +16,7 @@ import {
   pressToolbarButton,
   problemsList,
   problemsTab,
+  releaseFixture,
   runCommand,
   setText,
   settingsDialog,
@@ -351,7 +352,8 @@ test.describe('script modules', () => {
     await setText(page, SCRIPT);
     await page.keyboard.press('ControlOrMeta+Home');
     await runCommand(page, title);
-    await expect(later(true, true)).toBeAttached({ timeout: 5000 });
+    await releaseFixture(page);
+    await expect(later(true, true)).toBeAttached();
     await expect.poll(() => textOf(page)).toMatch(/^\[\[later\]\]INT\. HALL/);
 
     // Text edited while it waited: it may report, but not change what it never saw.
@@ -360,7 +362,8 @@ test.describe('script modules', () => {
     await editor(page).click();
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.insertText(' Edited meanwhile.');
-    await expect(later(true, false)).toBeAttached({ timeout: 5000 });
+    await releaseFixture(page);
+    await expect(later(true, false)).toBeAttached();
     expect(await textOf(page)).not.toMatch(/\[\[later\]\]\[\[later\]\]/);
   });
 
@@ -369,9 +372,10 @@ test.describe('script modules', () => {
     await turnOnFixture(page);
     await runCommand(page, 'Fixture: add a note after a pause');
     await runCommand(page, 'New stage play');
+    await releaseFixture(page);
     await expect(
       page.getByRole('status').filter({ hasText: 'Later: reported false, changed false' }),
-    ).toBeAttached({ timeout: 5000 });
+    ).toBeAttached();
     await showSource(page);
     expect(await textOf(page)).not.toContain('[[later]]');
     await showProblems(page);
@@ -386,9 +390,10 @@ test.describe('script modules', () => {
     await openSettings(page);
     await fixtureSwitch(page).click();
     await closeSettings(page);
+    await releaseFixture(page);
     await expect(
       page.getByRole('status').filter({ hasText: 'Later: reported false, changed false' }),
-    ).toBeAttached({ timeout: 5000 });
+    ).toBeAttached();
     expect(await textOf(page)).not.toContain('[[later]]');
     await showProblems(page);
     await expect(problemsList(page)).not.toContainText('Added later');
