@@ -127,6 +127,25 @@ describe('manifestProblem', () => {
     }
   });
 
+  test('takes a name that only looks, to a rule, like the app’s', () => {
+    // The audit of the audit: each of these was refused, and each is a name a module might have.
+    for (const name of [
+      'Redrafter',
+      'Draft erasing',
+      'Overdraft errors',
+      'Сч\u0451тчик PDF',
+      '\u03c0 calculator',
+      'Scene counter (\u03b2)',
+      '\u00c5ngstr\u00f6m \u03a9',
+      '\u{1f468}\u200d\u{1f469}\u200d\u{1f467} Family names',
+      '\u0645\u06cc\u200c\u0634\u0645\u0627\u0631\u062f',
+      '\u0915\u094d\u200d\u0937 counter',
+      'Драфтер',
+    ]) {
+      expect(manifestProblem({ ...MANIFEST, name }), name).toBeUndefined();
+    }
+  });
+
   test('says what is wrong with one that isn’t', () => {
     const cases: [unknown, RegExp][] = [
       [null, /not an object/],
@@ -139,16 +158,37 @@ describe('manifestProblem', () => {
       [{ ...MANIFEST, name: 'Drafter' }, /name can’t be “Drafter”/],
       [{ ...MANIFEST, name: 'Drafter Helper' }, /name can’t be “Drafter”/],
       [{ ...MANIFEST, name: 'drafter' }, /name can’t be “Drafter”/],
-      // However it is dressed (red/blue audit, 2026-11-23, D3): unseen characters before it, a
-      // look-alike letter, a word or a mark in front, a line break, or another script's letters.
-      [{ ...MANIFEST, name: '\u200bDrafter' }, /name can’t be “Drafter”|name holds a character/],
-      [{ ...MANIFEST, name: '\u202eDrafter' }, /name can’t be “Drafter”|name holds a character/],
-      [{ ...MANIFEST, name: 'Dr\u0430fter' }, /name can’t be “Drafter”|one alphabet/],
+      // However it is dressed (red/blue audit, 2026-11-23, D3, and the audit of it).
+      [{ ...MANIFEST, name: '\u200bDrafter' }, /can’t be seen/],
+      [{ ...MANIFEST, name: '\u202eDrafter' }, /can’t be seen/],
+      [{ ...MANIFEST, name: 'Dra\u00adfter' }, /can’t be seen/],
+      [{ ...MANIFEST, name: 'Tidy\n\nDrafter' }, /can’t be seen/],
+      [{ ...MANIFEST, name: 'Dr\u0430fter' }, /mixes two alphabets/],
+      [{ ...MANIFEST, name: '\u13a0rafter' }, /mixes two alphabets/],
+      [
+        { ...MANIFEST, name: '\u1d05\u0280\u1d00\ua730\u1d1b\u1d07\u0280' },
+        /made to look like others/,
+      ],
+      [{ ...MANIFEST, name: 'Dr\u0251fter' }, /made to look like others/],
+      [{ ...MANIFEST, name: 'Dra\u0192ter' }, /made to look like others/],
+      [
+        { ...MANIFEST, name: '\u{1f173}\u{1f181}\u{1f170}\u{1f175}\u{1f183}\u{1f174}\u{1f181}' },
+        /made to look like others/,
+      ],
+      [{ ...MANIFEST, name: 'Dra\u0301fter' }, /name can’t be “Drafter”/],
+      [{ ...MANIFEST, name: 'Dr\u00e4fter' }, /name can’t be “Drafter”/],
+      [{ ...MANIFEST, name: '\u0110rafter' }, /name can’t be “Drafter”/],
+      [{ ...MANIFEST, name: 'Draft3r' }, /name can’t be “Drafter”/],
+      [{ ...MANIFEST, name: 'Dr4fter' }, /name can’t be “Drafter”/],
+      [
+        { ...MANIFEST, name: '\uff24\uff52\uff41\uff46\uff54\uff45\uff52' },
+        /name can’t be “Drafter”/,
+      ],
       [{ ...MANIFEST, name: 'Drafter_Update' }, /name can’t be “Drafter”/],
       [{ ...MANIFEST, name: 'The Drafter app' }, /name can’t be “Drafter”/],
       [{ ...MANIFEST, name: '\u{1F512} Drafter' }, /name can’t be “Drafter”/],
-      [{ ...MANIFEST, name: 'Tidy\n\nDrafter' }, /name holds a character/],
       [{ ...MANIFEST, name: 'D r a f t e r' }, /name can’t be “Drafter”/],
+      [{ ...MANIFEST, name: 'D.r.a.f.t.e.r' }, /name can’t be “Drafter”/],
       [
         { ...MANIFEST, description: 'Tidies.\nDrafter: update now' },
         /description holds a character/,
