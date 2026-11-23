@@ -13,7 +13,7 @@ drafter convert "The Call.fdx"                      # writes The Call.fountain b
 drafter convert old-scripts --recursive --out fountain
 ```
 
-In this repository, run it from the root as `pnpm drafter …` after `pnpm -r build`. Publishing it to npm, for `npx @drafter/cli`, is planned for Phase 5.
+In this repository, run it from the root as `pnpm drafter …` after `pnpm -r build`. Publishing it to npm is planned for Phase 5, under a name still to be chosen: the `@drafter` scope on npm is not this project's, so don't run a package of that name from there.
 
 ## Commands
 

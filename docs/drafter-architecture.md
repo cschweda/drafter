@@ -459,7 +459,7 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 ### Phase 5 — Community
 
 - A template gallery and a docs site.
-- The `@drafter/*` packages and `@drafter/cli` published on npm, so `npx @drafter/cli build script.fountain` works without the app.
+- The command line published on npm, so one `npx` command builds a script without the app. Its name is still to be chosen: the `@drafter` scope on npm is not this project's, so the workspace's `@drafter/*` packages are marked private and are never published under those names.
 - A VS Code extension.
 - A plugin API, only if there's demand, sandboxed in a Web Worker per the technical design.
 

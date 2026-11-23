@@ -13,3 +13,6 @@ overrides:
   node-forge: ^1.4.1
   # fontless's own copy (the build's font step); the rest of the build is on 0.28 already.
   fontless>esbuild: ^0.28.1
+  # @nuxt/ui's own copy was 4.6.2 (GHSA-mjrq-cffv-q4qc: the dev server serves files from a parent
+  # directory); the rest of the build is on 4.6.4 already.
+  "@nuxt/schema": ^4.6.4

@@ -1,6 +1,7 @@
 {
   "name": "@drafter/compare",
   "version": "0.27.4",
+  "private": true,
   "description": "Compare for Drafter: a line diff of two versions of a script, the changes it makes, and where they fall on the newer version's pages.",
   "license": "MIT",
   "type": "module",
