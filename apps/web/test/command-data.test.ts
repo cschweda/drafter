@@ -162,17 +162,17 @@ describe('the command data', () => {
     }
   });
 
-  test('Export as Story map… follows export-epub, in File, found by what it is for', () => {
+  test('Export as Story Atlas… follows export-epub, in File, found by what it is for', () => {
     const ids = COMMAND_DATA.map((c) => c.id);
-    expect(ids.indexOf('export-story-map')).toBe(ids.indexOf('export-epub') + 1);
-    const command = COMMAND_DATA.find((c) => c.id === 'export-story-map');
-    expect(command).toMatchObject({ title: 'Export as Story map…', group: 'File' });
+    expect(ids.indexOf('export-story-atlas')).toBe(ids.indexOf('export-epub') + 1);
+    const command = COMMAND_DATA.find((c) => c.id === 'export-story-atlas');
+    expect(command).toMatchObject({ title: 'Export as Story Atlas…', group: 'File' });
     expect(command?.keywords).toEqual(
       expect.arrayContaining(['visual', 'teaser', 'share', "what I'm writing"]),
     );
     // Made after its dialog, so not one of the files the export menus list by kind.
-    expect(EXPORTS.fountain).not.toContain('story-map');
-    expect(EXPORTS.markdown).not.toContain('story-map');
+    expect(EXPORTS.fountain).not.toContain('story-atlas');
+    expect(EXPORTS.markdown).not.toContain('story-atlas');
   });
 
   test('the manuscript’s two exports follow export-treatment, in File, found by what they are for', () => {
@@ -202,10 +202,10 @@ describe('the command data', () => {
     }
   });
 
-  test('Use in story map and Never use in story map are Edit commands with no key', () => {
+  test('Use in Story Atlas and Never use in Story Atlas are Edit commands with no key', () => {
     for (const [id, title] of [
-      ['story-map-use-line', 'Use in story map'],
-      ['story-map-never-line', 'Never use in story map'],
+      ['story-atlas-use-line', 'Use in Story Atlas'],
+      ['story-atlas-never-line', 'Never use in Story Atlas'],
     ]) {
       const command = COMMAND_DATA.find((c) => c.id === id);
       expect(command, id).toMatchObject({ title, group: 'Edit' });
@@ -240,7 +240,7 @@ describe('the command data', () => {
       '/docs/production',
       '/docs/saving',
       '/docs/drafts-and-cuts',
-      '/docs/story-map',
+      '/docs/story-atlas',
       '/docs/drafter-for-claude',
       '/docs/self-hosting',
       '/docs/shortcuts',
@@ -315,7 +315,7 @@ describe('the command data', () => {
       '/docs/production/',
       '/docs/saving/',
       '/docs/drafts-and-cuts/',
-      '/docs/story-map/',
+      '/docs/story-atlas/',
       '/docs/drafter-for-claude/',
       '/docs/self-hosting/',
       '/docs/shortcuts/',

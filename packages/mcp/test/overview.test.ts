@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
 import { DEFAULT_WORDS_PER_MINUTE } from '@drafter/outline';
-import { buildStoryMap, storyMapMeta } from '@drafter/story-map';
+import { buildStoryAtlas, storyAtlasMeta } from '@drafter/story-atlas';
 import { builtins, type Template } from '@drafter/templates';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildScript } from '../../../fixtures/generators/script';
@@ -106,14 +106,14 @@ describe('script_overview', () => {
     expect(JSON.stringify(pitch)).not.toContain('Hollow Creek');
   });
 
-  it('pages, minutes, and scenes are the story map’s', async () => {
+  it('pages, minutes, and scenes are the Story Atlas’s', async () => {
     const { scripts } = makeLibrary(tempFolder());
     const got = await overview([scripts], { script: EP101 });
     const text = readFileSync(join(LIBRARY, EPISODE_101), 'utf8');
     const doc = parse(text);
     const layout = paginate(doc, SCREENPLAY);
-    const meta = storyMapMeta(doc.meta);
-    const map = buildStoryMap({
+    const meta = storyAtlasMeta(doc.meta);
+    const map = buildStoryAtlas({
       doc,
       template: SCREENPLAY,
       layout,

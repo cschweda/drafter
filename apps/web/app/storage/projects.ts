@@ -9,7 +9,7 @@ import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
 import { daysOf, goalKey, statsDaysOf } from '../stats/keys';
 import type { Rates } from '../stats/time-format';
-import type { StoryMapProjectOptions } from '../story-map/options';
+import type { StoryAtlasProjectOptions } from '../story-atlas/options';
 import type { ExportOptions } from '../workers/export-compute';
 import { db } from './db';
 import type { FileRef } from './files';
@@ -85,11 +85,13 @@ export interface Project {
    */
   timing?: Partial<Rates>;
   /**
-   * The story map's choices for this script (story-map design §7, Call 19): its status, the line
+   * The Story Atlas's choices for this script (story-atlas design §7, Call 19): its status, the line
    * under the name, the explaining line, what goes in, and the contact. A missing or unknown value
-   * is its default (`storyMapOptionsOf`). Unindexed, so it needed no new version.
+   * is its default (`storyAtlasOptionsOf`). Unindexed, so it needed no new version.
    */
-  storyMap?: Partial<StoryMapProjectOptions>;
+  /** The Story Atlas's choices for this script. The field keeps its name from before v0.28.0, when
+   * it was the story map: it is in every stored project. */
+  storyMap?: Partial<StoryAtlasProjectOptions>;
 }
 
 /** The kind a project is: Fountain unless it says it is Markdown. */

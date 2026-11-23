@@ -21,7 +21,7 @@ let inFlight: Promise<unknown> | undefined;
  * PDF names any). Rejects with the worker's message if the export failed, or if the worker could
  * not be made or died (it is made again next time). `onProgress` hears how far it is as it goes
  * (0 to 1, or null while the worker can't say), before the reply. One request at a time: the worker
- * answers in order but every listener hears every reply, so a second request (the story map
+ * answers in order but every listener hears every reply, so a second request (the Story Atlas
  * dialog's picks while an export runs) waits for the first one's answer; a lone one goes at once.
  */
 export function renderExport(

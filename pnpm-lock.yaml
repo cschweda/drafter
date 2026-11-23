@@ -145,9 +145,9 @@ importers:
       '@drafter/spell':
         specifier: workspace:*
         version: link:../../packages/spell
-      '@drafter/story-map':
+      '@drafter/story-atlas':
         specifier: workspace:*
-        version: link:../../packages/story-map
+        version: link:../../packages/story-atlas
       '@drafter/templates':
         specifier: workspace:*
         version: link:../../packages/templates
@@ -256,9 +256,9 @@ importers:
       '@drafter/render-text':
         specifier: workspace:*
         version: link:../render-text
-      '@drafter/story-map':
+      '@drafter/story-atlas':
         specifier: workspace:*
-        version: link:../story-map
+        version: link:../story-atlas
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
@@ -418,9 +418,9 @@ importers:
       '@drafter/outline':
         specifier: workspace:*
         version: link:../outline
-      '@drafter/story-map':
+      '@drafter/story-atlas':
         specifier: workspace:*
-        version: link:../story-map
+        version: link:../story-atlas
       '@drafter/templates':
         specifier: workspace:*
         version: link:../templates
@@ -619,7 +619,7 @@ importers:
         specifier: 2.1.6
         version: 2.1.6
 
-  packages/story-map:
+  packages/story-atlas:
     dependencies:
       '@drafter/cast':
         specifier: workspace:*
@@ -2916,7 +2916,6 @@ packages:
 
   '@tiptap/y-tiptap@3.0.10':
     resolution: {integrity: sha512-vJtwYVoBBk+e8KyUVoH9WSsfUfKTXf1Uh+tk2UNTlD8wim9j7XVTuc7sakWUYuznB7DkXThT9w5uQTGH2SN0Kg==}
-    deprecated: Persistent position migrations can cause excessive collaborative document growth. Upgrade all collaborating clients to 3.1.0 or later.
     peerDependencies:
       prosemirror-model: ^1.7.1
       prosemirror-state: ^1.2.3

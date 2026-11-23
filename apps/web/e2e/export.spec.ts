@@ -672,7 +672,7 @@ test.describe('export options', () => {
       'PDF',
       'HTML (.html)',
       'EPUB (.epub)',
-      'Story map (.html)…',
+      'Story Atlas (.html)…',
       'Fountain (.fountain)',
       'Plain text (.txt)',
       'Final Draft (.fdx)',

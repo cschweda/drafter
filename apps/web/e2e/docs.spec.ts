@@ -278,7 +278,7 @@ test.describe('without JavaScript', () => {
         'utf8',
       ),
     );
-    // The story map's Anton and Archivo, whose licences travel with every story map's fonts.
+    // The Story Atlas's Anton and Archivo, whose licences travel with every Story Atlas's fonts.
     for (const [name, file, from] of [
       ['Anton', '/fonts/anton/OFL.txt', 'OFL-Anton.txt'],
       ['Archivo', '/fonts/archivo/OFL.txt', 'OFL-Archivo.txt'],
@@ -289,7 +289,10 @@ test.describe('without JavaScript', () => {
       const served = await page.request.get(file);
       expect(served.ok(), file).toBe(true);
       expect(await served.text(), file).toBe(
-        readFileSync(new URL(`../../../packages/story-map/fonts/${from}`, import.meta.url), 'utf8'),
+        readFileSync(
+          new URL(`../../../packages/story-atlas/fonts/${from}`, import.meta.url),
+          'utf8',
+        ),
       );
     }
     const ofl = await page.request.get('/fonts/inter-tight/OFL.txt');
@@ -721,7 +724,7 @@ test.describe('without JavaScript', () => {
       'Not in a browser: claude.ai can’t start a program on your computer; Claude Desktop is the same account.',
       'It isn’t made by or connected with Anthropic.',
       'Each npm release is the same file as the one on the GitHub Release; you can check its SHA-256.',
-      'except the setup and payoff names a story map shows',
+      'except the setup and payoff names a Story Atlas shows',
     ]) {
       expect(text, phrase).toContain(phrase);
     }
@@ -928,7 +931,7 @@ test.describe('from the app', () => {
     for (const { title, path } of HELP_PAGES) {
       await page.keyboard.press('ControlOrMeta+k');
       await expect(palette(page)).toBeVisible();
-      // The command's own words: "Story map" alone finds Export as Story map… first.
+      // The command's own words: "Story Atlas" alone finds Export as Story Atlas… first.
       await page.keyboard.insertText(`Open the page: ${title}`);
       // The page is the first match, and the highlighted one.
       await expect(palette(page).getByRole('option').first()).toContainText(

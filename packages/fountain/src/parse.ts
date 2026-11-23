@@ -68,7 +68,7 @@ const TITLE_KEYS = new Set([
   'contact',
   'copyright',
   'notes',
-  // The story map's logline (story-map design §3.5): a title page of only a Logline is one.
+  // The Story Atlas's logline (story-atlas design §3.5): a title page of only a Logline is one.
   'logline',
 ]);
 const EMPHASIS_KINDS = new Set<BlockKind>([

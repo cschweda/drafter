@@ -44,9 +44,9 @@ const templateSection = computed<DropdownMenuItem[]>(() => [
 // the other kind's items are left out.)
 const exportIds = computed(() => {
   const ids = EXPORTS[editor.kind.value === 'markdown' ? 'markdown' : 'fountain'].flatMap((kind) =>
-    // A script's story map follows its EPUB (story-map design §1.1).
+    // A script's Story Atlas follows its EPUB (story-atlas design §1.1).
     kind === 'epub' && editor.kind.value !== 'markdown'
-      ? [`export-${kind}`, 'export-story-map']
+      ? [`export-${kind}`, 'export-story-atlas']
       : [`export-${kind}`],
   );
   // A novel's manuscript, as a PDF or a Word file, ends the exports; only a novel has it.
@@ -58,7 +58,7 @@ const EXPORT_ICONS: Record<string, string> = {
   'export-pdf': 'i-lucide-file-output',
   'export-html': 'i-lucide-globe',
   'export-epub': 'i-lucide-book',
-  'export-story-map': 'i-lucide-map',
+  'export-story-atlas': 'i-lucide-map',
   'export-md': 'i-lucide-file-output',
   'export-fountain': 'i-lucide-file-pen-line',
   'export-txt': 'i-lucide-file-type',

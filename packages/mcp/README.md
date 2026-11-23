@@ -63,7 +63,7 @@ Ten tools, each annotated `readOnlyHint: true`, `destructiveHint: false`, `idemp
 | `compare_drafts` | What changed between two drafts, or a draft and `now`, by scene, with totals | A scene of more than 400 changed lines comes as counts until named; a draft over 5 MB refused |
 | `list_cuts` | Every cut: title, kind, where, when and from which draft, whether put back, words, and text; grouped and filtered | Text trimmed to 1,500 characters in a list (whole by `id`) |
 | `search_scripts` | Plain words (never a pattern) in one script, a folder, or everything: each hit's file, scene, element, speaker, and about 200 characters around it | 50 hits a page, 500 in all; 200 files and 100 MB a search, 20 MB parsed a page |
-| `story_map` | The Story map's model as data (never the page, never the contact) | A few acts a page |
+| `story_atlas` | The Story Atlas's model as data (never the page, never the contact) | A few acts a page |
 | `series_overview` | Up to 30 scripts: each one's pages, running time, and leads; every character with their scripts, scenes, and ages; names that look alike (never merged); and places | 20 MB read a call; 1,000 names or pairs; a folder isn't searched recursively |
 
 Seven prompts: `storyboard`, `shot_list`, `readers_notes`, `character_arc`, `ideas_from_cuts`, `continuity`, and `previously_on`. A prompt carries the writer's choices and the tools to call, never any of a script. No resources.

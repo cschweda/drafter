@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DOCUMENT_FONT_FILES, MANUSCRIPT_FONT_FILES } from '@drafter/render-pdf';
 import { DICTIONARIES } from '@drafter/spell';
-import { STORY_MAP_FONT_FILES } from '@drafter/story-map';
+import { STORY_ATLAS_FONT_FILES } from '@drafter/story-atlas';
 import { describe, expect, test, vi } from 'vitest';
 import { ASSETS, PACKAGE_ASSETS, packageDir, syncAssets } from '../scripts/sync-assets.mjs';
 
@@ -17,7 +17,7 @@ const ALL = ASSETS.length + PACKAGE_ASSETS.length;
 vi.setConfig({ testTimeout: 30_000 });
 
 describe('syncAssets', () => {
-  test('lists the four Courier Prime styles, Inter Tight’s four for a Markdown PDF, Liberation Serif’s four for a manuscript, the story map’s four, every font’s license, and the brand files', () => {
+  test('lists the four Courier Prime styles, Inter Tight’s four for a Markdown PDF, Liberation Serif’s four for a manuscript, the Story Atlas’s four, every font’s license, and the brand files', () => {
     expect(ASSETS.map(({ to }) => to)).toEqual([
       'fonts/courier-prime/CourierPrime-Regular.ttf',
       'fonts/courier-prime/CourierPrime-Bold.ttf',
@@ -36,10 +36,10 @@ describe('syncAssets', () => {
       'fonts/liberation-serif/OFL.txt',
       'fonts/anton/OFL.txt',
       'fonts/archivo/OFL.txt',
-      'fonts/story-map/Anton-Regular.woff2',
-      'fonts/story-map/Archivo-Regular.woff2',
-      'fonts/story-map/Archivo-SemiBold.woff2',
-      'fonts/story-map/CourierPrime-Regular.woff2',
+      'fonts/story-atlas/Anton-Regular.woff2',
+      'fonts/story-atlas/Archivo-Regular.woff2',
+      'fonts/story-atlas/Archivo-SemiBold.woff2',
+      'fonts/story-atlas/CourierPrime-Regular.woff2',
       'favicon.svg',
       'favicon.ico',
       'favicon-unsaved.svg',
@@ -61,9 +61,9 @@ describe('syncAssets', () => {
         ...Object.values(MANUSCRIPT_FONT_FILES.times),
       ].map((file) => `packages/render-pdf/fonts/${file}`),
     );
-    // The story map's faces are its package's own, the ones the worker embeds.
+    // The Story Atlas's faces are its package's own, the ones the worker embeds.
     expect(ASSETS.filter(({ to }) => to.endsWith('.woff2')).map(({ from }) => from)).toEqual(
-      Object.values(STORY_MAP_FONT_FILES).map((file) => `packages/story-map/fonts/${file}`),
+      Object.values(STORY_ATLAS_FONT_FILES).map((file) => `packages/story-atlas/fonts/${file}`),
     );
   });
 

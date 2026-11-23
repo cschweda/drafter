@@ -1,6 +1,6 @@
 /**
  * Words a period after doesn't end a sentence (`Dr. Vance`), lowercased. The scene summaries'
- * list (`@drafter/story-map`), made longer.
+ * list (`@drafter/story-atlas`), made longer.
  */
 const ABBREVIATIONS = new Set([
   'mr',

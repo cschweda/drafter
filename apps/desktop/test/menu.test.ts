@@ -38,7 +38,7 @@ const COMMANDS: MenuCommand[] = [
   cmd('help-shortcuts', 'Help', 'Open the page: Keyboard shortcuts'),
   cmd('help-saving', 'Help', 'Open the page: Saving and your browser'),
   cmd('help-drafts-and-cuts', 'Help', 'Open the page: Drafts and cuts'),
-  cmd('help-story-map', 'Help', 'Open the page: Story map'),
+  cmd('help-story-atlas', 'Help', 'Open the page: Story Atlas'),
   cmd('help-privacy', 'Help', 'Open the page: Privacy'),
   cmd('help-licences', 'Help', 'Open the page: Third-party licences'),
   cmd('go-to-scene', 'Go', 'Go to scene…'),
@@ -152,14 +152,14 @@ describe('menuTemplate', () => {
     expect(labelOf(items.at(-1) as MenuItemConstructorOptions)).toBe('Export options…');
   });
 
-  test('lists Story map… in File → Export after EPUB, and the story map’s two line commands in Edit', () => {
+  test('lists Story Atlas… in File → Export after EPUB, and the Story Atlas’s two line commands in Edit', () => {
     const more = [
       cmd('export-epub', 'File', 'Export as EPUB'),
-      cmd('export-story-map', 'File', 'Export as Story map…'),
+      cmd('export-story-atlas', 'File', 'Export as Story Atlas…'),
       cmd('export-options', 'File', 'Export options…'),
       cmd('dual-dialogue', 'Edit', 'Dual dialogue'),
-      cmd('story-map-use-line', 'Edit', 'Use in story map'),
-      cmd('story-map-never-line', 'Edit', 'Never use in story map'),
+      cmd('story-atlas-use-line', 'Edit', 'Use in Story Atlas'),
+      cmd('story-atlas-never-line', 'Edit', 'Never use in Story Atlas'),
       cmd('mark-setup', 'Edit', 'Mark a setup'),
       cmd('markdown-list', 'Edit', 'Markdown: List'),
     ];
@@ -167,12 +167,12 @@ describe('menuTemplate', () => {
     const exportMenu = submenu(m.File).find((i) => labelOf(i) === 'Export');
     const items = submenu(exportMenu).filter((i) => i.type !== 'separator');
     const at = items.findIndex((i) => i.id === 'export-epub');
-    expect(items[at + 1]?.id).toBe('export-story-map');
-    expect(labelOf(items[at + 1] as MenuItemConstructorOptions)).toBe('Story map…');
+    expect(items[at + 1]?.id).toBe('export-story-atlas');
+    expect(labelOf(items[at + 1] as MenuItemConstructorOptions)).toBe('Story Atlas…');
     const edit = submenu(m.Edit).map((i) => i.id ?? i.type);
-    const use = edit.indexOf('story-map-use-line');
+    const use = edit.indexOf('story-atlas-use-line');
     expect(use).toBeGreaterThan(edit.indexOf('dual-dialogue'));
-    expect(edit[use + 1]).toBe('story-map-never-line');
+    expect(edit[use + 1]).toBe('story-atlas-never-line');
     expect(edit[use - 1]).toBe('separator');
     // Their own section, after the Fountain commands: before Markdown, never with the leftovers.
     expect(edit[use + 2]).toBe('separator');
@@ -268,7 +268,7 @@ describe('menuTemplate', () => {
       'help-shortcuts',
       'help-saving',
       'help-drafts-and-cuts',
-      'help-story-map',
+      'help-story-atlas',
       'help-privacy',
       'help-licences',
       'take-the-tour',
@@ -316,7 +316,7 @@ describe('menuTemplate', () => {
     expect(named(t, 'help-shortcuts')?.label).toBe('Keyboard Shortcuts');
     expect(named(t, 'help-saving')?.label).toBe('Saving');
     expect(named(t, 'help-drafts-and-cuts')?.label).toBe('Drafts and Cuts');
-    expect(named(t, 'help-story-map')?.label).toBe('Story Map');
+    expect(named(t, 'help-story-atlas')?.label).toBe('Story Atlas');
     expect(named(t, 'help-privacy')?.label).toBe('Privacy');
     expect(named(t, 'help-licences')?.label).toBe('Third-party Licences');
   });
@@ -590,7 +590,7 @@ describe('Help’s About, sample scripts, and Check for updates', () => {
       'help-shortcuts',
       'help-saving',
       'help-drafts-and-cuts',
-      'help-story-map',
+      'help-story-atlas',
       'help-privacy',
       'help-licences',
       'take-the-tour',

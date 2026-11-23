@@ -1,4 +1,4 @@
-// Across files (§3, tools 8–10): search_scripts, story_map, and series_overview. Every file is
+// Across files (§3, tools 8–10): search_scripts, story_atlas, and series_overview. Every file is
 // reached through a checked path (a walk's, then load's resolvePath) and read capped, without
 // following a link. The writer's text comes back only as §6 allows: a search looks only at what
 // `visible` keeps (never the title page, the Contact, or anything from the metadata block on, and
@@ -8,7 +8,7 @@
 import { Refused } from '@drafter/archive/node';
 import type { Doc } from '@drafter/fountain';
 import { bodyEnd, startsScene } from '@drafter/outline';
-import { hooksOf, type StoryMap } from '@drafter/story-map';
+import { hooksOf, type StoryAtlas } from '@drafter/story-atlas';
 import * as z from 'zod/v4';
 import { argsHash, type CursorAt, makeCursor, readCursor } from '../cursor';
 import { ABOUT, type Include, type LeftOut } from '../envelope';
@@ -458,7 +458,7 @@ export const searchScripts: ToolDef<SearchInput, SearchOutput> = {
 };
 
 // ---------------------------------------------------------------------------------------------
-// story_map
+// story_atlas
 
 const mapInput = z.strictObject({
   script: path,
@@ -505,7 +505,7 @@ const mapOutput = z.object({
 });
 type MapOutput = z.infer<typeof mapOutput>;
 
-/** The longest a short text of the story map may be, JSON-escaped. */
+/** The longest a short text of the Story Atlas may be, JSON-escaped. */
 const MAP_TEXT = {
   title: 1_000,
   line: 500,
@@ -532,7 +532,7 @@ function capped<T, K extends string>(items: readonly T[], max: number, more: K) 
   return (items.length > max ? { [more]: items.length - max } : {}) as Partial<Record<K, number>>;
 }
 
-type MapScene = StoryMap['scenes'][number];
+type MapScene = StoryAtlas['scenes'][number];
 
 /** A scene within its limits: long texts cut (`cut: true`), long lists capped (`_more`). */
 function boundedScene(scene: MapScene): Record<string, unknown> {
@@ -564,7 +564,7 @@ function share<T, K extends string>(items: readonly T[], part: number, more: K) 
 }
 
 /** Everything but the acts and scenes, within its limits: the first page's. */
-function mapHead(map: StoryMap): Record<string, unknown> {
+function mapHead(map: StoryAtlas): Record<string, unknown> {
   const cut = { any: false };
   const title = clipped(map.title, MAP_TEXT.title, cut) as string;
   const characters = share(
@@ -648,8 +648,8 @@ function mapHead(map: StoryMap): Record<string, unknown> {
 
 /** The acts' scenes as pages are made of them: scenes in no act first, then each act's. */
 function groupsOf(
-  map: StoryMap,
-): Array<{ act: StoryMap['acts'][number] | null; scenes: number[] }> {
+  map: StoryAtlas,
+): Array<{ act: StoryAtlas['acts'][number] | null; scenes: number[] }> {
   const inAct = new Set(map.acts.flatMap((act) => act.scenes));
   const loose = map.scenes.map((_, s) => s).filter((s) => !inAct.has(s));
   return [
@@ -659,7 +659,7 @@ function groupsOf(
 }
 
 /** An act on a page: its title cut to a limit, and its scenes on that page. */
-function actOn(act: StoryMap['acts'][number], scenes: number[]) {
+function actOn(act: StoryAtlas['acts'][number], scenes: number[]) {
   const title = clipText(act.title, MAP_TEXT.line);
   return {
     ...act,
@@ -670,17 +670,20 @@ function actOn(act: StoryMap['acts'][number], scenes: number[]) {
   };
 }
 
-async function storyMapTool(args: MapInput, ctx: ToolContext): Promise<MapOutput> {
+async function storyAtlasTool(args: MapInput, ctx: ToolContext): Promise<MapOutput> {
   const loaded = await load(args.script, ctx);
   if (loaded.kind === 'markdown')
-    throw new Refusal('A story map is for a screenplay or a stage play.');
+    throw new Refusal('A Story Atlas is for a screenplay or a stage play.');
   const map =
     args.status === undefined || args.status === loaded.map.status
       ? loaded.map
       : mapOf(loaded, args.status, ctx.data.options.wordsPerMinute);
 
   const groups = groupsOf(map);
-  const now = cursorBase('story_map', loaded, { script: args.script, status: args.status ?? null });
+  const now = cursorBase('story_atlas', loaded, {
+    script: args.script,
+    status: args.status ?? null,
+  });
   let at = 0;
   let part = 0;
   let isRestart = false;
@@ -758,14 +761,14 @@ async function storyMapTool(args: MapInput, ctx: ToolContext): Promise<MapOutput
   } as MapOutput;
 }
 
-export const storyMap: ToolDef<MapInput, MapOutput> = {
-  name: 'story_map',
-  title: 'Story map',
+export const storyAtlas: ToolDef<MapInput, MapOutput> = {
+  name: 'story_atlas',
+  title: 'Story Atlas',
   description:
-    'The Story map of one screenplay or stage play, as data (never the page itself, and never the writer’s contact): its acts, scenes (where and when, what happens, who is in it, planned and to-do marks), characters (screen time, share of the talking, scenes, hooks and ages from their introductions), places, picked lines, setups and payoffs, and what is still to be written. Indexes in it (a scene’s `chips`, a quote’s `character`, a character’s `signature`) count from 0 into its lists; when a list was too long for the page (`characters_more`, `quotes_more`), an index can point past what is shown. `status` finished leaves planned scenes out. A long script comes a few acts a page, an act too long for one page in parts: pass `next` back as `cursor`; everything but the acts and scenes is on the first page.',
+    'The Story Atlas of one screenplay or stage play, as data (never the page itself, and never the writer’s contact): its acts, scenes (where and when, what happens, who is in it, planned and to-do marks), characters (screen time, share of the talking, scenes, hooks and ages from their introductions), places, picked lines, setups and payoffs, and what is still to be written. Indexes in it (a scene’s `chips`, a quote’s `character`, a character’s `signature`) count from 0 into its lists; when a list was too long for the page (`characters_more`, `quotes_more`), an index can point past what is shown. `status` finished leaves planned scenes out. A long script comes a few acts a page, an act too long for one page in parts: pass `next` back as `cursor`; everything but the acts and scenes is on the first page.',
   input: mapInput,
   output: mapOutput,
-  run: storyMapTool,
+  run: storyAtlasTool,
 };
 
 // ---------------------------------------------------------------------------------------------

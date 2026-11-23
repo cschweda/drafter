@@ -27,7 +27,7 @@ const textEnd = (source: string, at: number) => (source[at - 1] === '\r' ? at - 
 const nextLine = (source: string, at: number) => (source[at] === '\n' ? at + 1 : at);
 
 /**
- * The changes that set the title page's `key` field (story-map design §3.5, `Logline:`): they
+ * The changes that set the title page's `key` field (story-atlas design §3.5, `Logline:`): they
  * replace the field's value (the key kept as typed, continuation lines and all made one line), add
  * it after the last field, or start a title page with it; with null or an empty value they remove
  * the field (and a title page left with no field). The value is one line: a line break is a space.

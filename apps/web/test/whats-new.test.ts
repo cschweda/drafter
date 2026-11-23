@@ -98,7 +98,7 @@ describe('What’s new', () => {
     }
   });
 
-  test('puts the banner on Production, the About menu, Novel, the v0.25.1 privacy work, Classic Mode, Drafter for Claude, Story map, Drafts and Cuts, the v0.23.2 security work, and v0.23.0’s fresh look', () => {
+  test('puts the banner on Production, the About menu, Novel, the v0.25.1 privacy work, Classic Mode, Drafter for Claude, Story Atlas, Drafts and Cuts, the v0.23.2 security work, and v0.23.0’s fresh look', () => {
     expect(WHATS_NEW.filter((entry) => entry.banner).map((entry) => entry.id)).toEqual([
       'v0.27.0-production',
       'v0.26.2-about-menu',
