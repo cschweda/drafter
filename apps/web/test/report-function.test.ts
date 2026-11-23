@@ -17,10 +17,15 @@ type Handler = (req: Request, context: { ip?: string }) => Promise<Response>;
 function setup(env: Record<string, string> = ENV, now = () => 1_000_000) {
   const send = vi.fn(async (_url: string, _init: RequestInit) => ok());
   const handler: Handler = createReportHandler({ env: (n: string) => env[n], send, now });
-  const post = (body: unknown, ip = '1.2.3.4') =>
+  const post = (
+    body: unknown,
+    ip = '1.2.3.4',
+    headers: Record<string, string> = { 'Content-Type': 'application/json' },
+  ) =>
     handler(
       new Request('https://drafter.dev/.netlify/functions/report', {
         method: 'POST',
+        headers,
         body: typeof body === 'string' ? body : JSON.stringify(body),
       }),
       { ip },
@@ -38,6 +43,29 @@ const problem = {
 };
 
 describe('the report function', () => {
+  test('takes a report only from its own page, as JSON', async () => {
+    // Red/blue audit, 2026-11-23 (P7): another site's page could make a visitor's browser post a
+    // plain-text body here, which needs no permission from this site, and mail would go out.
+    const json = { 'Content-Type': 'application/json' };
+    const { post, send } = setup();
+    expect((await post(problem, '1.1.1.1', { 'Content-Type': 'text/plain' })).status).toBe(415);
+    expect((await post(problem, '1.1.1.2', {})).status).toBe(415);
+    expect(
+      (await post(problem, '1.1.1.3', { ...json, Origin: 'https://evil.example' })).status,
+    ).toBe(403);
+    expect((await post(problem, '1.1.1.4', { ...json, Origin: 'null' })).status).toBe(403);
+    expect(send).not.toHaveBeenCalled();
+    // Its own page, and a client that names no origin (the desktop app's, a test's).
+    expect(
+      (await post(problem, '1.1.1.5', { ...json, Origin: 'https://drafter.dev' })).status,
+    ).toBe(200);
+    expect(
+      (await post(problem, '1.1.1.6', { 'Content-Type': 'application/json; charset=utf-8' }))
+        .status,
+    ).toBe(200);
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
   test('says whether it is set up, for the dialog to offer Send email', async () => {
     const get = (env: Record<string, string>) =>
       setup(env).handler(new Request('https://drafter.dev/.netlify/functions/report'), {});
@@ -158,7 +186,11 @@ describe('the report function', () => {
     const send = vi.fn(async () => new Response('no', { status: 500 }));
     const handler: Handler = createReportHandler({ env: (n: string) => ENV[n], send });
     const res = await handler(
-      new Request('https://drafter.dev/', { method: 'POST', body: JSON.stringify(problem) }),
+      new Request('https://drafter.dev/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(problem),
+      }),
       { ip: '9' },
     );
     expect(res.status).toBe(502);
