@@ -279,6 +279,32 @@ describe('the export worker’s options', () => {
     }
   });
 
+  test('a Final Draft file holds no title-page line the page doesn’t print, unless notes are included', async () => {
+    // Red/blue audit, 2026-11-23 (P4): Notes, Copyright, and a key of the writer's own never
+    // print, yet went into the file's title page as lines anyone could read.
+    const exporter = createExporter(realFonts);
+    const source =
+      'Title: The Lamp\nAuthor: A. Tester\nContact: 12 Sample Street\nNotes: PRIVATE owe Sam a rewrite\nCopyright: COPY 2026\nAgent phone: PHONE 555\n\nINT. A - DAY\n\nShe waits.\n';
+    const left = textOf(
+      await exporter({ kind: 'fdx', source, template, options: DEFAULT_EXPORT_OPTIONS }),
+    );
+    for (const hidden of ['PRIVATE', 'COPY 2026', 'PHONE 555'])
+      expect(left, hidden).not.toContain(hidden);
+    for (const printed of ['The Lamp', 'A. Tester', '12 Sample Street'])
+      expect(left).toContain(printed);
+    // Asked for, they go, as the notes in the script do.
+    const kept = textOf(
+      await exporter({
+        kind: 'fdx',
+        source,
+        template,
+        options: { ...DEFAULT_EXPORT_OPTIONS, notes: 'include' },
+      }),
+    );
+    for (const hidden of ['PRIVATE', 'COPY 2026', 'PHONE 555'])
+      expect(kept, hidden).toContain(hidden);
+  });
+
   test('a request with no options exports as before', async () => {
     const exporter = createExporter(realFonts);
     const layout = paginate(parse(sampleScreenplay), template);

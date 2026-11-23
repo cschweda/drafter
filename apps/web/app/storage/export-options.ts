@@ -105,10 +105,10 @@ export const REVISION_MARKS_WHERE =
  * The notes choice's name (HTML export design §3.3): the stored setting keeps its key (`notes`),
  * and is shared by the three exports that read it.
  */
-export const NOTES_LEGEND = 'Include notes (Markdown, HTML, and EPUB)';
+export const NOTES_LEGEND = 'Include notes (Markdown, HTML, EPUB, and Final Draft)';
 /** Under the Include notes choices: the exports that read them. */
 export const NOTES_ONLY_MARKDOWN =
-  'Only the Markdown, HTML, and EPUB exports carry notes; a PDF never prints them.';
+  'Only the Markdown, HTML, EPUB, and Final Draft exports carry notes; a PDF never prints them.';
 
 /** The words for each choice that isn't the default, in the toast's sentence. */
 const SCENE_PHRASE: Record<Exclude<SceneNumbering, 'none'>, string> = {
@@ -140,7 +140,7 @@ export function optionsPhrase(options: ExportOptions): string {
 }
 
 export const FDX_NOTE =
-  'A Final Draft file gets the title page you choose, and always keeps the scene numbers written in the script: Final Draft decides whether to print them. Its notes and synopses go in only with Include notes, as Final Draft’s own notes and summaries (a note inside a line stays as [[…]] in the text). Final Draft shows them and your sections in purple, as its outline, and prints them unless you hide the outline from its View menu.';
+  'A Final Draft file gets the title page you choose, and always keeps the scene numbers written in the script: Final Draft decides whether to print them. Its notes and synopses, and title-page lines that never print (Notes, Copyright), go in only with Include notes, as Final Draft’s own notes and summaries (a note inside a line stays as [[…]] in the text). Final Draft shows them and your sections in purple, as its outline, and prints them unless you hide the outline from its View menu.';
 export const OPTIONS_NOT_FOR_MARKDOWN =
   'A Markdown document has no scene numbers, title page, or notes to choose; it can still carry its text for Drafter to reopen.';
 /** The dialog's first line for a Markdown document, whose only choice is for its HTML and EPUB. */

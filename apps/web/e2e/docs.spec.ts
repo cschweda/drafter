@@ -636,7 +636,7 @@ test.describe('without JavaScript', () => {
       'RTF',
       'PDF',
       'Markdown (.md)',
-      'Include notes (Markdown, HTML, and EPUB)',
+      'Include notes (Markdown, HTML, EPUB, and Final Draft)',
       'HTML (.html)',
       'EPUB (.epub)',
       'e-book',
