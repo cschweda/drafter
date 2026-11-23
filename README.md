@@ -149,25 +149,24 @@ The [Technical details](docs/technical-details.md#security) give the specifics.
 
 Every audit of Drafter, newest first. The newest is in full; each earlier one is kept here in a line, with its full report in [`docs/`](docs/AUDITS.md).
 
-**Newest: [red/blue team audit, 3 November 2026](docs/redblue-audit-2026-11-03.md).** Four red-team attackers each took one area (the web app and its file formats, the desktop app, the supply chain and release, and privacy) and tried to break it. A blue team then checked each finding, fixed what was real with a test that fails without the fix, and left only GitHub and npm settings for the maintainer. **No attack ran code from a script, a file, or an export, got past the security policy, or reached the network from a page.**
+**Newest: [red/blue team audit, 23 November 2026](docs/redblue-audit-2026-11-23.md).** Five red-team attackers each took one area (the web app and its file formats, the desktop app, the supply chain and release, privacy, and, for the first time, Drafter for Claude with the command line and Classic Mode) and tried to break it, proving each weakness by running it where they could. A blue team checked every finding and fixed what was real, each with a test that fails without the fix, and a second team then audited the findings and the fixes. **No attack ran code from a script, a file, or an export, reached the network from a page, or read a file the writer hadn't chosen.** What broke was mostly small hostile files that froze the editor or a tool.
 
 | | Severity | Finding | Mitigation | Status |
 |---|---|---|---|---|
-| P1 | High | Final Draft exports carried notes and synopses as printed text, even with notes left out | Leave out now leaves them all out; Include says they print | Fixed |
-| D1 | High | A compromised desktop page could hand the browser an address holding the script, past every network block | Only Drafter's own links open at once; any other site asks you first | Fixed |
-| S1 | High | One stolen credential could push a release, with no tag or branch protection | 7-day waits on new dependencies; tag and branch rulesets and a release environment are for the maintainer | Maintainer |
-| W1 | Medium | 160 KB of `*_` in a Markdown file froze the tab, again on every reload | Past 4,000 marks in a paragraph, they're plain text | Fixed |
-| W2 | Medium | The same file stalled the Preview and every export after it | That paragraph is refused before parsing, with a trap document to hold it | Fixed |
-| P2 | Medium | The script's title goes into the browser's history and tab sync | Settings → Hide the script's title in the tab | Mitigated |
-| P3 | Medium | The Story map's logline and synopses went into the browser's form history | `autocomplete="off"` on every text field, with a test | Fixed |
-| P4 | Medium | Plausible's script could read the page, and the policy allowed all of plausible.io | The policy allows one script and one address; the help says what can't be checked | Mitigated |
-| S2 | Medium | `drafter build` wrote through a planted link, overwriting a file outside the folder | Written beside and renamed, so a link is replaced | Fixed |
-| D2 | Low–Medium | A page could open a hidden window with the app's bridge | New windows always get the app's own chrome | Fixed |
-| S3–S5, W3–W4, P5–P7, D3 | Low | One huge file broke Drafter for Claude's listing; PR checks unenforced; Docker cached 404s; a template named `constructor` broke Cuts; a slow spellcheck on hyphen chains; cuts in shared folders; EPUB ids linking blind copies; a help line | Each fixed with a test, or warned about in the help; a download handler deferred | Fixed (D3 deferred) |
-| W5–W6, S6–S8, D4, P8 | Info | Extra addresses in a contact link, prototype lookups, a loose release check, ignore rules, and smaller notes | Fixed or recorded in [DEFERRED](docs/DEFERRED.md) | Fixed / recorded |
+| S1 | High | A pull request could run code on the maintainer's machine when checked out, through the tracked Git hooks folder | The hook is copied into Git's own folder; Git no longer reads the tracked one | Fixed |
+| S2 | High | One stolen credential could still push a release (open since 3 November) | Branch and tag rulesets, a release environment, and immutable releases are for the maintainer | Maintainer |
+| P1 | Medium | A locked script's file carries its text as it stood before the revision, scenes since cut included | To say so, or to strip it from exported copies, is the maintainer's choice | Maintainer |
+| P2 | Medium | Remove from this browser left the script's file name and its folder's handle | Removed with the script; a test fails on any row left | Fixed |
+| P3 | Medium | Privacy statements had become untrue since reports by email | The README and five help pages say what is sent, to whom, and when | Fixed |
+| S3 | Medium | A release build restored caches that other code can write | A release is built with no cache | Fixed |
+| W1–W6, M1–M3 | Medium | Nine small files froze the editor, an export, or Drafter for Claude: a note of spaces, a crowded scene, nested brackets, and others, each costing the square or the cube of its size | Each is linear now, or refused past a limit no real document reaches | Fixed |
+| D1, D3, C1, C2, K1, K2, M4, M5, W7–W16, P4–P7, S5–S8 | Low | A trusted site took any address; a module could pose as Drafter; the command line could write over its input; Classic Mode's settings block could be deleted; a Final Draft export showed title-page lines that never print; and smaller ones | Each fixed, with a test | Fixed |
+| D2, D5, S4 | Low | Two desktop findings that need a running app to prove, and a diagram script outside the lockfile | Recorded in [DEFERRED](docs/DEFERRED.md) | Deferred |
+| D4 | Low | Two scripts whose names clean to the same thing share drafts beside the file | Accepted, and the comment that overstated the guarantee corrected | Accepted |
 
 **Earlier audits:**
 
+- **[Red/blue team audit, 3 November 2026](docs/redblue-audit-2026-11-03.md):** four attackers, one area each. No attack ran code or reached the network from a page. Fixed: Final Draft exports that carried notes as printed text, a desktop page that could hand the browser an address holding the script, a file that froze the Markdown editor, and smaller ones.
 - **[Privacy audit, 3 November 2026](docs/privacy-audit-2026-11-03.md):** nothing about a script is stored in the cloud, and there's no AI. A writing session in three browsers on live drafter.dev sent the script in no request. One leak was fixed the same day: on drafter.dev, a report's text could reach the analytics.
 - **[Security audit, 1 November 2026](docs/security-audit-2026-11-01.md):** the first formal audit. No exploitable hole and nothing leaves the device. Fixed: private vulnerability reporting, the desktop's drop grant, Nuxt 4.6.3, and Dependabot.
 - **[Clean-room audit, 22 November 2026](docs/clean-room-audit-2026-11-22.md):** no copied code, no screenwriting package or converter, no file from another app. Fixed: a film reference back in a test, three small values that had come from a real Final Draft sample, and records that had fallen behind.
