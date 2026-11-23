@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **The third clean-room audit, and its fixes** ([the audit](docs/clean-room-audit-2026-11-22.md)). It found no copied code, no screenwriting package or converter, and no file from another app. Fixed: a film reference that had come back in the layout tests; three small values in the Final Draft import's tests and notes that had come from a real sample, now invented; and records that had fallen behind (`DEPENDENCIES.md`, the clean-room rules, three plans). `.gitignore` now keeps any real Final Draft file out of `samples/fdx/`. Nothing a writer sees changes.
 - **The planned canvas of idea cards is now called the Wall.** Its working name turned out to be the name of a Final Draft feature. Living documents and code comments use the new name, and the block that will hold its cards in a script is `/* the wall`; no released version ever wrote the old marker, so no file changes meaning.
 
+### Fixed
+
+- **Sections, synopses, and notes survive a trip through Final Draft.** A script exported as `.fdx`, opened in Final Draft, and saved from there used to come back with each `#` section as a line of action and a stray note beside it, because Final Draft drops the marks Drafter wrote them with. They are now written as Final Draft's own outline, summary, and note paragraphs, which it keeps. A note exported this way no longer prints in Final Draft. Found with the first real round trip, on files the maintainer made in Final Draft 13.
+
 ## [0.27.3] - 2026-11-22
 
 **The cursor stays where you left it.** Three faults a writer could meet are fixed: the cursor could jump to the top of the script when the palette or a dialog closed on a busy page, so the next thing typed went in there; a dialog asked for again the moment it closed could fail to open; and focus could be left on nothing after the tour. All three were found while hunting a fault in the test browser, which is also dealt with: the checks no longer have a page stop dead about one run in fifty.

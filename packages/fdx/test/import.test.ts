@@ -3,8 +3,11 @@ import { fileURLToPath } from 'node:url';
 import { type Doc, parse, print } from '@drafter/fountain';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { FdxError, fromFdx, XmlError } from '../src';
+import { builtins } from '@drafter/templates';
+import { FdxError, fromFdx, toFdx, XmlError } from '../src';
 import { HANG_MS, MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
+
+const screenplay = builtins['us-screenplay'];
 
 const fixture = (name: string) =>
   readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)), 'utf8');
@@ -438,6 +441,22 @@ describe('fromFdx: unmapped content', () => {
 });
 
 describe("fromFdx: Drafter's own marks", () => {
+  it('keeps sections, synopses, and notes when another app drops Drafter\'s marks', () => {
+    // Final Draft keeps a paragraph's type and drops attributes it doesn't know, so the kinds
+    // that never print travel as its own kinds (Outline 1 to 3, Summary, Note).
+    const source =
+      '# Act One\n\n= About the act.\n\n## Sequence\n\n### Beat\n\nINT. HALL - DAY\n\n[[remember this]]\n\nShe waits.\n';
+    const saved = toFdx(parse(source), screenplay).replace(/ Drafter[A-Za-z]+="[^"]*"/g, '');
+    expect(saved).not.toContain('Drafter');
+    expect(fromFdx(saved).text).toBe(source);
+  });
+
+  it('reads a section deeper than Final Draft\'s three outline levels from its own mark', () => {
+    expect(fromFdx(fdx(P('Outline 3', 'Deep', ' DrafterSection="5"'))).text).toBe('##### Deep\n');
+    // A mark Drafter can't trust leaves the outline paragraph's own depth.
+    expect(fromFdx(fdx(P('Outline 3', 'Deep', ' DrafterSection="99"'))).text).toBe('### Deep\n');
+  });
+
   it('honours DrafterSection, DrafterSynopsis, DrafterNote, DrafterLyric, and DrafterKey', () => {
     const result = fromFdx(fixture('drafter-marks.fdx'));
     expect(result.text).toBe(

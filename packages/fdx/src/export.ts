@@ -290,10 +290,12 @@ class Exporter {
           return;
         case 'synopsis':
           // One a scene took is already in its properties; any other has no scene to ride on, so
-          // it is a General paragraph in its place, marked so import can write it back as `=`.
+          // it is a paragraph in its place: Final Draft's Summary, which doesn't print there
+          // either. Drafter's own mark rides along for a reader that knows it; Final Draft drops
+          // an attribute it doesn't know and keeps the type, so the type carries it back.
           if (this.withNotes && !this.collected.has(index)) {
             this.push([
-              this.paragraph('General', { DrafterSynopsis: 'Yes' }, this.blockPieces(block)),
+              this.paragraph('Summary', { DrafterSynopsis: 'Yes' }, this.blockPieces(block)),
             ]);
           }
           return;
@@ -309,8 +311,11 @@ class Exporter {
           if (resolveRole(this.template, block, null) === 'scene_heading_play') {
             this.scene(block, index, { DrafterSection: depth });
           } else {
+            // A section never prints, and neither does Final Draft's outline paragraph, which has
+            // three levels: a deeper section is its third, with Drafter's mark holding the depth.
+            const level = Math.min(block.sem.depth, 3);
             this.push([
-              this.paragraph('General', { DrafterSection: depth }, this.blockPieces(block)),
+              this.paragraph(`Outline ${level}`, { DrafterSection: depth }, this.blockPieces(block)),
             ]);
           }
           return;
@@ -327,7 +332,8 @@ class Exporter {
           }
           this.push(
             notes.map((r) =>
-              this.paragraph('General', { DrafterNote: 'Yes' }, [
+              // Final Draft's Note paragraph is hidden text there; a General one would print.
+              this.paragraph('Note', { DrafterNote: 'Yes' }, [
                 plain(this.doc.source.slice(r.span.from + 2, r.span.to - 2)),
               ]),
             ),

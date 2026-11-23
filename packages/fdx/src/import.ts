@@ -911,7 +911,9 @@ class Importer {
       this.pageBreak = true;
     }
     // A summary or a note inside a speech waits for its end rather than breaking it.
-    const aside = (summaryType || noteType) && this.speech !== null;
+    // One Drafter wrote says so with its mark, and stood between blocks there: it ends the speech.
+    const own = attrs.DrafterNote === 'Yes' || attrs.DrafterSynopsis === 'Yes';
+    const aside = (summaryType || noteType) && !own && this.speech !== null;
     if (!inSpeech && !aside) this.flushSpeech();
 
     // A section's depth is 1 to 6, as export writes it; any other value (a huge one would make a
@@ -919,7 +921,9 @@ class Importer {
     const sectionMark = attrs.DrafterSection;
     const section =
       sectionMark !== undefined && /^[1-6]$/.test(sectionMark) ? Number(sectionMark) : 0;
-    const sectionType = type === 'General' || type === 'Scene Heading';
+    // Drafter writes its mark on a General paragraph (before v0.27.4), a play's Scene Heading, and
+    // an outline paragraph, where it holds a depth past Final Draft's three levels.
+    const sectionType = type === 'General' || type === 'Scene Heading' || outline !== null;
     // Final Draft's outline paragraphs (`Outline 1 (Acts)` and so on) are sections of their
     // depth, or of their `OutlineLevel` when they carry one; deeper than six is six.
     const level = attrs.OutlineLevel?.trim() ?? '';
@@ -928,7 +932,7 @@ class Importer {
       : 0;
     const depth = sectionType && section > 0 ? section : outlineDepth;
     const isSection = depth > 0;
-    if (sectionType && sectionMark !== undefined && !(section > 0)) {
+    if (sectionType && !outline && sectionMark !== undefined && !(section > 0)) {
       this.action(lines, type);
     } else if (isSection) {
       if (outlineDepth === 0 || lines.length > 0) {
@@ -937,13 +941,13 @@ class Importer {
         const color = outline ? sceneColorOf(attrs.Color) : null;
         if (color) this.push(`[[Color: ${color}]]`);
       }
-    } else if (summaryType) {
+    } else if (summaryType && !own) {
       // Final Draft's summary of the item before it: a synopsis in its place, which keeps the order
       // (after the speech, inside one).
       if (lines.length > 0) this.place(this.synopsisLines(lines));
     } else if ((type === 'General' && attrs.DrafterNote === 'Yes') || noteType) {
       if (lines.length > 0 || !noteType) this.place(this.note(lines));
-    } else if (type === 'General' && attrs.DrafterSynopsis === 'Yes') {
+    } else if ((type === 'General' || summaryType) && attrs.DrafterSynopsis === 'Yes') {
       if (lines.length > 0) this.push(this.synopsisLines(lines));
     } else if (type === 'Scene Heading' || type === 'Shot') {
       if (lines.length > 0) this.heading(lines, type, attrs.Number);
