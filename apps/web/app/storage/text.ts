@@ -100,13 +100,19 @@ export function fileBaseName(name: string | undefined): string {
 // grapheme joiner, the Mongolian selectors). Two kinds of format character stay, where a real
 // title needs them: the joiners (U+200C, U+200D: Persian, a family emoji), and the tag characters
 // that follow a black flag and make it Scotland's or Wales's.
-const UNSAFE =
-  /[/\\:*?"<>|\p{Cc}\p{Cf}\u2028\u2029\u034f\u115f\u1160\u180b-\u180f\u2800\u3164\uffa0]/u;
-const JOINER = /[\u200c\u200d]/u;
-const TAG = /[\u{e0020}-\u{e007f}]/u;
+const UNSAFE = /[/\\:*?"<>|\p{Cc}\p{Cf}\u2028\u2029]/u;
+/** Letters and marks that draw nothing, by code point (a pattern's class can't hold a combining one). */
+const BLANK = new Set([
+  0x034f, 0x115f, 0x1160, 0x180b, 0x180c, 0x180d, 0x180e, 0x180f, 0x2800, 0x3164, 0xffa0,
+]);
+const isJoiner = (code: number) => code === 0x200c || code === 0x200d;
+const isTag = (code: number) => code >= 0xe0020 && code <= 0xe007f;
 const FLAG = '\u{1f3f4}';
-/** What draws nothing alone: a name made only of these is no name. */
-const DRAWS_NOTHING = /[\s\u200c\u200d\ufe00-\ufe0f\u{e0020}-\u{e007f}]/gu;
+/** What draws nothing alone (a space, a joiner, a variation selector, a tag): a name of only these is no name. */
+const drawsNothing = (char: string) => {
+  const code = char.codePointAt(0) as number;
+  return /\s/.test(char) || isJoiner(code) || isTag(code) || (code >= 0xfe00 && code <= 0xfe0f);
+};
 const MAX_NAME = 120;
 /**
  * Under the 255 bytes most disks allow a name, with room for the extension and a " (2)": 120
@@ -125,12 +131,13 @@ function seen(title: string): string {
   let out = '';
   let flag = false;
   for (const char of title) {
-    if (TAG.test(char)) {
+    const code = char.codePointAt(0) as number;
+    if (isTag(code)) {
       if (flag) out += char;
       continue;
     }
     flag = char === FLAG;
-    if (JOINER.test(char) || !UNSAFE.test(char)) out += char;
+    if (isJoiner(code) || (!UNSAFE.test(char) && !BLANK.has(code))) out += char;
   }
   return out;
 }
@@ -167,7 +174,7 @@ export function fileNameFor(
     cut += char;
   }
   let name = cut.replace(/^[.\s]+|[.\s]+$/g, '');
-  if (name.replace(DRAWS_NOTHING, '') === '') name = '';
+  if (Array.from(name).every(drawsNothing)) name = '';
   // The part before the first dot is what Windows goes by, spaces after it or not.
   const stem = name.split('.')[0]?.trim() ?? '';
   return (DEVICE.test(stem) ? `_${name}` : name || 'Untitled') + extension;
