@@ -45,15 +45,12 @@ describe('toFdx', () => {
     );
   });
 
-  it('maps a scene heading, with a locked number and its synopses', () => {
+  it('maps a scene heading, with a locked number, and its synopses in their places', () => {
     expect(content('INT. HALL - DAY #12A#\n\n= First.\n\nAction.\n\n= Second.\n')).toEqual([
-      P(
-        'Scene Heading',
-        { Number: '12A' },
-        el('SceneProperties', { Title: '', Summary: 'First.\nSecond.' }),
-        T('INT. HALL - DAY'),
-      ),
+      P('Scene Heading', { Number: '12A' }, T('INT. HALL - DAY')),
+      P('Summary', { DrafterSynopsis: 'Yes' }, T('First.')),
       P('Action', {}, T('Action.')),
+      P('Summary', { DrafterSynopsis: 'Yes' }, T('Second.')),
     ]);
     expect(content('INT. HALL - DAY\n')).toEqual([P('Scene Heading', {}, T('INT. HALL - DAY'))]);
     expect(content('.SNOWY FIELD\n')).toEqual([P('Scene Heading', {}, T('SNOWY FIELD'))]);
@@ -62,12 +59,8 @@ describe('toFdx', () => {
   it("maps a stage play's scene to a Scene Heading and its act to a section", () => {
     expect(content('# Act One\n\n## Scene 1\n\n= A kitchen.\n\nA table.\n', play)).toEqual([
       P('Outline 1', { DrafterSection: '1' }, T('Act One')),
-      P(
-        'Scene Heading',
-        { DrafterSection: '2' },
-        el('SceneProperties', { Title: '', Summary: 'A kitchen.' }),
-        T('Scene 1'),
-      ),
+      P('Scene Heading', { DrafterSection: '2' }, T('Scene 1')),
+      P('Summary', { DrafterSynopsis: 'Yes' }, T('A kitchen.')),
       P('Action', {}, T('A table.')),
     ]);
   });
@@ -275,7 +268,7 @@ describe('toFdx', () => {
     }
   });
 
-  it('exports a synopsis no scene collects as a Summary paragraph, in document order', () => {
+  it('exports every synopsis as a Summary paragraph, in document order', () => {
     const syn = (text: string) => P('Summary', { DrafterSynopsis: 'Yes' }, T(text));
     expect(content('= Before any scene.\n\nINT. A - DAY\n')).toEqual([
       syn('Before any scene.'),
@@ -284,22 +277,14 @@ describe('toFdx', () => {
     expect(content('# Act\n\n= About the act.\n\nINT. A - DAY\n\n= Of the scene.\n')).toEqual([
       P('Outline 1', { DrafterSection: '1' }, T('Act')),
       syn('About the act.'),
-      P(
-        'Scene Heading',
-        {},
-        el('SceneProperties', { Title: '', Summary: 'Of the scene.' }),
-        T('INT. A - DAY'),
-      ),
+      P('Scene Heading', {}, T('INT. A - DAY')),
+      syn('Of the scene.'),
     ]);
     expect(content('# Act\n\n= Act synopsis.\n\n## Scene 1\n\n= Scene synopsis.\n', play)).toEqual([
       P('Outline 1', { DrafterSection: '1' }, T('Act')),
       syn('Act synopsis.'),
-      P(
-        'Scene Heading',
-        { DrafterSection: '2' },
-        el('SceneProperties', { Title: '', Summary: 'Scene synopsis.' }),
-        T('Scene 1'),
-      ),
+      P('Scene Heading', { DrafterSection: '2' }, T('Scene 1')),
+      syn('Scene synopsis.'),
     ]);
   });
 

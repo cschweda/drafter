@@ -108,7 +108,6 @@ class Exporter {
   private open: { paragraphs: XmlElement[]; speech: boolean; dual: boolean } | null = null;
   private pageBreak = false;
   /** The synopses a scene heading has taken into its properties (a heading comes before them). */
-  private readonly collected = new Set<number>();
 
   private readonly withNotes: boolean;
 
@@ -237,29 +236,16 @@ class Exporter {
     return item;
   }
 
-  private synopsisOf(index: number): string {
-    if (!this.withNotes) return '';
-    const parts: string[] = [];
-    for (let i = index + 1; i < this.doc.blocks.length; i++) {
-      const block = this.doc.blocks[i] as Block;
-      if (block.kind === 'section' || block.kind === 'scene_heading') break;
-      if (block.kind === 'synopsis') {
-        this.collected.add(i);
-        parts.push(
-          this.blockPieces(block)
-            .map((p) => p.text)
-            .join(''),
-        );
-      }
-    }
-    return parts.join('\n');
+  /** Whether this block is a synopsis on the line right after another's (no blank line between). */
+  private joinsSynopsis(index: number): boolean {
+    const block = this.doc.blocks[index];
+    const before = this.doc.blocks[index - 1];
+    if (block?.kind !== 'synopsis' || before?.kind !== 'synopsis') return false;
+    return !/\n[ \t]*\n/.test(this.doc.source.slice(before.span.to, block.span.from));
   }
 
-  private scene(block: Block, index: number, attrs: Record<string, string>) {
-    const summary = this.synopsisOf(index);
-    const properties =
-      summary === '' ? [] : [el('SceneProperties', { Title: '', Summary: clean(summary) })];
-    this.push([this.paragraph('Scene Heading', attrs, this.blockPieces(block), properties)]);
+  private scene(block: Block, attrs: Record<string, string>) {
+    this.push([this.paragraph('Scene Heading', attrs, this.blockPieces(block))]);
   }
 
   private character(block: Block) {
@@ -289,33 +275,41 @@ class Exporter {
           this.open = null;
           return;
         case 'synopsis':
-          // One a scene took is already in its properties; any other has no scene to ride on, so
-          // it is a paragraph in its place: Final Draft's Summary, which doesn't print there
-          // either. Drafter's own mark rides along for a reader that knows it; Final Draft drops
-          // an attribute it doesn't know and keeps the type, so the type carries it back.
-          if (this.withNotes && !this.collected.has(index)) {
-            this.push([
-              this.paragraph('Summary', { DrafterSynopsis: 'Yes' }, this.blockPieces(block)),
-            ]);
+          // A paragraph in its place: Final Draft's Summary, which doesn't print there either. A
+          // scene's own synopsis too: its `SceneProperties` once carried it as a `Summary`
+          // attribute, which Final Draft 13 drops when it saves (seen in a file it saved,
+          // 2026-11-23). Drafter's own mark rides along for a reader that knows it; Final Draft
+          // drops an attribute it doesn't know and keeps the type, so the type carries it back.
+          // Lines that follow one another with no blank line between are one summary, of lines.
+          if (this.withNotes && !this.joinsSynopsis(index)) {
+            const pieces = [...this.blockPieces(block)];
+            for (let i = index + 1; this.joinsSynopsis(i); i++) {
+              pieces.push(plain('\n'), ...this.blockPieces(blocks[i] as Block));
+            }
+            this.push([this.paragraph('Summary', { DrafterSynopsis: 'Yes' }, pieces)]);
           }
           return;
         case 'boneyard':
           return;
         case 'scene_heading':
-          this.scene(block, index, block.sem.number ? { Number: block.sem.number } : {});
+          this.scene(block, block.sem.number ? { Number: block.sem.number } : {});
           return;
         case 'section': {
           // Import takes a depth of 1 to 6 (a mark it can't trust beyond that), so a deeper section
           // is written as six.
           const depth = String(Math.min(block.sem.depth, 6));
           if (resolveRole(this.template, block, null) === 'scene_heading_play') {
-            this.scene(block, index, { DrafterSection: depth });
+            this.scene(block, { DrafterSection: depth });
           } else {
             // A section never prints, and neither does Final Draft's outline paragraph, which has
             // three levels: a deeper section is its third, with Drafter's mark holding the depth.
             const level = Math.min(block.sem.depth, 3);
             this.push([
-              this.paragraph(`Outline ${level}`, { DrafterSection: depth }, this.blockPieces(block)),
+              this.paragraph(
+                `Outline ${level}`,
+                { DrafterSection: depth },
+                this.blockPieces(block),
+              ),
             ]);
           }
           return;
