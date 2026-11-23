@@ -1,4 +1,4 @@
-// Final Draft colors an outline paragraph with any color at all (`Color="#8F8FC3C36A6A"`: red,
+// Final Draft colors an outline paragraph with any color at all (`Color="#7070B0B05050"`: red,
 // green, and blue, each as four hex digits); Drafter's scene colors are nine words (Phase 2 design
 // §5.4, `@drafter/notes`' `SCENE_COLORS`). A color comes in as the nearest word.
 

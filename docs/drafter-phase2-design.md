@@ -22,14 +22,14 @@ Unmarked statements restate the earlier documents.
 
 Phase 1 made Drafter a place to write. Phase 2 makes it a place to see and shape what's been written: where the scenes are, how long they run, whose story each one carries, what each scene is for, and what is still open.
 
-The maintainer is new to Fountain and wants to start writing soon (Decided). So the order of work (§22) puts first what helps a writer draft and see structure: the outline and reordering, then cards and notes. Analysis views, the Beat Board, and reader notes follow.
+The maintainer is new to Fountain and wants to start writing soon (Decided). So the order of work (§22) puts first what helps a writer draft and see structure: the outline and reordering, then cards and notes. Analysis views, the Wall, and reader notes follow.
 
 The file stays the whole project (architecture §1). Everything Phase 2 adds lives in the `.fountain` as Fountain: synopses, sections, notes, boneyard, and the one metadata block. Another Fountain app opens the file, prints the same pages, and shows Drafter's additions as ordinary notes or not at all.
 
 **Done when:**
 
 1. Every Phase 2 roadmap item is built, except testing with NVDA and VoiceOver, which comes after all phases (§20). Writing statistics by day already shipped in v0.5.0.
-2. Nothing Phase 2 adds changes the printed script: for any script, the layout with every Phase 2 note and the Beat Board block removed equals the layout with them. A property test checks it.
+2. Nothing Phase 2 adds changes the printed script: for any script, the layout with every Phase 2 note and the Wall block removed equals the layout with them. A property test checks it.
 3. Every change made from a view is a text change to the source, applied as one transaction and undone in one step. `print(parse(text)) === text` still holds.
 4. Every drag has a keyboard equivalent, and an end-to-end test drives each one by keyboard alone.
 5. Every new view passes axe in both themes, at desktop and phone width, in the suite that runs on every build. The tests also assert the accessibility tree: roles, names, and what the live region says.
@@ -48,7 +48,7 @@ The file stays the whole project (architecture §1). Everything Phase 2 adds liv
 - Snapshots with a retention schedule, and Compare (§11).
 - Spellcheck with nspell and a per-script dictionary (§12).
 - The script map, the pacing view, the character-by-scene grid, and the Stats tab (§14–16).
-- The Beat Board (§17), reader notes (§18), and the Reference tab (§19).
+- The Wall (§17), reader notes (§18), and the Reference tab (§19).
 
 **Non-goals for Phase 2,** each with its later home:
 
@@ -104,7 +104,7 @@ Each entry holds:
 | `id` | The session identity (§5.2). |
 | `ordinal` | 1, 2, 3… in script order; `number` is the locked `#n#` number, if any. |
 | `heading` | The block that starts the scene: a scene heading, or a `##` section in a play. |
-| `span` | From the heading to the end of the scene's last block, as technical design §7 defines a scene range. The metadata and Beat Board blocks are never inside one. |
+| `span` | From the heading to the end of the scene's last block, as technical design §7 defines a scene range. The metadata and Wall blocks are never inside one. |
 | `sections` | The sections the scene sits in, outermost first. |
 | `synopses` | Its `=` lines. |
 | `fields` | Its keyed notes (§5.3): color, storylines, goal, conflict, outcome, shift. |
@@ -145,7 +145,7 @@ How Drafter reads `[[Head: body]]`:
 | Head | Meaning |
 |---|---|
 | A **field key**: `Color`, `Storyline`, `Goal`, `Conflict`, `Outcome`, `Shift`, `Setup`, `Payoff` | Drafter data, matched without regard to case. |
-| `Card` | A Beat Board card's place and links. Only inside the Beat Board block (§5.6). |
+| `Card` | A Wall card's place and links. Only inside the Wall block (§5.6). |
 | A word in **all capitals**, such as `TODO`, `FIX`, `CUT?` | A category for the writer's own note (`todo`). Call: so a habit like `[[TODO: …]]` files itself instead of reading as a person called TODO. |
 | A **name** with a lowercase letter, such as `Sam` or `Ann Lee`, up to 40 characters | A note from that person: a reader, or the writer replying (§18). |
 | `Name on “quote”` | A person's note on the quoted words, not the whole line (§18.2). |
@@ -204,12 +204,12 @@ The `/* drafter … */` block keeps what belongs to the script as a whole and wo
 
 None of it is keyed by scene, so it never needs an identity. A missing entry gets a default; an entry with no use left is harmless and is removed the next time Drafter writes the block.
 
-### 5.6 The Beat Board block
+### 5.6 The Wall block
 
-The Beat Board's cards (§17) live in one boneyard just before the metadata block, which other Fountain apps never show:
+The Wall's cards (§17) live in one boneyard just before the metadata block, which other Fountain apps never show:
 
 ```
-/* beat board
+/* the wall
 = Margaret finds the letter in Tom's coat. [[Card: 1, at 2 1, yellow, links 3]] [[Storyline: A]]
 = Tom's sister calls out of nowhere. [[Card: 2, at 4 1]]
 = The power goes out during dinner. [[Card: 3, at 2 3, links 1]] [[Storyline: B]]
@@ -229,13 +229,13 @@ The Beat Board's cards (§17) live in one boneyard just before the metadata bloc
 - **Announcements.** A move, a merge, or a bulk change says what happened once in the polite live region ("Moved INT. HALL to scene 4 of 32"). Nothing counts down or repeats.
 - **Color is never the only signal.** A color comes with a label: a letter, a word, or a name.
 - **Phones.** One pane at a time, as now. Every view has a single-column form; a drag becomes a row's **Move** menu (Move up, Move down, Move to…).
-- **Markdown documents** have no scenes. Outline, Cards, Beat Board, map, pacing, and grid are not offered there. Notes and spellcheck work. Call, because Markdown has no Fountain notes or scenes to read.
+- **Markdown documents** have no scenes. Outline, Cards, Wall, map, pacing, and grid are not offered there. Notes and spellcheck work. Call, because Markdown has no Fountain notes or scenes to read.
 - **Samples** behave as in Phase 1: editable, with the edits kept in the browser.
 - **The desktop app** gets every view, with the new commands in its native menus (`commands/desktop-menu.ts`).
 
 ### 5.8 Where the views live
 
-Phase 2 brings the tabs to Source, Script, Problems, **Outline, Cards, Notes, Stats, Beat Board, Reference**, and a **Compare** tab that exists only while a comparison is open.
+Phase 2 brings the tabs to Source, Script, Problems, **Outline, Cards, Notes, Stats, Wall, Reference**, and a **Compare** tab that exists only while a comparison is open.
 
 **Call:** each pane's tab row shows Source, Script, Problems, and Outline, then one slot for the last other tab chosen, then a **More** menu listing the rest. A tab chosen from More takes the slot. Reason: nine tabs don't fit a pane's width, and a row that scrolls hides tabs from sight. Builder: on a very wide pane, more tabs may stay in the row if they fit. On a phone, the single tab row has the same shape. **Show Outline**, **Show Cards**, and the rest are commands, and the tab order follows the list above.
 
@@ -269,7 +269,7 @@ Focus stays on the moved row, and the live region says where it went. On a phone
 
 - The scene's text, heading to last block, moves whole, with everything in it: notes, setups, reader notes. That is why per-scene data lives in the scene.
 - Call: the scene arrives with one blank line before it and one after, whatever surrounded it before. Reason: simple and readable. A property test checks that moving a scene and moving it back restores the source exactly whenever the scenes were separated by one blank line, which is how Drafter writes them.
-- The preamble, the title page, the Beat Board block, and the metadata block never move.
+- The preamble, the title page, the Wall block, and the metadata block never move.
 - A locked scene number (`#12#`) moves with its heading and is not renumbered. The existing lint rule reports numbers out of order.
 - A transition ending the scene moves with it. Builder: if that reads wrongly in practice, record the alternative in DECISIONS.
 
@@ -302,7 +302,7 @@ Every scene as an index card, in script order, like a corkboard, grouped under t
 
 Every note and boneyard in the script, in one list, each linked to its place.
 
-- **Groups,** chosen with filter chips: **All**, **My notes** (no head, or a category head), **Readers** (person heads, §18), **Setups & payoffs** (§10), **Boneyard** (every boneyard except the Beat Board and metadata blocks). Scene fields (§5.4) are not listed, since the Cards and Outline show them. Call: listing them would bury the writer's own notes under a dozen field lines per scene.
+- **Groups,** chosen with filter chips: **All**, **My notes** (no head, or a category head), **Readers** (person heads, §18), **Setups & payoffs** (§10), **Boneyard** (every boneyard except the Wall and metadata blocks). Scene fields (§5.4) are not listed, since the Cards and Outline show them. Call: listing them would bury the writer's own notes under a dozen field lines per scene.
 - **Filters:** by category, by person, by status (open, resolved, all), and by scene; a text filter.
 - **A row** shows the note's text, its category chips (colored, and named), its person if it has one, its scene and line, and its status. Replies sit under their note, indented.
 - **Actions:** Go to (Enter), Resolve or Reopen (adds or removes `#resolved`), Edit (in place; the head, tags, and text), Set category…, Reply (§18.3), Delete (one undo). **Resolve all shown** works on the filtered list, after asking.
@@ -387,7 +387,7 @@ Tag a scene with the plots it carries: `[[Storyline: A]]`, or `A, B`, or names (
   - on Outline rows and cards, as labeled chips;
   - in the Outline's **Timeline** view: one lane per storyline along the page timeline, each scene a block placed at its page and sized by its length, a scene with two storylines in both lanes. The lanes are drawn with the same component as the script map (§14), and reuse the Structure strip's geometry (`structureStrip` in `@drafter/outline`: a lane is a strip row filtered to one storyline's scenes, on the same page axis);
   - in the Script pane's margin, as a thin colored bar with the label beside each scene, turned on from the pane's slim bar. Call: off by default, so the pages stay clean. The margin marks are hidden from screen readers and never printed; the Outline says the same thing in text;
-  - on the Beat Board, as the cards' storyline chips, with **Arrange by storyline** (§17).
+  - on the Wall, as the cards' storyline chips, with **Arrange by storyline** (§17).
 - **Timeline keyboard:** the blocks are a grid with one tab stop, one row per lane; Left and Right move along a lane, Up and Down between lanes, and Enter goes to the scene. A block's name reads "Scene 12, INT. KITCHEN, storyline A, page 12, 1 3/8 pages". On a phone, Timeline is a list grouped by storyline.
 
 ## 14. The script map
@@ -439,9 +439,11 @@ A heading starts each section, and a short list of links at the top of the tab g
 
 **Since v0.21.0 (built in Plan E's first part).** The scene index lists each scene's **`speeches`** (who, the cue's block, and the words, a dual pair's sides in full and lyrics counted), with an **`opening`** for what's said before the first scene or section and each section's own stretch, so every speech has one owner and is counted once. The Stats window's own **`characterTable`** pass is retired: the tab's Characters table, the grid, and Scaffold all read one `Cast` from `@drafter/cast`. Two figures change meaning, as the changelog says: Words now count lyrics, and Scenes count every scene a character is in, speaking or silent, with the new **Speaks in** column keeping the old figure. Details are in the [seeing-the-script design](drafter-seeing-the-script-design.md) §3 and §4.
 
-## 17. The Beat Board
+## 17. The Wall
 
-A free board of idea cards, like a corkboard, for ideas that aren't scenes yet. The cards live in the Beat Board block (§5.6).
+*Named the Wall on 2026-11-23. Its working name until then was also the name of a Final Draft feature, so Drafter chose its own; its block in the file is `/* the wall`, which no released version has ever written.*
+
+A free board of idea cards, like a corkboard, for ideas that aren't scenes yet. The cards live in the Wall block (§5.6).
 
 - **The board** is a grid of cells the cards snap to. Call: a grid rather than free placement, so the keyboard can move a card one step at a time, a position is two small numbers in the file, and the board reads in rows.
 - **A card** shows its text, color, and storyline chips. **New card** (a button, the palette, or N on the board) adds one in the next free cell and opens it for typing.
@@ -483,7 +485,7 @@ In reader mode:
 1. **The anchor** of each note: its line's text (without notes), its quote if it has one, the lines before and after, and its scene heading.
 2. **Matching,** in order: the same line in a scene with the same heading; the same line anywhere, if it's there once; the closest similar line in the same scene, above a threshold (Builder: tuned on fixtures); the start of the scene with the same heading; otherwise **not placed**.
 3. **A preview** says what will happen: "14 notes from Sam: 10 in place, 3 close matches, 1 not placed." Close matches and the unplaced are listed with their text and where they'll go.
-4. **Applying** takes a snapshot, then inserts every note as one change. A note not placed goes into a paragraph of notes at the end of the script (before the Beat Board and metadata blocks), with the scene it came from added: `[[Sam: … (was in INT. HALL - DAY) #story]]`. **No note is ever dropped.** Call: the end of the script, because a note there prints nothing and is always found by the Notes tab.
+4. **Applying** takes a snapshot, then inserts every note as one change. A note not placed goes into a paragraph of notes at the end of the script (before the Wall and metadata blocks), with the scene it came from added: `[[Sam: … (was in INT. HALL - DAY) #story]]`. **No note is ever dropped.** Call: the end of the script, because a note there prints nothing and is always found by the Notes tab.
 5. **Running it twice** adds nothing the second time: a note whose person, text, and place already match is skipped.
 
 Notes typed by hand as `[[Name: comment]]` are reader notes too, and merge the same way. The writer replies from the Notes tab or the margin (in the Script pane, a **Notes in margin** toggle shows the same comment column outside reader mode), resolves with `#resolved`, filters by person and category, and sends the file back with **Send for notes…** again.
@@ -495,7 +497,7 @@ Reader colors are in the metadata block (§5.5), assigned on first sight.
 Fountain and Drafter, built in, offline.
 
 - **Fountain:** every element, its mark, its rule in a sentence, and an example: the cheat sheet's content. Call: one source for both, so the `/docs/fountain/` page and the tab can't disagree.
-- **Drafter's conventions:** keyed notes (§5.3) with every key, scene headers, the Beat Board block, the metadata block, setups and payoffs, reader notes, and how a stage play is written in Fountain (architecture §7).
+- **Drafter's conventions:** keyed notes (§5.3) with every key, scene headers, the Wall block, the metadata block, setups and payoffs, reader notes, and how a stage play is written in Fountain (architecture §7).
 - **This template:** the active template's rules, generated from its JSON: paper, margins in inches, and each element's indent, width, capitals, and spacing.
 - **Keyboard shortcuts:** generated from the command registry, as the shortcuts page is.
 - A search field filters every section. Each topic is also in the palette as "Reference: Character", opening the tab at it.
@@ -515,7 +517,7 @@ Until then, every view is built for screen readers and checked automatically: ax
 |---|---|---|
 | `@drafter/outline` | The scene index (§5.1); move, synopsis, fields, color, and storyline edits; condense, expand, and treatment export | A |
 | `@drafter/fdx` | Final Draft XML: export, import to Fountain text, and a strict XML reader (technical design §6.3) | FD |
-| `@drafter/notes` | Keyed notes (§5.3), scene headers (§5.4), setups and payoffs, the Beat Board block (§5.6), anchors and the reader merge (§18.3) | B |
+| `@drafter/notes` | Keyed notes (§5.3), scene headers (§5.4), setups and payoffs, the Wall block (§5.6), anchors and the reader merge (§18.3) | B |
 | `@drafter/compare` | The line diff and its mapping to pages (§11.2) | C |
 | `@drafter/spell` | The nspell wrapper, the words never flagged, and the two dictionaries (§12) | D |
 | `@drafter/lint` | New rules: `stub-heading`, `setup-without-payoff`, `payoff-without-setup`, `duplicate-field`, and the Spelling group | A, B, D |
@@ -656,11 +658,11 @@ This release is v0.18.0 and changes no plan's number: Plans E to H stay v0.20.0 
 
 This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 to v0.23.0, where v0.17.0 put them.
 
-**Decided (2026-10-30, with the formats release): v0.20.0 is the formats release** (`drafter convert`, footnotes in Markdown documents, the tour's Fountain-first wording, and the README's Formats section), ahead of Plan E. Plan E ships in two parts, v0.21.0 (Scaffold, the Stats tab, and the character grid) and v0.23.0 (storylines, the Timeline, the map, and pacing), with **Export as HTML** ([its design](drafter-html-export-design.md)) as v0.22.0 between them. Plans F to H move to v0.24.0 to v0.27.0, their letters unchanged. Plan F, the Beat Board, is expected to become the **Workbook** the maintainer asked for (a story bible and scene cards beside the script), with its own design.
+**Decided (2026-10-30, with the formats release): v0.20.0 is the formats release** (`drafter convert`, footnotes in Markdown documents, the tour's Fountain-first wording, and the README's Formats section), ahead of Plan E. Plan E ships in two parts, v0.21.0 (Scaffold, the Stats tab, and the character grid) and v0.23.0 (storylines, the Timeline, the map, and pacing), with **Export as HTML** ([its design](drafter-html-export-design.md)) as v0.22.0 between them. Plans F to H move to v0.24.0 to v0.27.0, their letters unchanged. Plan F, the Wall, is expected to become the **Workbook** the maintainer asked for (a story bible and scene cards beside the script), with its own design.
 
 **Decided (2026-10-30, with Plan E's first part; the controller's ruling on the seeing-the-script design's Call 1, renumbered after the formats release): Plan E ships in two parts, with Drafts and Cuts and Novel between them** (the maintainer's order). **v0.21.0** is Plan E part 1 (Scaffold, the Stats tab, and the character grid); **v0.22.0** is Export as HTML, and EPUB, for reading a draft on an e-reader ([its design](drafter-html-export-design.md)); **v0.23.0** is **Drafts and Cuts**, numbered drafts with content-hash IDs and a permanent Cuts file beside each script or novel, for every kind, to be designed; **v0.24.0** is **Novel**, a choice beside Screenplay and Stage play for drafting a novel in Markdown (chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release), to be designed; **v0.26.0** is Plan E part 2 (storylines, the strip's Color by, and pacing); and Plans F to H move to **v0.27.0 to v0.29.0**, their letters unchanged, F still expected to become the Workbook. The script map is the strip's **Color by** (Call 38), not a column of its own.
 
-**Decided (2026-10-30, with HTML and EPUB; the maintainer's order): a fresh look comes before Drafts and Cuts, and Plan F becomes the Workbook.** **v0.22.0** is Export as HTML and EPUB; **v0.23.0** is **a fresh look** ([its design](drafter-fresh-look-design.md)): calm and paper-first, two bars instead of five, the editor always on the left with an Inspector on the right, paper pages, one button and dialog system, a tab bar along the foot of a phone, and six bug fixes, so the releases after it are built in the new look; **v0.24.0** is **Drafts and Cuts** ([its design](drafter-drafts-and-cuts-design.md)); **v0.26.0** is **Novel**; **v0.27.0** is Plan E part 2; **v0.28.0** is Plan F, now **the Workbook**: a story bible and scene cards beside the script (the Beat Board's cards among them), a landing spot for pasted notes, a Dropbox, Google Drive, or OneDrive folder watched for notes dropped into it, and voice notes recorded and transcribed on the device, with a live sound bar while recording, to be designed; **v0.29.0** is **the `.drafter` project package**; and Plans G and H move to **v0.30.0 and v0.31.0**, their letters unchanged.
+**Decided (2026-10-30, with HTML and EPUB; the maintainer's order): a fresh look comes before Drafts and Cuts, and Plan F becomes the Workbook.** **v0.22.0** is Export as HTML and EPUB; **v0.23.0** is **a fresh look** ([its design](drafter-fresh-look-design.md)): calm and paper-first, two bars instead of five, the editor always on the left with an Inspector on the right, paper pages, one button and dialog system, a tab bar along the foot of a phone, and six bug fixes, so the releases after it are built in the new look; **v0.24.0** is **Drafts and Cuts** ([its design](drafter-drafts-and-cuts-design.md)); **v0.26.0** is **Novel**; **v0.27.0** is Plan E part 2; **v0.28.0** is Plan F, now **the Workbook**: a story bible and scene cards beside the script (the Wall's cards among them), a landing spot for pasted notes, a Dropbox, Google Drive, or OneDrive folder watched for notes dropped into it, and voice notes recorded and transcribed on the device, with a live sound bar while recording, to be designed; **v0.29.0** is **the `.drafter` project package**; and Plans G and H move to **v0.30.0 and v0.31.0**, their letters unchanged.
 
 **Built (2026-10-31): the fresh look, v0.23.0** ([its design](drafter-fresh-look-design.md); the calls as they landed are in `docs/DECISIONS.md`, under "A fresh look"). Calm, paper-first colours with one goldenrod accent; a 44px top bar with the Drafter menu, a Help menu of its own, and an **Unsaved** mark after the title; the editor always on the left and every other view in the Inspector, whose tools fold into "⋯" when tight; the element bar in the editor's header, folding into More instead of clipping; paper pages at full height, with a Page colour setting; a quiet status bar; one button, menu, and dialog style, and Settings in sections (a jump list over one column, so nothing is hidden); Stats and Scaffold as designed pages; and below 1024px one pane with a bottom tab bar (Write, Script, Outline, More), bottom-sheet menus, More actions in the top bar, and the element row above the on-screen keyboard. Focus mode fits the window, and a fresh visit follows the system's appearance. The design's six bugs are fixed, with a Firefox blank-editor bug, a focus slip after a dialog closes, and the Export submenu's mouse bug found on the way. Left for later (`docs/DEFERRED.md`): dialogs as full-height sheets on a phone, and a check of the element row on a real phone's keyboard. No plan's number changes.
 
@@ -704,11 +706,11 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 - The strip's Color by, the Timeline, and the pacing table work fully by keyboard, and each chart has its table.
 - axe passes on the Storylines and Pacing sections, the Timeline, the margin marks, and the strip's Color by, in both themes at both widths.
 
-### Plan F — v0.29.0: The Workbook (was the Beat Board)
+### Plan F — v0.29.0: The Workbook (was the Wall)
 
-**Status:** to be designed (decided 2026-10-30, above): the story bible and scene cards, the pasted-notes landing spot, the watched notes folder, and on-device voice notes. Its design replaces the Beat Board scope below, which it takes in.
+**Status:** to be designed (decided 2026-10-30, above): the story bible and scene cards, the pasted-notes landing spot, the watched notes folder, and on-device voice notes. Its design replaces the Wall scope below, which it takes in.
 
-**Scope:** the Beat Board block (§5.6) and the Beat Board tab (§17): cards, the grid, moving, links, Arrange by storyline, Place in the script, and the list view.
+**Scope:** the Wall block (§5.6) and the Wall tab (§17): cards, the grid, moving, links, Arrange by storyline, Place in the script, and the list view.
 
 **Done when:**
 
@@ -751,7 +753,7 @@ This release is v0.19.0 and changes no plan's number: Plans E to H stay v0.20.0 
 | 5.3 | One keyed-note convention for all placed data | Notes never print, and every Fountain app keeps them. |
 | 5.3 | An all-capitals head is a category | `[[TODO: …]]` files itself. |
 | 5.4 | Scene colors are header notes, not metadata (decided 2026-10-28) | They survive renames, reorders, and other apps. |
-| 5.6 | Beat Board cards are synopsis lines in a boneyard | Placing a card needs no translation; other apps never show the board. |
+| 5.6 | Wall cards are synopsis lines in a boneyard | Placing a card needs no translation; other apps never show the board. |
 | 5.7 | No scene views for Markdown documents | Markdown has no scenes or notes. |
 | 5.8 | Four fixed tabs, one slot, then More | Nine tabs don't fit a pane. |
 | 6.1 | The Outline is an ARIA tree | Screen readers know how to read one. |
@@ -801,7 +803,7 @@ Made with Plan A (2026-10-28):
 - **Architecture §5.1 and §5.3:** scene colors live in scene headers as keyed notes; the metadata block keeps script-wide data. **§12 and §13:** NVDA and VoiceOver come last. **§14:** the scene-identity question is closed by §5.2.
 - **Technical design §7:** colors and stubs as in §5.4 and §6.5; the scene index and identity as in §5.1–5.2. **§8.4:** the snapshot schedule as in §11.1. **§8.6:** the metadata block's Phase 2 keys. **§13:** NVDA and VoiceOver come last.
 - **README and architecture §13 (Final Draft, decided 2026-10-28):** `.fdx` import and export is listed under Phase 2 (Plan FD, v0.11.0), not Phase 3, and `@drafter/fdx` is a Phase 2 package.
-- **Phase 1 design §14:** the Beat Board's positions, colors, and links live in the Beat Board block, not the metadata block, and storylines are header notes with their colors in the metadata block.
+- **Phase 1 design §14:** the Wall's positions, colors, and links live in the Wall block, not the metadata block, and storylines are header notes with their colors in the metadata block.
 
 Made with the Structure strip (2026-10-29):
 

@@ -32,7 +32,7 @@ function aloneAt(source: string, from: number, to: number): boolean {
 }
 
 /**
- * Every closed note and boneyard in source order; never the metadata block or the Beat Board block.
+ * Every closed note and boneyard in source order; never the metadata block or the Wall block.
  * An unclosed boneyard isn't listed (it hides the rest of the script, and lint reports it), nor is
  * a note on the title page, which no block holds.
  */

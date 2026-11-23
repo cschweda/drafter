@@ -254,7 +254,7 @@ export function blockLines(
   const { blockIndex, role, style, frame, append } = options;
   const source = block.lines.filter((line) => !line.transparent);
   const lines: LayoutLine[] = [];
-  // A forced cue prints as typed: `@McCLANE` is how Fountain keeps a name's small letters. What
+  // A forced cue prints as typed: `@McBRIDE` is how Fountain keeps a name's small letters. What
   // the layout adds to it, such as (CONT'D), still takes the role's case.
   const typed: RoleStyle =
     block.kind === 'character' && block.forced && style.case === 'upper'

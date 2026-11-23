@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **Clean room** (recorded 2026-11-23; the maintainer confirmed the session worked under it): built from the industry's conventions, the Fountain specification, and Drafter's own packages. No other app's code, screens, or text; no Final Draft structure that isn't in a real file the maintainer supplied; fixtures and sample text are original. See [the clean-room rules](../clean-room.md).
 - The file stays plain Fountain: scene numbers are `#12A#`, an omitted scene is `.OMITTED #12#`, everything else lives in the `/* drafter */` block under the key `production` (spec §4, §6.3).
 - The block is written only by the writer's own actions (lock, start the next revision, write new scene numbers, omit a scene, unlock, clear marks), each one undo step; never in the background (spec §6.3).
 - The open set's baseline is in the block as `production.baseline`: the baseline text, gzip-compressed, base64 (spec §6.3a, the maintainer's decision).

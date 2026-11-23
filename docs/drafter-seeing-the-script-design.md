@@ -268,7 +268,7 @@ From the Stats tab's Storylines section (§8.3), and a row menu in the Storyline
 - **Rename…** rewrites the label in every Storyline note in the script, and moves its metadata entry, as one transaction (one undo): "Renamed storyline A to Job in 12 scenes." **Call:** **renaming to a label already in use is a merge.** It asks first ("B is already a storyline. Merge A into it?"), and each note's list loses its repeat.
 - **Remove from every scene…** asks first and then takes the label out of every note, dropping a note that is left empty, and drops its metadata entry, in one undo.
 - In a read-only tab, these are disabled with the reason, as everywhere else.
-- **Call:** **the Beat Board block is left alone in v0.27.0.** It doesn't exist yet. Plan F's rename will cover cards.
+- **Call:** **the Wall block is left alone in v0.27.0.** It doesn't exist yet. Plan F's rename will cover cards.
 
 ### 6.4 Where storylines show
 
@@ -396,7 +396,7 @@ As the rest of Drafter (WCAG 2.2 AA):
 
 ## 14. Not in this release
 
-**Deferred,** each a line in `docs/DEFERRED.md`: silent-only characters (a `[[Cast: …]]` note); aliases and merged names; marking a mention as not present; grouping sub-locations; sorting the Characters table; storyline rows in the strip; the Beat Board's storylines in rename (Plan F); a per-scene history link from Scaffold (History of this scene is in the scene menus already); and export of the Stats tab's tables.
+**Deferred,** each a line in `docs/DEFERRED.md`: silent-only characters (a `[[Cast: …]]` note); aliases and merged names; marking a mention as not present; grouping sub-locations; sorting the Characters table; storyline rows in the strip; the Wall's storylines in rename (Plan F); a per-scene history link from Scaffold (History of this scene is in the scene menus already); and export of the Stats tab's tables.
 
 **The maintainer's other wishes, already recorded for later and not in this release:**
 
@@ -446,7 +446,7 @@ Without the split, Plan E is v0.20.0 alone, Plans F to H stay v0.21.0 to v0.23.0
 31. Storyline colors are shown, not written, until the writer picks one (§6.1).
 32. Storylines… writes one header note and removes the others in that scene (§6.2).
 33. Renaming to a label in use is a merge, after asking (§6.3).
-34. Rename leaves the Beat Board block to Plan F (§6.3).
+34. Rename leaves the Wall block to Plan F (§6.3).
 35. The Timeline is a second view of the Outline tab, remembered (§6.5).
 36. `storylineLanes` in `@drafter/outline`, on the strip's axis (§6.5).
 37. Margin marks are off by default and remembered (§6.6).

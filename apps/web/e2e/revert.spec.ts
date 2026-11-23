@@ -8,7 +8,7 @@ import {
   stubPickers,
   textOf,
 } from './fs-stub';
-import { expectSaved, expectScript, expectUnsaved, saveState } from './modules';
+import { downloadOf, expectSaved, expectScript, expectUnsaved, saveState } from './modules';
 
 const editor = (page: Page) => page.locator('.cm-content');
 // Revert to Saved is on Save's arrow (Save options), and in More actions where Save is folded.
@@ -322,7 +322,7 @@ test.describe('Revert to Saved where Save downloads', () => {
     await page.keyboard.insertText('FADE IN:');
     const download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
-    const file = await download;
+    const file = await downloadOf(page, download);
     await expectSaved(page);
 
     await typeAtEnd(page, ' MORE');

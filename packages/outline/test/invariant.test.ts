@@ -28,7 +28,7 @@ import { apply, indexOf, screenplay, stagePlay } from './helpers';
 // pages with every Phase 2 note in place print the same as without them. Plan A writes scene
 // colors (`[[Color: …]]` header lines) and synopses; Plan B writes whole scene headers, inline
 // Setup and Payoff marks, and the writer's and readers' notes with their categories and status.
-// Later plans add their notes and the Beat Board block to this file.
+// Later plans add their notes and the Wall block to this file.
 //
 // A color note typed by hand inside a line (`waits [[Color: red]] by`) is taken out alone: the
 // spaces around it stay (`waits  by`), because a note prints nothing and they print. Closing them up

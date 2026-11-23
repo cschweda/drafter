@@ -18,7 +18,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.27.3.** The web app and the desktop apps for Windows and Linux are ready to use. v0.27.3 **keeps the cursor where you left it**: it could jump to the top of the script when the palette or a dialog closed on a busy page, and two smaller faults with dialogs and the tour are fixed with it. v0.27.2 made **a page end where a sentence does**, v0.27.1 was **fixes before features**, and v0.27.0 brought **Production**, free. See the [roadmap](#roadmap).
+> **Status: v0.27.4.** The web app and the desktop apps for Windows and Linux are ready to use. v0.27.4 makes **Save say where it went, and brings a script back from Final Draft**: saving moves nothing in the top bar, the status bar names the file, and a script that has been through Final Draft keeps its sections, synopses, notes, and title page. v0.27.3 **kept the cursor where you left it**, v0.27.2 made **a page end where a sentence does**, v0.27.1 was **fixes before features**, and v0.27.0 brought **Production**, free. See the [roadmap](#roadmap).
 
 ## Contents
 
@@ -168,6 +168,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 - **[Privacy audit, 3 November 2026](docs/privacy-audit-2026-11-03.md):** nothing about a script is stored in the cloud, and there's no AI. A writing session in three browsers on live drafter.dev sent the script in no request. One leak was fixed the same day: on drafter.dev, a report's text could reach the analytics.
 - **[Security audit, 1 November 2026](docs/security-audit-2026-11-01.md):** the first formal audit. No exploitable hole and nothing leaves the device. Fixed: private vulnerability reporting, the desktop's drop grant, Nuxt 4.6.3, and Dependabot.
+- **[Clean-room audit, 22 November 2026](docs/clean-room-audit-2026-11-22.md):** no copied code, no screenwriting package or converter, no file from another app. Fixed: a film reference back in a test, three small values that had come from a real Final Draft sample, and records that had fallen behind.
 - **[Clean-room audit, 1 November 2026](docs/clean-room-audit-2026-11-01.md):** no copied code, no screenwriting package, no GPL code shipped. A film catchphrase and an unrecorded source were fixed.
 - **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 294, each with the one outcome it must have, run on every pull request.
 - **Reopenable exports review, 1 November 2026 (v0.23.1):** only the embedded source is read, as text, with caps before unpacking.
@@ -179,7 +180,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.27.3, there are **8,885 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,480 browser tests**, each run in five browser setups (7,400 runs), 140 end-to-end tests of the desktop app, and **294 trap documents** with 1,376 checks:
+**What runs.** As of v0.27.4, there are **8,889 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,483 browser tests**, each run in five browser setups (7,415 runs), 140 end-to-end tests of the desktop app, and **294 trap documents** with 1,376 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
@@ -326,6 +327,7 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 - **Fixes before features** (v0.27.1): four faults a writer could meet fixed, warnings when words won't print as written, page breaks that never leave one line of a paragraph behind, an outline as a board of cards, and Save As with a name in every browser.
 - **A page ends where a sentence does** (v0.27.2): action and speeches break at the last sentence that fits, locked scripts keep every page, and Reload for a new version no longer stalls.
 - **The cursor stays where you left it** (v0.27.3): it no longer jumps to the top of the script when the palette or a dialog closes on a busy page; a dialog reopened at once opens, and focus comes back after the tour.
+- **Save says where it went, and a script comes back from Final Draft** (v0.27.4): saving moves nothing in the top bar, the status bar names the file, Safari and Firefox ask for a name on the first Save, and sections, synopses, notes, and the title page survive a trip through Final Draft.
 
 **Next:**
 

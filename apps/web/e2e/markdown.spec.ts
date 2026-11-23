@@ -1,6 +1,6 @@
 import { expect, type Page, test } from './fixtures';
 import { files, nextFileName, picks, putFile, removePickers, stubPickers, textOf } from './fs-stub';
-import { expectScript, pasteText, showView, wholeText } from './modules';
+import { downloadOf, expectScript, pasteText, showView, wholeText } from './modules';
 
 // Markdown is a document kind beside Fountain (Plan 4 Task 6). The accessibility test the plan
 // names is in a11y.spec.ts.
@@ -461,7 +461,7 @@ test.describe('Markdown files without a file picker', () => {
     await newMarkdown(page);
     const download = page.waitForEvent('download');
     await page.keyboard.press('ControlOrMeta+s');
-    expect((await download).suggestedFilename()).toBe('Untitled.md');
+    expect((await downloadOf(page, download)).suggestedFilename()).toBe('Untitled.md');
   });
 });
 
