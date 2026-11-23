@@ -4,6 +4,7 @@
 // menus, and that page can't disagree. Script modules' commands are added at run time and are not
 // here. This file imports only plain data, by relative paths, so a test outside the app can read it.
 
+import { SUPPORT_ON, SUPPORT_PAGE } from '../about/support';
 import { SAMPLES } from '../editor/sample-kinds';
 import { STARTER_KINDS } from '../editor/starter-kinds';
 import { DOCUMENT_TYPES } from '../editor/template';
@@ -30,6 +31,9 @@ export interface CommandData {
 
 /** What a writer looking for Production might search the palette for. */
 const PRODUCTION_WORDS = ['production', 'lock', 'revisions', 'scene numbers', 'shooting script'];
+
+/** What someone who wants to leave a tip might search the palette for (the page never says "donate"). */
+const SUPPORT_WORDS = ['tip', 'tip jar', 'donate', 'sponsor', 'thanks', 'ko-fi', 'support'];
 
 /** What a writer who wants Classic Mode might search the palette for. */
 const MODE_WORDS = ['final draft', 'mode', 'typing'];
@@ -70,6 +74,8 @@ export const HELP_PAGES: readonly HelpPage[] = [
     section: 'about',
   },
   { id: 'help-why', path: '/docs/why', title: 'Why Drafter', section: 'about' },
+  // Only in a build that has the maintainer's Ko-fi page (about/support.ts).
+  ...(SUPPORT_ON ? [SUPPORT_PAGE] : []),
   {
     id: 'help-fountain',
     path: '/docs/fountain',
@@ -247,7 +253,12 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'start-blank', title: 'Start blank', group: 'File' },
   { id: 'take-the-tour', title: 'Take the tour', group: 'Help' },
   ...HELP_PAGES.map(
-    (page): CommandData => ({ id: page.id, title: helpCommandTitle(page), group: 'Help' }),
+    (page): CommandData => ({
+      id: page.id,
+      title: helpCommandTitle(page),
+      group: 'Help',
+      ...(page.id === SUPPORT_PAGE.id && { keywords: SUPPORT_WORDS }),
+    }),
   ),
   { id: DOWNLOAD_PAGE.id, title: 'Download the desktop app', group: 'Help', webOnly: true },
   // Help → Sample scripts: a tiny sample of each kind, opened as a new script of the writer's own.

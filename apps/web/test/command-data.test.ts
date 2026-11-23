@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { SUPPORT_ON } from '../app/about/support';
 import {
   COMMAND_DATA,
   HELP_PAGES,
@@ -228,10 +229,11 @@ describe('the command data', () => {
     for (const c of COMMAND_DATA.filter((c) => c.global)) expect(c.keys, c.id).toBeTruthy();
   });
 
-  test('has the seventeen help pages, in the Help group', () => {
+  test('has every help page, in the Help group', () => {
     expect(HELP_PAGES.map((p) => p.path)).toEqual([
       '/docs/what-is-drafter',
       '/docs/why',
+      ...(SUPPORT_ON ? ['/docs/support'] : []),
       '/docs/fountain',
       '/docs/classic-mode',
       '/docs/novel',
@@ -294,10 +296,19 @@ describe('the command data', () => {
     });
   });
 
+  test('finds the Support page by what people call it', () => {
+    if (!SUPPORT_ON) return;
+    const command = COMMAND_DATA.find((c) => c.id === 'help-support');
+    expect(command?.keywords).toEqual(
+      expect.arrayContaining(['tip', 'donate', 'sponsor', 'thanks']),
+    );
+  });
+
   test('links each page at its directory, where a static host serves it', () => {
     expect(HELP_PAGES.map(helpHref)).toEqual([
       '/docs/what-is-drafter/',
       '/docs/why/',
+      ...(SUPPORT_ON ? ['/docs/support/'] : []),
       '/docs/fountain/',
       '/docs/classic-mode/',
       '/docs/novel/',

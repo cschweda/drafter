@@ -66,6 +66,7 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 | A count of page visits ([Plausible](https://drafter.dev/docs/privacy/#analytics): privacy-first, no cookies, no ads; only to see the basic traffic, for future improvements) | plausible.io | drafter.dev only: each page view and the time on it, each address cut before any `?` or `#`; no clicks, downloads, or forms | No. The desktop app and self-hosted copies don't have it |
 | A check for a new version | GitHub | The desktop app, when it starts; you can turn it off in Settings | No. GitHub sees your IP address, version, and system |
 | A report or an idea | GitHub, or your email app | Only when you click **Open on GitHub** or **Write an email** | Only what you typed and saw |
+| A tip, if you choose to leave one | Ko-fi | Only when you follow the link on the [Support page](https://drafter.dev/docs/support/) | No |
 | A module you add yourself | The addresses it names | Desktop app only, and only once you agree to them | It can, so add only modules you trust ([more](https://drafter.dev/docs/privacy/#modules)) |
 
 **Checked, not just promised.** The [privacy audit of 3 November 2026](docs/privacy-audit-2026-11-03.md) went through every line of code that could reach the network, every place Drafter stores anything, and every dependency. It also ran a writing session on drafter.dev in Chrome, Firefox, and Safari's engine with every request recorded. A made-up phrase typed into the script appeared in none of them. It found one leak and it was fixed the same day: on drafter.dev, what a report said could reach the analytics when it was opened on GitHub. The [Privacy](https://drafter.dev/docs/privacy/) help page, in the app and on drafter.dev, says the same in more detail.
@@ -379,5 +380,7 @@ Made by Christopher Schweda ([cschweda](https://github.com/cschweda)), who also 
 ## License
 
 [MIT](LICENSE) © 2026 Christopher Schweda. Courier Prime and Inter Tight are distributed under the SIL Open Font License, each with its license file alongside the fonts. The logo, icons, and share image are in [`brand/`](brand/). See the [Changelog](CHANGELOG.md) for every release.
+
+Drafter is free, and stays free. If you'd like to say thanks, you can leave a tip on [Ko-fi](https://ko-fi.com/chrisschweda) or [Buy Me a Coffee](https://buymeacoffee.com/cschweda); neither needs an account. More on the [Support Drafter](https://drafter.dev/docs/support/) page.
 
 **Trademark.** Drafter™ and the Drafter logo are trademarks of Christopher Schweda. The MIT License covers the code, so you are free to use, change, and share it; it doesn't grant use of the Drafter name or logo. A changed copy you share needs a name of its own. Final Draft is a trademark of its owner. Drafter reads and writes its file format so a script can move between the two apps, and isn't connected with or endorsed by Final Draft.
