@@ -276,6 +276,22 @@ const TRUSTED_HOSTS = new Set([
  */
 const TRUSTED_PAGES = new Set(['https://ko-fi.com/chrisschweda']);
 
+/** As long as the longest of Drafter's own links, with room: not long enough to carry a page of script. */
+const MAX_TRUSTED_ADDRESS = 160;
+
+/**
+ * Whether an address on a trusted site is shaped like the links Drafter has to it: short, with no
+ * query, nothing percent-encoded, and at most a short anchor. A trusted host is otherwise a place
+ * a page that had been made to run code could put the script (in the path, the query, the
+ * fragment) and hand it to the browser with no question (red/blue audit of 23 November 2026, D1).
+ * A test holds this to every such link the web app has.
+ */
+function plainAddress(url: string, parsed: URL): boolean {
+  if (url.length > MAX_TRUSTED_ADDRESS || parsed.search !== '' || url.includes('?')) return false;
+  if (!/^[A-Za-z0-9._~/-]*$/.test(parsed.pathname)) return false;
+  return /^(?:#[A-Za-z0-9._-]{0,64})?$/.test(parsed.hash);
+}
+
 /** Whether a page may send `url` to the browser without asking: one of Drafter's own links. */
 export function trustedExternal(url: string): boolean {
   let parsed: URL;
@@ -291,10 +307,13 @@ export function trustedExternal(url: string): boolean {
   if (parsed.port !== '') return false;
   const host = parsed.hostname.toLowerCase();
   if (host === 'github.com') {
-    const [, owner, repo] = parsed.pathname.split('/');
-    return owner?.toLowerCase() === 'cschweda' && repo?.toLowerCase() === 'drafter';
+    const [, owner, repo, ...rest] = parsed.pathname.split('/');
+    if (owner?.toLowerCase() !== 'cschweda' || repo?.toLowerCase() !== 'drafter') return false;
+    // The report the app builds for a new issue carries what the writer typed, in its query.
+    if (rest.join('/') === 'issues/new') return true;
+    return plainAddress(url, parsed);
   }
-  return TRUSTED_HOSTS.has(host);
+  return TRUSTED_HOSTS.has(host) && plainAddress(url, parsed);
 }
 
 /** The maintainer's address, the one `mailto:` the app hands to the system (apps/web/app/report/issue.ts). */
