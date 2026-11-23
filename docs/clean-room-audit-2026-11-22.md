@@ -314,7 +314,7 @@ The maintainer answered the open questions the next day, and the fixes went in w
 | Question 2, finding 5: the attribute name | "Not sure" | Removed from the plan. No code used it |
 | Question 3: where the real samples live | In `samples/fdx/` of the main checkout, kept out by that checkout's local exclude file only | `.gitignore` now closes `samples/fdx/` to everything but its README and Drafter's two synthetic files |
 | Question 4, finding 6: were the sessions given the rule | Yes | The three plans say so, with the date it was recorded |
-| Question 5, finding 8: "Beat Board" | It is Final Draft's name, from the app itself | Drafter's planned feature gets its own name before it is built. The rename is still to do |
+| Question 5, finding 8: "Beat Board" | It is Final Draft's name, from the app itself | Drafter's planned feature is now the Wall, in every living document and comment, and its block in the file is `/* the wall` |
 | Question 6: the npm package | Not answered here | Still open |
 | Finding 1: the film reference | | Replaced in the layout tests, two comments, and the changelog |
 | Finding 2: `DEPENDENCIES.md` | | The two rows, six edges, and the font are added |

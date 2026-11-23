@@ -424,7 +424,7 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 
 **To come**
 
-- The Workbook's cards (the Beat Board, taken into Plan F): a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
+- The Workbook's cards (the Wall, taken into Plan F): a free canvas of idea cards to color, link, and move into the outline. The ideas live in the file as Fountain.
 - Storylines: tag scenes with A, B, and C plots, each in its own color, and see them as lanes along the outline's page timeline, on the cards, and in the script's margin.
 - The built-in Reference tab.
 - A script map, as the Structure strip's **Color by**: every scene's block colored by INT/EXT, day or night, storyline, or scene color (decided with Plan E's design).

@@ -58,7 +58,7 @@ People will find drafter.dev through search and shared links, many of them on ph
 
 **Non-goals for Phase 1.** Each has a later home (§14):
 
-- The Outline, Cards, Notes, Stats, and Reference tabs; the Beat Board and storylines; writing history by day; spellcheck with nspell; snapshot history and Compare (Phase 2).
+- The Outline, Cards, Notes, Stats, and Reference tabs; the Wall and storylines; writing history by day; spellcheck with nspell; snapshot history and Compare (Phase 2).
 - Final Draft import and export; the TV, radio, and UK templates; user templates (Phase 3).
 - Read aloud; revision marks and colored pages; the "clean" display mode; the guided install flow (Phase 4).
 - Direct Open and Save for Dropbox and Google Drive (a later phase).
@@ -439,7 +439,7 @@ None of them is a screenwriting tool. `@codemirror/language` supplies folding, n
   - a sprint timer, a daily goal, and counts
   - the Inform-style layout, with the dark theme by default
 - **Phase 2** adds:
-  - a **Beat Board**
+  - the **Wall**
   - **storylines**
   - writing statistics by day, kept on the device
   - testing with NVDA and VoiceOver
@@ -450,9 +450,9 @@ None of them is a screenwriting tool. `@codemirror/language` supplies folding, n
   - production revisions: locked pages (12A), scenes marked OMITTED, and scene numbers that start anywhere
 - **A later phase** adds direct Open and Save for Dropbox and Google Drive. People sign in with Dropbox or Google in their own window, never with Drafter, and nothing passes through a Drafter server. It needs an app registered with each service, a verified domain, and a privacy page.
 
-**Call: Beat Board and storylines in Phase 2,** with the Outline and Cards they build on, and their shape here:
-- **The Beat Board** is a free canvas of idea cards that can be colored, linked, and moved into the outline. The ideas live in the file as Fountain: placed beats are synopses (`=` lines), and beats not yet placed wait in a boneyard section that never prints. Where each card sits, its color, and the links between cards travel in the metadata block. *Changed by the [Phase 2 design](drafter-phase2-design.md) §5.6:* the cards, with their places, colors, and links, live in one Beat Board block (a boneyard just before the metadata block), not in the metadata block. Every drag has a keyboard equivalent, and the board can also be read as a list (architecture §12).
-- **Storylines** tag scenes with A, B, and C plots, or with names, each in its own color, stored in the metadata block like scene colors. *Changed by the Phase 2 design §5.4–5.5 and §13:* a scene's storylines are header notes in the scene (`[[Storyline: A]]`), as its color is (`[[Color: blue]]`); the metadata block keeps each storyline's name and color. The Outline shows them as lanes along a timeline measured in pages; the Cards and the Beat Board are colored by them; and the Script pane can mark them in the margin.
+**Call: the Wall and storylines in Phase 2,** with the Outline and Cards they build on, and their shape here:
+- **The Wall** is a free canvas of idea cards that can be colored, linked, and moved into the outline. The ideas live in the file as Fountain: placed beats are synopses (`=` lines), and beats not yet placed wait in a boneyard section that never prints. Where each card sits, its color, and the links between cards travel in the metadata block. *Changed by the [Phase 2 design](drafter-phase2-design.md) §5.6:* the cards, with their places, colors, and links, live in one Wall block (a boneyard just before the metadata block), not in the metadata block. Every drag has a keyboard equivalent, and the board can also be read as a list (architecture §12).
+- **Storylines** tag scenes with A, B, and C plots, or with names, each in its own color, stored in the metadata block like scene colors. *Changed by the Phase 2 design §5.4–5.5 and §13:* a scene's storylines are header notes in the scene (`[[Storyline: A]]`), as its color is (`[[Color: blue]]`); the metadata block keeps each storyline's name and color. The Outline shows them as lanes along a timeline measured in pages; the Cards and the Wall are colored by them; and the Script pane can mark them in the margin.
 
 **Call: these stay off the roadmap:**
 - real-time collaboration and cloud workspaces, which need accounts and a server
@@ -488,7 +488,7 @@ Each is marked **Call** where it appears.
 | 11 | The manifest and service worker ship in Phase 1, with a Reload prompt for updates. |
 | 12 | Phones show one pane at a time and open on the Script pane, with no phone-only tools. |
 | 13 | The deploy configuration lives in the repository; Phase 1 is checked on deploy previews and published from `main` when done, with production publishing held back until then. |
-| 14 | The Beat Board and storylines in Phase 2, in the shape described; what stays off the roadmap. |
+| 14 | The Wall and storylines in Phase 2, in the shape described; what stays off the roadmap. |
 
 ## 16. Left to the builder
 

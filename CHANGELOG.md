@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - **The third clean-room audit, and its fixes** ([the audit](docs/clean-room-audit-2026-11-22.md)). It found no copied code, no screenwriting package or converter, and no file from another app. Fixed: a film reference that had come back in the layout tests; three small values in the Final Draft import's tests and notes that had come from a real sample, now invented; and records that had fallen behind (`DEPENDENCIES.md`, the clean-room rules, three plans). `.gitignore` now keeps any real Final Draft file out of `samples/fdx/`. Nothing a writer sees changes.
+- **The planned canvas of idea cards is now called the Wall.** Its working name turned out to be the name of a Final Draft feature. Living documents and code comments use the new name, and the block that will hold its cards in a script is `/* the wall`; no released version ever wrote the old marker, so no file changes meaning.
 
 ## [0.27.3] - 2026-11-22
 

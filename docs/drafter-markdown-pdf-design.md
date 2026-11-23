@@ -160,7 +160,7 @@ The Markdown PDF takes v0.16.0, so the Phase 2 plans after the Structure strip e
 | Structure strip | v0.15.0 | v0.15.0 |
 | **Markdown PDF** | — | **v0.16.0** |
 | E — Seeing the script | v0.16.0 | v0.17.0 |
-| F — The Beat Board | v0.17.0 | v0.18.0 |
+| F — The Wall | v0.17.0 | v0.18.0 |
 | G — Reader notes | v0.18.0 | v0.19.0 |
 | H — Reference | v0.19.0 | v0.20.0 |
 

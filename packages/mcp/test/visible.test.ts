@@ -43,7 +43,7 @@ describe('visible', () => {
   });
 
   it('the metadata block never shows, even included', () => {
-    const board = '/* beat board\n{"cards":[]}\n*/\n\n';
+    const board = '/* the wall\n{"cards":[]}\n*/\n\n';
     const source = `INT. RADIO ROOM - NIGHT\n\nStatic.\n\n${board}${META}`;
     const shown = all(source, ['notes', 'boneyard']);
     expect(shown.text).toBe('INT. RADIO ROOM - NIGHT\n\nStatic.');

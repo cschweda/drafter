@@ -77,9 +77,9 @@ describe('hasStrayBoneyard', () => {
 });
 
 describe('bodyEnd', () => {
-  test('leaves out the metadata block and the beat board before it', () => {
+  test('leaves out the metadata block and the wall before it', () => {
     const both = parse(
-      'INT. A - DAY\n\nOne.\n\n/* beat board\n= An idea.\n*/\n\n/* drafter\n{"v":1}\n*/\n',
+      'INT. A - DAY\n\nOne.\n\n/* the wall\n= An idea.\n*/\n\n/* drafter\n{"v":1}\n*/\n',
     );
     expect(bodyEnd(both)).toBe(both.blocks.length - 2);
     const meta = parse('INT. A - DAY\n\nOne.\n\n/* drafter\n{"v":1}\n*/\n');
