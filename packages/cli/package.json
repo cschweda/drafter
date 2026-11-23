@@ -43,6 +43,6 @@
     "@drafter/render-text": "workspace:*",
     "@drafter/story-map": "workspace:*",
     "@drafter/templates": "workspace:*",
-    "commander": "^15.0.0"
+    "commander": "^15.1.0"
   }
 }
