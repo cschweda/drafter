@@ -173,6 +173,21 @@ describe('drafter build', () => {
     },
   );
 
+  it('takes the Story Atlas by its old flag or its new one, not both', async () => {
+    const result = await drafter(
+      'build',
+      short,
+      '--story-map',
+      join(dir(), 'a.html'),
+      '--story-atlas',
+      join(dir(), 'b.html'),
+    );
+    expect(result.code).toBe(1);
+    expect(result.err).toMatch(/give one of them/);
+    expect(existsSync(join(dir(), 'a.html'))).toBe(false);
+    expect(existsSync(join(dir(), 'b.html'))).toBe(false);
+  });
+
   it("won't write over the template it was given", async () => {
     const template = join(dir(), 'tpl.json');
     writeFileSync(template, '{"id":"mine"}');
