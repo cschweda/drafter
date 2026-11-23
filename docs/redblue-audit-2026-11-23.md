@@ -11,7 +11,7 @@ A second team then audited the findings and the fixes; its result is [at the end
 **Date:** 2026-11-23
 **Red team:** five AI agents (Claude), working read-only on the code but for throwaway proof-of-concept tests they deleted. No pushes, no publishing, and no requests to anyone but plain reads of drafter.dev's public files and of this repository's public settings.
 **Blue team:** an AI agent (Claude), who checked and fixed.
-**Code audited:** `staging` at `433eb449` (v0.27.4 and the tip jar) with the work then pending for v0.28.0: the guard tests, the save state in the status bar, the Story Atlas rename, and a count of conversions that was dropped the same day (`audit/red-blue-2026-11-23` at `41944a71`). **The fixes are on a branch from `433eb449`**, not from that audited tree: they were written and tested without the pending work, and meet it when both are merged into `staging`. So this record says "Story Atlas" where the fix branch's own code still says "story map".
+**Code audited:** `staging` at `433eb449` (v0.27.4 and the tip jar) with the work then pending for v0.28.0: the guard tests, the save state in the status bar, the Story Atlas rename, and a count of conversions that was dropped the same day (`audit/red-blue-2026-11-23` at `41944a71`). **The fixes were written on a branch from `433eb449`**, not from that audited tree, and tested without the pending work; `staging` with the Story Atlas rename was merged into the branch afterwards, and the unit suite and the browser tests for the parts the fixes touch were run again on the result.
 **Overall result:** **PASS WITH FINDINGS.**
 
 - **No attack ran code from a script, a file, or an export**, made file content into markup, got past the security policy, or reached the network from a page.
@@ -124,9 +124,8 @@ Not run with this audit:
 - a browser on the red team's timings, which were measured in Node on the functions the page calls;
 - a release build from a tag, so the change that turns its caches off (S3) has never executed;
 - the report function on Netlify, whose new checks are tested against the handler alone;
-- the fixes together with the pending work the red team read (above).
+- the whole browser suite: nineteen of its files, the ones for the parts the fixes touch, were run in all five browsers on the merged branch (2,064 tests), and the rest is left to the pull request's checks.
 
-The browser tests for the parts of the app the fixes touch were run in all five browsers.
 
 ## The audit of this audit
 
