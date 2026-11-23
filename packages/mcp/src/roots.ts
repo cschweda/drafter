@@ -27,6 +27,26 @@ export function hiddenBelow(real: string, root: string, platform: NodeJS.Platfor
   return below.split(sep).some((part) => part.startsWith('.'));
 }
 
+/** Folders that hold everyone's files, or every drive: as much a whole drive as `/` is. */
+const TOO_BROAD = new Set(['/Users', '/home', '/Volumes', '/mnt', '/media', '/System/Volumes']);
+
+/**
+ * Whether a folder is a whole volume though it isn't `/`: a drive mounted somewhere
+ * (`/Volumes/Work`, `/System/Volumes/Data`), which is on another device than the folder that
+ * holds it, or one of the folders that hold every user's files. The path's root alone caught only
+ * `/` (red/blue audit of 23 November 2026, M5).
+ */
+export async function wholeVolume(real: string, platform: NodeJS.Platform): Promise<boolean> {
+  if (platform === 'win32') return false;
+  if (TOO_BROAD.has(real)) return true;
+  try {
+    const [here, above] = await Promise.all([stat(real), stat(posix.dirname(real))]);
+    return here.dev !== above.dev;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Each folder's real path, checked to be a folder and not a whole drive. A folder that is, or is
  * inside, another one given is the same root, so it is dropped: every file has one name. Names are
@@ -47,7 +67,7 @@ export async function resolveRoots(
     } catch {
       throw new StartError(`${folder} isn’t a folder.`);
     }
-    if (path.parse(real).root === real)
+    if (path.parse(real).root === real || (await wholeVolume(real, platform)))
       throw new StartError(`Choose a folder, not a whole drive: ${folder}.`);
     reals.push(real);
   }

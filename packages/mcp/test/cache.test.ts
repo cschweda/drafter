@@ -41,6 +41,12 @@ describe('the parse cache', () => {
     expect(cache.size).toBe(1);
     expect(cache.get('/huge', CACHE_MAX_BYTES * 2, 1)).toBe('huge');
     // Replacing a file's entry, or dropping a changed one, keeps the count of bytes right.
+    // A packed file is charged by the text inside it, not its size on disk.
+    const packed = new LoadCache<string>();
+    packed.set('/a.highland', 1000, 1, 'a', CACHE_MAX_BYTES - 10);
+    packed.set('/b.highland', 1000, 1, 'b', 20);
+    expect(packed.size).toBe(1);
+    expect(packed.get('/b.highland', 1000, 1)).toBe('b');
     cache.set('/huge', 10, 2, 'small now');
     expect(cache.bytes).toBe(10);
     expect(cache.get('/huge', 11, 3)).toBeUndefined();

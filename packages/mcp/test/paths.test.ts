@@ -200,6 +200,14 @@ describe('pathProblem and resolvePath', () => {
     expect(
       await refusal(resolvePath('Scripts/Private/diary.fountain', roots, platform, 'file')),
     ).toBe(OUTSIDE);
+    // What isn't there, past a link that leads out, gets the same answer as what is: a different
+    // one would say which files exist outside the folder (red/blue audit, 2026-11-23, M4).
+    expect(
+      await refusal(resolvePath('Scripts/Private/nothing.fountain', roots, platform, 'file')),
+    ).toBe(OUTSIDE);
+    expect(await refusal(resolvePath('Scripts/Private/no/such', roots, platform, 'folder'))).toBe(
+      OUTSIDE,
+    );
     // A link that stays inside is the file it leads to.
     symlinkSync(
       join(t, 'Scripts', 'Signal Hill', '101.fountain'),

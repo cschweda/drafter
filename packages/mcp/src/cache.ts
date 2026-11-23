@@ -16,7 +16,7 @@ export class LoadCache<T> {
   readonly #max: number;
   readonly #maxBytes: number;
   #bytes = 0;
-  readonly #entries = new Map<string, { size: number; mtimeMs: number; value: T }>();
+  readonly #entries = new Map<string, { size: number; mtimeMs: number; cost: number; value: T }>();
 
   constructor(max: number = CACHE_MAX, maxBytes: number = CACHE_MAX_BYTES) {
     this.#max = max;
@@ -29,7 +29,7 @@ export class LoadCache<T> {
     if (!entry) return undefined;
     this.#entries.delete(real);
     if (entry.size !== size || entry.mtimeMs !== mtimeMs) {
-      this.#bytes -= entry.size;
+      this.#bytes -= entry.cost;
       return undefined;
     }
     // Used again: to the back of the queue.
@@ -37,26 +37,31 @@ export class LoadCache<T> {
     return entry.value;
   }
 
-  set(real: string, size: number, mtimeMs: number, value: T): void {
+  /**
+   * `size` and `mtimeMs` say which version of the file this is. `cost` is what it is charged
+   * against the size limit: the length of the text that was parsed, which for a packed file (a
+   * `.highland`, an e-book) is many times its size on disk.
+   */
+  set(real: string, size: number, mtimeMs: number, value: T, cost: number = size): void {
     const before = this.#entries.get(real);
     if (before) {
-      this.#bytes -= before.size;
+      this.#bytes -= before.cost;
       this.#entries.delete(real);
     }
-    this.#entries.set(real, { size, mtimeMs, value });
-    this.#bytes += size;
+    this.#entries.set(real, { size, mtimeMs, cost, value });
+    this.#bytes += cost;
     // The oldest go until it fits, by count and by size; the one just put in always stays.
     while (
       this.#entries.size > 1 &&
       (this.#entries.size > this.#max || this.#bytes > this.#maxBytes)
     ) {
       const oldest = this.#entries.keys().next().value as string;
-      this.#bytes -= (this.#entries.get(oldest) as { size: number }).size;
+      this.#bytes -= (this.#entries.get(oldest) as { cost: number }).cost;
       this.#entries.delete(oldest);
     }
   }
 
-  /** The bytes of source text behind what it holds. */
+  /** What it holds, as charged: the length of the text behind each entry. */
   get bytes(): number {
     return this.#bytes;
   }

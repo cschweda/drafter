@@ -110,7 +110,22 @@ export async function resolvePath(
     real = await realpath(join(root.real, ...rest));
   } catch (error) {
     const code = (error as { code?: string }).code;
-    if (code === 'ENOENT') throw new Missing(`There’s no ${want} at ${shown}.`);
+    if (code === 'ENOENT') {
+      // Where the part of it that is there really leads: past a link out of the folder, a file
+      // that isn't there gets the answer one that is would, or the two answers would say which
+      // files exist outside (red/blue audit of 23 November 2026, M4).
+      for (let kept = rest.length - 1; kept >= 0; kept--) {
+        let above: string;
+        try {
+          above = await realpath(join(root.real, ...rest.slice(0, kept)));
+        } catch {
+          continue;
+        }
+        if (!isInside(above, root.real, platform)) throw new Refusal(OUTSIDE);
+        break;
+      }
+      throw new Missing(`There’s no ${want} at ${shown}.`);
+    }
     if (code === 'ELOOP') throw new Refusal(`${shown} is a loop of links.`);
     throw new Refusal(`Can’t read ${shown}: ${reason(error)}.`);
   }
