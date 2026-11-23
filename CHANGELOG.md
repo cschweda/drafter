@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.27.4] - 2026-11-23
+
+**Save says where it went, and a script comes back from Final Draft.** Saving no longer moves anything in the top bar, the status bar says which file a save went to, and Safari and Firefox ask what to call a script the first time it is saved. A script exported as a Final Draft file, opened there, and saved now comes back with its sections, synopses, notes, and title page: found by sending real files through Final Draft 13 and reading what came back. Also here: the third clean-room audit and its fixes.
+
 ### Changed
 
 - **The third clean-room audit, and its fixes** ([the audit](docs/clean-room-audit-2026-11-22.md)). It found no copied code, no screenwriting package or converter, and no file from another app. Fixed: a film reference that had come back in the layout tests; three small values in the Final Draft import's tests and notes that had come from a real sample, now invented; and records that had fallen behind (`DEPENDENCIES.md`, the clean-room rules, three plans). `.gitignore` now keeps any real Final Draft file out of `samples/fdx/`. Nothing a writer sees changes.
@@ -1529,7 +1533,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.27.3...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.27.4...HEAD
+[0.27.4]: https://github.com/cschweda/drafter/compare/v0.27.3...v0.27.4
 [0.27.3]: https://github.com/cschweda/drafter/compare/v0.27.2...v0.27.3
 [0.27.2]: https://github.com/cschweda/drafter/compare/v0.27.1...v0.27.2
 [0.27.1]: https://github.com/cschweda/drafter/compare/v0.27.0...v0.27.1
