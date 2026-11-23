@@ -5,6 +5,7 @@ import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, it } from 'vitest';
 import { BREAKDOWN_COLUMNS, breakdownRows, toCsv } from '../src/breakdown';
 import { productionLayout } from '../src/layout';
+import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 const screenplay = builtins['us-screenplay'] as Template;
 const play = builtins['stage-play-standard'] as Template;
@@ -151,6 +152,13 @@ describe('breakdownRows', () => {
 });
 
 describe('toCsv', () => {
+  it('quotes a semicolon and a tab, and guards a formula after one (red/blue audit, W15)', () => {
+    expect(toCsv([['a;b', 'a\tb']])).toBe('"a;b","a\tb"\r\n');
+    expect(toCsv([['KITCHEN;=HYPERLINK("x")', 'a\t=1', 'a; +1', 'a;b=1']])).toBe(
+      '"\'KITCHEN;=HYPERLINK(""x"")","\'a\t=1","\'a; +1","a;b=1"\r\n',
+    );
+  });
+
   it('quotes commas, quotes, and line breaks', () => {
     const csv = toCsv([['a', 'b,c', 'say "hi"', 'two\nlines', 'cr\rhere', '']]);
     expect(csv).toBe('a,"b,c","say ""hi""","two\nlines","cr\rhere",\r\n');
@@ -166,7 +174,8 @@ describe('toCsv', () => {
     const csv = toCsv([
       ['=SUM(A1)', '+1', '-2', '@WREN', '\tx', '\rx', '=a,b', 'plain', '', 'a=b', '-'],
     ]);
-    expect(csv).toBe(`'=SUM(A1),'+1,'-2,'@WREN,'\tx,"'\rx","'=a,b",plain,,a=b,'-\r\n`);
+    // A tab is quoted too: where it is the list separator, an unquoted one would split the field.
+    expect(csv).toBe(`'=SUM(A1),'+1,'-2,'@WREN,"'\tx","'\rx","'=a,b",plain,,a=b,'-\r\n`);
   });
 
   it('neutralises a planted location, synopsis, and cue in the breakdown', () => {
@@ -176,4 +185,31 @@ describe('toCsv', () => {
     expect(csv).toContain(`"'=HYPERLINK(""https://x/?""&B2,""Open"")"`);
     expect(csv).not.toMatch(/(^|,)=/m);
   });
+});
+
+describe('a breakdown of a long script', () => {
+  it(
+    'is made in time that grows with its scenes, not with the scenes times the cast (W9)',
+    () => {
+      // A few busy scenes, then `n` empty ones: each empty scene used to look through every
+      // character's whole list of scenes.
+      const make = (n: number) => {
+        const lines: string[] = [];
+        for (let scene = 0; scene < 40; scene++) {
+          lines.push(`INT. HALL ${scene} - DAY`, '');
+          for (let k = 0; k < 100; k++) lines.push(`@P${k}`, 'Hi.', '');
+        }
+        for (let k = 0; k < n; k++) lines.push(`.B${k}`, '');
+        const doc = parse(lines.join('\n'));
+        return { doc, layout: paginate(doc, screenplay, { sceneNumbers: 'none' }) };
+      };
+      const { growth } = scaling(
+        make,
+        ({ doc, layout }) => breakdownRows(doc, screenplay, layout),
+        1500,
+      );
+      expect(growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
 });

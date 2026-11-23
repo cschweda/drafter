@@ -78,12 +78,15 @@ export async function renderTablePdf(
   const fitBold = (s: string) => measure.width(s, 'textBold', SIZE);
 
   const total = page.width - 2 * MARGIN;
-  const widest = table.columns.map((name, c) =>
-    Math.max(
-      fitBold(name),
-      ...table.rows.map((row) => Math.max(...(row[c] ?? '').split(/\r?\n/).map(fitRegular), 0)),
-    ),
-  );
+  // Each column's widest line, found with a loop: handing every row to `Math.max` at once ran out
+  // of stack at 130,000 rows (red/blue audit of 23 November 2026, W16).
+  const widest = table.columns.map((name, c) => {
+    let width = fitBold(name);
+    for (const row of table.rows) {
+      for (const line of (row[c] ?? '').split(/\r?\n/)) width = Math.max(width, fitRegular(line));
+    }
+    return width;
+  });
   const natural = widest.map((w) => Math.max(w + 2 * PAD, MIN_COLUMN));
   const sum = natural.reduce((a, b) => a + b, 0);
   // Scale to the page; a column keeps its minimum while the others give way, and if the minimums
