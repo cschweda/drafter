@@ -21,7 +21,7 @@ Today Drafter can number scenes on export and show changes on screen, but nothin
 
 ## 3. Non-goals
 
-- **Final Draft revision round-trip, for now.** Final Draft's `Revisions`, `RevisionID`, and `LockedPages` are not written or read in v0.27.0. The project's rule is to build `.fdx` structures only from real Final Draft files the maintainer supplies ([FDX test sources](FORMATS.md); the 2026-11 decision that an AI-generated `.fdx` template contradicted real files). Scene numbers already round-trip. When the maintainer supplies a real revised `.fdx`, its revisions are a follow-up ([§13](#13-follow-ups)).
+- **Final Draft revision round-trip, for now.** Final Draft's `Revisions`, `RevisionID`, and `LockedPages` are not written or read in v0.27.0. The project's rule is to build `.fdx` structures only from real Final Draft files the maintainer supplies ([the clean-room rules](clean-room.md), "Final Draft support comes from the files": in November 2026 an AI-written `.fdx` template contradicted the real files and was set aside). Scene numbers already round-trip. When the maintainer supplies a real revised `.fdx`, its revisions are a follow-up ([§13](#13-follow-ups)).
 - **Scheduling.** The breakdown is a report to take into a scheduling app, not a stripboard, a calendar, or a day-out-of-days.
 - **Element-level breakdown tagging** (props, wardrobe, vehicles, extras marked in the text). The breakdown has what Drafter already knows: places, times, and the cast. Tagging is a later idea, not this release.
 - **Multiple people revising at once.** Co-writing is Phase 5; this design assumes one writer holds the script.

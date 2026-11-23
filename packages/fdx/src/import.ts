@@ -574,7 +574,7 @@ class Importer {
   /**
    * The file sets its Character element in capitals (`ElementSettings Type="Character"`, with
    * `AllCaps` in its `FontSpec`'s `Style`), as Final Draft's own files do: a name it holds as
-   * `McCall` prints MCCALL there. A forced cue prints as typed in Drafter, so such a name is
+   * `McBride` prints MCBRIDE there. A forced cue prints as typed in Drafter, so such a name is
    * written in capitals. A file that doesn't say so, as Drafter's own exports don't, keeps each
    * name as it is.
    */
