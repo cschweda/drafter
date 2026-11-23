@@ -51,12 +51,19 @@ const nodeIO = (): IO => ({
  * scripts, and templates can come from anyone, and a raw escape sequence in
  * one could restyle, retitle, or rewrite the user's terminal.
  */
-function inert(text: string): string {
+export function inert(text: string): string {
   let out = '';
   for (const char of text) {
     const c = char.charCodeAt(0);
+    // And what can reorder or split the line a message is on: the direction overrides and
+    // isolates, and the line and paragraph separators (red/blue audit of 23 November 2026, C5).
     const control =
-      (c < 0x20 && c !== 0x09 && c !== 0x0a && c !== 0x0c) || (c >= 0x7f && c <= 0x9f);
+      (c < 0x20 && c !== 0x09 && c !== 0x0a && c !== 0x0c) ||
+      (c >= 0x7f && c <= 0x9f) ||
+      (c >= 0x202a && c <= 0x202e) ||
+      (c >= 0x2066 && c <= 0x2069) ||
+      c === 0x2028 ||
+      c === 0x2029;
     out += control ? `\\u${c.toString(16).padStart(4, '0')}` : char;
   }
   return out;
@@ -207,10 +214,23 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
     );
   }
   const source = resolve(io.cwd, input);
+  // The same file, however it is named: by another case on a disk that folds case, or by a link.
+  // Comparing the two paths as written let `--txt SCRIPT.FOUNTAIN` write over `script.fountain`
+  // (red/blue audit of 23 November 2026, C1).
+  const sameFile = async (a: string, b: string) => {
+    if (a === b) return true;
+    const [one, two] = await Promise.all(
+      [a, b].map((path) => stat(path, { bigint: true }).catch(() => null)),
+    );
+    return one !== null && two !== null && one.dev === two.dev && one.ino === two.ino;
+  };
+  const targets = new Set<string>();
   for (const [, target] of outputs) {
-    if (target !== '-' && resolve(io.cwd, target) === source) {
-      throw new CliError(`won't write over the input, ${input}`);
-    }
+    if (target === '-') continue;
+    const path = resolve(io.cwd, target);
+    if (await sameFile(path, source)) throw new CliError(`won't write over the input, ${input}`);
+    if (targets.has(path)) throw new CliError(`won't write two outputs to one file, ${target}`);
+    targets.add(path);
   }
 
   const { doc, template, layout, header, text, bytes } = await load(input, options, io);

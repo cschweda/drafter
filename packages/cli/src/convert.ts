@@ -9,12 +9,13 @@ import {
   lstat,
   mkdir,
   readdir,
+  realpath,
   rename,
   stat,
   unlink,
   writeFile,
 } from 'node:fs/promises';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve, sep } from 'node:path';
 import { ArchiveError, importKindOf, MAX_SCRIPT_BYTES } from '@drafter/archive';
 import { Refused, readScriptFile, reason, type ScriptRead } from '@drafter/archive/node';
 import { FdxError } from '@drafter/fdx';
@@ -43,6 +44,8 @@ interface Job {
   shown: string;
   target: string;
   targetShown: string;
+  /** With `--out`: the folder every file must end up in, whatever links lie on the way. */
+  outDir?: string;
 }
 
 /**
@@ -212,7 +215,7 @@ function jobFor(
     };
   }
   const under = join(dirname(rel), name);
-  return { source, shown, target: join(outDir, under), targetShown: join(outShown, under) };
+  return { source, shown, target: join(outDir, under), targetShown: join(outShown, under), outDir };
 }
 
 /**
@@ -267,6 +270,22 @@ async function convertOne(job: Job, read: ScriptRead, force: boolean): Promise<O
       kind: 'refused',
       reason: `can't make the folder ${dirname(job.targetShown)}: ${folderReason(error)}`,
     };
+  }
+  // Where the folder really is: a link planted in the output folder, named as a folder of the
+  // source, would lead the file out of it (red/blue audit of 23 November 2026, C2).
+  if (job.outDir !== undefined) {
+    const [folder, out] = await Promise.all([
+      realpath(dirname(job.target)).catch(() => null),
+      realpath(job.outDir).catch(() => null),
+    ]);
+    const inside =
+      folder !== null && out !== null && (folder === out || folder.startsWith(out + sep));
+    if (!inside) {
+      return {
+        kind: 'refused',
+        reason: `${dirname(job.targetShown)} leads outside the output folder`,
+      };
+    }
   }
   try {
     if (!(await publish(job.target, text, force))) return { kind: 'skipped' };
