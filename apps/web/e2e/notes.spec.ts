@@ -2,6 +2,7 @@ import { expect, type Page, test } from './fixtures';
 import {
   editor,
   problemsList,
+  releaseFixture,
   runCommand,
   setText,
   showProblems,
@@ -343,6 +344,7 @@ test.describe('the Notes tab', () => {
     const dialog = page.getByRole('dialog', { name: 'Categories for this note' });
     await expect(dialog).toBeVisible();
     // While the dialog is open, the note changes under it.
+    await releaseFixture(page);
     const changed = 'INT. HALL - DAY\n\nAnn waits. [[Check the dates[[later]]]]';
     await expect.poll(() => textOf(page)).toBe(changed);
     await dialog.getByRole('checkbox', { name: 'story' }).check();
@@ -376,6 +378,7 @@ test.describe('the Notes tab', () => {
     await page.keyboard.press('Shift+F10');
     await expect(rowMenu(page)).toBeVisible();
     // While the menu is open, a note goes in above Bob's: the list shifts under it.
+    await releaseFixture(page);
     await expect.poll(() => textOf(page)).toContain('[[Check the dates]][[later]]');
     await expect(rows(page)).toHaveCount(3);
     await rowMenu(page).getByRole('menuitem', { name: 'Delete' }).click();
@@ -428,6 +431,7 @@ test.describe('the Notes tab', () => {
     await page.keyboard.press('c');
     const dialog = page.getByRole('dialog', { name: 'Categories for this note' });
     await expect(dialog).toBeVisible();
+    await releaseFixture(page);
     await expect.poll(() => textOf(page)).toContain('A long note.');
     await dialog.getByRole('checkbox', { name: 'story' }).check();
     await dialog.getByRole('button', { name: 'Save' }).click();
