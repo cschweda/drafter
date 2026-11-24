@@ -1,0 +1,108 @@
+diff --git a/dev/lib/initialize/text.js b/dev/lib/initialize/text.js
+index af0ff9f50e4f912acde9c93b610413e2c1419254..9e16dab533320b27530c95d3aa19342a898e49eb 100644
+--- a/dev/lib/initialize/text.js
++++ b/dev/lib/initialize/text.js
+@@ -114,29 +114,28 @@ function createResolver(extraResolver) {
+ 
+   /** @type {Resolver} */
+   function resolveAllText(events, context) {
+-    let index = -1
+-    /** @type {number | undefined} */
+-    let enter
+-
+-    // A rather boring computation (to merge adjacent `data` events) which
+-    // improves mm performance by 29%.
+-    while (++index <= events.length) {
+-      if (enter === undefined) {
+-        if (events[index] && events[index][1].type === types.data) {
+-          enter = index
+-          index++
+-        }
+-      } else if (!events[index] || events[index][1].type !== types.data) {
+-        // Don’t do anything if there is one data token.
+-        if (index !== enter + 2) {
+-          events[enter][1].end = events[index - 1][1].end
+-          events.splice(enter + 2, index - enter - 2)
+-          index = enter + 2
+-        }
+-
+-        enter = undefined
++    // Drafter's patch: adjacent `data` events are merged in one pass. The original removed each
++    // run with a `splice`, which moves everything after it, so a paragraph of thousands of runs
++    // took the square of its length.
++    let index = 0
++    let kept = 0
++    while (index < events.length) {
++      const event = events[index]
++      if (event[1].type !== types.data) {
++        events[kept++] = event
++        index++
++        continue
+       }
++      // `event` enters a data token and the event after it exits it; every data event that
++      // follows is part of the run.
++      let end = index + 2
++      while (end < events.length && events[end][1].type === types.data) end++
++      if (end !== index + 2) event[1].end = events[end - 1][1].end
++      events[kept++] = event
++      if (index + 1 < events.length) events[kept++] = events[index + 1]
++      index = end
+     }
++    events.length = kept
+ 
+     return extraResolver ? extraResolver(events, context) : events
+   }
+diff --git a/lib/initialize/text.js b/lib/initialize/text.js
+index f9c110be7f67d070fb9f8c12cf436dc0efabcd3b..0a0569d4ed0b0e6fcd6f683b64dfc71b7623d86d 100644
+--- a/lib/initialize/text.js
++++ b/lib/initialize/text.js
+@@ -105,28 +105,29 @@ function createResolver(extraResolver) {
+ 
+   /** @type {Resolver} */
+   function resolveAllText(events, context) {
+-    let index = -1;
+-    /** @type {number | undefined} */
+-    let enter;
+-
+-    // A rather boring computation (to merge adjacent `data` events) which
+-    // improves mm performance by 29%.
+-    while (++index <= events.length) {
+-      if (enter === undefined) {
+-        if (events[index] && events[index][1].type === "data") {
+-          enter = index;
+-          index++;
+-        }
+-      } else if (!events[index] || events[index][1].type !== "data") {
+-        // Don’t do anything if there is one data token.
+-        if (index !== enter + 2) {
+-          events[enter][1].end = events[index - 1][1].end;
+-          events.splice(enter + 2, index - enter - 2);
+-          index = enter + 2;
+-        }
+-        enter = undefined;
++    // Drafter's patch: adjacent `data` events are merged in one pass. The original removed each
++    // run with a `splice`, which moves everything after it, so a paragraph of thousands of runs
++    // took the square of its length.
++    let index = 0;
++    let kept = 0;
++    while (index < events.length) {
++      const event = events[index];
++      if (event[1].type !== "data") {
++        events[kept++] = event;
++        index++;
++        continue;
+       }
++      // `event` enters a data token and the event after it exits it; every data event that
++      // follows is part of the run.
++      let end = index + 2;
++      while (end < events.length && events[end][1].type === "data") end++;
++      if (end !== index + 2) event[1].end = events[end - 1][1].end;
++      events[kept++] = event;
++      if (index + 1 < events.length) events[kept++] = events[index + 1];
++      index = end;
+     }
++    events.length = kept;
++
+     return extraResolver ? extraResolver(events, context) : events;
+   }
+ }

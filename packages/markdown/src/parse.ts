@@ -1,8 +1,9 @@
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFootnoteFromMarkdown } from 'mdast-util-gfm-footnote';
 import { gfmFootnote } from 'micromark-extension-gfm-footnote';
+import { closesTooOften } from './closings';
 import { containerDepth, MAX_NESTING } from './depth';
-import { denseMarks, MAX_BRACKETS, MAX_MARKS } from './marks';
+import { denseMarks } from './marks';
 import { markdownProse } from './meta';
 import { cutsOf, readInPieces, readPlain } from './pieces';
 import type { MdNode } from './types';
@@ -16,7 +17,7 @@ import type { MdNode } from './types';
 export class MarkedTooDensely extends Error {
   constructor() {
     super(
-      'This document has too many marks to read: thousands of * and _, of brackets, of underlined headings, or of HTML comments that never close.',
+      'This document has too many marks to read: thousands of * and _, of brackets, of underlined headings, of HTML comments that never close, or of lists and quotes that each end at a paragraph.',
     );
     this.name = 'MarkedTooDensely';
   }
@@ -100,8 +101,18 @@ export function parseMarkdown(source: string): MdNode {
   // A long document is read in pieces where it can be cut, each the plain way where it is plain
   // prose: the same tree, many times faster (`pieces.ts`).
   const cuts = cutsOf(text);
-  if (cuts.length === 0) return readWhole(text);
-  return readInPieces(text, cuts, (piece) => readPlain(piece) ?? readWhole(piece));
+  if (cuts.length === 0) return readGuarded(text);
+  return readInPieces(text, cuts, (piece) => readPlain(piece) ?? readGuarded(piece));
+}
+
+/**
+ * `text`, the whole document or a piece of it, read by the parser unless its lists and quotes
+ * would make the parser reread it thousands of times (`closings.ts`). A piece is read on its own,
+ * so only what a piece holds counts against it.
+ */
+function readGuarded(text: string): MdNode {
+  if (closesTooOften(text)) throw new MarkedTooDensely();
+  return readWhole(text);
 }
 
 /** `text` read by the parser in one go. */

@@ -15,11 +15,22 @@ import { type IsWord, mentions, type Presence, sceneBlocks } from './presence';
 export const MAX_PAIRED = 200;
 
 /**
- * The most pairs counted over the whole script. A scene's cap alone leaves many scenes that are
- * each just under it: a long file of them would still hold pairs without end. An ordinary script
- * uses a few thousand; once this is spent, later scenes add nothing to who shares scenes with whom.
+ * The most pairs kept over the whole script: who shares a scene with whom, each way. A scene's cap
+ * alone leaves many scenes that are each just under it, with speakers of their own: a long file of
+ * them would still hold pairs without end. Only a pair met for the first time spends this, so a
+ * script of any length with a cast of hundreds is counted in full; once it is spent, a new pair
+ * is left out, and the pairs already kept go on being counted.
  */
 export const PAIR_BUDGET = 1_000_000;
+
+/**
+ * The most counting done over the whole script: one for each pair in each scene, new or not. The
+ * pairs kept bound the memory; this bounds the time, which a file of thousands of scenes that each
+ * hold the same two hundred speakers would otherwise take in seconds. A script of 20,000 scenes
+ * with thirty people in every one of them spends under half of it; once it is spent, later scenes
+ * add nothing to who shares scenes with whom.
+ */
+export const PAIR_WORK = 20_000_000;
 
 export interface Character {
   /** The name in capitals: names that differ only in case are one character. */
@@ -187,16 +198,29 @@ export function castOf(
   // left out: its pairs are the square of the crowd (three thousand speakers in one scene, a
   // file of 32 KB, made nine million entries and ran a reader out of memory; red/blue audit of
   // 23 November 2026, M1), and a scene everyone is in says little about who plays opposite whom.
-  // The whole script has a budget too (`PAIR_BUDGET`).
+  // The whole script has two budgets too: for the pairs it keeps (`PAIR_BUDGET`), and for the
+  // counting (`PAIR_WORK`).
   const shared: Array<Map<number, number>> = characters.map(() => new Map());
   let pairsLeft = PAIR_BUDGET;
+  let workLeft = PAIR_WORK;
   for (const here of present) {
     if (here.length > MAX_PAIRED) continue;
-    pairsLeft -= here.length * (here.length - 1);
-    if (pairsLeft < 0) break;
-    for (const { row: a } of here) {
-      const counts = shared[a] as Map<number, number>;
-      for (const { row: b } of here) if (a !== b) counts.set(b, (counts.get(b) ?? 0) + 1);
+    workLeft -= (here.length * (here.length - 1)) / 2;
+    if (workLeft < 0) break;
+    for (let i = 0; i < here.length; i++) {
+      const a = (here[i] as InScene).row;
+      const mine = shared[a] as Map<number, number>;
+      for (let j = i + 1; j < here.length; j++) {
+        const b = (here[j] as InScene).row;
+        const theirs = shared[b] as Map<number, number>;
+        const met = mine.get(b);
+        if (met === undefined) {
+          if (pairsLeft < 2) continue;
+          pairsLeft -= 2;
+        }
+        mine.set(b, (met ?? 0) + 1);
+        theirs.set(a, (theirs.get(a) ?? 0) + 1);
+      }
     }
   }
 

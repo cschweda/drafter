@@ -7,6 +7,8 @@ FROM node:24.22.3-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48
 WORKDIR /app
 # The packages first, from the lockfile alone, so a change to the code doesn't download them again.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# The one patch to a dependency (pnpm-workspace.yaml, patchedDependencies): the install needs it.
+COPY patches ./patches
 RUN corepack enable && pnpm fetch
 COPY . .
 # Only the web app and what it needs, so no Electron download. The Licences page copies the licence

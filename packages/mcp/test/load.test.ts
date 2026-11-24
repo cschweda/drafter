@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { notAScript, refusalMessage, zipStored } from '@drafter/archive';
+import { deflateRawSync } from 'node:zlib';
+import { crc32, notAScript, refusalMessage, zipStored } from '@drafter/archive';
 import { toFdx } from '@drafter/fdx';
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
@@ -20,6 +21,45 @@ const SCREENPLAY = builtins['us-screenplay'] as Template;
 function writeBytes(path: string, bytes: Uint8Array): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, bytes);
+}
+
+/** A zip of one entry, deflated, as Highland writes its files: the text inside is far larger than the file. */
+function zipDeflated(name: string, data: Uint8Array): Uint8Array {
+  const packed = deflateRawSync(data);
+  const file = new TextEncoder().encode(name);
+  const local = new DataView(new ArrayBuffer(30));
+  local.setUint32(0, 0x04034b50, true);
+  local.setUint16(4, 20, true);
+  local.setUint16(8, 8, true);
+  local.setUint32(14, crc32(data), true);
+  local.setUint32(18, packed.length, true);
+  local.setUint32(22, data.length, true);
+  local.setUint16(26, file.length, true);
+  const central = new DataView(new ArrayBuffer(46));
+  central.setUint32(0, 0x02014b50, true);
+  central.setUint16(4, 20, true);
+  central.setUint16(6, 20, true);
+  central.setUint16(10, 8, true);
+  central.setUint32(16, crc32(data), true);
+  central.setUint32(20, packed.length, true);
+  central.setUint32(24, data.length, true);
+  central.setUint16(28, file.length, true);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(8, 1, true);
+  end.setUint16(10, 1, true);
+  end.setUint32(12, 46 + file.length, true);
+  end.setUint32(16, 30 + file.length + packed.length, true);
+  return new Uint8Array(
+    Buffer.concat([
+      new Uint8Array(local.buffer),
+      file,
+      packed,
+      new Uint8Array(central.buffer),
+      file,
+      new Uint8Array(end.buffer),
+    ]),
+  );
 }
 
 const script = (loaded: Loaded) => {
@@ -269,6 +309,19 @@ describe('every file is judged by what is inside it, as Open does', () => {
     const body2 = refusalOf(await open.call('script_overview', { script: 'Lib/grows.fdx' }));
     expect(body2.error).toBe('Can’t read that file: the script in it is larger than 5 MB.');
   }, 30_000);
+
+  it('a packed file is charged to the cache by the text inside it, not by its size', async () => {
+    const dir = tempFolder();
+    const text = 'INT. HALL - DAY\n\nANNA\nHello again.\n\n'.repeat(8000);
+    const bytes = zipDeflated('Draft.textbundle/text.fountain', new TextEncoder().encode(text));
+    expect(bytes.length).toBeLessThan(text.length / 50);
+    writeBytes(join(dir, 'Lib', 'draft.highland'), bytes);
+    const ctx = await contextFor([join(dir, 'Lib')]);
+    const loaded = script(await load('Lib/draft.highland', ctx));
+    expect(loaded.index.scenes).toHaveLength(8000);
+    // A cache that charged the file's few kilobytes would hold hundreds of these scripts.
+    expect(ctx.cache.bytes).toBeGreaterThanOrEqual(text.length);
+  });
 
   it('over 5 MB, a file is judged by its first bytes, then refused by its size', async () => {
     const dir = tempFolder();

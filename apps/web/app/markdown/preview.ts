@@ -39,6 +39,6 @@ export function previewProblem(error: unknown): PreviewProblem {
 export const PREVIEW_PROBLEMS: Readonly<Record<PreviewProblem, string>> = {
   deep: 'This document is nested too deeply to preview. Your text is safe in the Source.',
   dense:
-    'A paragraph here has thousands of * or _ marks, too many to preview. Your text is safe in the Source.',
+    'This document has too many marks to preview: thousands of * or _, of brackets, or of lists and quotes that each end at a paragraph. Your text is safe in the Source.',
   other: 'The Preview couldn’t show this document. Your text is safe in the Source.',
 };

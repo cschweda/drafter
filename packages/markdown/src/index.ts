@@ -1,3 +1,4 @@
+export { CLOSING_BUDGET, closesTooOften, closingCost } from './closings';
 export { containerDepth, MAX_NESTING } from './depth';
 export {
   DEEP_BRACKETS,
