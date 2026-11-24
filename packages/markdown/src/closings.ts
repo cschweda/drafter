@@ -21,9 +21,10 @@
 import { MAX_NESTING } from './depth';
 
 /**
- * The most looking back a document, or a piece of one, may cost: the lines read so far, summed
- * over every line that makes the parser look. The worst shape spends this in about two seconds on
- * the maintainer's machine; 2,000 lists that each end at a paragraph spend a twelfth of it.
+ * The most looking back a document, or a piece of one, may cost: what the parser holds so far (a
+ * line, and one more for each container open on it), for each container closed, summed over every
+ * line that makes the parser look. The worst shapes spend this in a second or two on the
+ * maintainer's machine; 2,000 lists that each end at a paragraph spend a tenth of it.
  */
 export const CLOSING_BUDGET = 100_000_000;
 
@@ -65,6 +66,12 @@ interface Level {
   blankStart: boolean;
   /** Such an item, and then a blank line: nothing goes on with it. */
   over: boolean;
+  /**
+   * Whether the parser may have refused the mark, so that this is no container at all: in a
+   * paragraph it takes no list that starts with a number other than 1, and none with nothing
+   * after its mark.
+   */
+  unsure: boolean;
 }
 
 /**
@@ -74,7 +81,10 @@ interface Level {
 export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): number {
   const stack: Level[] = [];
   let cost = 0;
-  let lines = 0;
+  // What the parser holds so far, about: a line, and one more for each container open on it. A
+  // look costs that, for each container it closes (twenty lists deep, 1,500 lines took two
+  // seconds: every level that closes moves what is held).
+  let held = 0;
   // The lines of the paragraph a lazy line would go on with, at most: since the last blank line
   // or the last container started.
   let para = 0;
@@ -110,11 +120,17 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
   /** The end of a footnote's label and colon (`[^a]:`) that starts at `at`, or -1. */
   const noteEnd = (at: number) => {
     if (text.charCodeAt(at + 1) !== CARET) return -1;
-    for (let i = at + 2; i < to; i++) {
+    // As the footnote syntax reads a label: no space or tab in it, no `[`, at most 999
+    // characters, and `\[`, `\\` and `\]` are each one character of it.
+    for (let i = at + 2; i < to && i - at < 1002; i++) {
       const code = text.charCodeAt(i);
-      if (code === BACKSLASH) i++;
-      else if (code === RIGHT_BRACKET) {
+      if (code === SPACE || code === TAB || code === LEFT_BRACKET) return -1;
+      if (code === RIGHT_BRACKET) {
         return i > at + 2 && text.charCodeAt(i + 1) === COLON ? i + 2 : -1;
+      }
+      if (code === BACKSLASH) {
+        const next = text.charCodeAt(i + 1);
+        if (next === LEFT_BRACKET || next === BACKSLASH || next === RIGHT_BRACKET) i++;
       }
     }
     return -1;
@@ -128,7 +144,6 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
       to++;
     }
     const lineEnd = to;
-    lines++;
     p = from;
     col = 0;
     skip();
@@ -160,7 +175,7 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
     if (p >= to) {
       // A blank line: a quote it leaves ends there, and the parser looks.
       if (kept < stack.length) {
-        cost += lines;
+        cost += (held + 1) * (stack.length - kept);
         stack.length = kept;
         if (kept === 0) murky = false;
       }
@@ -170,6 +185,11 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
     } else {
       // The containers it starts: each closes what the line didn't keep, and the parser doesn't look.
       let made = false;
+      // Whether every container the line started is certain to be one, to the parser too.
+      let sure = true;
+      // The parser refuses some list marks in a paragraph: only when the line kept every
+      // container (or the one it left may be none itself), and not after a blank line.
+      const mayRefuse = !afterBlank && (kept === stack.length || stack[kept]?.unsure === true);
       while (p < to && pad < 4 && stack.length < MAX_OPEN) {
         const code = text.charCodeAt(p);
         let level: Level | null = null;
@@ -179,10 +199,11 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
           const before = col;
           skip();
           pad = Math.max(0, col - before - 1);
-          level = { quote: true, size: 0, mark: 0, blankStart: false, over: false };
+          level = { quote: true, size: 0, mark: 0, blankStart: false, over: false, unsure: false };
         } else {
           let after = -1;
           let mark = code;
+          let one = true;
           if (code === PLUS) after = p + 1;
           else if (code === HYPHEN || code === STAR) after = rule(p) ? -1 : p + 1;
           else if (code >= ZERO && code <= NINE) {
@@ -191,6 +212,7 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
             const end = text.charCodeAt(i);
             if (end === DOT || end === RIGHT_PAREN) after = i + 1;
             mark = end;
+            one = i === p + 1 && code === ZERO + 1;
           } else if (code === LEFT_BRACKET) {
             const end = noteEnd(p);
             if (end < 0) break;
@@ -198,7 +220,14 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
             p = end;
             skip();
             pad = 0;
-            level = { quote: false, size: 4, mark: 0, blankStart: false, over: false };
+            level = {
+              quote: false,
+              size: 4,
+              mark: 0,
+              blankStart: false,
+              over: false,
+              unsure: false,
+            };
           }
           if (!level) {
             // A list's mark needs a space after it, or the line's end.
@@ -210,8 +239,16 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
             const before = col;
             skip();
             const space = col - before;
+            if (mayRefuse && (!one || p >= to)) sure = false;
             if (p >= to) {
-              level = { quote: false, size: pad + width + 1, mark, blankStart: true, over: false };
+              level = {
+                quote: false,
+                size: pad + width + 1,
+                mark,
+                blankStart: true,
+                over: false,
+                unsure: false,
+              };
               pad = 0;
             } else if (space <= 4) {
               level = {
@@ -220,11 +257,19 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
                 mark,
                 blankStart: false,
                 over: false,
+                unsure: false,
               };
               pad = 0;
             } else {
               // Five spaces or more: one is the mark's, and the rest indent code.
-              level = { quote: false, size: pad + width + 1, mark, blankStart: false, over: false };
+              level = {
+                quote: false,
+                size: pad + width + 1,
+                mark,
+                blankStart: false,
+                over: false,
+                unsure: false,
+              };
               pad = space - 1;
             }
           }
@@ -233,21 +278,28 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
           // The next item of a list, with something still open inside the last one: the parser
           // moves all it holds to close that.
           const left = stack[kept];
+          // The list itself goes on: what closes is everything inside its last item.
           if (left && level.mark !== 0 && left.mark === level.mark && stack.length > kept + 1)
-            cost += lines;
+            cost += (held + 1) * (stack.length - kept - 1);
           stack.length = kept;
         }
         made = true;
+        // Once one mark may have been refused, the rest of the line is the paragraph's too.
+        level.unsure = !sure;
         stack.push(level);
       }
 
-      if (made) para = 0;
-      else if (kept < stack.length) {
+      // A container that is certain starts a paragraph of its own; one that may be none leaves
+      // the paragraph before it going on.
+      if (made && sure) para = 0;
+      if (made) {
+        // Nothing to charge: it closed what it left, or it is the paragraph's own line.
+      } else if (kept < stack.length) {
         // It leaves a container and starts none: the parser looks back.
         const first = text.charCodeAt(p);
         if (afterBlank) {
           // Nothing is open after a blank line, so it reads everything, and the container ends.
-          cost += lines;
+          cost += (held + 1) * (stack.length - kept);
           stack.length = kept;
           if (kept === 0) murky = false;
         } else if (plainBefore && !murky && pad < 4 && !startsBlock(first)) {
@@ -255,7 +307,7 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
           cost += para + 1;
         } else {
           // It may end the container or not: charged as if it did, and kept open as if it didn't.
-          cost += lines;
+          cost += (held + 1) * (stack.length - kept);
         }
       }
 
@@ -273,6 +325,7 @@ export function closingCost(text: string, budget = Number.POSITIVE_INFINITY): nu
         para++;
       }
     }
+    held += 1 + stack.length;
     if (cost > budget) return cost;
     // CRLF is one line ending.
     to = lineEnd;

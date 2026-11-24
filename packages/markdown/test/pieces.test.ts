@@ -109,6 +109,12 @@ describe('a long document read in pieces', () => {
     }
   });
 
+  test('never cuts before a byte-order mark: the parser would drop it from the piece', () => {
+    expect(same('x\n\n\ufeffy\n')).toEqual([]);
+    const text = `${'word '.repeat(1000)}\n\n\ufeffAfter *the* mark.\n\n${'More words.\n\n'.repeat(400)}`;
+    expect(JSON.stringify(parseMarkdown(text))).toBe(JSON.stringify(readWhole(text)));
+  });
+
   test('never cuts before a line that may go on with a list, or one that is indented', () => {
     for (const unit of [
       '- a\n\n- b\n\n',

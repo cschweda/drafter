@@ -119,6 +119,70 @@ function closesFence(source: string, at: number, fence: { mark: number; run: num
   return true;
 }
 
+const BACKSLASH = 92;
+const LEFT_PAREN = 40;
+const RIGHT_PAREN = 41;
+const DOUBLE = 34;
+const SINGLE = 39;
+/** How far a title is followed for its end: a longer one counts as never closing. */
+const TITLE_REACH = 1000;
+
+/**
+ * Whether the `](` at `at` (the index of its `]`) starts a link whose title opens and is not
+ * closed and followed by `)` on its line: `[a](b "c`, `[a](b (c`, `[a](<b> 'c`. The parser looks
+ * for the rest of such a link as far as the paragraph goes, each time (144 KB of `[a](b (c `: a
+ * minute). A link that is whole on its line, with a title or without, is not one of these.
+ */
+export function opensTitle(source: string, at: number): boolean {
+  if (source.charCodeAt(at + 1) !== LEFT_PAREN) return false;
+  let i = at + 2;
+  const blank = (code: number) => code === SPACE || code === TAB;
+  const ends = (code: number) => code === LF || code === CR || Number.isNaN(code);
+  while (blank(source.charCodeAt(i))) i++;
+  // The destination: in angle brackets, or up to a space, or the `)` that closes the link.
+  if (source.charCodeAt(i) === LESS) {
+    for (i++; ; i++) {
+      const code = source.charCodeAt(i);
+      if (ends(code) || code === LESS) return false;
+      if (code === BACKSLASH) i++;
+      else if (code === QUOTE) break;
+    }
+    i++;
+  } else {
+    let depth = 0;
+    for (; ; i++) {
+      const code = source.charCodeAt(i);
+      if (ends(code) || blank(code)) break;
+      if (code === BACKSLASH) i++;
+      else if (code === LEFT_PAREN) depth++;
+      else if (code === RIGHT_PAREN && depth-- === 0) return false;
+    }
+  }
+  // Spaces, and one line ending, may come before the title.
+  const gap = i;
+  while (blank(source.charCodeAt(i))) i++;
+  if (source.charCodeAt(i) === CR && source.charCodeAt(i + 1) === LF) i++;
+  if (source.charCodeAt(i) === LF || source.charCodeAt(i) === CR) i++;
+  while (blank(source.charCodeAt(i))) i++;
+  if (i === gap) return false;
+  const open = source.charCodeAt(i);
+  if (open !== DOUBLE && open !== SINGLE && open !== LEFT_PAREN) return false;
+  const close = open === LEFT_PAREN ? RIGHT_PAREN : open;
+  const limit = i + TITLE_REACH;
+  for (i++; i < limit; i++) {
+    const code = source.charCodeAt(i);
+    if (ends(code)) return true;
+    if (code === BACKSLASH) i++;
+    else if (code === close) {
+      // Closed: a whole link only if `)` comes next.
+      i++;
+      while (blank(source.charCodeAt(i))) i++;
+      return source.charCodeAt(i) !== RIGHT_PAREN;
+    } else if (open === LEFT_PAREN && code === LEFT_PAREN) return true;
+  }
+  return true;
+}
+
 /**
  * Whether some paragraph of `source` (text between blank lines) holds more than MAX_MARKS
  * emphasis marks, MAX_BRACKETS closing brackets with nothing open, or as many that close a deeply
@@ -144,6 +208,9 @@ export function denseMarks(source: string): boolean {
   let underlined = 0;
   let openers = 0;
   let allOpeners = 0;
+  // Whether the paragraph holds a backtick or a `<`: a `[` may then be inside code or a tag,
+  // where it opens nothing, so every `]` after it is counted as closing nothing.
+  let literal = false;
   let length = 0;
   let looked = 0;
   // A paragraph ends: what its openers cost, against the paragraph's budget and the document's.
@@ -168,6 +235,7 @@ export function denseMarks(source: string): boolean {
       stray = 0;
       deep = 0;
       openers = 0;
+      literal = false;
     }
     textAbove = !lineBlank;
     lineBlank = true;
@@ -209,6 +277,16 @@ export function denseMarks(source: string): boolean {
       }
     }
     if (isEmphasisMark(code) && ++marks > MAX_MARKS) return true;
+    if (code === BACKSLASH) {
+      // An escaped bracket is only itself: `\[` opens nothing, and `\]` closes nothing.
+      const next = source.charCodeAt(i + 1);
+      if (next === OPEN || next === CLOSE || next === BACKSLASH) {
+        i++;
+        length++;
+      }
+      continue;
+    }
+    if (code === LESS || code === BACKTICK) literal = true;
     if (code === LESS) unsure = true;
     // Three fence marks in a row that opened no block here: indented (so perhaps in a list item,
     // or the document's own all the same), or after other text. Whichever, the next fence at the
@@ -222,8 +300,11 @@ export function denseMarks(source: string): boolean {
     if (code === LESS && isOpener(source, i)) {
       if (++openers > MAX_OPENERS || ++allOpeners > MAX_OPENERS_IN_ALL) return true;
     }
-    if (code === OPEN) open++;
-    else if (code === CLOSE) {
+    if (code === OPEN) {
+      if (!literal) open++;
+    } else if (code === CLOSE) {
+      if (opensTitle(source, i) && (++openers > MAX_OPENERS || ++allOpeners > MAX_OPENERS_IN_ALL))
+        return true;
       if (open > DEEP_BRACKETS && ++deep > MAX_BRACKETS) return true;
       if (open > 0) open--;
       else if (++stray > MAX_BRACKETS) return true;

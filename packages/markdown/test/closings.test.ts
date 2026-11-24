@@ -35,6 +35,11 @@ const SLOW = [
   '[^a]: x\n\nb\n\n',
   '[^a\\]b]: x\n\nb\n\n',
   '- a\n\n# b\n\n',
+  // A list mark the parser refuses in a paragraph (a number other than 1): the paragraph goes on.
+  '> a\n> 2. b\nc\n',
+  'x\n> 2. b\n',
+  // A note's label may hold no space: this is a lazy line, not a note.
+  '> a\n[^a b]: x\n',
   '- a\n  - c\n',
   '- a\n- > a\n',
   '1. a\n   > b\n2. a\n',
@@ -85,6 +90,13 @@ describe('what a document costs the parser in lists and quotes that end', () => 
     expect(closesTooOften(`<b>x</b>\n\n${lazy}`)).toBe(false);
     const spaced = '- an item that is long\nand wraps to the margin\n\n'.repeat(6000);
     expect(closesTooOften(`<b>x</b>\n\n${spaced}`)).toBe(false);
+  });
+
+  test('charges more the deeper the lists and quotes that close: the parser holds more', () => {
+    // Twenty deep, 1,500 lines took the parser two seconds, and 6,000, thirty-five.
+    expect(closesTooOften(`${'- '.repeat(20)}a\n`.repeat(1500))).toBe(true);
+    expect(closesTooOften(`${'> '.repeat(20)}a\n\n`.repeat(1500))).toBe(true);
+    expect(closesTooOften(`${'- '.repeat(20)}a\n`.repeat(200))).toBe(false);
   });
 
   test('reads an outline of a few thousand items that each hold a list', () => {

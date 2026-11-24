@@ -88,7 +88,8 @@ export function cutsOf(text: string, piece = PIECE): number[] {
  * from everything before it: it is not blank or indented, and not the mark of a list item.
  */
 function startsApart(code: number): boolean {
-  if (Number.isNaN(code)) return false;
+  // A byte-order mark at a piece's start is one the parser drops.
+  if (Number.isNaN(code) || code === 0xfeff) return false;
   if (code === 32 || code === 9 || code === 10 || code === 13) return false;
   if (code === 45 /* - */ || code === 43 /* + */ || code === 42 /* * */) return false;
   return code < 48 || code > 57;

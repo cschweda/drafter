@@ -219,3 +219,28 @@ describe('marks inside a fenced code block', () => {
     expect(asCode).toBeGreaterThan(500);
   });
 });
+
+// Three more shapes that took the parser the square of a paragraph's length (found by the review
+// of the branch that closed the audit's leftovers): a link's title in parentheses or quotes that
+// never closes, and closing brackets whose opening one was escaped, or was inside code.
+describe('marks that only look paired', () => {
+  it('refuses link titles that never close, by how far each looks', () => {
+    for (const unit of ['[a](b (c ', '[a](b (c\n', '[a](b "c ', "[a](b 'c ", '[a](<b> (c ']) {
+      expect(denseMarks(unit.repeat(16_000)), JSON.stringify(unit)).toBe(true);
+    }
+  });
+
+  it('reads links with titles, and lists of links, however many', () => {
+    expect(denseMarks('[a](b "title") and [c](d (title)) '.repeat(20_000))).toBe(false);
+    expect(denseMarks('- [a](https://example.com/b) (see c)\n'.repeat(20_000))).toBe(false);
+    expect(denseMarks('- [a](b)\n'.repeat(50_000))).toBe(false);
+  });
+
+  it('counts a closing bracket whose opening one was escaped or in code', () => {
+    expect(denseMarks('\\[ ] '.repeat(MAX_BRACKETS + 1))).toBe(true);
+    expect(denseMarks('`[` ] '.repeat(MAX_BRACKETS + 1))).toBe(true);
+    expect(denseMarks('\\[ ] '.repeat(100))).toBe(false);
+    // An escaped closing bracket closes nothing, and is no stray either.
+    expect(denseMarks('\\] '.repeat(MAX_BRACKETS + 1))).toBe(false);
+  });
+});
