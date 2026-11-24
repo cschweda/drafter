@@ -23,6 +23,15 @@ export const MAX_PAIRED = 200;
  */
 export const PAIR_BUDGET = 1_000_000;
 
+/**
+ * The most counting done over the whole script: one for each pair in each scene, new or not. The
+ * pairs kept bound the memory; this bounds the time, which a file of thousands of scenes that each
+ * hold the same two hundred speakers would otherwise take in seconds. A script of 20,000 scenes
+ * with thirty people in every one of them spends under half of it; once it is spent, later scenes
+ * add nothing to who shares scenes with whom.
+ */
+export const PAIR_WORK = 20_000_000;
+
 export interface Character {
   /** The name in capitals: names that differ only in case are one character. */
   key: string;
@@ -189,11 +198,15 @@ export function castOf(
   // left out: its pairs are the square of the crowd (three thousand speakers in one scene, a
   // file of 32 KB, made nine million entries and ran a reader out of memory; red/blue audit of
   // 23 November 2026, M1), and a scene everyone is in says little about who plays opposite whom.
-  // The whole script has a budget too, for the pairs it keeps (`PAIR_BUDGET`).
+  // The whole script has two budgets too: for the pairs it keeps (`PAIR_BUDGET`), and for the
+  // counting (`PAIR_WORK`).
   const shared: Array<Map<number, number>> = characters.map(() => new Map());
   let pairsLeft = PAIR_BUDGET;
+  let workLeft = PAIR_WORK;
   for (const here of present) {
     if (here.length > MAX_PAIRED) continue;
+    workLeft -= (here.length * (here.length - 1)) / 2;
+    if (workLeft < 0) break;
     for (let i = 0; i < here.length; i++) {
       const a = (here[i] as InScene).row;
       const mine = shared[a] as Map<number, number>;

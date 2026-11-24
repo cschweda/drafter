@@ -3,7 +3,7 @@ import { paginate } from '@drafter/layout';
 import { linesPerPage, sceneIndex } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
 import { castOf } from '../src';
-import { PAIR_BUDGET } from '../src/figures';
+import { PAIR_BUDGET, PAIR_WORK } from '../src/figures';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 import { screenplay } from './scripts';
 
@@ -82,6 +82,32 @@ describe('a scene with a crowd in it', () => {
       expect(figures.sharedWith).toHaveLength(7);
       for (const other of figures.sharedWith) expect(other.scenes).toBe(scenes);
     }
+  }, 120_000);
+
+  test('stops counting once the counting itself has cost enough, though no pair is new', () => {
+    // 1,100 scenes of the same 199 people: no new pair after the first scene, so nothing more to
+    // keep, but 19,701 counts a scene, 21 million in all. A file of a few megabytes of these
+    // would otherwise be counted for seconds.
+    const scenes = 1100;
+    const lines: string[] = [];
+    for (let s = 0; s < scenes; s++) {
+      lines.push('INT. HALL - DAY', '');
+      for (let k = 0; k < 199; k++) lines.push(speaker(k), 'Hi.', '');
+    }
+    const doc = parse(lines.join('\n'));
+    const layout = paginate(doc, screenplay);
+    const built = castOf(
+      sceneIndex(doc, screenplay, layout),
+      doc,
+      screenplay,
+      linesPerPage(layout),
+      () => undefined,
+    );
+    const counted = Math.floor(PAIR_WORK / ((199 * 198) / 2));
+    expect(counted).toBeLessThan(scenes);
+    const first = built.figures.get(speaker(0).toUpperCase());
+    expect(first?.sharedWith).toHaveLength(198);
+    expect(first?.sharedWith[0]?.scenes).toBe(counted);
   }, 120_000);
 
   test('says who shares a scene with whom in a scene of ordinary size, and not in a crowd', () => {
