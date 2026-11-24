@@ -1132,6 +1132,26 @@ const MARKDOWN_TRAPS: Trap[] = [
     limitMs: 5000,
   },
   {
+    id: 'md-lists-ending',
+    format: 'markdown',
+    name: 'lists-ending.md',
+    tests:
+      '40,000 lists that each end at a line of text, in a document that cannot be cut, open at once; the reader refuses it instead of rereading it 40,000 times (the audit of the red/blue audit of 23 November 2026).',
+    bytes: () => enc(`# Lists\n\n\`\`\`\nx\n\`\`\`\n\n${'- a\n\n1\n\n'.repeat(40_000)}`),
+    expect: { 'web-open': opensWith('# Lists'), package: warns('too many marks') },
+    limitMs: 5000,
+  },
+  {
+    id: 'md-quotes-ending',
+    format: 'markdown',
+    name: 'quotes-ending.md',
+    tests:
+      '20,000 short block quotes, each ended by a blank line, are read in pieces, in time: in one piece the parser took the square of them.',
+    bytes: () => enc(`# Quotes\n\n${'> a\n\n'.repeat(20_000)}`),
+    expect: { 'web-open': opensWith('# Quotes') },
+    limitMs: 5000,
+  },
+  {
     id: 'md-huge-table',
     format: 'markdown',
     name: 'huge-table.md',

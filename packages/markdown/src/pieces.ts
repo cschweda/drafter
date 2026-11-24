@@ -34,14 +34,21 @@ function lineBefore(text: string, end: number): { from: number; to: number } {
  * do in the whole: the start of each piece after the first, or none when it is short or it may
  * not be cut at all.
  *
- * A cut is made only before a heading line (`#` at the line's start) that follows a blank line or
- * another heading line. Such a line is always a heading of the document itself, and it closes
- * whatever was open before it: a paragraph, a list, a block quote, indented code. Two things are
- * not closed by it, and a document holding either is never cut: a fenced code block (``` or ~~~)
- * and an HTML block (any `<`), which run until their own end, past blank lines and headings. And
- * one thing reaches back across the whole document: a definition (`[label]: …`, `[^note]: …`), so
- * a document with any `]:` is never cut either. These tests over-refuse (a `<` in a sentence is
- * no HTML block), which costs only speed.
+ * A cut is made in two places only. Before a heading line (`#` at the line's start) that follows
+ * an empty line or another heading line; and before any line that follows an empty line and
+ * starts, at the margin, with something that can't go on with a list (not a space or a tab, not
+ * `-`, `+`, `*`, and not a digit). Such a line always belongs to the document itself, and it
+ * closes whatever was open before it: a paragraph, a list, a block quote, indented code (a list
+ * item or a note goes on only by an indent, and a quote, after an empty line, not at all). Two
+ * things are not closed by it, and a document holding either is never cut: a fenced code block
+ * (``` or ~~~) and an HTML block (any `<`), which run until their own end, past blank lines and
+ * headings. And one thing reaches back across the whole document: a definition (`[label]: …`,
+ * `[^note]: …`), so a document with any `]:` is never cut either. These tests over-refuse (a `<`
+ * in a sentence is no HTML block), which costs only speed.
+ *
+ * The second kind of cut is what keeps a long document of many lists and quotes quick: the parser
+ * rereads all it has read each time one of them ends at a paragraph (`closings.ts`), so the same
+ * text in one piece takes the square of its length.
  */
 export function cutsOf(text: string, piece = PIECE): number[] {
   if (text.length < 2 * piece) return [];
@@ -52,25 +59,39 @@ export function cutsOf(text: string, piece = PIECE): number[] {
   const cuts: number[] = [];
   let from = piece;
   for (;;) {
-    let nl = text.indexOf('\n#', from - 1);
+    let nl = text.indexOf('\n', from - 1);
     let cut = -1;
     while (nl >= 0) {
       const at = nl + 1;
-      if (isAtxHeading(text, at)) {
-        const line = lineBefore(text, nl);
-        const before = text.slice(line.from, line.to);
-        if (before === '' || (!before.includes('\r') && isAtxHeading(text, line.from))) {
-          cut = at;
-          break;
-        }
+      const line = lineBefore(text, nl);
+      const empty = line.from === line.to;
+      if (
+        isAtxHeading(text, at)
+          ? empty ||
+            (isAtxHeading(text, line.from) && !text.slice(line.from, line.to).includes('\r'))
+          : empty && startsApart(text.charCodeAt(at))
+      ) {
+        cut = at;
+        break;
       }
-      nl = text.indexOf('\n#', at);
+      nl = text.indexOf('\n', at);
     }
     if (cut < 0 || cut >= text.length) return cuts;
     cuts.push(cut);
     from = cut + piece;
     if (from >= text.length) return cuts;
   }
+}
+
+/**
+ * Whether a line that starts with `code`, at the margin and after an empty line, stands apart
+ * from everything before it: it is not blank or indented, and not the mark of a list item.
+ */
+function startsApart(code: number): boolean {
+  if (Number.isNaN(code)) return false;
+  if (code === 32 || code === 9 || code === 10 || code === 13) return false;
+  if (code === 45 /* - */ || code === 43 /* + */ || code === 42 /* * */) return false;
+  return code < 48 || code > 57;
 }
 
 /** The line endings in `text` from `from` to `to`, counted as the parser counts them. */

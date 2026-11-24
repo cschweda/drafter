@@ -16,3 +16,12 @@ overrides:
   # @nuxt/ui's own copy was 4.6.2 (GHSA-mjrq-cffv-q4qc: the dev server serves files from a parent
   # directory); the rest of the build is on 4.6.4 already.
   "@nuxt/schema": ^4.6.4
+
+# One change to a dependency's own code, kept as a patch that `pnpm install` applies. micromark
+# (the Markdown parser) merged a paragraph's runs of plain text with one `splice` for each run,
+# so a manuscript pasted with single line breaks (one paragraph of 40,000 lines, a `!` or an `&`
+# on each) took four seconds in the Preview and every export. The patch merges them in one pass;
+# nothing else changes. Tested in packages/markdown/test/parse.test.ts, which fails without it.
+# When micromark's version changes, pnpm refuses to install until this is looked at again.
+patchedDependencies:
+  micromark@4.0.3: patches/micromark@4.0.3.patch

@@ -66,12 +66,75 @@ export function isOpener(source: string, i: number): boolean {
 /** Whether `code` is an emphasis mark, `*` or `_`. */
 export const isEmphasisMark = (code: number): boolean => code === STAR || code === UNDERSCORE;
 
+const BACKTICK = 96;
+const TILDE = 126;
+
+/** Where the line that holds `at` ends: at its line ending, or the text's end. */
+function lineEnd(source: string, at: number): number {
+  let i = at;
+  while (i < source.length) {
+    const code = source.charCodeAt(i);
+    if (code === LF || code === CR) break;
+    i++;
+  }
+  return i;
+}
+
+/**
+ * The fence that the line at `at` opens, when the line starts at the margin with one: its mark and
+ * how many of them (three or more backticks or tildes; after backticks, no other backtick in the
+ * line, or it is code within a line). Only at the margin: indented, it may belong to a list item.
+ */
+function fenceAt(source: string, at: number): { mark: number; run: number } | null {
+  const mark = source.charCodeAt(at);
+  if (mark !== BACKTICK && mark !== TILDE) return null;
+  let run = 1;
+  while (source.charCodeAt(at + run) === mark) run++;
+  if (run < 3) return null;
+  if (mark === BACKTICK) {
+    const end = lineEnd(source, at);
+    for (let i = at + run; i < end; i++) if (source.charCodeAt(i) === BACKTICK) return null;
+  }
+  return { mark, run };
+}
+
+/**
+ * Whether the line at `at` closes `fence`: up to three spaces, at least as many of its mark, and
+ * then only spaces and tabs.
+ */
+function closesFence(source: string, at: number, fence: { mark: number; run: number }): boolean {
+  let i = at;
+  while (i < at + 3 && source.charCodeAt(i) === SPACE) i++;
+  let run = 0;
+  while (source.charCodeAt(i) === fence.mark) {
+    run++;
+    i++;
+  }
+  if (run < fence.run) return false;
+  const end = lineEnd(source, i);
+  for (; i < end; i++) {
+    const code = source.charCodeAt(i);
+    if (code !== SPACE && code !== TAB) return false;
+  }
+  return true;
+}
+
 /**
  * Whether some paragraph of `source` (text between blank lines) holds more than MAX_MARKS
  * emphasis marks, MAX_BRACKETS closing brackets with nothing open, or as many that close a deeply
  * nested one, or more than MAX_OPENERS HTML openers; or the whole of it more than MAX_UNDERLINED
  * underlined headings or MAX_OPENERS_IN_ALL openers. One pass, no
  * regular expression.
+ *
+ * A fenced code block that starts at the margin is passed over, as so many blank lines: the parser
+ * keeps what is in it as it is, so a long listing of ordinary code (`snake_case` names, rules of
+ * `-`, brackets) costs it nothing, and was refused. Only where it is certain to be one: a fence
+ * at the margin closes every list, quote and note, so it is the document's own; but HTML may hold
+ * a line that looks like a fence, and a fence that is indented may open a block that the next
+ * fence at the margin closes. So after the first `<` outside a code block, or the first three
+ * fence marks in a row that opened none here, no fence is taken for one, and everything is counted
+ * as before. A test asks the parser where each line of
+ * thousands of small documents ended up, and nothing it reads as text is passed over here.
  */
 export function denseMarks(source: string): boolean {
   let marks = 0;
@@ -111,13 +174,31 @@ export function denseMarks(source: string): boolean {
     rule = 0;
     return false;
   };
+  // The open code block; whether fences can no longer be told (a `<`, or a run of fence marks
+  // that was not taken for a block, has been seen outside one); and whether a line starts here.
+  let fence: { mark: number; run: number } | null = null;
+  let unsure = false;
+  let lineStart = true;
   for (let i = 0; i < source.length; i++) {
+    if (lineStart) {
+      lineStart = false;
+      const opened = fence;
+      if (opened) {
+        if (closesFence(source, i, opened)) fence = null;
+      } else if (!unsure) fence = fenceAt(source, i);
+      if (opened || fence) {
+        // A line of the block, its fences too: nothing in it is read, and it ends a paragraph.
+        i = lineEnd(source, i) - 1;
+        continue;
+      }
+    }
     const code = source.charCodeAt(i);
     length++;
     if (code === LF || code === CR) {
       // CRLF is one line ending, as the parsers read it: two would make every line look blank.
       if (code === CR && source.charCodeAt(i + 1) === LF) i++;
       if (endLine()) return true;
+      lineStart = true;
       continue;
     }
     if (code !== SPACE && code !== TAB) {
@@ -128,6 +209,16 @@ export function denseMarks(source: string): boolean {
       }
     }
     if (isEmphasisMark(code) && ++marks > MAX_MARKS) return true;
+    if (code === LESS) unsure = true;
+    // Three fence marks in a row that opened no block here: indented (so perhaps in a list item,
+    // or the document's own all the same), or after other text. Whichever, the next fence at the
+    // margin may be its end and not a start.
+    if (
+      (code === BACKTICK || code === TILDE) &&
+      source.charCodeAt(i - 1) === code &&
+      source.charCodeAt(i - 2) === code
+    )
+      unsure = true;
     if (code === LESS && isOpener(source, i)) {
       if (++openers > MAX_OPENERS || ++allOpeners > MAX_OPENERS_IN_ALL) return true;
     }

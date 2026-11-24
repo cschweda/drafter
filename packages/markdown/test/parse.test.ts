@@ -1,6 +1,7 @@
 // Moved from apps/web/test/markdown-footnotes.test.ts with the code.
 import { describe, expect, test } from 'vitest';
 import { footnotes, MAX_NESTING, type MdNode, parseMarkdown } from '../src';
+import { readWhole } from '../src/parse';
 import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 describe('the footnote parser on hostile input', () => {
@@ -117,4 +118,31 @@ describe('the tree, for the HTML export', () => {
     const marked = parseMarkdown('﻿# Title\n\nText.\n');
     expect(JSON.stringify(marked)).toBe(JSON.stringify(plain));
   });
+});
+
+// The parser merged a paragraph's adjacent runs of plain text with one `splice` for each run, and
+// a splice moves everything after it: a manuscript pasted with single line breaks, so one
+// paragraph of 40,000 lines, with an exclamation mark or an ampersand on each, took four seconds.
+// The merge is one pass now (patches/micromark@4.0.3.patch).
+describe('a long paragraph with marks that come to nothing', () => {
+  test('merges the text around a mark that is only itself, as before', () => {
+    const tree = parseMarkdown('Tom & Jerry < Spike! [so] they\\ said\nand *then* more & more');
+    const blocks = tree.children ?? [];
+    expect(blocks).toHaveLength(1);
+    const kinds = (blocks[0] as { children: Array<{ type: string; value?: string }> }).children;
+    expect(kinds.map((node) => node.type)).toEqual(['text', 'emphasis', 'text']);
+    expect(kinds[0]?.value).toBe('Tom & Jerry < Spike! [so] they\\ said\nand ');
+    expect(kinds[2]?.value).toBe(' more & more');
+  });
+
+  test(
+    'is read in linear time',
+    () => {
+      for (const line of ['Stop! Go on.\n', 'Tom & Jerry\n', 'a < b\n', '[a] ', '[a](<b ']) {
+        const { growth } = scaling((n) => line.repeat(n), readWhole, 8000);
+        expect(growth, JSON.stringify(line)).toBeLessThan(MAX_GROWTH);
+      }
+    },
+    SCALING_TIMEOUT,
+  );
 });
