@@ -49,7 +49,8 @@ describe('a scene with a crowd in it', () => {
   );
 
   test('stops counting pairs once the whole script has spent its budget', () => {
-    // 60 scenes of 150 are 1.3 million pairs: past the budget, so the last scenes add none.
+    // 60 scenes of 150, each with speakers of its own, are 1.3 million pairs: past the budget, so
+    // the last scenes add none.
     const built = cast(crowds(60));
     let pairs = 0;
     for (const figures of built.figures.values()) pairs += figures.sharedWith.length;
@@ -58,6 +59,30 @@ describe('a scene with a crowd in it', () => {
     expect(built.figures.get(speaker(0).toUpperCase())?.sharedWith.length).toBe(149);
     expect(built.figures.get(speaker(59 * 150).toUpperCase())?.sharedWith).toEqual([]);
   });
+
+  test('counts every scene of a long script with a small cast: only new pairs are budgeted', () => {
+    // 18,500 scenes of the same eight people: 56 counts a scene, over a million in all, and
+    // 56 pairs. Counting each scene against the budget left the last scenes out, with no word.
+    const scenes = 18_500;
+    const lines: string[] = [];
+    for (let s = 0; s < scenes; s++) {
+      lines.push('INT. HALL - DAY', '');
+      for (let k = 0; k < 8; k++) lines.push(speaker(k), 'Hi.', '');
+    }
+    const doc = parse(lines.join('\n'));
+    const layout = paginate(doc, screenplay);
+    const built = castOf(
+      sceneIndex(doc, screenplay, layout),
+      doc,
+      screenplay,
+      linesPerPage(layout),
+      () => undefined,
+    );
+    for (const figures of built.figures.values()) {
+      expect(figures.sharedWith).toHaveLength(7);
+      for (const other of figures.sharedWith) expect(other.scenes).toBe(scenes);
+    }
+  }, 120_000);
 
   test('says who shares a scene with whom in a scene of ordinary size, and not in a crowd', () => {
     const few = cast(crowd(5));
