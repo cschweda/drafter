@@ -140,7 +140,7 @@ Drafter is built to open files from anyone without putting you at risk.
 - **The desktop app** never loads an opened file into a window. It reads the bytes of only the files you chose, and hands them to the editor.
 - **Reopening an HTML or EPUB file** reads only the script Drafter embedded in it, as text. A browser opening an HTML file outside Drafter is outside Drafter's control, so treat one someone sent you like any downloaded page (see [Open formats](https://drafter.dev/docs/open-formats/)).
 - **Drafter for Claude only reads, and only the folders you name.** It has no code that writes, moves, or deletes a file, starts a program, or opens a connection. A path leading outside your folders, through `..` or a link, is refused, hidden files are never read, and each file is judged by what's inside it, with the app's own size limits. Your notes are left out unless you ask.
-- **The trap documents.** Drafter is tested against [294 deliberately broken and hostile files](fixtures/trap/README.md) in every format it opens, plus the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs code, or fetches anything, and that each file finishes within its time limit ([what is enforced](fixtures/trap/README.md#running-it)). It runs on every pull request.
+- **The trap documents.** Drafter is tested against [296 deliberately broken and hostile files](fixtures/trap/README.md) in every format it opens, plus the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs code, or fetches anything, and that each file finishes within its time limit ([what is enforced](fixtures/trap/README.md#running-it)). It runs on every pull request.
 - **Found a security problem?** Please report it privately: choose **Report a vulnerability** on the repository's [Security tab](https://github.com/cschweda/drafter/security) ([SECURITY.md](SECURITY.md) says what to include), or email cschweda@gmail.com with the details. Never in a public issue.
 
 The [Technical details](docs/technical-details.md#security) give the specifics.
@@ -171,7 +171,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 - **[Security audit, 1 November 2026](docs/security-audit-2026-11-01.md):** the first formal audit. No exploitable hole and nothing leaves the device. Fixed: private vulnerability reporting, the desktop's drop grant, Nuxt 4.6.3, and Dependabot.
 - **[Clean-room audit, 22 November 2026](docs/clean-room-audit-2026-11-22.md):** no copied code, no screenwriting package or converter, no file from another app. Fixed: a film reference back in a test, three small values that had come from a real Final Draft sample, and records that had fallen behind.
 - **[Clean-room audit, 1 November 2026](docs/clean-room-audit-2026-11-01.md):** no copied code, no screenwriting package, no GPL code shipped. A film catchphrase and an unrecorded source were fixed.
-- **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 294, each with the one outcome it must have, run on every pull request.
+- **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 296, each with the one outcome it must have, run on every pull request.
 - **Reopenable exports review, 1 November 2026 (v0.23.1):** only the embedded source is read, as text, with caps before unpacking.
 - **Accessibility pass, 28 October 2026 (v0.9.0):** automated axe checks in every browser and both themes. Screen-reader passes are still to come.
 - **[Clean-room audit, 27 October 2026](docs/clean-room-audit-2026-10-27.md):** passed, with two fixes.
@@ -181,7 +181,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.27.4, there are **8,889 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,483 browser tests**, each run in five browser setups (7,415 runs), 140 end-to-end tests of the desktop app, and **294 trap documents** with 1,376 checks:
+**What runs.** As of v0.27.4, there are **8,889 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,483 browser tests**, each run in five browser setups (7,415 runs), 140 end-to-end tests of the desktop app, and **296 trap documents** with 1,386 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
