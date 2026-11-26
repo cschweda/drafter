@@ -289,7 +289,7 @@ function headerThreads(doc: Doc, scene: Scene) {
  * Notes outside the header are touched only when the header holds none. One change, so it is one
  * transaction however many notes there were.
  */
-function setThreadField(doc: Doc, scene: Scene, value: string): TextChange[] {
+function setThreadField(doc: Doc, scene: Scene, value: string, everywhere = false): TextChange[] {
   const body = safeBody(value);
   const note = body === '' ? '' : fieldNote('thread', value);
   let cur = doc;
@@ -328,6 +328,9 @@ function setThreadField(doc: Doc, scene: Scene, value: string): TextChange[] {
     if (cur.source.slice(header.span.from, header.span.to) !== note) {
       apply([{ ...header.span, insert: note }]);
     }
+  } else if (everywhere) {
+    // Threads are read from every note in the scene: the header gets the one note.
+    if (note !== '') apply(insertField(cur, view(), 'thread', note));
   } else {
     const scene2 = view();
     const outside = scene2.fields.thread?.span ?? emptyField(cur, scene2, 'thread');
@@ -340,8 +343,36 @@ function setThreadField(doc: Doc, scene: Scene, value: string): TextChange[] {
       if (entry) apply(remove(entry));
     }
   }
+  if (everywhere) {
+    // Every other Thread or Storyline note in the scene goes, last first.
+    for (;;) {
+      const kept = headerThreads(cur, view())[0]?.span.from;
+      const others = noteEntries(cur).filter(
+        (e) =>
+          e.kind === 'note' &&
+          e.span.from >= scene.span.from &&
+          e.span.to <= to &&
+          e.span.from !== kept &&
+          e.note?.head?.kind === 'field' &&
+          e.note.head.key === 'thread',
+      );
+      const last = others[others.length - 1];
+      if (!last) break;
+      if (!apply(remove(last))) return [];
+    }
+  }
   const change = smallest(doc.source, { from: 0, to: doc.source.length, insert: cur.source });
   return change ? [change] : [];
+}
+
+/**
+ * Put the scene in exactly these threads, wherever its notes are (design §7.2): one `Thread` note
+ * in the header, or none when `value` is empty, and every other Thread or Storyline note in the
+ * scene removed, as one change. [] when nothing changes, a `/*` is stray, or a note can't go.
+ */
+export function setSceneThreadNotes(doc: Doc, scene: Scene, value: string): TextChange[] {
+  if (hasStrayBoneyard(doc)) return [];
+  return setThreadField(doc, scene, value, true);
 }
 
 /** The scene as it reads in `doc`: its synopses, fields, and the rest of its notes, within `span`. */

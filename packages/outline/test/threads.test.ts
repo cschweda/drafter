@@ -246,6 +246,51 @@ describe('a Thread note outside the header (setThreadField)', () => {
   });
 });
 
+describe('a thread note in the middle of a scene', () => {
+  const source =
+    'INT. A - DAY\n\n[[Thread: A]]\nAction one.\n\n[[Storyline: B]]\n\nMore. [[Thread: A, D]]\n\nINT. B - DAY\n\n[[Thread: B]]\n\nEnd.\n';
+  const stale = (text: string) => threadsOf(text);
+  /** The inverse of a change set, in the changed text's offsets. */
+  const undo = (text: string, changes: readonly TextChange[]) => {
+    let shift = 0;
+    const inverse = [...changes]
+      .sort((a, b) => a.from - b.from)
+      .map((c) => {
+        const from = c.from + shift;
+        shift += c.insert.length - (c.to - c.from);
+        return { from, to: from + c.insert.length, insert: text.slice(c.from, c.to) };
+      });
+    return inverse;
+  };
+
+  test('setSceneThreads leaves one note, in the header', () => {
+    const { doc, index } = indexOf(source);
+    const changes = setSceneThreads(doc, sceneAt(index, 0), ['C']);
+    const out = cm(source, changes);
+    expect(out.slice(0, out.indexOf('INT. B'))).toBe(
+      'INT. A - DAY\n\n[[Thread: C]]\nAction one.\n\nMore. \n\n',
+    );
+    expect(stale(out)).toEqual([['C'], ['B']]);
+    expect(changes).toHaveLength(1);
+    expect(cm(out, undo(source, changes))).toBe(source);
+  });
+
+  test('renameThread and removeThread leave no stale label, and undo is one inverse', () => {
+    const { doc, index } = indexOf(source);
+    const renamed = renameThread(doc, index, 'A', 'X');
+    const out = cm(source, renamed.changes);
+    expect(stale(out)).toEqual([['X', 'B', 'D'], ['B']]);
+    expect(out).not.toMatch(/Thread: A|Storyline/);
+    expect(cm(out, undo(source, renamed.changes))).toBe(source);
+    const removed = removeThread(doc, index, 'B');
+    expect(removed.scenes).toBe(2);
+    const gone = cm(source, removed.changes);
+    expect(stale(gone)).toEqual([['A', 'D'], []]);
+    expect(gone).not.toMatch(/Storyline|Thread: B/);
+    expect(cm(gone, undo(source, removed.changes))).toBe(source);
+  });
+});
+
 describe('a header note flush against the action', () => {
   test('is emptied, not refused, when the last thread goes', () => {
     const source = 'INT. A - DAY\n\n[[Storyline: a]]\nAction.\n';

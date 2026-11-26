@@ -1,7 +1,7 @@
 import { normalizeLabel } from '@drafter/notes';
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
-import { renameThread, setSceneDetails, setSceneThreads } from '../src';
+import { renameThread, setSceneThreadNotes, setSceneThreads } from '../src';
 import { anyScript } from './arbitraries';
 import { apply, indexOf, sceneAt } from './helpers';
 
@@ -83,13 +83,15 @@ describe('thread properties', () => {
         const key = normalizeLabel(used);
         const direct = apply(
           tagged,
-          index.scenes.flatMap((s) =>
-            setSceneDetails(doc, s, {
-              thread: s.threads
-                .map((l) => (normalizeLabel(l) === key ? 'Zulu Zulu' : l))
-                .join(', '),
-            }),
-          ),
+          index.scenes
+            .filter((s) => s.threads.some((l) => normalizeLabel(l) === key))
+            .flatMap((s) =>
+              setSceneThreadNotes(
+                doc,
+                s,
+                s.threads.map((l) => (normalizeLabel(l) === key ? 'Zulu Zulu' : l)).join(', '),
+              ),
+            ),
         );
         expect(viaRename).toBe(direct);
       }),

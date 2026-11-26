@@ -10,7 +10,7 @@ import {
   type ThreadMeta,
   threadMeta,
 } from '@drafter/notes';
-import { setSceneDetails } from './header';
+import { setSceneThreadNotes } from './header';
 import type { Scene, SceneIndex } from './types';
 
 // A script's threads (Threads design §7.2, §7.4): which are in use, their names and colors, and
@@ -87,7 +87,7 @@ function checked(labels: readonly string[]): string[] {
  * throws a RangeError. [] when nothing changes or a `/*` is stray.
  */
 export function setSceneThreads(doc: Doc, scene: Scene, labels: readonly string[]): TextChange[] {
-  return setSceneDetails(doc, scene, { thread: checked(labels).join(', ') });
+  return setSceneThreadNotes(doc, scene, checked(labels).join(', '));
 }
 
 /**
@@ -97,7 +97,7 @@ export function setSceneThreads(doc: Doc, scene: Scene, labels: readonly string[
 function inScene(doc: Doc, scene: Scene, labels: readonly string[]): TextChange[] {
   const text = doc.source.slice(scene.span.from, scene.span.to);
   const local: Scene = { ...scene, block: 0, span: { from: 0, to: text.length } };
-  return setSceneDetails(parse(text), local, { thread: labels.join(', ') }).map((c) => ({
+  return setSceneThreadNotes(parse(text), local, labels.join(', ')).map((c) => ({
     from: c.from + scene.span.from,
     to: c.to + scene.span.from,
     insert: c.insert,

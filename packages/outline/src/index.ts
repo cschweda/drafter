@@ -14,6 +14,7 @@ export {
   sectionHeader,
   setColor,
   setSceneDetails,
+  setSceneThreadNotes,
   setSynopsis,
 } from './header';
 export { type ScriptMarkdownOptions, scriptMarkdown } from './markdown';
