@@ -602,7 +602,7 @@ watch(cards, async () => {
             @drop="onDrop"
             @dragend="onDragend"
           >
-            <span class="sr-only">{{ nodeName(card.node, card.facts) }}</span>
+            <span class="sr-only">{{ nodeName(card.node, card.facts) }}<ThreadChips :labels="card.facts.threads" speak /></span>
             <div class="top" aria-hidden="true">
               <span class="kind">{{ kindLabel(card) }}</span>
               <span class="heading" :class="{ untitled: !card.node.title }">{{ titleOf(card.node) }}</span>
@@ -625,6 +625,7 @@ watch(cards, async () => {
               <p v-if="card.facts.synopsis && editing !== card.id" :id="`${domId(card.id)}-synopsis`" class="synopsis">
                 {{ card.facts.synopsis }}
               </p>
+              <ThreadChips :labels="card.facts.threads" />
             </div>
             <div class="foot" aria-hidden="true">
               <MenuButton

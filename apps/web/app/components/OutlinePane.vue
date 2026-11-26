@@ -108,6 +108,7 @@ const rows = computed<Row[]>(() => {
               goalLine(item),
               item.speakers,
               item.pages,
+              item.threads,
             ]
           : [
               sectionName(item, rates.value),
@@ -557,7 +558,11 @@ const nameOfRow = (row: Row) =>
           <!-- The row's name is this one line of words; what's drawn is the same, laid out, and
                hidden from screen readers so they read it once. Its synopsis and speakers are its
                description. -->
-          <span class="sr-only">{{ nameOfRow(row) }}</span>
+          <span class="sr-only">{{ nameOfRow(row) }}<ThreadChips
+              v-if="row.item.kind === 'scene'"
+              :labels="row.item.threads"
+              speak
+          /></span>
           <div class="line" aria-hidden="true">
             <span
               v-if="row.expandable"
@@ -578,6 +583,7 @@ const nameOfRow = (row: Row) =>
                   aria-hidden="true"
                 />{{ colorName(row.item.color.value) }}
               </span>
+              <ThreadChips :labels="row.item.threads" />
               <span v-if="sceneLength(row)" class="length">{{ sceneLength(row) }}</span>
             </template>
             <template v-else>

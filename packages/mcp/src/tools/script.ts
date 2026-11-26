@@ -7,7 +7,8 @@ import { shares } from '@drafter/cast';
 import type { Doc } from '@drafter/fountain';
 import { lint } from '@drafter/lint';
 import { wordsIn } from '@drafter/markdown';
-import { bodyEnd, type Speech, startsScene } from '@drafter/outline';
+import { normalizeLabel } from '@drafter/notes';
+import { bodyEnd, type Speech, startsScene, threadInfo } from '@drafter/outline';
 import { openTodos, topSections } from '@drafter/story-atlas';
 import * as z from 'zod/v4';
 import { argsHash, type CursorAt, makeCursor, readCursor } from '../cursor';
@@ -141,6 +142,26 @@ function boundedSynopsis(text: string | null): { synopsis: string | null; synops
   return clipped.cut ? { synopsis: clipped.text, synopsis_cut: true } : { synopsis: text };
 }
 
+/** The most threads one scene lists (a scene holds at most 12). */
+const SCENE_THREADS = 12;
+
+/** Each script's thread names, read once per loaded script. */
+const threadNames = new WeakMap<object, Map<string, string | null>>();
+
+/** A scene's threads: each label, and the name the writer gave it (null when none), bounded. */
+function sceneThreads(loaded: Script, s: number): Array<{ label: string; name: string | null }> {
+  let names = threadNames.get(loaded);
+  if (!names) {
+    names = new Map(threadInfo(loaded.doc, loaded.index).map((t) => [t.key, t.name]));
+    threadNames.set(loaded, names);
+  }
+  const labels = loaded.index.scenes[s]?.threads ?? [];
+  return labels.slice(0, SCENE_THREADS).map((label) => {
+    const name = names.get(normalizeLabel(label)) ?? null;
+    return { label: nameOf(label), name: name === null ? null : nameOf(name) };
+  });
+}
+
 /** What every scene says of itself: its heading, place, time, and who is in it, each bounded. */
 function sceneFacts(loaded: Script, s: number) {
   const { index, cast } = loaded;
@@ -158,6 +179,7 @@ function sceneFacts(loaded: Script, s: number) {
     time: place?.time ? clipText(place.time, TEXT_LIMITS.heading).text : null,
     who,
     ...(who.length < names.length ? { who_more: names.length - who.length } : {}),
+    threads: sceneThreads(loaded, s),
   };
 }
 
@@ -188,6 +210,7 @@ const overviewScene = z.object({
   synopsis_cut: z.literal(true).optional(),
   who: z.array(z.string()),
   who_more: z.number().int().optional(),
+  threads: z.array(z.object({ label: z.string(), name: z.string().nullable() })),
 });
 type OverviewScene = z.infer<typeof overviewScene>;
 
@@ -403,6 +426,7 @@ async function overview(args: OverviewInput, ctx: ToolContext): Promise<Overview
       ...boundedSynopsis(synopsis ? synopsisText(doc, synopsis.block, include) : null),
       who: facts.who,
       ...(facts.who_more ? { who_more: facts.who_more } : {}),
+      threads: facts.threads,
     };
   });
 
@@ -526,7 +550,7 @@ export const scriptOverview: ToolDef<OverviewInput, OverviewOutput> = {
   name: 'script_overview',
   title: 'Script overview',
   description:
-    'The shape of one script: its title page (never the contact), template, pages, and running time; its acts with their synopses; every scene with its heading, place, time of day, act, page, length, synopsis, and who is in it; every character’s speeches, words, share of the talking, scenes, long absences, and who they are most often with; its places; what is still to be written; and a count of problems. For a Markdown document, its title and sections; for a novel, its parts, chapters, and sections, each with its words and the status, synopsis, and word target the writer keeps for it. Notes and the boneyard are left out unless include asks for them. Pass `next` back as `cursor` for more scenes. A field ending `_cut` means its text was too long and only its start is shown; one ending `_more` counts what didn’t fit.',
+    'The shape of one script: its title page (never the contact), template, pages, and running time; its acts with their synopses; every scene with its heading, place, time of day, act, page, length, synopsis, who is in it, and its threads (each a label and the name the writer gave it, or null); every character’s speeches, words, share of the talking, scenes, long absences, and who they are most often with; its places; what is still to be written; and a count of problems. For a Markdown document, its title and sections; for a novel, its parts, chapters, and sections, each with its words and the status, synopsis, and word target the writer keeps for it. Notes and the boneyard are left out unless include asks for them. Pass `next` back as `cursor` for more scenes. A field ending `_cut` means its text was too long and only its start is shown; one ending `_more` counts what didn’t fit.',
   input: overviewInput,
   output: overviewOutput,
   run: overview,
@@ -556,6 +580,8 @@ const readItem = z.object({
   minutes: z.number().nullable(),
   who: z.array(z.string()),
   who_more: z.number().int().optional(),
+  /** A script's scene only; a novel's passage has none here. */
+  threads: z.array(z.object({ label: z.string(), name: z.string().nullable() })).optional(),
   text: z.string(),
   part: z.number().int().optional(),
   parts: z.number().int().optional(),
@@ -614,6 +640,7 @@ function sceneItem(loaded: Loaded, n: number, include: Include): { item: ReadIte
       minutes: round2(map.scenes[n - 1]?.minutes ?? 0),
       who: facts.who,
       ...(facts.who_more ? { who_more: facts.who_more } : {}),
+      threads: facts.threads,
       text: shown.text,
     },
     left: shown.leftOut,
@@ -675,7 +702,7 @@ export const readScene: ToolDef<ReadInput, ReadOutput> = {
   name: 'read_scene',
   title: 'Read a scene',
   description:
-    'One scene as the writer wrote it, or a run of up to 10 (`through`, a later scene), with each scene’s heading, place, time of day, act, page, minutes, and who is in it. Name a scene by its place in order (`7`), its written scene number (`7A`), or words from its heading (`radio room`). Notes and the boneyard are left out unless include asks for them. A scene too long for one answer comes in parts: pass `next` back as `cursor`.',
+    'One scene as the writer wrote it, or a run of up to 10 (`through`, a later scene), with each scene’s heading, place, time of day, act, page, minutes, who is in it, and its threads (each a label and its name, or null). Name a scene by its place in order (`7`), its written scene number (`7A`), or words from its heading (`radio room`). Notes and the boneyard are left out unless include asks for them. A scene too long for one answer comes in parts: pass `next` back as `cursor`.',
   input: readInput,
   output: readOutput,
   run: readRun,

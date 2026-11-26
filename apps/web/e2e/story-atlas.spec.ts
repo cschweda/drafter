@@ -184,7 +184,7 @@ test('dialog choices are kept for the script', async ({ page }) => {
   await start(page);
   await openDialog(page);
   await dialog(page).getByRole('button', { name: 'Finished' }).click();
-  await dialog(page).getByLabel('Threads (your setups and payoffs)').uncheck();
+  await dialog(page).getByLabel('Setups and payoffs').uncheck();
   await dialog(page).getByLabel('The line under your name').fill('My first screenplay');
   const { text } = await downloaded(page, async () => {
     await makeButton(page).click();
@@ -198,7 +198,7 @@ test('dialog choices are kept for the script', async ({ page }) => {
     'aria-pressed',
     'true',
   );
-  await expect(dialog(page).getByLabel('Threads (your setups and payoffs)')).not.toBeChecked();
+  await expect(dialog(page).getByLabel('Setups and payoffs')).not.toBeChecked();
   await expect(dialog(page).getByLabel('The line under your name')).toHaveValue(
     'My first screenplay',
   ); // Back to the default: the gaps decide again, and that is kept too.

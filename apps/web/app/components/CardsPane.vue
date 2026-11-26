@@ -102,6 +102,7 @@ const groups = computed<Group[]>(() => {
             scene.synopses.map((s) => s.text),
             scene.fields.goal?.body,
             scene.pages?.eighths,
+            scene.threads,
             preview,
           ]
         : ['section', (item as Section).title, item.color?.value, item.synopses.map((s) => s.text)],

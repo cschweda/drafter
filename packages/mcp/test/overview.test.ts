@@ -25,6 +25,7 @@ interface Scene {
   minutes: number;
   synopsis: string | null;
   who: string[];
+  threads: Array<{ label: string; name: string | null }>;
 }
 interface Overview {
   title_page: Record<string, string>;
@@ -151,6 +152,7 @@ describe('script_overview', () => {
       minutes: expect.any(Number),
       synopsis: 'June hears a dead station come back to life.',
       who: expect.any(Array),
+      threads: [],
     });
     expect(got.scenes[0]?.who.sort()).toEqual(['ANNOUNCER', 'JUNE']);
     expect(got.scenes[2]?.who.sort()).toEqual(['ELI', 'JUNE', 'WES']);
@@ -189,6 +191,21 @@ describe('script_overview', () => {
       }),
     );
     expect(included.acts[0]?.synopsis).toBe('The farm. [[secret]]');
+  });
+
+  it('each scene lists its threads, with their names', async () => {
+    const dir = tempFolder();
+    put(
+      join(dir, 'Lib', 'threads.fountain'),
+      'INT. FARM - DAY\n\n[[Thread: A, B]]\nHay.\n\nINT. BARN - NIGHT\n\nSmoke.\n\n/* drafter\n{"v":1,"threads":{"a":{"name":"The heist"}}}\n*/\n',
+    );
+    const got = await overview([join(dir, 'Lib')], { script: 'Lib/threads.fountain' });
+    const scenes = got.scenes;
+    expect(scenes[0]?.threads).toEqual([
+      { label: 'A', name: 'The heist' },
+      { label: 'B', name: null },
+    ]);
+    expect(scenes[1]?.threads).toEqual([]);
   });
 
   it('characters with share, absences, and most often with', async () => {

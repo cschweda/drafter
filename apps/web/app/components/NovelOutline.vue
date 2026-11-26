@@ -611,13 +611,14 @@ watch(rows, async () => {
         @drop="onDrop"
         @dragend="onDragend"
       >
-        <span class="sr-only">{{ nodeName(row.node, row.facts) }}</span>
+        <span class="sr-only">{{ nodeName(row.node, row.facts) }}<ThreadChips :labels="row.facts.threads" speak /></span>
         <div class="line" aria-hidden="true">
           <span v-if="row.expandable" class="twisty" @click.stop="toggle(row.id)">
             <UIcon :name="row.open ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" />
           </span>
           <span v-else class="twisty" />
           <span class="heading" :class="{ untitled: !row.node.title }">{{ titleOf(row.node) }}</span>
+          <ThreadChips :labels="row.facts.threads" />
           <span class="words">{{ wordsLabel(row.node.words) }}</span>
           <span v-if="row.facts.target" class="target">
             <span class="bar"

@@ -302,6 +302,70 @@ test.describe('Threads… for a novel passage', () => {
   });
 });
 
+// Thread chips (Task 8, design §7.6): a bar in the thread's color beside its label on a row and a
+// card, named "thread A, The heist"; never the round dot a scene's color uses.
+const CHIPS_SCRIPT = `${SCRIPT}/* drafter\n{"v":1,"threads":{"a":{"name":"The heist","color":"yellow"}}}\n*/\n`;
+const chipsIn = (scope: ReturnType<Page['locator']>) => scope.locator('.thread-chip');
+
+test.describe('thread chips', () => {
+  test('an outline row shows one chip per thread, as a bar, named with the thread’s name', async ({
+    page,
+  }) => {
+    await openWith(page, CHIPS_SCRIPT);
+    const chips = chipsIn(yard(page));
+    await expect(chips).toHaveCount(2);
+    await expect(chips.nth(0)).toHaveText('A');
+    await expect(chips.nth(0)).toHaveAttribute('aria-label', 'thread A, The heist');
+    await expect(chips.nth(1)).toHaveText('B');
+    await expect(chips.nth(1)).toHaveAttribute('aria-label', 'thread B');
+    const bar = chips.nth(0).locator('.thread-bar');
+    expect(await bar.evaluate((el) => [el.clientWidth, el.clientHeight])).toEqual([4, 16]);
+    expect(await bar.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
+      'rgb(229, 193, 58)',
+    );
+    // Not the round dot a scene's color uses.
+    await expect(yard(page).locator('.swatch')).toHaveCount(0);
+    await expect(chipsIn(hall(page))).toHaveCount(0);
+    // The row's name says them too.
+    await expect(yard(page)).toHaveAccessibleName(/thread A, The heist, thread B/);
+  });
+
+  test('a card shows the same chips', async ({ page }) => {
+    await openWith(page, CHIPS_SCRIPT);
+    await runCommand(page, 'Show Cards');
+    const card = page
+      .getByRole('listbox', { name: 'Cards' })
+      .getByRole('option', { name: /EXT\. YARD - NIGHT/ });
+    await expect(chipsIn(card)).toHaveCount(2);
+    await expect(chipsIn(card).first()).toHaveAttribute('aria-label', 'thread A, The heist');
+    await expect(card).toHaveAccessibleName(/thread A, The heist, thread B/);
+  });
+
+  test('a novel passage’s row and card show its chips', async ({ page }) => {
+    await start(page);
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'Novel', exact: true })
+      .click();
+    await expect(page.locator('.cm-content')).toContainText('Low Tide');
+    await runCommand(page, 'Show Outline');
+    const chapter = row(page, /^The Salt Road, chapter/);
+    await menuFor(page, chapter);
+    await rowMenu(page).getByRole('menuitem', { name: 'Threads…' }).click();
+    const dialog = dialogOf(page, 'Threads for The Salt Road');
+    await dialog.getByRole('textbox', { name: 'New thread' }).fill('A');
+    await page.keyboard.press('Enter');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(chipsIn(chapter)).toHaveCount(1);
+    await expect(chipsIn(chapter)).toHaveAttribute('aria-label', 'thread A');
+    await expect(chipsIn(chapter)).toHaveText('A');
+    await runCommand(page, 'Show Cards');
+    await expect(chipsIn(page.locator('.novel-cards .card').first())).toHaveCount(1);
+  });
+});
+
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 for (const theme of ['dark', 'light'] as const) {
   test(`has no accessibility violations in the thread dialogs (${theme})`, async ({ page }) => {

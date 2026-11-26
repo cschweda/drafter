@@ -74,6 +74,20 @@ describe('read_scene', () => {
     expect((await read({ script: EP101, scene: 'pruitt farm continuous' })).scenes[0]?.n).toBe(3);
   });
 
+  it('a scene lists its threads, with names', async () => {
+    const dir = tempFolder();
+    put(
+      join(dir, 'Lib', 'threads.fountain'),
+      'INT. FARM - DAY\n\n[[Thread: A, B]]\nHay.\n\n/* drafter\n{"v":1,"threads":{"a":{"name":"The heist"}}}\n*/\n',
+    );
+    open = await connect({ folders: [join(dir, 'Lib')] });
+    const got = await read({ script: 'Lib/threads.fountain', scene: '1' });
+    expect((got.scenes[0] as { threads?: unknown }).threads).toEqual([
+      { label: 'A', name: 'The heist' },
+      { label: 'B', name: null },
+    ]);
+  });
+
   it('include notes brings them back, and --notes does too', async () => {
     await library();
     const asked = await read({ script: EP101, scene: '3', include: ['notes'] });

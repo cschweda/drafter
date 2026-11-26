@@ -67,8 +67,8 @@ useDocsHead({
         your reader what they are looking at. You can change the sentence or turn it off.
       </li>
       <li>
-        <strong>Include:</strong> Scene summaries, Lines of dialogue, and Threads (your setups and
-        payoffs) are on. <strong>Your contact</strong> is off. When you turn it on, it starts with
+        <strong>Include:</strong> Scene summaries, Lines of dialogue, and Setups and payoffs are
+        on. <strong>Your contact</strong> is off. When you turn it on, it starts with
         the Contact on your title page, and an email address becomes a link to email you.
       </li>
       <li>
@@ -223,8 +223,8 @@ useDocsHead({
     <ul>
       <li>
         <strong>Notes are never included</strong>, nor the boneyard, to-do text, revision marks, or
-        your script itself. The only words from notes are your Setup and Payoff names, when Threads
-        is on.
+        your script itself. The only words from notes are your Setup and Payoff names, when Setups and
+        payoffs is on.
       </li>
       <li>
         Of the title page, only the title, your name, the logline, and (only when you turn it on)

@@ -82,7 +82,7 @@ describe('threads', () => {
     expect(map.threads).toHaveLength(15);
     const doc = docOf(map);
     const section = doc.querySelector('section#threads');
-    expect(text(section?.querySelector('h2'))).toBe('Threads');
+    expect(text(section?.querySelector('h2'))).toBe('Setups and payoffs');
     const arcs = section?.querySelectorAll('svg.arcs path.arc');
     expect(arcs).toHaveLength(12);
     const svg = section?.querySelector('svg.arcs');
@@ -96,7 +96,10 @@ describe('threads', () => {
     expect(section?.querySelectorAll('svg.arcn text.nt')).toHaveLength(12);
     expect(section?.querySelectorAll('ol.threads > li')).toHaveLength(15);
     expect(section?.querySelectorAll('details table tbody tr')).toHaveLength(15);
-    expect(doc.querySelector('nav a[href="#threads"]')?.textContent).toBe('Threads');
+    expect(doc.querySelector('nav a[href="#threads"]')?.textContent).toBe('Setups and payoffs');
+    expect(text(svg?.querySelector(':scope > title'))).toMatch(
+      /^Setups and payoffs across the script/,
+    );
   });
 
   it('the numbers on the arcs never touch', () => {

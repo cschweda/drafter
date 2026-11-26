@@ -83,7 +83,7 @@ function onEditKeydown(event: KeyboardEvent) {
           : undefined
     "
   >
-    <span class="sr-only">{{ name }}</span>
+    <span class="sr-only">{{ name }}<ThreadChips v-if="scene" :labels="scene.threads" speak /></span>
     <div class="stripe" aria-hidden="true">
       <span v-if="props.scene.color" class="color">{{ colorName(props.scene.color.value) }}</span>
     </div>
@@ -138,6 +138,7 @@ function onEditKeydown(event: KeyboardEvent) {
         <span class="sr-only">Opens with: </span><span data-preview-text>{{ props.preview }}</span>
       </p>
       <p v-if="goal" class="goal">Goal: {{ goal }}</p>
+      <ThreadChips v-if="scene && scene.threads.length > 0" :labels="scene.threads" />
     </div>
     <div v-if="scene?.pages" class="foot" aria-hidden="true">
       {{ lengthLabel(scene.pages.eighths) }}
