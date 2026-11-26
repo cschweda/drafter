@@ -33,3 +33,9 @@ export {
   nodeAt,
   novelStructure,
 } from './structure';
+export {
+  removeNovelThread,
+  renameNovelThread,
+  setNovelThreadMeta,
+  setPassageThreads,
+} from './threads';

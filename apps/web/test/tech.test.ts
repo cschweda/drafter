@@ -220,8 +220,9 @@ describe('directUses', () => {
     // and two more since production (it diffs with compare; the app reads a locked script with
     // it), and one more since the breakdown report (production reads the cast and the scene
     // index), and one more since `drafter build` prints a locked script's pages,
-    // and one more since `drafter check` runs the Problems pane's rules (the CLI reads lint).
-    expect(edges).toBeLessThanOrEqual(48);
+    // and one more since `drafter check` runs the Problems pane's rules (the CLI reads lint),
+    // and one more since a novel's threads follow a script's rules (novel reads notes).
+    expect(edges).toBeLessThanOrEqual(49);
   });
 });
 

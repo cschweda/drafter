@@ -30,7 +30,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@drafter/markdown": "workspace:*"
+    "@drafter/markdown": "workspace:*",
+    "@drafter/notes": "workspace:*"
   },
   "devDependencies": {
     "@codemirror/state": "^6.7.6"

@@ -256,7 +256,7 @@ export const PACKAGES: readonly PackageNote[] = [
   {
     name: '@drafter/novel',
     does: 'A novel in Markdown: its parts, chapters, and sections with their words, moving one byte for byte, and the status, synopsis, and word target kept for each in the metadata comment.',
-    uses: ['@drafter/markdown'],
+    uses: ['@drafter/markdown', '@drafter/notes'],
   },
   {
     name: '@drafter/fountain',

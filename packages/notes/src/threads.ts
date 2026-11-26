@@ -52,12 +52,12 @@ function entryOf(value: unknown): ThreadMeta | null {
 }
 
 /**
- * The threads' names and colors, by normalized label, in the block's order. Junk is ignored, a name
- * is cut to 80 units, and the object has no prototype, so a thread called `__proto__` is ordinary.
+ * The threads' names and colors in a raw `threads` map (as read from a file), by normalized label,
+ * in its order. Junk is ignored, a name is cut to 80 units, and the object has no prototype, so a
+ * thread called `__proto__` is ordinary.
  */
-export function threadMeta(doc: Doc): Record<string, ThreadMeta> {
+export function readThreadMetaMap(threads: unknown): Record<string, ThreadMeta> {
   const out: Record<string, ThreadMeta> = Object.create(null);
-  const threads = doc.meta?.threads;
   if (typeof threads !== 'object' || threads === null || Array.isArray(threads)) return out;
   for (const [raw, value] of Object.entries(threads)) {
     const key = normalizeLabel(raw);
@@ -72,6 +72,11 @@ export function threadMeta(doc: Doc): Record<string, ThreadMeta> {
       });
   }
   return out;
+}
+
+/** The script's threads' names and colors, by normalized label, in the block's order. */
+export function threadMeta(doc: Doc): Record<string, ThreadMeta> {
+  return readThreadMetaMap(doc.meta?.threads);
 }
 
 /**

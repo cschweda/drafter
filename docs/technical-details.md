@@ -110,6 +110,7 @@ flowchart BT
   fountain --> notes
   fountain --> spell
   markdown --> novel
+  notes --> novel
 ```
 
 The desktop app isn’t drawn: it uses none of the packages directly, and serves the web app’s finished build instead.

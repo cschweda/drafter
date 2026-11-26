@@ -41,6 +41,7 @@ export {
 } from './text';
 export {
   isThreadLabel,
+  readThreadMetaMap,
   replaceThreadMeta,
   setThreadMeta,
   THREAD_LIMITS,
