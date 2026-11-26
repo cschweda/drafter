@@ -18,6 +18,8 @@ import { fillPercent, KIND_WORD, nodeName, targetLine, titleOf, wordsLabel } fro
 import { useLiveNovel } from '~/novel/use-novel';
 import { sayOutline } from '~/outline/notice';
 import { type TreeRow, treeKey, typeAhead } from '~/outline/tree';
+import { useSettings } from '~/settings/settings';
+import { openThreads } from '~/threads/dialogs';
 
 // The Outline for a novel (the Novel design, goal 3): its parts, chapters, and sections as an ARIA
 // tree, with the script Outline's keys. One row is a tab stop; the arrows, Home, End, and typing
@@ -30,6 +32,10 @@ const novel = useLiveNovel();
 const { tree, facts } = novel;
 
 const closed = ref(new Set<string>());
+// The Lanes in the tree's place (threads design §7.3): the grid, its table, or on a phone the list.
+const { settings } = useSettings();
+const lanes = computed(() => settings.value.outlineView === 'lanes');
+const roomy = useMatchMedia(LANES_QUERY);
 
 interface Row extends TreeRow {
   node: NovelNode;
@@ -465,6 +471,16 @@ function menuItems(row: Row): DropdownMenuItem[][] {
       onSelect: () => afterClosing(() => startTarget(row)),
     },
   ]);
+  // A part is no passage: only a chapter or a section has threads. Read-only, it opens read-only.
+  if (row.node.kind !== 'part') {
+    groups.push([
+      {
+        label: 'Threads…',
+        icon: 'i-lucide-git-branch',
+        onSelect: () => afterClosing(() => openThreads(row.id, () => void focusRow(row.id))),
+      },
+    ]);
+  }
   return groups;
 }
 
@@ -544,7 +560,12 @@ watch(rows, async () => {
 <template>
   <div ref="root" class="novel-outline">
     <TargetDialog :passage="targeting" @save="saveTarget" @close="endTarget" />
-    <DEmpty v-if="rows.length === 0" icon="i-lucide-list-tree">
+    <template v-if="lanes">
+      <ThreadLanes v-if="roomy && !settings.threadsAsTable" />
+      <ThreadTable v-else-if="roomy" />
+      <ThreadList v-else />
+    </template>
+    <DEmpty v-else-if="rows.length === 0" icon="i-lucide-list-tree">
       No chapters yet. A chapter starts with <code>#</code> and its title, and a section within it
       with <code>##</code>.
     </DEmpty>
@@ -590,13 +611,14 @@ watch(rows, async () => {
         @drop="onDrop"
         @dragend="onDragend"
       >
-        <span class="sr-only">{{ nodeName(row.node, row.facts) }}</span>
+        <span class="sr-only">{{ nodeName(row.node, row.facts) }}<ThreadChips :labels="row.facts.threads" speak /></span>
         <div class="line" aria-hidden="true">
           <span v-if="row.expandable" class="twisty" @click.stop="toggle(row.id)">
             <UIcon :name="row.open ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" />
           </span>
           <span v-else class="twisty" />
           <span class="heading" :class="{ untitled: !row.node.title }">{{ titleOf(row.node) }}</span>
+          <ThreadChips :labels="row.facts.threads" />
           <span class="words">{{ wordsLabel(row.node.words) }}</span>
           <span v-if="row.facts.target" class="target">
             <span class="bar"

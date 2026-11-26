@@ -79,7 +79,7 @@ const value = fc.option(
 const detailsArb: fc.Arbitrary<SceneDetails> = fc.record({
   synopsis: value,
   color: fc.option(fc.constantFrom<SceneColor | null>(...SCENE_COLORS, null), { nil: undefined }),
-  storyline: value,
+  thread: value,
   goal: value,
   conflict: value,
   outcome: value,
@@ -89,7 +89,7 @@ const detailsArb: fc.Arbitrary<SceneDetails> = fc.record({
 const fullDetails = fc.record({
   synopsis: fc.string({ minLength: 1, maxLength: 20 }),
   color: fc.constantFrom(...SCENE_COLORS),
-  storyline: fc.constantFrom('A', 'A, B', 'C'),
+  thread: fc.constantFrom('A', 'A, B', 'C'),
   goal: fc.string({ minLength: 1, maxLength: 20 }),
   conflict: fc.string({ minLength: 1, maxLength: 20 }),
   outcome: fc.string({ minLength: 1, maxLength: 20 }),
@@ -146,7 +146,7 @@ describe('the printed script', () => {
             return scene
               ? setSceneDetails(doc, scene, {
                   color: null,
-                  storyline: '',
+                  thread: '',
                   goal: '',
                   conflict: '',
                   outcome: '',

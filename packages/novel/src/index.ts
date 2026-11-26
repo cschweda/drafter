@@ -26,6 +26,7 @@ export {
 } from './manuscript';
 export { downTarget, moveNode, type NovelMove, type NovelTarget, upTarget } from './move';
 export {
+  bodyWords,
   findNode,
   type NovelKind,
   type NovelNode,
@@ -33,3 +34,9 @@ export {
   nodeAt,
   novelStructure,
 } from './structure';
+export {
+  removeNovelThread,
+  renameNovelThread,
+  setNovelThreadMeta,
+  setPassageThreads,
+} from './threads';

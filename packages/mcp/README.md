@@ -56,8 +56,8 @@ Ten tools, each annotated `readOnlyHint: true`, `destructiveHint: false`, `idemp
 | Tool | What it returns | Limits |
 |---|---|---|
 | `list_scripts` | Each file's path, kind, title, scene count, date, size, and the drafts and cuts beside it, with a manifest: what is inside each file (`content`), whether that matches its name (`matches_name`), and why it is refused (`refused`), and counts of each | 500 files, 6 levels; 100 MB read a call; links to folders never followed |
-| `script_overview` | The title page (never Contact), template, pages, running time, acts and synopses, every scene, every character's figures, places, what is still to write, and a count of problems; a Markdown document's title and sections | Scenes paged |
-| `read_scene` | One scene, or a run of up to 10 (`through`), as written, with its heading, place, time, act, page, minutes, and cast | A long scene in parts |
+| `script_overview` | The title page (never Contact), template, pages, running time, acts and synopses, every scene (with its threads, each a label and name), every character's figures, places, what is still to write, and a count of problems; a Markdown document's title and sections | Scenes paged |
+| `read_scene` | One scene, or a run of up to 10 (`through`), as written, with its heading, place, time, act, page, minutes, cast, and threads | A long scene in parts |
 | `character_lines` | Every speech of one character (any case, with or without an extension), with extensions, parentheticals, and dual dialogue, and their figures | A long speech in parts |
 | `list_drafts` | Each frozen draft's number, IDs, date, note, pages, scenes, and words, and whether its text still matches its ID; never its text | 50 a page; no figures for a draft over 5 MB |
 | `compare_drafts` | What changed between two drafts, or a draft and `now`, by scene, with totals | A scene of more than 400 changed lines comes as counts until named; a draft over 5 MB refused |

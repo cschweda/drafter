@@ -16,7 +16,7 @@ const move = moveItem(doc, index, first, downTarget(index, first));
 move.changes; // a delete and an insert, for one editor transaction
 ```
 
-Each scene in the index also carries what its notes say: `fields` (the first `[[Goal: …]]`, `Conflict`, `Outcome`, `Shift`, `Storyline`, and `Color` note, typed anywhere in the scene, in any case), `storylines`, and its `[[Setup: …]]` and `[[Payoff: …]]` marks. `setSceneDetails` writes a scene's whole header at once, in the design's order:
+Each scene in the index also carries what its notes say: `fields` (the first `[[Goal: …]]`, `Conflict`, `Outcome`, `Shift`, `Thread` (or its older name `Storyline`, read as the same field), and `Color` note, typed anywhere in the scene, in any case), `threads` (every Thread or Storyline note's labels, case-folded, once each), and its `[[Setup: …]]` and `[[Payoff: …]]` marks. `setSceneDetails` writes a scene's whole header at once, in the design's order:
 
 ```ts
 import { setSceneDetails } from '@drafter/outline';

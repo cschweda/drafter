@@ -17,7 +17,7 @@ const scene = (more: Partial<Scene> = {}): Scene => ({
   synopses: [],
   color: null,
   fields: {},
-  storylines: [],
+  threads: [],
   marks: [],
   speakers: [],
   words: 0,

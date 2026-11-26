@@ -41,6 +41,11 @@ export interface NovelSession {
   tree: Readonly<Ref<NovelTree | null>>;
   facts: Readonly<Ref<NovelFacts>>;
   /**
+   * The facts as the document holds them now, read from the editor's text: what an edit of many
+   * facts starts from, since `facts` may be a frame behind.
+   */
+  current(): NovelFacts;
+  /**
    * Keeps `tree` and `facts` fresh, a frame behind every edit, until the function it returns is
    * called: what shows the book (the Outline, Cards, Stats, Counts, the passage bar) holds it while
    * it is there. The first hold reads the book at once, so it starts with a fresh tree. With no
@@ -51,8 +56,17 @@ export interface NovelSession {
   moved: Readonly<Ref<string | null>>;
   /** Why nothing can be changed from the Outline now, or null when it can. */
   readOnly(): string | null;
-  /** Writes `facts` as the facts of node `id`, in one undo step. Empty facts take them away. */
+  /**
+   * Writes the Outline's facts of node `id` (its status, synopsis and target) from `facts`, in one
+   * undo step; an Outline fact `facts` doesn't have is taken away. Every other fact the document
+   * keeps for the node (its threads, and whatever is kept next) stays as it is.
+   */
   setFacts(id: string, facts: Facts): void;
+  /**
+   * Writes the whole `facts` of the book, in one undo step: for an edit that changes many passages
+   * at once (renaming a thread). False, changing nothing, when `readOnly` says no.
+   */
+  setAllFacts(facts: NovelFacts): boolean;
   /** Writes the whole book's word target, in one undo step. Null takes it away. */
   setBookTarget(target: number | null): void;
   /**
@@ -203,7 +217,10 @@ function create(): NovelSession {
       const state = editor.view.state;
       const text = state.doc.toString();
       const all = readFacts(text);
-      const kept: Facts = {};
+      const kept: Facts = { ...all.nodes[id] };
+      delete kept.status;
+      delete kept.synopsis;
+      delete kept.target;
       if (next.status) kept.status = next.status;
       const synopsis = capSynopsis(next.synopsis?.trim() ?? '');
       if (synopsis) kept.synopsis = synopsis;
@@ -213,6 +230,19 @@ function create(): NovelSession {
       const change = factsChange(text, all);
       if (!change) return;
       dispatch(state.changes(change));
+    }
+
+    function current(): NovelFacts {
+      if (editor.kind.value !== 'markdown' || !editor.novel.value) return emptyFacts();
+      return readFacts(editor.view.state.doc.toString());
+    }
+
+    function setAllFacts(next: NovelFacts): boolean {
+      if (readOnly()) return false;
+      const state = editor.view.state;
+      const change = factsChange(state.doc.toString(), next);
+      if (change) dispatch(state.changes(change));
+      return true;
     }
 
     function setBookTarget(target: number | null) {
@@ -293,10 +323,12 @@ function create(): NovelSession {
     return {
       tree,
       facts,
+      current,
       moved,
       hold,
       readOnly,
       setFacts,
+      setAllFacts,
       setBookTarget,
       setManuscript,
       move,

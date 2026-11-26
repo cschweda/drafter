@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Threads: see which scenes each plot thread is in.** A thread is one line of the story, the heist or the marriage or who sent the letter. Choose **Threads…** from any scene's menu (in the Outline, on a card, in the Lanes, or from the command palette for the scene you're in), check the threads the scene is in, or type a new label, and Save. The Outline tab has a new **Tree | Lanes** switch: Lanes draws a row for each thread along the whole script, each scene a block as wide as it is long, with a card on hover or focus, a ruler, and **Show as table** for a screen reader or anyone who prefers numbers. It works with the arrow keys, Home and End, Shift+F10 or the ⋯ on a focused block for its menu, and Escape to hide the card; a phone gets a list. A thread can have a name and a color (one of the nine color words), and can be renamed, merged with another, or removed from every scene in one step, one Undo. Rows in the Outline and Cards show a small chip for each thread. Scene details' Threads field suggests the labels already in use as you type. In a script a thread is the note `[[Thread: Heist, Mara]]`; the older `[[Storyline: …]]` is still read, forever. In a novel the threads of each chapter and section sit in the novel's comment beside its status, and a chapter's threads carry to the sections that have none, drawn lighter. Drafter for Claude shows each scene's threads in `script_overview` and `read_scene`. Help has a new [Threads](https://drafter.dev/docs/threads/) page. Not yet: threads in exports, the strip's Color by, margin marks, and pacing (listed in `docs/DEFERRED.md`).
+
+### Changed
+
+- **The Story Atlas's "Threads" section is now "Setups and payoffs"**, in the Atlas, the Make a Story Atlas box, and its help, so "thread" means a plot thread everywhere in Drafter. Nothing about what it draws changes, and a saved choice of whether to include it still works. Its table's first column is now headed "Setup".
+
 ## [0.28.0] - 2026-11-26
 
 **The Story Atlas, a quiet tip jar, and a second red/blue audit.** The first release after the freeze on features. The story map is now the **Story Atlas**, a name no other writing app uses for its own feature; nothing about it changes but the name. "Unsaved" moves to the status bar, so nothing in the top bar ever moves. A help page, **Support Drafter**, has one button for anyone who'd like to leave a tip; Drafter never asks, and nothing changes whether you do. And a second red/blue audit, with five attackers and a second team auditing the fixes, found no way to run code from a file, reach the network from a page, or read a file you hadn't chosen; it found small files that could freeze the editor or a tool for seconds, and those are fixed.

@@ -51,8 +51,8 @@ export interface Scene {
    * spacing), with its body trimmed; an empty one is no field, as an empty color is no color.
    */
   fields: Partial<Record<FieldKey, { body: string; span: Span }>>;
-  /** Every Storyline note's comma-separated labels, once each (case folded), as first typed, in order. */
-  storylines: string[];
+  /** Every Thread (or Storyline) note's comma-separated labels, once each (case folded), as first typed, in order. */
+  threads: string[];
   /** Every Setup and Payoff note with a label, in order (design §10). */
   marks: Array<{ key: MarkKey; label: string; span: Span }>;
   /** The names that speak in it, as first typed, once each, in order. */

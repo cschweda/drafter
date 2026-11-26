@@ -1,4 +1,11 @@
 import { readMarkdownMeta, setMarkdownMeta } from '@drafter/markdown';
+import {
+  isThreadLabel,
+  normalizeLabel,
+  readThreadMetaMap,
+  THREAD_LIMITS,
+  type ThreadMeta,
+} from '@drafter/notes';
 import { findNode, type NovelNode, type NovelTree } from './structure';
 
 // What a novelist keeps beside each passage: a status, a synopsis, and a word target. They live in
@@ -19,6 +26,8 @@ export interface Facts {
   status?: Status;
   synopsis?: string;
   target?: number;
+  /** The threads this passage is in, as first typed, once each by `normalizeLabel`; at most 12. */
+  threads?: string[];
 }
 
 export type ManuscriptFont = 'times' | 'courier';
@@ -39,6 +48,8 @@ export interface NovelFacts {
   manuscript?: ManuscriptDetails;
   /** Keyed by node id; made with `Object.create(null)`, so no key is special. */
   nodes: Record<string, Facts>;
+  /** Each thread's name and color, keyed by `normalizeLabel`; made with `Object.create(null)`. */
+  threads?: Record<string, ThreadMeta>;
 }
 
 /** The longest synopsis kept, in UTF-16 code units: a longer one is cut there when read or written. */
@@ -96,11 +107,29 @@ function manuscript(value: unknown): ManuscriptDetails | undefined {
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-function newNodes(): Record<string, Facts> {
+export function newNodes(): Record<string, Facts> {
   return Object.create(null) as Record<string, Facts>;
 }
 
-function readOne(raw: unknown): Facts | null {
+/** Labels as a hand-edited file may hold them: cut to 40 units, invalid ones dropped, once each, 12 at most. */
+function readLabels(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'string') continue;
+    const label = cut(item.trim(), THREAD_LIMITS.label).trim();
+    if (!isThreadLabel(label)) continue;
+    const key = normalizeLabel(label);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(label);
+    if (out.length === THREAD_LIMITS.perUnit) break;
+  }
+  return out;
+}
+
+export function readOne(raw: unknown): Facts | null {
   if (!isRecord(raw)) return null;
   const facts: Facts = {};
   const status = raw.status;
@@ -112,6 +141,8 @@ function readOne(raw: unknown): Facts | null {
   }
   const t = target(raw.target);
   if (t !== undefined) facts.target = t;
+  const threads = readLabels(raw.threads);
+  if (threads.length > 0) facts.threads = threads;
   return Object.keys(facts).length > 0 ? facts : null;
 }
 
@@ -129,6 +160,8 @@ export function readFacts(text: string): NovelFacts {
   if (bookTarget !== undefined) out.bookTarget = bookTarget;
   const details = manuscript(novel.manuscript);
   if (details) out.manuscript = details;
+  const threadMap = readThreadMetaMap(novel.threads);
+  if (Object.keys(threadMap).length > 0) out.threads = threadMap;
   if (isRecord(novel.nodes)) {
     for (const id of Object.keys(novel.nodes)) {
       const facts = readOne(novel.nodes[id]);
@@ -161,7 +194,14 @@ export function writeFacts(text: string, facts: NovelFacts): string {
   }
   const book = target(facts.bookTarget);
   const details = manuscript(facts.manuscript);
-  if (book === undefined && details === undefined && Object.keys(nodes).length === 0) {
+  const threadMap = readThreadMetaMap(facts.threads);
+  const hasThreads = Object.keys(threadMap).length > 0;
+  if (
+    book === undefined &&
+    details === undefined &&
+    !hasThreads &&
+    Object.keys(nodes).length === 0
+  ) {
     delete next.novel;
     if (meta === null) return text;
   } else {
@@ -169,6 +209,7 @@ export function writeFacts(text: string, facts: NovelFacts): string {
     if (book !== undefined) novel.bookTarget = book;
     novel.nodes = nodes;
     if (details) novel.manuscript = details;
+    if (hasThreads) novel.threads = threadMap;
     next.novel = novel;
   }
   return setMarkdownMeta(text, next);
@@ -197,6 +238,7 @@ export function carryFacts(
   const out: NovelFacts = { nodes: newNodes() };
   if (facts.bookTarget !== undefined) out.bookTarget = facts.bookTarget;
   if (facts.manuscript) out.manuscript = facts.manuscript;
+  if (facts.threads) out.threads = facts.threads;
   const orphans: string[] = [];
   for (const id of Object.keys(facts.nodes)) {
     const node = findNode(before, id);

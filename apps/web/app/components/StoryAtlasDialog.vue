@@ -297,7 +297,7 @@ function make() {
         <label class="check"><input v-model="include.summaries" type="checkbox" />Scene summaries</label>
         <label class="check"><input v-model="include.lines" type="checkbox" />Lines of dialogue</label>
         <label class="check">
-          <input v-model="include.threads" type="checkbox" />Threads (your setups and payoffs)
+          <input v-model="include.threads" type="checkbox" />Setups and payoffs
         </label>
         <label class="check">
           <input v-model="include.contact" type="checkbox" aria-describedby="story-atlas-contact-hint" />

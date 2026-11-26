@@ -6,6 +6,8 @@
 
 **Renumbered (2026-10-31):** Production (revisions, locked pages, breakdowns, sides) became v0.27.0, so Part 2 below is now **v0.28.0**, Plan F v0.29.0, the `.drafter` package v0.30.0, and Plans G and H v0.31.0 and v0.32.0. The numbers below are as first decided.
 
+**Part 2's storylines are replaced (2026-11-26):** the storylines half of Part 2 (§6, the Timeline, the margin marks) is superseded by [the Threads design](drafter-threads-design.md), built as v0.29.0 as **Threads** and **Lanes**; the script map (the strip's Color by) and pacing remain open (see DEFERRED.md, Seeing the script).
+
 **Release numbers (decided 2026-10-30, after this design):** v0.20.0 went to the formats release (`drafter convert`, footnotes in Markdown documents), so Part 1 is **v0.21.0**; **Export as HTML** (and EPUB) is v0.22.0; **a fresh look** (the UI refresh) v0.23.0; **Drafts and Cuts** v0.24.0; **Novel** v0.26.0; Part 2 is **v0.27.0**; Plan F, the Workbook, v0.28.0; the `.drafter` package v0.29.0; and Plans G and H v0.30.0 and v0.31.0, their letters unchanged. The numbers below are the current ones; the Calls and the controller's rulings keep the numbers they were made with.
 
 **Asked for.** Phase 2 design §22, Plan E: storylines (§13) with the Timeline view and margin marks; the script map (§14); the pacing view (§15); the Stats tab replacing the window, with screen time, dialogue share, most often with, the character-by-scene grid, and Storylines (§16); and **Scaffold**. The maintainer, 2026-10-29: "How about adding an x-ray feature like amazons x-ray for movies. Characters, scene time per character, etc etc". They named it **Scaffold**, and then said "Yes please keep going this sounds really cool". Scaffold, as Phase 2 design §22 writes it down:

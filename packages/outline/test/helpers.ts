@@ -35,3 +35,10 @@ export function apply(source: string, changes: readonly TextChange[]): string {
 
 /** The scenes' headings, in order. */
 export const headings = (index: SceneIndex) => index.scenes.map((s) => s.heading);
+
+/** Scene number `n` (0-based) of the index; throws when there is none. */
+export function sceneAt(index: SceneIndex, n: number) {
+  const scene = index.scenes[n];
+  if (!scene) throw new Error(`no scene ${n}`);
+  return scene;
+}

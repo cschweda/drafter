@@ -90,6 +90,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
   },
   { id: 'help-novel', path: '/docs/novel', title: 'Novel', section: 'writing' },
   { id: 'help-production', path: '/docs/production', title: 'Production', section: 'writing' },
+  { id: 'help-threads', path: '/docs/threads', title: 'Threads', section: 'writing' },
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser', section: 'files' },
   {
     id: 'help-drafts-and-cuts',
@@ -403,6 +404,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'show-preview', title: 'Show Preview', group: 'View' },
   { id: 'show-problems', title: 'Show Problems', group: 'View' },
   { id: 'show-outline', title: 'Show Outline', group: 'View' },
+  // The Outline's Lanes (threads design §7.3): a row per plot thread along the work.
+  { id: 'show-lanes', title: 'Show Lanes', group: 'View', keywords: ['threads', 'storylines'] },
   { id: 'show-cards', title: 'Show Cards', group: 'View' },
   { id: 'show-notes', title: 'Show Notes', group: 'View' },
   // Compare's (Phase 2 design §11.2, Call 21): N and Shift+N in the Compare tab, which is not a
@@ -572,6 +575,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'move-scene-down', title: 'Move scene down', group: 'Edit' },
   // Scene details (Phase 2 design §9), for the scene holding the cursor.
   { id: 'scene-details', title: 'Scene details…', group: 'Edit' },
+  // Threads… (Threads design §7.4), for the scene or passage holding the cursor.
+  { id: 'scene-threads', title: 'Threads…', group: 'Edit' },
   // New note (Phase 2 design §8): at the end of the cursor's line, with an optional category.
   { id: 'new-note', title: 'New note…', group: 'Edit' },
   { id: 'expand-outline', title: 'Expand outline', group: 'Edit' },

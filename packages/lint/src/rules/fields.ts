@@ -2,7 +2,7 @@ import { bodyEnd, readNote } from '@drafter/notes';
 import { resolveRole } from '@drafter/templates';
 import type { LintDiagnostic, Rule } from '../types';
 
-// duplicate-field (Phase 2 design §21): a scene's Goal, Conflict, Outcome, Shift, Storyline, or
+// duplicate-field (Phase 2 design §21): a scene's Goal, Conflict, Outcome, Shift, Thread, or
 // Color is read from the first such note in the scene, so a second one does nothing. This lists
 // each second (and later) note, as advice. Setup, Payoff, and Card notes may repeat, and an empty
 // field (`[[Goal:]]`) is no field. `@drafter/outline` reads the same scenes (a scene starts at a
@@ -42,8 +42,8 @@ export const duplicateField: Rule = {
       if (at < 0 || !stops[at]?.scene) continue;
       const note = readNote(doc.source.slice(from + 2, to - 2));
       if (note.head?.kind !== 'field' || note.body === '') continue;
-      // Storyline notes add up (Scene details lists them all), so a second is no duplicate.
-      if (note.head.key === 'storyline') continue;
+      // Thread notes add up (Scene details lists them all), so a second is no duplicate.
+      if (note.head.key === 'thread') continue;
       if (!seen.has(note.head.key)) {
         seen.add(note.head.key);
         continue;
@@ -61,7 +61,7 @@ export const duplicateField: Rule = {
 
 const LABELS = {
   color: 'Color',
-  storyline: 'Storyline',
+  thread: 'Thread',
   goal: 'Goal',
   conflict: 'Conflict',
   outcome: 'Outcome',

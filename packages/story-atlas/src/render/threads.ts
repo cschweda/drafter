@@ -151,7 +151,7 @@ export const threadsSection: Section = (map) => {
   }
   const unpaid = map.threads.filter((t) => t.to === null).length;
   const shown = Math.min(map.threads.length, STORY_ATLAS_LIMITS.arcs);
-  const svgTitle = `Threads across the script: ${shown} arcs, each from the scene that sets something up to the scene where it pays off${
+  const svgTitle = `Setups and payoffs across the script: ${shown} arcs, each from the scene that sets something up to the scene where it pays off${
     unpaid > 0 ? `; dashed arcs are not paid off yet` : ''
   }.`;
   const svg =
@@ -186,8 +186,8 @@ export const threadsSection: Section = (map) => {
       .join(''),
   );
   const table = chartTable(
-    'Threads: where each is set up and where it pays off',
-    ['Thread', 'Set up in scene', 'Pays off in scene'],
+    'Setups and payoffs: where each is set up and where it pays off',
+    ['Setup', 'Set up in scene', 'Pays off in scene'],
     map.threads.map((t) => [t.label, t.from, t.to === null ? 'Not yet' : t.to]),
   );
   const more =
@@ -197,7 +197,7 @@ export const threadsSection: Section = (map) => {
   const html = el(
     'section',
     { id: 'threads', 'aria-labelledby': 'threads-h' },
-    el('h2', { class: 'sec-h', id: 'threads-h' }, 'Threads') +
+    el('h2', { class: 'sec-h', id: 'threads-h' }, 'Setups and payoffs') +
       el(
         'p',
         { class: 'cap' },
@@ -209,5 +209,5 @@ export const threadsSection: Section = (map) => {
         el('div', { class: 'arcwrap' }, svg) + rulerHtml(axis) + more + list + table,
       ),
   );
-  return { nav: { id: 'threads', label: 'Threads' }, html, rules: RULES };
+  return { nav: { id: 'threads', label: 'Setups and payoffs' }, html, rules: RULES };
 };

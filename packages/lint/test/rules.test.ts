@@ -878,6 +878,10 @@ describe('duplicate-field', () => {
     miss('INT. A - DAY\n\n[[Goal:]] [[Goal: Real.]] [[Goal:]]\n');
   });
 
+  it('allows Storyline and Thread notes together', () => {
+    miss('INT. A - DAY\n\n[[Storyline: A]]\n\n[[Thread: B]] [[Thread: C]]\n');
+  });
+
   it('treats each scene apart in a stage play', () => {
     const source =
       '# Act One\n\n[[Goal: stray]]\n\n## Scene 1\n\n[[Goal: A]]\n\n## Scene 2\n\n[[Goal: B]] [[Goal: C]]\n\n# Act Two\n\n[[Goal: D]]\n';

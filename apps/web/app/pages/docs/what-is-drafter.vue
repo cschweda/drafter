@@ -238,6 +238,11 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <a :href="help('help-drafts-and-cuts')">Drafts and cuts</a>
         </li>
         <li>
+          <strong>Threads.</strong> Tag the scenes (or chapters) each plot thread is in, give a thread
+          a name and a color, and see every thread as a lane along the whole work.
+          <a :href="help('help-threads')">Threads</a>
+        </li>
+        <li>
           <strong>A Story Atlas to send to anyone.</strong> One page that shows someone who doesn’t
           read scripts the whole story so far: its shape, its people, and every scene in order, with
           a few lines of dialogue and what is still to write. It opens on a phone, has no code,

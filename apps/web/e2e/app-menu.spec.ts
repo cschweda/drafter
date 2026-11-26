@@ -453,6 +453,7 @@ test.describe('the Help menu', () => {
       /^Classic Mode/,
       /^Novel/,
       /^Production/,
+      /^Threads/,
       /^Saving and your browser/,
       /^Drafts and cuts/,
       /^Story Atlas/,

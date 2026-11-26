@@ -18,6 +18,7 @@ import { fillPercent, KIND_WORD, nodeName, targetLine, titleOf, wordsLabel } fro
 import { useLiveNovel } from '~/novel/use-novel';
 import { sayOutline } from '~/outline/notice';
 import { useSettings } from '~/settings/settings';
+import { openThreads } from '~/threads/dialogs';
 
 // The Cards tab for a novel (the Novel design, goal 3): a card for each chapter and each section, in
 // the book's order, under its part's title, with its synopsis, status, and words. As the script's
@@ -453,6 +454,16 @@ function menuItems(card: Card): DropdownMenuItem[][] {
       onSelect: () => afterClosing(() => startTarget(card)),
     },
   ]);
+  // A part is no passage: only a chapter or a section has threads. Read-only, it opens read-only.
+  if (card.node.kind !== 'part') {
+    groups.push([
+      {
+        label: 'Threads…',
+        icon: 'i-lucide-git-branch',
+        onSelect: () => afterClosing(() => openThreads(card.id, () => void focusCard(card.id))),
+      },
+    ]);
+  }
   return groups;
 }
 
@@ -591,7 +602,7 @@ watch(cards, async () => {
             @drop="onDrop"
             @dragend="onDragend"
           >
-            <span class="sr-only">{{ nodeName(card.node, card.facts) }}</span>
+            <span class="sr-only">{{ nodeName(card.node, card.facts) }}<ThreadChips :labels="card.facts.threads" speak /></span>
             <div class="top" aria-hidden="true">
               <span class="kind">{{ kindLabel(card) }}</span>
               <span class="heading" :class="{ untitled: !card.node.title }">{{ titleOf(card.node) }}</span>
@@ -614,6 +625,7 @@ watch(cards, async () => {
               <p v-if="card.facts.synopsis && editing !== card.id" :id="`${domId(card.id)}-synopsis`" class="synopsis">
                 {{ card.facts.synopsis }}
               </p>
+              <ThreadChips :labels="card.facts.threads" />
             </div>
             <div class="foot" aria-hidden="true">
               <MenuButton

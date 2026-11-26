@@ -205,6 +205,30 @@ describe('useNovel', () => {
     expect(novel.readOnly()).toBe('This novel is open for editing in another tab.');
   });
 
+  test('a status, synopsis or target keeps the passage’s threads and every other fact', async () => {
+    stand(
+      setMarkdownMeta('# One\n\nText.\n', {
+        template: 'novel',
+        novel: { nodes: { 'chapter:one:0': { status: 'todo', threads: ['Tide', 'Moon'] } } },
+      }),
+    );
+    const novel = await session();
+    novel.setFacts('chapter:one:0', { status: 'revised' });
+    expect(readFacts(text()).nodes['chapter:one:0']).toEqual({
+      status: 'revised',
+      threads: ['Tide', 'Moon'],
+    });
+    novel.setFacts('chapter:one:0', { synopsis: 'The sea.', target: 900 });
+    expect(readFacts(text()).nodes['chapter:one:0']).toEqual({
+      synopsis: 'The sea.',
+      target: 900,
+      threads: ['Tide', 'Moon'],
+    });
+    // Empty Outline facts leave the threads, which are still the passage’s.
+    novel.setFacts('chapter:one:0', {});
+    expect(readFacts(text()).nodes['chapter:one:0']).toEqual({ threads: ['Tide', 'Moon'] });
+  });
+
   test('empty facts take a node’s facts away', async () => {
     const novel = await session();
     novel.setFacts('section:what-the-sand-kept:0', {});
@@ -343,6 +367,29 @@ describe('useNovel', () => {
     env.refs.novel.value = false;
     const novel = await session();
     expect(novel.tree.value).toBeNull();
+  });
+});
+
+describe('sameFacts', () => {
+  test('a thread’s name or color, or the manuscript details, make the facts different', () => {
+    const base = { nodes: { a: { status: 'draft' as const } } };
+    const { sameFacts } = carryModule;
+    expect(sameFacts(base, { nodes: { a: { status: 'draft' } } })).toBe(true);
+    expect(sameFacts(base, { ...base, threads: { tide: { name: 'The sea' } } })).toBe(false);
+    expect(
+      sameFacts(
+        { ...base, threads: { tide: { name: 'The sea' } } },
+        { ...base, threads: { tide: { name: 'The sea', color: 'blue' } } },
+      ),
+    ).toBe(false);
+    expect(sameFacts(base, { ...base, manuscript: { byline: 'R. Vale' } })).toBe(false);
+    // Key order is not a difference.
+    expect(
+      sameFacts(
+        { nodes: { a: { status: 'draft', synopsis: 'x' }, b: {} } },
+        { nodes: { b: {}, a: { synopsis: 'x', status: 'draft' } } },
+      ),
+    ).toBe(true);
   });
 });
 

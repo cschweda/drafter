@@ -14,8 +14,10 @@ export {
   sectionHeader,
   setColor,
   setSceneDetails,
+  setSceneThreadNotes,
   setSynopsis,
 } from './header';
+export { type Lanes, type LaneUnit, lanesOf, scriptUnits } from './lanes';
 export { type ScriptMarkdownOptions, scriptMarkdown } from './markdown';
 export {
   downTarget,
@@ -37,6 +39,14 @@ export {
   type StripRow,
   structureStrip,
 } from './strip';
+export {
+  describeThreads,
+  removeThread,
+  renameThread,
+  setSceneThreads,
+  type ThreadInfo,
+  threadInfo,
+} from './threads';
 export {
   ACTION_SECONDS_PER_LINE,
   addTiming,

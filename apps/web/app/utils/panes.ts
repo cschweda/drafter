@@ -252,6 +252,9 @@ export function dropTab(tabs: PaneTabs, tab: TabId): PaneTabs {
 /** The media query for two panes: 1024px, Tailwind's `lg`. */
 export const WIDE_QUERY = '(min-width: 1024px)';
 
+/** Screens wide enough for the Lanes' grid (threads design §7.3); below it, a phone, the list. */
+export const LANES_QUERY = '(min-width: 640px)';
+
 /** Screens with a status bar (fresh-look design §3.1, Task 6): 640px and up. */
 export const STATUS_BAR_QUERY = '(min-width: 640px)';
 
