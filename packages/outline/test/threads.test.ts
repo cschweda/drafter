@@ -183,6 +183,48 @@ describe('renameThread', () => {
   });
 });
 
+describe('merge, half-done edits, and labels already in a script', () => {
+  test('a merge drops the source meta even when the target has none', () => {
+    const source = script(
+      ['[[Thread: A]]\n', '[[Thread: B]]\n'],
+      '{"v":1,"threads":{"a":{"name":"Ay","color":"red"}}}',
+    );
+    const { doc, index } = indexOf(source);
+    const r = renameThread(doc, index, 'A', 'B');
+    expect(r).toMatchObject({ scenes: 1, merged: true });
+    const out = cm(source, r.changes);
+    expect(threadsOf(out)).toEqual([['B'], ['B']]);
+    expect(meta(out)).toBeUndefined();
+  });
+
+  // A stray two-space line between two Thread notes: the first can't be taken out safely.
+  const stuck = 'INT. A - DAY\n\nOne.\n[[Thread: A]]\n  \n[[Thread: A]]\n';
+  const withMeta = `INT. B - DAY\n\n[[Thread: A]]\n\n${stuck}\n/* drafter\n{"v":1,"threads":{"a":{"name":"Ay"}}}\n*/\n`;
+
+  test('remove is all or nothing', () => {
+    const { doc, index } = indexOf(withMeta);
+    expect(index.scenes[1]?.threads).toEqual(['A']);
+    expect(removeThread(doc, index, 'A')).toEqual({ changes: [], scenes: 0 });
+  });
+
+  test('rename is all or nothing, meta included', () => {
+    const { doc, index } = indexOf(withMeta);
+    expect(renameThread(doc, index, 'A', 'Z')).toEqual({ changes: [], scenes: 0, merged: false });
+  });
+
+  test('renaming one thread leaves another scene label of any length alone', () => {
+    const long = 'L'.repeat(60);
+    const labels = Array.from({ length: 13 }, (_, i) => `T${i}`).join(', ');
+    const source = script([`[[Thread: A, ${long}]]\n`, `[[Thread: A, ${labels}]]\n`]);
+    const { doc, index } = indexOf(source);
+    const r = renameThread(doc, index, 'A', 'Z');
+    expect(r.scenes).toBe(2);
+    const out = cm(source, r.changes);
+    expect(threadsOf(out)[0]).toEqual(['Z', long]);
+    expect(threadsOf(out)[1]).toHaveLength(14);
+  });
+});
+
 describe('removeThread', () => {
   test('takes the label from every scene and its meta', () => {
     const source = script(
@@ -249,7 +291,6 @@ describe('a Thread note outside the header (setThreadField)', () => {
 describe('a thread note in the middle of a scene', () => {
   const source =
     'INT. A - DAY\n\n[[Thread: A]]\nAction one.\n\n[[Storyline: B]]\n\nMore. [[Thread: A, D]]\n\nINT. B - DAY\n\n[[Thread: B]]\n\nEnd.\n';
-  const stale = (text: string) => threadsOf(text);
   /** The inverse of a change set, in the changed text's offsets. */
   const undo = (text: string, changes: readonly TextChange[]) => {
     let shift = 0;
@@ -270,7 +311,7 @@ describe('a thread note in the middle of a scene', () => {
     expect(out.slice(0, out.indexOf('INT. B'))).toBe(
       'INT. A - DAY\n\n[[Thread: C]]\nAction one.\n\nMore. \n\n',
     );
-    expect(stale(out)).toEqual([['C'], ['B']]);
+    expect(threadsOf(out)).toEqual([['C'], ['B']]);
     expect(changes).toHaveLength(1);
     expect(cm(out, undo(source, changes))).toBe(source);
   });
@@ -279,13 +320,13 @@ describe('a thread note in the middle of a scene', () => {
     const { doc, index } = indexOf(source);
     const renamed = renameThread(doc, index, 'A', 'X');
     const out = cm(source, renamed.changes);
-    expect(stale(out)).toEqual([['X', 'B', 'D'], ['B']]);
+    expect(threadsOf(out)).toEqual([['X', 'B', 'D'], ['B']]);
     expect(out).not.toMatch(/Thread: A|Storyline/);
     expect(cm(out, undo(source, renamed.changes))).toBe(source);
     const removed = removeThread(doc, index, 'B');
     expect(removed.scenes).toBe(2);
     const gone = cm(source, removed.changes);
-    expect(stale(gone)).toEqual([['A', 'D'], []]);
+    expect(threadsOf(gone)).toEqual([['A', 'D'], []]);
     expect(gone).not.toMatch(/Storyline|Thread: B/);
     expect(cm(gone, undo(source, removed.changes))).toBe(source);
   });
@@ -305,16 +346,11 @@ describe('a header note flush against the action', () => {
 describe('thread budget', () => {
   const make = (n: number) =>
     indexOf(script(Array.from({ length: n }, (_, i) => note(`A, T${i % 7}, B${i % 3}`))));
-  const run = (f: (x: ReturnType<typeof make>) => unknown) => (x: ReturnType<typeof make>) => f(x);
 
   test(
     'threadInfo grows linearly',
     () => {
-      const { growth } = scaling(
-        make,
-        run(({ doc, index }) => threadInfo(doc, index)),
-        120,
-      );
+      const { growth } = scaling(make, ({ doc, index }) => threadInfo(doc, index), 120);
       expect(growth).toBeLessThan(MAX_GROWTH);
     },
     SCALING_TIMEOUT,
@@ -323,17 +359,9 @@ describe('thread budget', () => {
   test(
     'rename and remove over every scene grow linearly',
     () => {
-      const rename = scaling(
-        make,
-        run(({ doc, index }) => renameThread(doc, index, 'A', 'Z')),
-        120,
-      );
+      const rename = scaling(make, ({ doc, index }) => renameThread(doc, index, 'A', 'Z'), 120);
       expect(rename.growth).toBeLessThan(MAX_GROWTH);
-      const remove = scaling(
-        make,
-        run(({ doc, index }) => removeThread(doc, index, 'A')),
-        120,
-      );
+      const remove = scaling(make, ({ doc, index }) => removeThread(doc, index, 'A'), 120);
       expect(remove.growth).toBeLessThan(MAX_GROWTH);
       const { doc, index } = make(480);
       expect(renameThread(doc, index, 'A', 'Z').scenes).toBe(480);

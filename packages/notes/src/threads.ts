@@ -94,7 +94,8 @@ export function replaceThreadMeta(
     });
     count++;
   }
-  const { threads: _, ...rest } = doc.meta ?? {};
+  const rest: DrafterMeta = { ...doc.meta };
+  delete rest.threads;
   const meta: DrafterMeta = count > 0 ? { ...rest, threads } : rest;
   return setMeta(doc, meta);
 }

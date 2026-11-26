@@ -104,19 +104,36 @@ function inScene(doc: Doc, scene: Scene, labels: readonly string[]): TextChange[
   }));
 }
 
-/** The scenes holding thread `key`, with their labels changed by `edit`, and the changes. */
+/** The labels once each by `normalizeLabel`, as first typed; no checking of the labels. */
+function distinct(labels: readonly string[]): string[] {
+  const seen = new Set<string>();
+  return labels.filter((l) => {
+    const key = normalizeLabel(l);
+    return !seen.has(key) && seen.add(key);
+  });
+}
+
+/**
+ * The scenes holding thread `key`, with their labels changed by `edit`, and the changes. Null when
+ * a scene that has to change can't be written (a note it can't remove safely): nothing is half done.
+ */
 function retag(
   doc: Doc,
   index: SceneIndex,
   key: string,
   edit: (labels: readonly string[]) => string[],
-): { changes: TextChange[]; scenes: number } {
+): { changes: TextChange[]; scenes: number } | null {
   const changes: TextChange[] = [];
   let scenes = 0;
   for (const scene of index.scenes) {
     if (!scene.threads.some((l) => normalizeLabel(l) === key)) continue;
     scenes++;
-    changes.push(...inScene(doc, scene, edit(scene.threads)));
+    const labels = edit(scene.threads);
+    const made = inScene(doc, scene, labels);
+    const same =
+      labels.length === scene.threads.length && labels.every((l, i) => l === scene.threads[i]);
+    if (made.length === 0 && !same) return null;
+    changes.push(...made);
   }
   return { changes, scenes };
 }
@@ -142,14 +159,16 @@ export function renameThread(
   const meta = threadMeta(doc);
   const inUse = index.scenes.some((s) => s.threads.some((l) => normalizeLabel(l) === toKey));
   const merged = fromKey !== toKey && (inUse || toKey in meta);
-  const { changes, scenes } = retag(doc, index, fromKey, (labels) =>
-    checked(labels.map((l) => (normalizeLabel(l) === fromKey ? label : l))),
+  const done = retag(doc, index, fromKey, (labels) =>
+    distinct(labels.map((l) => (normalizeLabel(l) === fromKey ? label : l))),
   );
+  if (!done) return { changes: [], scenes: 0, merged: false };
+  const { changes, scenes } = done;
   if (fromKey !== toKey && fromKey in meta) {
     const entries = new Map<string, ThreadMeta>();
     for (const [key, value] of Object.entries(meta)) {
       if (key === fromKey) {
-        if (!(toKey in meta)) entries.set(toKey, value);
+        if (!merged) entries.set(toKey, value);
       } else entries.set(key, value);
     }
     changes.push(...replaceThreadMeta(doc, entries));
@@ -165,9 +184,9 @@ export function removeThread(
 ): { changes: TextChange[]; scenes: number } {
   const key = normalizeLabel(label);
   if (hasStrayBoneyard(doc)) return { changes: [], scenes: 0 };
-  const { changes, scenes } = retag(doc, index, key, (labels) =>
-    labels.filter((l) => normalizeLabel(l) !== key),
-  );
+  const done = retag(doc, index, key, (labels) => labels.filter((l) => normalizeLabel(l) !== key));
+  if (!done) return { changes: [], scenes: 0 };
+  const { changes, scenes } = done;
   const meta = threadMeta(doc);
   if (key in meta) {
     const entries = Object.entries(meta).filter(([k]) => k !== key);
