@@ -133,6 +133,25 @@ test.describe('Threads… for a scene', () => {
     await expect(dialog.getByRole('checkbox', { name: /^A/ })).toBeDisabled();
   });
 
+  test('a hand-typed label that can’t be written is named when Save refuses', async ({ page }) => {
+    const long = 'x'.repeat(41);
+    const typed = SCRIPT.replace('= Ann arrives.', `= Ann arrives.\n[[Thread: ${long}]]`);
+    await openWith(page, typed);
+    const dialog = await openThreads(page, hall(page), 'INT. HALL - DAY');
+    await dialog.getByRole('textbox', { name: 'New thread' }).fill('C');
+    await page.keyboard.press('Enter');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog.getByRole('alert')).toHaveText(
+      `Thread ${long} can’t be saved: a label is at most 40 characters. Uncheck it to save.`,
+    );
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('checkbox', { name: new RegExp(`^${long}`) }).uncheck();
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toBeHidden();
+    await expect.poll(() => textOf(page)).toContain('[[Thread: C]]');
+    expect(await textOf(page)).not.toContain(long);
+  });
+
   test('opens from the palette for the cursor’s scene', async ({ page }) => {
     await start(page);
     await setText(page, SCRIPT);
@@ -148,7 +167,8 @@ test.describe('Threads… for a scene', () => {
   });
 
   test('is read-only in a script a stray /* locks, with the reason shown', async ({ page }) => {
-    const stray = 'INT. A - DAY\n\nA.\n\nINT. B - DAY\n\nB. /* oops\n\n/* drafter\n{"v":1}\n*/\n';
+    const stray =
+      'INT. A - DAY\n\nA.\n\nINT. B - DAY\n\n[[Thread: X]]\n\nB. /* oops\n\n/* drafter\n{"v":1}\n*/\n';
     await openWith(page, stray);
     const why =
       'A /* in this script isn’t closed by its own */, so the outline changes nothing until it is.';
@@ -161,6 +181,18 @@ test.describe('Threads… for a scene', () => {
       'readonly',
       '',
     );
+    // The checks stay in the tab order, say why they can't change, and don't change.
+    const check = dialog.getByRole('checkbox', { name: /^X/ });
+    await expect(check).toBeChecked();
+    await expect(check).not.toHaveAttribute('disabled');
+    await expect(check).toHaveAttribute('aria-disabled', 'true');
+    await expect(check).toHaveAccessibleDescription(why);
+    await check.click({ force: true });
+    await expect(check).toBeChecked();
+    await check.focus();
+    await expect(check).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(check).toBeChecked();
     await save.click({ force: true });
     await expect(announcer(page)).toHaveText(why);
     await expect(dialog).toBeVisible();
@@ -299,6 +331,91 @@ test.describe('Threads… for a novel passage', () => {
     expect(cut(after)).toBe(cut(before));
     await undo(page);
     await expect.poll(() => textOf(page)).toBe(before);
+  });
+});
+
+test.describe('a novel’s threads and its facts', () => {
+  async function openSample(page: Page) {
+    await start(page);
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'Novel', exact: true })
+      .click();
+    await expect(page.locator('.cm-content')).toContainText('Low Tide');
+    await runCommand(page, 'Show Outline');
+    await expect(tree(page)).toBeVisible();
+  }
+  const saltRoad = (page: Page) => row(page, /^The Salt Road, chapter/);
+  const lowTide = (page: Page) => row(page, /^Low Tide, section/);
+  /** The book's facts, from the trailing comment. */
+  const factsOf = async (page: Page) => {
+    const text = await textOf(page);
+    const json = text.slice(text.lastIndexOf('<!--') + 4, text.lastIndexOf('-->'));
+    const body = json.slice(json.indexOf('{'));
+    return JSON.parse(body).novel as {
+      nodes: Record<string, { status?: string; threads?: string[] }>;
+      threads?: Record<string, { name?: string; color?: string }>;
+    };
+  };
+  async function tag(page: Page, target: ReturnType<typeof row>, heading: string, label: string) {
+    const dialog = await openThreads(page, target, heading);
+    const existing = dialog.getByRole('checkbox', { name: new RegExp(`^${label}`) });
+    if ((await existing.count()) > 0) await existing.check();
+    else {
+      await dialog.getByRole('textbox', { name: 'New thread' }).fill(label);
+      await page.keyboard.press('Enter');
+    }
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toBeHidden();
+  }
+
+  test('setting a status from the Outline keeps the passage’s threads', async ({ page }) => {
+    await openSample(page);
+    await tag(page, saltRoad(page), 'The Salt Road', 'Tide');
+    await expect
+      .poll(async () => (await factsOf(page)).nodes['chapter:the-salt-road:0']?.threads)
+      .toEqual(['Tide']);
+    await saltRoad(page).locator('.status').click();
+    await page.getByRole('menuitemradio', { name: 'Done' }).click();
+    await expect(saltRoad(page)).toHaveAccessibleName(/, Done, thread Tide$/);
+    await expect
+      .poll(async () => (await factsOf(page)).nodes['chapter:the-salt-road:0'])
+      .toEqual(expect.objectContaining({ status: 'done', threads: ['Tide'] }));
+  });
+
+  test('Name…, then Color…, then a tag keep the name and color, and the table shows them', async ({
+    page,
+  }) => {
+    await openSample(page);
+    await tag(page, saltRoad(page), 'The Salt Road', 'Tide');
+    const action = async (item: string) => {
+      const dialog = await openThreads(page, saltRoad(page), 'The Salt Road');
+      await dialog.getByRole('button', { name: 'Actions for thread Tide' }).click();
+      await page.getByRole('menuitem', { name: item }).click();
+      await expect(dialog).toBeHidden();
+    };
+    await action('Name…');
+    let edit = dialogOf(page, 'Name thread Tide');
+    await edit.getByRole('textbox', { name: 'Name' }).fill('The sea');
+    await edit.getByRole('button', { name: 'Save' }).click();
+    await expect(edit).toBeHidden();
+    await action('Color…');
+    edit = dialogOf(page, 'Color thread Tide');
+    await edit.getByRole('combobox', { name: 'Color' }).selectOption('teal');
+    await edit.getByRole('button', { name: 'Save' }).click();
+    await expect(edit).toBeHidden();
+    await tag(page, lowTide(page), 'Low Tide', 'Tide');
+    await expect
+      .poll(async () => (await factsOf(page)).threads)
+      .toEqual({ tide: { name: 'The sea', color: 'teal' } });
+    expect((await factsOf(page)).nodes['section:low-tide:0']?.threads).toEqual(['Tide']);
+    await runCommand(page, 'Show Lanes');
+    await page.getByRole('button', { name: 'Lanes options' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Show as table' }).click();
+    const table = page.getByRole('table', { name: 'Threads' });
+    await expect(table).toBeVisible();
+    await expect(table.getByRole('row', { name: /^Tide/ })).toContainText('The sea');
   });
 });
 

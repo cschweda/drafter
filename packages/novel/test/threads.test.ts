@@ -154,6 +154,24 @@ describe('editing a novel’s threads', () => {
     expect(r.facts.threads).toEqual({ heist: { color: 'red' } });
   });
 
+  it('remove and rename count and change only the passages still in the book', () => {
+    const facts = withNodes({
+      'chapter:one:0': { threads: ['Maya'] },
+      'chapter:gone:0': { threads: ['Maya'], status: 'todo' },
+    });
+    const inBook = (id: string) => id !== 'chapter:gone:0';
+    const r = removeNovelThread(facts, 'Maya', inBook);
+    expect(r.passages).toBe(1);
+    expect(r.facts.nodes['chapter:one:0']).toBeUndefined();
+    expect(r.facts.nodes['chapter:gone:0']).toEqual({ threads: ['Maya'], status: 'todo' });
+    const n = renameNovelThread(facts, 'Maya', 'Mia', inBook);
+    expect(n.passages).toBe(1);
+    expect(n.facts.nodes['chapter:one:0']?.threads).toEqual(['Mia']);
+    expect(n.facts.nodes['chapter:gone:0']?.threads).toEqual(['Maya']);
+    // Without the book, every passage the facts have.
+    expect(removeNovelThread(facts, 'Maya').passages).toBe(2);
+  });
+
   it('setNovelThreadMeta sets, clears, validates', () => {
     const f = setNovelThreadMeta(empty(), 'Zed', { name: 'Zed!', color: 'blue' });
     expect(f.threads).toEqual({ zed: { name: 'Zed!', color: 'blue' } });

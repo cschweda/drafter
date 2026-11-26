@@ -9,7 +9,7 @@ import { sayOutline } from '~/outline/notice';
 import { useOutline } from '~/outline/use-outline';
 import { openThreadEdit, takeThreadsFocusBack, threadsFor } from '~/threads/dialogs';
 import { useThreads } from '~/threads/use-threads';
-import { labelRefusal, limitMessage, REFUSED } from '~/threads/words';
+import { labelRefusal, limitMessage, REFUSED, saveRefusal } from '~/threads/words';
 
 // Threads… (Threads design §7.4): every thread as a checklist, with a field for a new one. Save
 // puts the scene or passage in exactly the checked threads, in one undo; Cancel and Escape change
@@ -73,6 +73,8 @@ const rows = ref<string[]>([]);
 const checked = ref<Set<string>>(new Set());
 const fresh = ref('');
 const error = ref('');
+/** Why Save can't write the labels as they stand (a hand-typed one at fault), or ''. */
+const saveError = ref('');
 let release: (() => void) | null = null;
 let opener: HTMLElement | null = null;
 
@@ -89,6 +91,7 @@ function begin(labels: string[]) {
   checked.value = new Set(labels.map(keyOf));
   fresh.value = '';
   error.value = '';
+  saveError.value = '';
 }
 
 watch(threadsFor, async (id) => {
@@ -115,6 +118,8 @@ watch(threadsFor, async (id) => {
 });
 
 function toggle(label: string, on: boolean) {
+  // Read-only, the checks only show the threads: a toggle changes nothing.
+  if (readOnly.value) return;
   const next = new Set(checked.value);
   const key = keyOf(label);
   const known = began.some((b) => keyOf(b) === key);
@@ -124,6 +129,12 @@ function toggle(label: string, on: boolean) {
   if (on && !known) added.push(key);
   checked.value = next;
   error.value = '';
+  saveError.value = '';
+}
+
+/** Read-only, a click on a check (or Space) leaves it as it is. */
+function onCheckClick(event: MouseEvent) {
+  if (readOnly.value) event.preventDefault();
 }
 
 /** Enter in the New thread field: adds the label (or finds it) and checks it, or says why not. */
@@ -175,8 +186,17 @@ function save() {
   const same = labels.length === began.length && labels.every((label, i) => began[i] === label);
   const sameSet =
     labels.length === began.length && labels.every((l) => began.some((b) => keyOf(b) === keyOf(l)));
+  if (same || sameSet) {
+    dialog.value?.close();
+    return;
+  }
+  // A label already there that can't be written (typed by hand) keeps the dialog open, naming it.
+  const refusal = saveRefusal(labels, noun.value);
+  if (refusal) {
+    saveError.value = refusal;
+    return;
+  }
   dialog.value?.close();
-  if (same || sameSet) return;
   if (threads.setUnitThreads(now.key, labels)) {
     void sayOutline(`Saved the threads of ${now.heading}.`);
   } else {
@@ -274,8 +294,16 @@ const swatch = (label: string) => {
             <input
               type="checkbox"
               :checked="checked.has(keyOf(label))"
-              :disabled="readOnly || (full && !checked.has(keyOf(label)))"
-              :aria-describedby="full && !checked.has(keyOf(label)) ? 'threads-full' : undefined"
+              :disabled="!readOnly && full && !checked.has(keyOf(label))"
+              :aria-disabled="readOnly ? 'true' : undefined"
+              :aria-describedby="
+                readOnly
+                  ? 'threads-why'
+                  : full && !checked.has(keyOf(label))
+                    ? 'threads-full'
+                    : undefined
+              "
+              @click="onCheckClick"
               @change="toggle(label, ($event.target as HTMLInputElement).checked)"
             />
             <span
@@ -315,6 +343,7 @@ const swatch = (label: string) => {
         />
       </label>
       <p v-if="error" id="threads-error" class="error" role="alert">{{ error }}</p>
+      <p v-if="saveError" id="threads-save-error" class="error" role="alert">{{ saveError }}</p>
       <div class="d-dialog-footer">
         <DButton @click="dialog?.close()">Cancel</DButton>
         <DButton

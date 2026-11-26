@@ -1,6 +1,11 @@
 import type { Scene } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
-import { changedDetails, detailsDraft, goalLine } from '../app/outline/scene-details';
+import {
+  changedDetails,
+  detailsDraft,
+  goalLine,
+  threadSuggestions,
+} from '../app/outline/scene-details';
 
 const at = { from: 0, to: 1 };
 
@@ -105,5 +110,22 @@ describe('Scene details', () => {
       'Win and/or lose',
     );
     expect(goalLine(scene())).toBeNull();
+  });
+});
+
+describe('the Threads field’s suggestions', () => {
+  const scenes = [
+    scene({ threads: ['Heist', 'Rain'] }),
+    scene({ threads: ['heist', 'Bottle'] }),
+    scene({ threads: [] }),
+  ];
+
+  test('every label in use, once each as first typed, for an empty field', () => {
+    expect(threadSuggestions(scenes, '')).toEqual(['Heist', 'Rain', 'Bottle']);
+  });
+
+  test('after a comma: the field so far and each label not yet in it', () => {
+    expect(threadSuggestions(scenes, 'Rain, ')).toEqual(['Rain, Heist', 'Rain, Bottle']);
+    expect(threadSuggestions(scenes, 'rain,Bo')).toEqual(['rain, Heist', 'rain, Bottle']);
   });
 });

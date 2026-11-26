@@ -45,3 +45,20 @@ export function removedMessage(label: string, units: number, noun: Noun): string
 }
 
 export const REFUSED = 'Nothing was changed.';
+
+/**
+ * Why Save from Threads… can't write `labels` (the scene's or passage's own, hand-typed, with what
+ * was checked), naming the label at fault or saying there are too many; null when it can.
+ */
+export function saveRefusal(labels: readonly string[], noun: Noun): string | null {
+  if (labels.length > THREAD_LIMITS.perUnit) {
+    return `This ${noun} is in more than ${THREAD_LIMITS.perUnit} threads. Uncheck some to save.`;
+  }
+  for (const label of labels) {
+    const why = labelRefusal(label);
+    if (!why) continue;
+    const reason = `${why.charAt(0).toLowerCase()}${why.slice(1)}`.replace(/\.$/u, '');
+    return `Thread ${label.trim()} can’t be saved: ${reason}. Uncheck it to save.`;
+  }
+  return null;
+}

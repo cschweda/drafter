@@ -393,7 +393,8 @@ function rescan(doc: Doc, scene: Scene, span: Span): Scene {
  * that sets the synopsis, Color, Thread, Goal, Conflict, Outcome, and Shift, in that order
  * (§5.4). Each is changed in place wherever it was typed; a new one goes into the header after the
  * ones before it and before the ones after it; a cleared one goes with its line. A second note of
- * the same key is left alone, except Thread: that field's notes in the header become one. [] while a `/*` is stray, or when nothing changes.
+ * the same key is left alone, except Thread: the field shows the labels of every Thread or
+ * Storyline note in the scene, so they all become the one note in the header. [] while a `/*` is stray, or when nothing changes.
  */
 export function setSceneDetails(doc: Doc, scene: Scene, details: SceneDetails): TextChange[] {
   if (hasStrayBoneyard(doc)) return [];
@@ -408,7 +409,7 @@ export function setSceneDetails(doc: Doc, scene: Scene, details: SceneDetails): 
     const value = details[key];
     if (value === undefined) continue;
     steps.push((d, s) =>
-      key === 'thread' ? setThreadField(d, s, value ?? '') : setField(d, s, key, value ?? ''),
+      key === 'thread' ? setThreadField(d, s, value ?? '', true) : setField(d, s, key, value ?? ''),
     );
   }
   // Each field is set on the text as the ones before it left it, and every change is kept in the

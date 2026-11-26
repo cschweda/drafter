@@ -77,15 +77,23 @@ export function setPassageThreads(facts: NovelFacts, id: string, labels: string[
   return withNode(facts, id, threads.length > 0 ? { ...rest, threads } : rest);
 }
 
-/** Apply `edit` to the labels of every passage holding thread `key`; the count changed. */
+/** Every id: the facts' own passages, when no book says which are still in it. */
+const everyId = () => true;
+
+/**
+ * Apply `edit` to the labels of every passage holding thread `key` that is in the book
+ * (`inBook`); the count changed. Facts left behind by a heading that is gone stay as they are.
+ */
 function retag(
   facts: NovelFacts,
   key: string,
   edit: (labels: string[]) => string[],
+  inBook: (id: string) => boolean,
 ): { facts: NovelFacts; passages: number } {
   let passages = 0;
   let out = facts;
   for (const id of Object.keys(facts.nodes)) {
+    if (!inBook(id)) continue;
     const node = facts.nodes[id] as Facts;
     if (!node.threads?.some((l) => normalizeLabel(l) === key)) continue;
     passages++;
@@ -100,31 +108,38 @@ function retag(
  * Rename thread `from` to `to` everywhere, with its name and color. `to` as typed becomes the
  * label. Onto another existing thread it merges (`merged`): each passage has it once, the target's
  * name and color stay and the source's go. A different case of the same label is a rename. A `to`
- * that isn't a label throws a RangeError.
+ * that isn't a label throws a RangeError. Only passages `inBook` says are still in the book are
+ * changed and counted (every one the facts have, without it).
  */
 export function renameNovelThread(
   facts: NovelFacts,
   from: string,
   to: string,
+  inBook: (id: string) => boolean = everyId,
 ): { facts: NovelFacts; passages: number; merged: boolean } {
   if (!isThreadLabel(to)) throw new RangeError(`“${to}” can't be a thread.`);
   const label = to.trim();
   const fromKey = normalizeLabel(from);
   const toKey = normalizeLabel(label);
   const meta = readThreadMetaMap(facts.threads);
-  const inUse = Object.values(facts.nodes).some((n) =>
-    n.threads?.some((l) => normalizeLabel(l) === toKey),
+  const inUse = Object.keys(facts.nodes).some(
+    (id) => inBook(id) && facts.nodes[id]?.threads?.some((l) => normalizeLabel(l) === toKey),
   );
   const merged = fromKey !== toKey && (inUse || toKey in meta);
-  const done = retag(facts, fromKey, (labels) => {
-    const seen = new Set<string>();
-    return labels
-      .map((l) => (normalizeLabel(l) === fromKey ? label : l))
-      .filter((l) => {
-        const k = normalizeLabel(l);
-        return !seen.has(k) && seen.add(k);
-      });
-  });
+  const done = retag(
+    facts,
+    fromKey,
+    (labels) => {
+      const seen = new Set<string>();
+      return labels
+        .map((l) => (normalizeLabel(l) === fromKey ? label : l))
+        .filter((l) => {
+          const k = normalizeLabel(l);
+          return !seen.has(k) && seen.add(k);
+        });
+    },
+    inBook,
+  );
   let out = done.facts;
   if (fromKey !== toKey && fromKey in meta) {
     const entries = new Map<string, ThreadMeta>();
@@ -138,13 +153,22 @@ export function renameNovelThread(
   return { facts: out, passages: done.passages, merged };
 }
 
-/** Take thread `label` out of every passage and out of the thread names and colors. */
+/**
+ * Take thread `label` out of every passage `inBook` says is still in the book (every one the facts
+ * have, without it) and out of the thread names and colors.
+ */
 export function removeNovelThread(
   facts: NovelFacts,
   label: string,
+  inBook: (id: string) => boolean = everyId,
 ): { facts: NovelFacts; passages: number } {
   const key = normalizeLabel(label);
-  const done = retag(facts, key, (labels) => labels.filter((l) => normalizeLabel(l) !== key));
+  const done = retag(
+    facts,
+    key,
+    (labels) => labels.filter((l) => normalizeLabel(l) !== key),
+    inBook,
+  );
   const meta = readThreadMetaMap(done.facts.threads);
   if (!(key in meta)) return done;
   return {

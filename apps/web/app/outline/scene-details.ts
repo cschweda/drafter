@@ -1,3 +1,4 @@
+import { normalizeLabel } from '@drafter/notes';
 import type { Scene, SceneColor, SceneDetails } from '@drafter/outline';
 import { ref } from 'vue';
 
@@ -74,4 +75,30 @@ export function goalLine(scene: Scene): string | null {
   const body = scene.fields.goal?.body;
   if (!body) return null;
   return body.split(' / ')[0]?.trim() || null;
+}
+
+/**
+ * What the Threads field suggests as the writer types (Threads design §7.4): the labels in use in
+ * `scenes`, once each as first typed, each after the labels already typed before the last comma,
+ * and none already in the field. A browser's suggestion list matches the whole field, so each
+ * suggestion is the whole field with one label more.
+ */
+export function threadSuggestions(scenes: readonly Scene[], typed: string): string[] {
+  const parts = typed.split(',');
+  const done = parts
+    .slice(0, -1)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const taken = new Set(done.map(normalizeLabel));
+  const prefix = done.length > 0 ? `${done.join(', ')}, ` : '';
+  const out: string[] = [];
+  for (const scene of scenes) {
+    for (const label of scene.threads) {
+      const key = normalizeLabel(label);
+      if (taken.has(key)) continue;
+      taken.add(key);
+      out.push(prefix + label);
+    }
+  }
+  return out;
 }

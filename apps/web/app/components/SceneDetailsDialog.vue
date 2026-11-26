@@ -8,6 +8,7 @@ import {
   detailsDraft,
   sceneDetailsFor,
   takeFocusBack,
+  threadSuggestions,
 } from '~/outline/scene-details';
 import { useOutline } from '~/outline/use-outline';
 
@@ -49,6 +50,11 @@ const otherColor = computed(() => {
   const value = scene.value?.color?.value;
   return value && !(SCENE_COLORS as readonly string[]).includes(value) ? value : null;
 });
+
+/** The labels in use, offered as the Threads field is typed in (Threads design §7.4). */
+const suggestions = computed(() =>
+  sceneDetailsFor.value ? threadSuggestions(outline.index.value.scenes, draft.value.thread) : [],
+);
 
 const TEXT_FIELDS = [
   { key: 'thread', label: 'Threads', hint: 'Labels, with commas: A, B' },
@@ -149,8 +155,12 @@ function onClose() {
           autocomplete="off"
           :placeholder="field.hint"
           :readonly="readOnly"
+          :list="field.key === 'thread' ? 'scene-details-threads' : undefined"
         />
       </label>
+      <datalist id="scene-details-threads">
+        <option v-for="value in suggestions" :key="value" :value="value" />
+      </datalist>
       <div class="d-dialog-footer">
         <DButton @click="dialog?.close()">Cancel</DButton>
         <DButton

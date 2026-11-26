@@ -65,6 +65,20 @@ describe('setSceneDetails thread', () => {
     });
     expect(out).toBe('INT. A - DAY\n\n[[Thread: Z]]\n\nINT. B - DAY\n\n[[Storyline: B]]\n');
   });
+  test('a label in a note below the header goes too: the field shows every note in the scene', () => {
+    const out = details('INT. HOUSE - DAY\n[[Storyline: A]]\n\nBob walks in. [[Storyline: B]]\n', {
+      thread: 'A',
+    });
+    expect(out).not.toContain('Storyline: B');
+    expect(indexOf(out).index.scenes[0]?.threads).toEqual(['A']);
+  });
+  test('an empty thread takes the notes below the header away too', () => {
+    const out = details('INT. A - DAY\n\n[[Thread: A]]\n\nBob walks in. [[Storyline: B]]\n', {
+      thread: '',
+    });
+    expect(indexOf(out).index.scenes[0]?.threads).toEqual([]);
+    expect(out).not.toContain('[[');
+  });
   test('an unchanged thread changes nothing', () => {
     const src = 'INT. A - DAY\n\n[[Thread: A]]\n';
     expect(details(src, { thread: 'A' })).toBe(src);

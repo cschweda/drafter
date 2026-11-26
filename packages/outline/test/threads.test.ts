@@ -262,8 +262,10 @@ describe('a Thread note outside the header (setThreadField)', () => {
     return cm(source, setSceneDetails(doc, sceneAt(index, 0), { thread: labels.join(', ') }));
   };
 
-  test('is replaced where it stands when the header has none', () => {
-    expect(run(['B'])).toBe('INT. A - DAY\n\nAction. [[Thread: B]]\n\nMore.\n');
+  // Scene details' field shows every note's labels, so its save rewrites them all (the ruling for
+  // setSceneThreads): one note in the header, the others gone.
+  test('goes into the header when the header has none', () => {
+    expect(run(['B'])).toBe('INT. A - DAY\n\n[[Thread: B]]\n\nAction. \n\nMore.\n');
   });
 
   test('is deleted when emptied', () => {
@@ -272,11 +274,11 @@ describe('a Thread note outside the header (setThreadField)', () => {
     expect(threadsOf(out)).toEqual([[]]);
   });
 
-  test('is left alone when the header has a note of its own', () => {
+  test('goes when the header has a note of its own', () => {
     const two = 'INT. A - DAY\n\n[[Thread: B]]\nAction. [[Thread: A]]\n';
     const { doc, index } = indexOf(two);
     const out = cm(two, setSceneDetails(doc, sceneAt(index, 0), { thread: 'C' }));
-    expect(out).toBe('INT. A - DAY\n\n[[Thread: C]]\nAction. [[Thread: A]]\n');
+    expect(out).toBe('INT. A - DAY\n\n[[Thread: C]]\nAction. \n');
   });
 
   test('is inserted into the header when there is none anywhere', () => {

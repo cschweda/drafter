@@ -310,6 +310,58 @@ describe('useThreads, for a novel', () => {
     expect(text()).toBe(before);
   });
 
+  test('Name…, then Color…, then a tag keep the name and the color', async () => {
+    const { threads } = await session(BOOK, 'markdown');
+    expect(threads.setMeta('Tide', { name: 'The sea' })).toBe(true);
+    const named = threads.info.value.find((t) => t.label === 'Tide');
+    expect(named?.name).toBe('The sea');
+    expect(threads.setMeta('Tide', { name: named?.name, color: 'blue' })).toBe(true);
+    expect(threads.setUnitThreads('section:low-tide:0', ['Tide', 'Moon'])).toBe(true);
+    expect(readFacts(text()).threads).toEqual({ tide: { name: 'The sea', color: 'blue' } });
+    const tide = threads.info.value.find((t) => t.label === 'Tide');
+    expect([tide?.name, tide?.color]).toEqual(['The sea', 'blue']);
+  });
+
+  test('a thread edit starts from the document, not what was last read of it', async () => {
+    const { threads } = await session(BOOK, 'markdown');
+    expect(threads.info.value.length).toBe(2);
+    // The document gains a thread's name without the session hearing of it yet.
+    const named = setMarkdownMeta(text(), {
+      template: 'novel',
+      novel: { ...readFacts(text()), threads: { tide: { name: 'The sea' } } },
+    });
+    env.view.state = env.view.state.update({
+      changes: { from: 0, to: text().length, insert: named },
+    }).state;
+    expect(threads.setUnitThreads('section:low-tide:0', ['Tide', 'Moon'])).toBe(true);
+    expect(readFacts(text()).threads).toEqual({ tide: { name: 'The sea' } });
+    expect(threads.rename('Moon', 'Moons')).not.toBeNull();
+    expect(readFacts(text()).threads).toEqual({ tide: { name: 'The sea' } });
+    expect(threads.remove('Moons')).toBe(1);
+    expect(readFacts(text()).threads).toEqual({ tide: { name: 'The sea' } });
+    expect(threads.setMeta('Bottle', { color: 'red' })).toBe(true);
+    expect(readFacts(text()).threads).toEqual({
+      tide: { name: 'The sea' },
+      bottle: { color: 'red' },
+    });
+  });
+
+  test('remove and rename count and change only passages whose heading is still there', async () => {
+    const orphaned = setMarkdownMeta(BOOK.slice(0, BOOK.indexOf('<!--')), {
+      template: 'novel',
+      novel: {
+        ...readFacts(BOOK),
+        nodes: { ...readFacts(BOOK).nodes, 'section:gone:0': { threads: ['Tide'] } },
+      },
+    });
+    const { threads } = await session(orphaned, 'markdown');
+    expect(threads.remove('Tide')).toBe(2);
+    expect(readFacts(text()).nodes['section:gone:0']?.threads).toEqual(['Tide']);
+    cmd(undo);
+    expect(threads.rename('Tide', 'Sea')).toEqual({ units: 2, merged: false });
+    expect(readFacts(text()).nodes['section:gone:0']?.threads).toEqual(['Tide']);
+  });
+
   test('locked: the novel’s reason, and no edit', async () => {
     const { threads } = await session(BOOK, 'markdown');
     env.refs.locked.value = true;

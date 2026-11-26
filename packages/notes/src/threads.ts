@@ -47,7 +47,9 @@ function entryOf(value: unknown): ThreadMeta | null {
   const out: ThreadMeta = {};
   const text = typeof name === 'string' ? cutName(name.replace(BREAK, ' ').trim()) : '';
   if (text !== '') out.name = text;
-  if (isColor(color)) out.color = color;
+  // A color word typed by hand in any case is the color it names.
+  const word = typeof color === 'string' ? color.trim().toLowerCase() : color;
+  if (isColor(word)) out.color = word;
   return out.name === undefined && out.color === undefined ? null : out;
 }
 

@@ -62,6 +62,20 @@ describe('thread names and colors', () => {
     expect(threadMeta(parse('Tom.\n'))).toEqual({});
   });
 
+  test('a color word typed by hand in any case is read, and kept by the next write', () => {
+    const source = block(
+      JSON.stringify({ v: 1, threads: { a: { color: 'Yellow' }, b: { color: ' BLUE ' } } }),
+    );
+    expect(threadMeta(parse(source))).toEqual({ a: { color: 'yellow' }, b: { color: 'blue' } });
+    const doc = parse(source);
+    const out = apply(source, setThreadMeta(doc, 'C', { name: 'Third' }));
+    expect(threadMeta(parse(out))).toEqual({
+      a: { color: 'yellow' },
+      b: { color: 'blue' },
+      c: { name: 'Third' },
+    });
+  });
+
   test('a cut never splits a surrogate pair', () => {
     const name = `${'x'.repeat(79)}😀`;
     const read = threadMeta(parse(block(JSON.stringify({ v: 1, threads: { a: { name } } }))));

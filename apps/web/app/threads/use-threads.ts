@@ -1,5 +1,6 @@
 import { normalizeLabel, readThreadMetaMap, setThreadMeta, type ThreadMeta } from '@drafter/notes';
 import {
+  type NovelNode,
   removeNovelThread,
   renameNovelThread,
   setNovelThreadMeta,
@@ -169,7 +170,7 @@ function create(): ThreadsSession {
       if (readOnly() !== null) return false;
       return tried(() => {
         if (isNovel()) {
-          const done = novel.setAllFacts(setPassageThreads(novel.facts.value, id, labels));
+          const done = novel.setAllFacts(setPassageThreads(novel.current(), id, labels));
           now();
           return done;
         }
@@ -181,11 +182,24 @@ function create(): ThreadsSession {
       }, false);
     }
 
+    /** Whether passage `id`'s heading is still in the book: facts left behind are left alone. */
+    function inBook(): (id: string) => boolean {
+      const ids = new Set<string>();
+      const walk = (list: readonly NovelNode[]) => {
+        for (const node of list) {
+          ids.add(node.id);
+          walk(node.children);
+        }
+      };
+      walk(novel.tree.value?.nodes ?? []);
+      return (id) => ids.has(id);
+    }
+
     function rename(from: string, to: string): { units: number; merged: boolean } | null {
       if (readOnly() !== null) return null;
       return tried(() => {
         if (isNovel()) {
-          const done = renameNovelThread(novel.facts.value, from, to);
+          const done = renameNovelThread(novel.current(), from, to, inBook());
           if (!novel.setAllFacts(done.facts)) return null;
           now();
           return { units: done.passages, merged: done.merged };
@@ -201,7 +215,7 @@ function create(): ThreadsSession {
       if (readOnly() !== null) return null;
       return tried(() => {
         if (isNovel()) {
-          const done = removeNovelThread(novel.facts.value, label);
+          const done = removeNovelThread(novel.current(), label, inBook());
           if (!novel.setAllFacts(done.facts)) return null;
           now();
           return done.passages;
@@ -217,7 +231,7 @@ function create(): ThreadsSession {
       if (readOnly() !== null || (!isNovel() && !isScript())) return false;
       return tried(() => {
         const done = isNovel()
-          ? novel.setAllFacts(setNovelThreadMeta(novel.facts.value, label, meta))
+          ? novel.setAllFacts(setNovelThreadMeta(novel.current(), label, meta))
           : outline.apply(setThreadMeta(editor.doc.value, label, meta));
         now();
         return done;

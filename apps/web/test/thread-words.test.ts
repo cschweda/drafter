@@ -6,9 +6,25 @@ import {
   removedMessage,
   removeQuestion,
   renamedMessage,
+  saveRefusal,
 } from '../app/threads/words';
 
 describe('thread words', () => {
+  test('a Save that a label already there refuses names the label, or the count', () => {
+    expect(saveRefusal(['A', 'B'], 'scene')).toBeNull();
+    const long = 'x'.repeat(41);
+    expect(saveRefusal(['A', long], 'scene')).toBe(
+      `Thread ${long} can’t be saved: a label is at most 40 characters. Uncheck it to save.`,
+    );
+    expect(saveRefusal(['a]]'], 'passage')).toBe(
+      'Thread a]] can’t be saved: a label can’t have [[ or ]], because they open and close a note. Uncheck it to save.',
+    );
+    const many = Array.from({ length: 13 }, (_, i) => `T${i}`);
+    expect(saveRefusal(many, 'scene')).toBe(
+      'This scene is in more than 12 threads. Uncheck some to save.',
+    );
+  });
+
   test('says why a label is refused', () => {
     expect(labelRefusal('A')).toBeNull();
     expect(labelRefusal('  ')).toMatch(/needs a label/);
