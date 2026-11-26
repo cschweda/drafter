@@ -40,6 +40,7 @@ export {
   structureStrip,
 } from './strip';
 export {
+  describeThreads,
   removeThread,
   renameThread,
   setSceneThreads,

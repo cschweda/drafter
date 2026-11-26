@@ -35,7 +35,6 @@ export interface ThreadInfo {
  * nothing is written until the writer picks one.
  */
 export function threadInfo(doc: Doc, index: SceneIndex): ThreadInfo[] {
-  const meta = threadMeta(doc);
   const found = new Map<string, { label: string; units: number }>();
   for (const scene of index.scenes) {
     for (const label of scene.threads) {
@@ -45,8 +44,20 @@ export function threadInfo(doc: Doc, index: SceneIndex): ThreadInfo[] {
       else found.set(key, { label, units: 1 });
     }
   }
+  return describeThreads(found, threadMeta(doc));
+}
+
+/**
+ * The infos of threads in use (`found`, by first appearance, keyed by `normalizeLabel`) and those
+ * only in `meta`: the one rule for names and colors, for a script's threads and a novel's.
+ */
+export function describeThreads(
+  found: Map<string, { label: string; units: number }>,
+  meta: Readonly<Record<string, ThreadMeta>>,
+): ThreadInfo[] {
+  const all = new Map(found);
   for (const key of Object.keys(meta)) {
-    if (!found.has(key)) found.set(key, { label: key, units: 0 });
+    if (!all.has(key)) all.set(key, { label: key, units: 0 });
   }
   const taken = new Set<SceneColor>();
   for (const entry of Object.values(meta)) if (entry.color) taken.add(entry.color);
@@ -54,7 +65,7 @@ export function threadInfo(doc: Doc, index: SceneIndex): ThreadInfo[] {
   const palette = free.length > 0 ? free : SCENE_COLORS;
   let next = 0;
   const out: ThreadInfo[] = [];
-  for (const [key, { label, units }] of found) {
+  for (const [key, { label, units }] of all) {
     const entry = meta[key];
     const chosen = entry?.color !== undefined;
     const color = entry?.color ?? (palette[next++ % palette.length] as SceneColor);

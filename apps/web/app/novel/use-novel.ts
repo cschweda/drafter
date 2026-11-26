@@ -53,6 +53,11 @@ export interface NovelSession {
   readOnly(): string | null;
   /** Writes `facts` as the facts of node `id`, in one undo step. Empty facts take them away. */
   setFacts(id: string, facts: Facts): void;
+  /**
+   * Writes the whole `facts` of the book, in one undo step: for an edit that changes many passages
+   * at once (renaming a thread). False, changing nothing, when `readOnly` says no.
+   */
+  setAllFacts(facts: NovelFacts): boolean;
   /** Writes the whole book's word target, in one undo step. Null takes it away. */
   setBookTarget(target: number | null): void;
   /**
@@ -215,6 +220,14 @@ function create(): NovelSession {
       dispatch(state.changes(change));
     }
 
+    function setAllFacts(next: NovelFacts): boolean {
+      if (readOnly()) return false;
+      const state = editor.view.state;
+      const change = factsChange(state.doc.toString(), next);
+      if (change) dispatch(state.changes(change));
+      return true;
+    }
+
     function setBookTarget(target: number | null) {
       const why = readOnly();
       if (why) {
@@ -297,6 +310,7 @@ function create(): NovelSession {
       hold,
       readOnly,
       setFacts,
+      setAllFacts,
       setBookTarget,
       setManuscript,
       move,
