@@ -518,6 +518,15 @@ export function registerBuiltinCommands(): void {
       enabled: () => isFountain() || editor.novel.value,
       run: () => showTab('outline'),
     },
+    // The Outline as its Lanes (threads design §7.3), remembered as the switch on its bar is.
+    'show-lanes': {
+      enabled: () => isFountain() || editor.novel.value,
+      why: () => (isMarkdown() && !editor.novel.value ? NOT_FOR_MARKDOWN : undefined),
+      run: () => {
+        void set('outlineView', 'lanes');
+        showTab('outline');
+      },
+    },
     // Not core tabs (design §5.8): showing one puts it in its pane's slot. Cards and the Outline are a script's or a novel's.
     'show-cards': {
       enabled: () => isFountain() || editor.novel.value,

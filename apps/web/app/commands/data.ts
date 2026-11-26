@@ -403,6 +403,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'show-preview', title: 'Show Preview', group: 'View' },
   { id: 'show-problems', title: 'Show Problems', group: 'View' },
   { id: 'show-outline', title: 'Show Outline', group: 'View' },
+  // The Outline's Lanes (threads design §7.3): a row per plot thread along the work.
+  { id: 'show-lanes', title: 'Show Lanes', group: 'View', keywords: ['threads', 'storylines'] },
   { id: 'show-cards', title: 'Show Cards', group: 'View' },
   { id: 'show-notes', title: 'Show Notes', group: 'View' },
   // Compare's (Phase 2 design §11.2, Call 21): N and Shift+N in the Compare tab, which is not a

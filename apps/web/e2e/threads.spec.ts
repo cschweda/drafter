@@ -1,6 +1,17 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from './fixtures';
-import { editor, runCommand, setText, showSource, start } from './modules';
+import { longScript } from './long-script';
+import {
+  editor,
+  palette,
+  pasteText,
+  runCommand,
+  setText,
+  settled,
+  showSource,
+  start,
+  stored,
+} from './modules';
 
 // Threads… (Threads plan, Task 6): the dialog from a scene's or passage's menu or the palette,
 // the thread's own menu (rename, name, color, remove), and the words each says. One undo each.
@@ -324,3 +335,349 @@ for (const theme of ['dark', 'light'] as const) {
     await check('the color dialog');
   });
 }
+
+// The Lanes view (Threads plan, Task 7): a row per thread along the work, then No thread; one
+// Tab stop with the arrows between blocks; the table; the phone's list; the switch remembered.
+
+const LANES_SCRIPT = [
+  'Title: Lanes',
+  '',
+  'INT. HALL - DAY',
+  '',
+  '[[Thread: A]]',
+  '',
+  'Ann waits in the hall.',
+  '',
+  'EXT. YARD - NIGHT',
+  '',
+  '[[Thread: B]]',
+  '',
+  'Bob digs in the yard.',
+  '',
+  'INT. SHED - DAY',
+  '',
+  'Nobody is in the shed.',
+  '',
+  'INT. KITCHEN - DAY',
+  '',
+  '[[Thread: A, C]]',
+  '',
+  'Ann and Cy cook.',
+  '',
+  'EXT. ROAD - DAY',
+  '',
+  '[[Thread: C, B]]',
+  '',
+  'Cy and Bob walk the road.',
+  '',
+].join('\n');
+
+const lanesGrid = (page: Page) => page.getByRole('grid', { name: 'Lanes' });
+const laneRow = (page: Page, header: string | RegExp) =>
+  lanesGrid(page)
+    .getByRole('row')
+    .filter({ has: page.getByRole('rowheader', { name: header }) });
+const cell = (page: Page, header: string | RegExp, scene: number) =>
+  laneRow(page, header).getByRole('gridcell', { name: new RegExp(`^Scene ${scene},`) });
+
+/** The script, with the cursor in the hall, and the Outline as Lanes. */
+async function openLanes(page: Page, text = LANES_SCRIPT, at = 'Ann waits in the hall.') {
+  await start(page);
+  await setText(page, text);
+  await editor(page).getByText(at).click();
+  await runCommand(page, 'Show Lanes');
+}
+
+test.describe('the Lanes', () => {
+  test.skip(({ isMobile }) => isMobile, 'a phone shows the list instead (below)');
+
+  test('a row per thread by first appearance, then No thread', async ({ page }) => {
+    await openLanes(page);
+    await expect(lanesGrid(page)).toBeVisible();
+    await expect(lanesGrid(page).getByRole('rowheader')).toHaveText(['A', 'B', 'C', /^No thread/]);
+    const headers = lanesGrid(page).getByRole('rowheader');
+    await expect(headers.nth(0).getByRole('button')).toHaveAccessibleName('Thread A, 2 scenes');
+    await expect(headers.nth(3)).toContainText('No thread');
+    await expect(laneRow(page, /^Thread A/).getByRole('gridcell')).toHaveCount(2);
+    await expect(laneRow(page, /^No thread/).getByRole('gridcell')).toHaveCount(1);
+    await expect(cell(page, /^Thread C/, 4)).toHaveAccessibleName(
+      /^Scene 4, INT\. KITCHEN - DAY, .+, threads A and C$/,
+    );
+    // The cursor's scene is marked in every row it is in, and is the tab stop.
+    await expect(cell(page, /^Thread A/, 1)).toHaveAttribute('aria-current', 'location');
+    await expect(lanesGrid(page).locator('[tabindex="0"]')).toHaveCount(1);
+    await expect(cell(page, /^Thread A/, 1)).toHaveAttribute('tabindex', '0');
+    // The switch says which view shows.
+    await expect(page.getByRole('button', { name: 'Lanes', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  test('the arrows move between blocks, and Enter puts the cursor in that scene', async ({
+    page,
+  }) => {
+    await openLanes(page);
+    await cell(page, /^Thread A/, 1).focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(cell(page, /^Thread A/, 1)).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(cell(page, /^Thread A/, 4)).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(cell(page, /^Thread B/, 5)).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(cell(page, /^Thread B/, 2)).toBeFocused();
+    await page.keyboard.press('End');
+    await expect(cell(page, /^Thread B/, 5)).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(cell(page, /^Thread C/, 5)).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(cell(page, /^No thread/, 3)).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(cell(page, /^No thread/, 3)).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(cell(page, /^Thread C/, 4)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(cell(page, /^Thread C/, 4)).toHaveAttribute('aria-current', 'location');
+    await expect(cell(page, /^Thread A/, 4)).toHaveAttribute('aria-current', 'location');
+    await expect(cell(page, /^Thread A/, 1)).not.toHaveAttribute('aria-current', 'location');
+  });
+
+  test('a block’s menu is the scene menu, and Threads… from it tags the scene', async ({
+    page,
+  }) => {
+    await openLanes(page);
+    await cell(page, /^No thread/, 3).focus();
+    await page.keyboard.press('Shift+F10');
+    const menu = page.getByRole('menu').and(page.locator('[data-state="open"]'));
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Scene details…' })).toBeVisible();
+    await menu.getByRole('menuitem', { name: 'Threads…' }).click();
+    const dialog = dialogOf(page, 'Threads for INT. SHED - DAY');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('checkbox', { name: /^B/ }).check();
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toBeHidden();
+    await expect.poll(() => textOf(page)).toContain('INT. SHED - DAY\n\n[[Thread: B]]');
+    // No unit is left without a thread: the No thread row goes.
+    await expect(lanesGrid(page).getByRole('rowheader')).toHaveText(['A', 'B', 'C']);
+    await expect(laneRow(page, /^Thread B/).getByRole('gridcell')).toHaveCount(3);
+  });
+
+  test('a row header’s menu renames the thread', async ({ page }) => {
+    await openLanes(page);
+    await laneRow(page, /^Thread A/)
+      .getByRole('button', { name: 'Thread A, 2 scenes' })
+      .click();
+    await page.getByRole('menuitem', { name: 'Rename thread…' }).click();
+    const edit = dialogOf(page, 'Rename thread A');
+    await edit.getByRole('textbox', { name: 'New label' }).fill('Heist');
+    await edit.getByRole('button', { name: 'Rename' }).click();
+    await expect(edit).toBeHidden();
+    await expect(lanesGrid(page).getByRole('rowheader')).toHaveText([
+      'Heist',
+      'B',
+      'C',
+      /^No thread/,
+    ]);
+  });
+
+  test('the table lists the same threads and counts', async ({ page }) => {
+    await openLanes(page);
+    await expect(lanesGrid(page)).toBeVisible();
+    await page.getByRole('button', { name: 'Lanes options' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Show as table' }).click();
+    const table = page.getByRole('table', { name: 'Threads' });
+    await expect(table).toBeVisible();
+    await expect(lanesGrid(page)).toBeHidden();
+    await expect(table.getByRole('columnheader')).toHaveText([
+      'Thread',
+      'Name',
+      'Scenes',
+      /^(Pages|Words)$/,
+      'Share',
+    ]);
+    const lists = table.locator('tbody tr').locator('td:nth-child(3)');
+    await expect(lists).toHaveText(['1, 4', '2, 5', '4, 5', '3']);
+    await expect(table.getByRole('rowheader')).toHaveText(['A', 'B', 'C', /^No thread/]);
+    await expect(table.getByRole('button', { name: 'Actions for thread A' })).toBeVisible();
+  });
+
+  test('the switch is remembered after a reload, and Tree goes back', async ({ page }) => {
+    await openLanes(page);
+    await expect(lanesGrid(page)).toBeVisible();
+    await expect.poll(async () => (await stored(page)).outlineView).toBe('lanes');
+    await page.reload();
+    await expect(editor(page)).toBeAttached();
+    await runCommand(page, 'Show Outline');
+    await expect(page.getByRole('button', { name: 'Lanes', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(lanesGrid(page).or(page.getByText('No threads yet.'))).toBeVisible();
+    await page.getByRole('button', { name: 'Tree', exact: true }).click();
+    await expect(tree(page)).toBeVisible();
+    await expect.poll(async () => (await stored(page)).outlineView).toBe('tree');
+  });
+
+  test('says how to add a thread when there are none', async ({ page }) => {
+    await openLanes(page, 'INT. HALL - DAY\n\nAnn waits.\n', 'Ann waits.');
+    await expect(
+      page.getByText('No threads yet. Add one from a scene’s menu: Threads…'),
+    ).toBeVisible();
+  });
+
+  test('a novel’s passages as lanes', async ({ page }) => {
+    await start(page);
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'Novel', exact: true })
+      .click();
+    await expect(page.locator('.cm-content')).toContainText('Low Tide');
+    await runCommand(page, 'Show Lanes');
+    await expect(
+      page.getByText('No threads yet. Add one from a chapter’s or section’s menu: Threads…'),
+    ).toBeVisible();
+  });
+});
+
+test.describe('the Lanes in a Markdown document', () => {
+  test('offer no switch, and the palette no Lanes', async ({ page }) => {
+    await start(page);
+    await page.getByRole('button', { name: 'File', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Scripts', exact: true })
+      .getByRole('button', { name: 'New Markdown document' })
+      .click();
+    await expect(editor(page)).toContainText('# Untitled');
+    await runCommand(page, 'Show Source');
+    // The palette offers no command that is off; its reason is the menus' (useCommandMenu).
+    await page.keyboard.press('ControlOrMeta+k');
+    await palette(page).locator('input').fill('Show Lanes');
+    await expect(palette(page).getByRole('option', { name: /Show Lanes/ })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('button', { name: 'Lanes', exact: true })).toHaveCount(0);
+  });
+});
+
+test.describe('the Lanes on a phone', () => {
+  test.skip(({ isMobile }) => !isMobile, 'the list is the phone’s');
+
+  test('a list grouped by thread, then No thread', async ({ page }) => {
+    await openLanes(page);
+    const groups = page.getByRole('heading', { level: 2 });
+    await expect(groups).toHaveText([/^A/, /^B/, /^C/, /^No thread/]);
+    await expect(
+      page.getByRole('list', { name: 'Thread A, 2 scenes' }).getByRole('button'),
+    ).toHaveText([/^Scene 1, INT\. HALL - DAY/, /^Scene 4, INT\. KITCHEN - DAY/]);
+    await expect(lanesGrid(page)).toHaveCount(0);
+  });
+});
+
+for (const theme of ['dark', 'light'] as const) {
+  test(`has no accessibility violations in the Lanes, table, and list (${theme})`, async ({
+    page,
+    isMobile,
+  }) => {
+    await page.addInitScript((t) => localStorage.setItem('nuxt-color-mode', t), theme);
+    await openLanes(page);
+    const check = async (state: string) => {
+      await page.evaluate(() =>
+        Promise.all(
+          document
+            .getAnimations()
+            .filter((a) => a.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY)
+            .filter((a) => !(a instanceof CSSAnimation && a.animationName.startsWith('cm-blink')))
+            .map((a) => a.finished.catch(() => {})),
+        ),
+      );
+      const { violations } = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+      expect(
+        violations.map(({ id, nodes }) => `${id}: ${nodes.map((n) => n.target).join(', ')}`),
+        state,
+      ).toEqual([]);
+    };
+    if (isMobile) {
+      await expect(page.getByRole('heading', { name: 'Thread A, 2 scenes' })).toBeVisible();
+      await check('the list');
+      return;
+    }
+    await expect(lanesGrid(page)).toBeVisible();
+    await cell(page, /^Thread A/, 1).focus();
+    await check('the grid, a block focused with its card');
+    await page.getByRole('button', { name: 'Lanes options' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Show as table' }).click();
+    await expect(page.getByRole('table', { name: 'Threads' })).toBeVisible();
+    await check('the table');
+  });
+}
+
+// The long-task budget, as the strip's (script.spec.ts): typing with the Lanes shown computes them
+// only after typing pauses. CI skips it by name ("long task"); run it alone, one worker.
+test.describe('Typing with the Lanes shown', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', 'long tasks are a Chromium API');
+  test.skip(
+    () => !process.env.DRAFTER_LONG_TASK,
+    'a release gate step of its own: DRAFTER_LONG_TASK=1, alone, one worker',
+  );
+
+  test('typing for 5 s in a long script with the Lanes shown makes no long task', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, 'the grid is the wide screen’s');
+    test.setTimeout(180_000);
+    const threadsOf = ['A', 'B', 'C', 'A, C', '', 'B'];
+    const script = longScript()
+      .split(/\n(?=(?:INT|EXT)\. )/)
+      .map((scene, i) => {
+        const tag = threadsOf[i % threadsOf.length];
+        return tag ? scene.replace(/\n\n/, `\n\n[[Thread: ${tag}]]\n\n`) : scene;
+      })
+      .join('\n');
+    await start(page);
+    await pasteText(page, script);
+    await runCommand(page, 'Show Lanes');
+    await expect(lanesGrid(page).getByRole('rowheader')).toHaveCount(4);
+    await settled(page);
+    await page.evaluate(() => {
+      const long: number[] = [];
+      (window as unknown as { longTasks: number[] }).longTasks = long;
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) long.push(entry.duration);
+      }).observe({ type: 'longtask', buffered: false });
+    });
+    const longTasks = () =>
+      page.evaluate(() => (window as unknown as { longTasks: number[] }).longTasks);
+    // Proof the observer sees what it should: a task of about 80 ms is reported once.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          setTimeout(() => {
+            const end = performance.now() + 80;
+            while (performance.now() < end);
+            resolve();
+          }),
+        ),
+    );
+    await expect.poll(async () => (await longTasks()).length).toBe(1);
+    await showSource(page);
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+Home');
+    await page.evaluate(() => {
+      (window as unknown as { longTasks: number[] }).longTasks.length = 0;
+    });
+    // About 5 s of typing: 84 letters, one every 60 ms.
+    const phrase =
+      'Typing with the Lanes shown, one letter at a time, as a writer does, for five secs.';
+    expect(phrase.length).toBeGreaterThanOrEqual(80);
+    await page.keyboard.type(phrase, { delay: 60 });
+    // The pause after typing: the lanes are read again, once.
+    await page.waitForTimeout(1000);
+    await settled(page);
+    // The lanes kept up: the grid is still drawn, its four rows read again after the pause.
+    await expect(lanesGrid(page).getByRole('rowheader')).toHaveCount(4);
+    expect(await longTasks()).toEqual([]);
+  });
+});

@@ -18,6 +18,7 @@ import { fillPercent, KIND_WORD, nodeName, targetLine, titleOf, wordsLabel } fro
 import { useLiveNovel } from '~/novel/use-novel';
 import { sayOutline } from '~/outline/notice';
 import { type TreeRow, treeKey, typeAhead } from '~/outline/tree';
+import { useSettings } from '~/settings/settings';
 import { openThreads } from '~/threads/dialogs';
 
 // The Outline for a novel (the Novel design, goal 3): its parts, chapters, and sections as an ARIA
@@ -31,6 +32,10 @@ const novel = useLiveNovel();
 const { tree, facts } = novel;
 
 const closed = ref(new Set<string>());
+// The Lanes in the tree's place (threads design §7.3): the grid, its table, or on a phone the list.
+const { settings } = useSettings();
+const lanes = computed(() => settings.value.outlineView === 'lanes');
+const roomy = useMatchMedia(LANES_QUERY);
 
 interface Row extends TreeRow {
   node: NovelNode;
@@ -555,7 +560,12 @@ watch(rows, async () => {
 <template>
   <div ref="root" class="novel-outline">
     <TargetDialog :passage="targeting" @save="saveTarget" @close="endTarget" />
-    <DEmpty v-if="rows.length === 0" icon="i-lucide-list-tree">
+    <template v-if="lanes">
+      <ThreadLanes v-if="roomy && !settings.threadsAsTable" />
+      <ThreadTable v-else-if="roomy" />
+      <ThreadList v-else />
+    </template>
+    <DEmpty v-else-if="rows.length === 0" icon="i-lucide-list-tree">
       No chapters yet. A chapter starts with <code>#</code> and its title, and a section within it
       with <code>##</code>.
     </DEmpty>
