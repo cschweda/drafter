@@ -108,7 +108,7 @@ useDocsHead({
         in it, and now and then a line of dialogue. Past 80 scenes, the list folds into parts you
         open.
       </li>
-      <li><strong>Places,</strong> sized by how long the story spends there, and <strong>threads</strong>: your setups joined to their payoffs.</li>
+      <li><strong>Places,</strong> sized by how long the story spends there, and <strong>setups and payoffs</strong>: each setup joined to its payoff.</li>
     </ul>
     <p>
       Places say <strong>Inside</strong> and <strong>Outside</strong>, not INT. and EXT., and lengths

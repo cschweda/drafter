@@ -709,6 +709,16 @@ const FOUNTAIN_TRAPS: Trap[] = [
     inert: true,
   },
   {
+    id: 'fountain-threads-hostile',
+    format: 'fountain',
+    name: 'threads-hostile.fountain',
+    tests:
+      'Thread notes with a 300-character label, 50 labels on one scene, right-to-left text with joiners, `]]` and markup inside, `__proto__` and other key names, case-only duplicates, empty notes, and a hostile settings entry open as written; the Outline and its Lanes read them without a throw and show markup as text.',
+    bytes: file('fountain/threads-hostile.fountain'),
+    expect: { 'web-open': opens(text('fountain/threads-hostile.fountain')) },
+    inert: true,
+  },
+  {
     id: 'fountain-story-atlas-huge-name',
     format: 'fountain',
     name: 'huge-name.fountain',
@@ -1240,6 +1250,16 @@ const NOVEL_TRAPS: Trap[] = [
     bytes: () => enc(HOSTILE_NOVEL_META),
     expect: { 'web-open': opens(HOSTILE_NOVEL_META) },
     novel: { parts: 0, chapters: 2, sections: 0, moves: true },
+  },
+  {
+    id: 'novel-threads-hostile',
+    format: 'markdown',
+    name: 'threads-hostile.md',
+    tests:
+      'A novel’s comment with threads on its passages: a 300-character label, 50 labels, right-to-left text with joiners, `]]` and markup, `__proto__` as a label and a node, case-only duplicates, a non-list, and a thread entry with a 5,000-character name open; the labels are cut or ignored, never thrown.',
+    bytes: file('markdown/threads-hostile.md'),
+    expect: { 'web-open': opens(text('markdown/threads-hostile.md')) },
+    novel: { parts: 0, chapters: 3, sections: 1, moves: true },
   },
   {
     id: 'novel-deep-parts',

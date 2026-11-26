@@ -24,6 +24,8 @@ const about: Record<string, string> = {
     'Writing a novel in plain Markdown: chapters, sections, and parts, the Outline and Cards, focus on one chapter, and word targets.',
   'help-production':
     'Locking pages and scene numbers, revisions in colors with marks in the margin, A-pages and A-scenes, and OMITTED scenes.',
+  'help-threads':
+    'Plot threads: tag the scenes each one is in, then see them as lanes along the whole script, in a screenplay, a stage play, or a novel.',
   'help-saving':
     'What Save does in each browser, keeping scripts in a synced folder, autosave, and installing Drafter as an app.',
   'help-drafts-and-cuts':

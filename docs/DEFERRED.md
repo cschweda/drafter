@@ -224,7 +224,7 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **Grouping sub-locations.** HOUSE - KITCHEN and HOUSE - HALL are two locations (Call 15); the Places list sorts them together but adds nothing up.
 - **Sorting the Characters table** (Call 19). It keeps the cast's order (most speeches first); sorting by a column, as a table's header buttons would, comes later.
 - **Exporting the Stats tab's tables** (Characters, the grid's List, Long absences), as CSV or Markdown.
-- **Storyline rows in the strip**, and **the Wall's storylines in rename** (Plan F): Plan E's second part (v0.28.0) adds storylines without either.
+- **Thread rows in the strip**, and **the Wall's threads in rename** (Plan F): Threads (v0.29.0) adds them without either.
 - **A per-scene history link from Scaffold.** History of this scene is in the scene menus already.
 - **The Stats tab opening over its budget in Firefox and WebKit** (243 to 502 ms against 300 ms, which the design sets for Chromium; DECISIONS has the profile). Most of WebKit's time is the tab switch itself; mounting the Overview later, or drawing the tab's shell first, would bring it under.
 - **The spare words worker retries every 5 seconds** (`SPARE_RETRY_MS`) while a dictionary fails to load with spellcheck off, or at once for another language. A dictionary that never loads (a broken download) is asked again every 5 s while a view holds the cast; a longer wait after each failure would cost less, if it ever shows. (The spare itself ends 30 s after no view needs the cast.)
@@ -232,6 +232,15 @@ What Plan E's first part (v0.21.0: Scaffold, the Stats tab, and the character gr
 - **A `^` cue at the start of a section's own stretch** is counted as a speech of its own there, in full, since tallies never run across a section, while the layout pairs it with the speech before. Rare, and the words are counted once either way.
 - **Smaller edges, found in review:** one shared `isWide()` helper for the three places that ask the same media query (`stats/tab.ts`, `compare/use-compare.ts`, `history/deleted.ts`); one generator of invented words for the cast's tests (`names.test.ts`, the cast budget, `scaling`); a test for `whenIdle`'s `setTimeout` fallback; and the scene page's own table (In this scene) doesn't yet move focus to its heading when a focused row leaves, as the other Scaffold tables do.
 - **The screen-reader listening pass** (the final accessibility steps). Axe runs on every Stats section, the grid and its List, Scaffold's pages, and the Cast and Places, in both themes at both widths on every project.
+
+Threads (v0.29.0) leaves, from `docs/drafter-threads-design.md` §3 and the build's reviews:
+
+- **Pacing**, the **script's margin marks** for threads, the **Structure strip's Color by** (thread, INT/EXT, day or night), and **threads in exports** (PDF, HTML, EPUB, the Atlas's pictures). Plan E's remainder; none of it was needed to see the threads.
+- **Threads' Stats tab section** (design §7.6): the Lanes' table covers it.
+- **Final Draft and the other imports** don't carry threads (a Thread note is an ordinary note to them).
+- **Smaller edges, found in review:** `setThreadMeta` drops hand-edited junk entries and cuts names on the next write; a merge into a label that exists nowhere reports `merged`; after a merge a novel's passages may hold mixed forms (`heist`/`Heist`); a novel's `withNode` moves the node to the end on each edit and rebuilds its map per passage, so a rename is O(n²); a leaf passage's words count its title and a chapter's opening's don't; part intro words are in no unit; a unit with no words is zero-length until the 4 px floor. Focus flickers on the opener row when the thread menu closes Threads…, and an Escape within 200 ms of a menu closing is swallowed (a timing guess). In the Lanes: a ⋯ Enter could bubble to the cell if it ever took focus; no refocus after a redraw when the stop was a row header; the 20 px ruler threshold is tight for "100k"; forced colors lose a current inherited block's dashed edge; the card isn't re-measured when the lanes redraw under a hovered block; `ThreadLanes.vue` is 734 lines (the card and block-menu wiring could be a component). Tests missing for: several changes in the pause window causing one compute, a novel passage in the palette, undo of merge/Name/Color, typed text (not only an unchecked box) making Threads… dirty, `aria-describedby` at 12 threads, IME Enter, an empty novel, and a chapter inside a part with threads.
+- **MCP's threads** aren't filtered by `include` (intended: they are labels on the scenes already chosen).
+- **`docs/drafter-story-atlas-design.md`** still says "Threads" for the section; it is a dated record.
 
 ## Fresh look
 

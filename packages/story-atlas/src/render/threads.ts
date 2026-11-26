@@ -187,7 +187,7 @@ export const threadsSection: Section = (map) => {
   );
   const table = chartTable(
     'Setups and payoffs: where each is set up and where it pays off',
-    ['Thread', 'Set up in scene', 'Pays off in scene'],
+    ['Setup', 'Set up in scene', 'Pays off in scene'],
     map.threads.map((t) => [t.label, t.from, t.to === null ? 'Not yet' : t.to]),
   );
   const more =

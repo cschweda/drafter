@@ -45,6 +45,16 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.29.0-threads',
+    date: '2026-11-26',
+    version: '0.29.0',
+    kind: 'New',
+    title: 'Threads: see which scenes each plot thread is in',
+    text: 'Tag a scene or chapter with the threads it belongs to, from its menu, and the Outline’s new Lanes view draws every thread along the whole work. The Story Atlas’s old Threads section is now called Setups and payoffs.',
+    link: { href: '/docs/threads/', label: 'Threads' },
+    banner: true,
+  },
+  {
     id: 'v0.28.0-story-atlas',
     date: '2026-11-23',
     version: '0.28.0',
