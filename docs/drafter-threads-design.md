@@ -1,6 +1,6 @@
 # Threads: see which scenes each plot thread is in (design)
 
-Status: drafted 2026-11-26 for v0.29.0, from a brainstorm with the maintainer; checked by a builder's read. Waiting for the maintainer's approval.
+Status: drafted 2026-11-26 for v0.29.0, from a brainstorm with the maintainer; checked by a builder's read; approved by the maintainer the same day ("yes please continue").
 
 This replaces Part 2 of the [seeing-the-script design](drafter-seeing-the-script-design.md) (§6 to §8, "storylines, the map, and pacing") as the plan for v0.29.0. What it leaves out is listed under Non-goals and goes to `docs/DEFERRED.md`.
 
