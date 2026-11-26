@@ -22,6 +22,7 @@ import { sceneMenuItems } from '~/outline/scene-menu';
 import { useOutline } from '~/outline/use-outline';
 import { showScaffold } from '~/scaffold/show';
 import { useSettings } from '~/settings/settings';
+import { openThreads } from '~/threads/dialogs';
 
 // The Cards tab (Phase 2 design §7): every scene as an index card, in script order, under its
 // section's title. A section still to write (no scenes in it, and no sections under it) has a card
@@ -300,6 +301,7 @@ function menuItems(card: Card): DropdownMenuItem[][] {
     focus: (id) => void focusCard(id),
     history: (id) => afterClosing(() => openHistoryOf(id)),
     scaffold: (id) => afterClosing(() => showScaffold({ kind: 'scene', pinned: id })),
+    threads: (id) => afterClosing(() => openThreads(id, () => void focusCard(id))),
   });
 }
 

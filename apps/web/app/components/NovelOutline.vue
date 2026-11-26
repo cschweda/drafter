@@ -18,6 +18,7 @@ import { fillPercent, KIND_WORD, nodeName, targetLine, titleOf, wordsLabel } fro
 import { useLiveNovel } from '~/novel/use-novel';
 import { sayOutline } from '~/outline/notice';
 import { type TreeRow, treeKey, typeAhead } from '~/outline/tree';
+import { openThreads } from '~/threads/dialogs';
 
 // The Outline for a novel (the Novel design, goal 3): its parts, chapters, and sections as an ARIA
 // tree, with the script Outline's keys. One row is a tab stop; the arrows, Home, End, and typing
@@ -465,6 +466,16 @@ function menuItems(row: Row): DropdownMenuItem[][] {
       onSelect: () => afterClosing(() => startTarget(row)),
     },
   ]);
+  // A part is no passage: only a chapter or a section has threads. Read-only, it opens read-only.
+  if (row.node.kind !== 'part') {
+    groups.push([
+      {
+        label: 'Threads…',
+        icon: 'i-lucide-git-branch',
+        onSelect: () => afterClosing(() => openThreads(row.id, () => void focusRow(row.id))),
+      },
+    ]);
+  }
   return groups;
 }
 

@@ -34,15 +34,16 @@ const TEXT_KEYS: readonly TextKey[] = [
   'shift',
 ];
 
-/** A text field's value now: the first synopsis, or the field's note (Thread: the first note's body). */
+/** A text field's value now: the first synopsis, or the field's note (Thread: every note's labels). */
 function textOf(scene: Scene, key: TextKey): string {
   if (key === 'synopsis') return scene.synopses[0]?.text ?? '';
+  if (key === 'thread') return scene.threads.join(', ');
   return scene.fields[key]?.body ?? '';
 }
 
 /**
- * The form's starting values. Thread is the first Thread note's body, which is the one
- * `setSceneDetails` edits, not every note's labels (`threads`). A color word Drafter doesn't
+ * The form's starting values. Thread is every Thread or Storyline note's labels (`threads`), so
+ * what the writer edits is what the scene has, not only the first note's body. A color word Drafter doesn't
  * know is kept as it is, so the form shows it and saving leaves it.
  */
 export function detailsDraft(scene: Scene): Required<SceneDetails> {

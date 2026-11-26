@@ -234,6 +234,8 @@ onBeforeUnmount(() => {
     <SidesDialog />
     <ExportOptionsDialog />
     <SceneDetailsDialog />
+    <ThreadsDialog />
+    <ThreadEditDialog />
     <NewNoteDialog />
     <SettingsDialog />
     <HistoryDialog />

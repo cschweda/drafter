@@ -68,6 +68,7 @@ import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/sav
 import { useScript } from '~/storage/script';
 import { markSpeech, speechAt } from '~/story-atlas/quote-marks';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
+import { openThreads } from '~/threads/dialogs';
 import { showInInspector, type TabId, WIDE_QUERY } from '~/utils/panes';
 import { type Behavior, quietly, type When } from './behavior';
 import { COMMAND_DATA, commandsFor, MARKDOWN_ACTIONS, modeSwitchApplies } from './data';
@@ -278,6 +279,15 @@ export function registerBuiltinCommands(): void {
   const sceneAtCursor = () => {
     const head = view.state.selection.main.head;
     return useOutline().index.value.scenes.find((s) => head >= s.span.from && head <= s.span.to);
+  };
+  /** The id Threads… takes for the cursor: its scene's outline id, or its novel passage's node id. */
+  const threadsUnit = (): string | null => {
+    if (isFountain()) {
+      const scene = sceneAtCursor();
+      return scene ? useOutline().idOf(scene) : null;
+    }
+    if (isNovel()) return (passageHere('section') ?? passageHere('chapter'))?.id ?? null;
+    return null;
   };
   /** Move scene up or down (Phase 2 design §6.2): the cursor goes with the scene. */
   const moveScene = (direction: 'up' | 'down'): Behavior => ({
@@ -760,6 +770,16 @@ export function registerBuiltinCommands(): void {
       run: () => {
         const scene = sceneAtCursor();
         if (scene) openSceneDetails(useOutline().idOf(scene));
+      },
+    },
+
+    'scene-threads': {
+      // On in a read-only tab too: the dialog opens read-only (Save says why).
+      enabled: () => !!threadsUnit(),
+      why: () => 'The cursor isn’t in a scene or passage.',
+      run: () => {
+        const id = threadsUnit();
+        if (id) openThreads(id);
       },
     },
 

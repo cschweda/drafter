@@ -18,6 +18,7 @@ import { fillPercent, KIND_WORD, nodeName, targetLine, titleOf, wordsLabel } fro
 import { useLiveNovel } from '~/novel/use-novel';
 import { sayOutline } from '~/outline/notice';
 import { useSettings } from '~/settings/settings';
+import { openThreads } from '~/threads/dialogs';
 
 // The Cards tab for a novel (the Novel design, goal 3): a card for each chapter and each section, in
 // the book's order, under its part's title, with its synopsis, status, and words. As the script's
@@ -453,6 +454,16 @@ function menuItems(card: Card): DropdownMenuItem[][] {
       onSelect: () => afterClosing(() => startTarget(card)),
     },
   ]);
+  // A part is no passage: only a chapter or a section has threads. Read-only, it opens read-only.
+  if (card.node.kind !== 'part') {
+    groups.push([
+      {
+        label: 'Threads…',
+        icon: 'i-lucide-git-branch',
+        onSelect: () => afterClosing(() => openThreads(card.id, () => void focusCard(card.id))),
+      },
+    ]);
+  }
   return groups;
 }
 

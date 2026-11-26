@@ -46,7 +46,7 @@ describe('Scene details', () => {
     expect(detailsDraft(full)).toEqual({
       synopsis: 'Ann arrives.',
       color: 'blue',
-      thread: 'A, B',
+      thread: 'A, B, C',
       goal: 'Ann wants in. / Then out.',
       conflict: 'The door is locked.',
       outcome: 'She waits.',
@@ -61,6 +61,12 @@ describe('Scene details', () => {
       outcome: '',
       shift: '',
     });
+  });
+
+  test('shows every Storyline note label in the Thread field, not only the first note', () => {
+    expect(detailsDraft(full).thread).toBe('A, B, C');
+    expect(detailsDraft(scene({ threads: ['X'] })).thread).toBe('X');
+    expect(detailsDraft(scene()).thread).toBe('');
   });
 
   test('reports only the changed fields', () => {
