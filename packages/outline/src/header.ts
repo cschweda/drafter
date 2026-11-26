@@ -8,6 +8,7 @@ import {
   hasStrayBoneyard,
   isLineBreak,
   lineBreakOf,
+  type NoteEntry,
   noteEntries,
   readNote,
   removeLine,
@@ -301,13 +302,25 @@ function setThreadField(doc: Doc, scene: Scene, value: string): TextChange[] {
     to += change.insert.length - (change.to - change.from);
     return true;
   };
+  // A note on a line of its own goes with its line. One the action starts right under is not
+  // refused: its line goes up to the next block when parsing shows that prints the same.
+  const remove = (entry: NoteEntry): TextChange[] => {
+    const gone = deleteEntry(cur, entry);
+    if (gone.length > 0 || !entry.alone) return gone;
+    const block = cur.blocks[entry.block];
+    const next = cur.blocks[entry.block + 1];
+    if (!block || !next || block.kind !== 'note' || block.lines.length !== 1) return [];
+    const change = { from: block.span.from, to: next.span.from, insert: '' };
+    const after = parse(cur.source.slice(0, change.from) + cur.source.slice(change.to));
+    return printing(after) === printing(cur) ? [change] : [];
+  };
   // Every header note but the first goes, last first.
   for (;;) {
     const found = headerThreads(cur, view());
     const keep = note === '' ? 0 : 1;
     const last = found[found.length - 1];
     if (!last || found.length <= keep) break;
-    if (!apply(deleteEntry(cur, last))) return [];
+    if (!apply(remove(last))) return [];
   }
   const header = headerThreads(cur, view())[0];
   if (header) {
@@ -324,7 +337,7 @@ function setThreadField(doc: Doc, scene: Scene, value: string): TextChange[] {
       apply([{ ...outside, insert: note }]);
     } else {
       const entry = noteEntries(cur).find((e) => e.span.from === outside.from);
-      if (entry) apply(deleteEntry(cur, entry));
+      if (entry) apply(remove(entry));
     }
   }
   const change = smallest(doc.source, { from: 0, to: doc.source.length, insert: cur.source });

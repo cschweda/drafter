@@ -38,6 +38,13 @@ export {
   structureStrip,
 } from './strip';
 export {
+  removeThread,
+  renameThread,
+  setSceneThreads,
+  type ThreadInfo,
+  threadInfo,
+} from './threads';
+export {
   ACTION_SECONDS_PER_LINE,
   addTiming,
   blockTiming,
