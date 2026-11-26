@@ -93,6 +93,7 @@ function rename(label: string) {
   if (onto && !merging.value) {
     mergeInto.value = onto.label;
     merging.value = true;
+    void nextTick().then(() => document.getElementById('thread-edit-submit')?.focus());
     return;
   }
   // Onto another thread, its own label is kept (b into B gives B).
@@ -221,6 +222,7 @@ function onClose() {
         <DButton @click="dialog?.close()">Cancel</DButton>
         <DButton
           variant="primary"
+          id="thread-edit-submit"
           type="submit"
           :danger="mode === 'remove'"
           :aria-disabled="readOnly ? 'true' : undefined"

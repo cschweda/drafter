@@ -157,6 +157,40 @@ test.describe('Threads… for a scene', () => {
   });
 });
 
+test.describe('Threads… keeps unsaved work and the scene’s order', () => {
+  test('a new label goes after the scene’s own, in its order', async ({ page }) => {
+    await openWith(page, SCRIPT.replace('[[Thread: A, B]]', '[[Thread: B, A]]'));
+    const dialog = await openThreads(page, yard(page), 'EXT. YARD - NIGHT');
+    await dialog.getByRole('textbox', { name: 'New thread' }).fill('C');
+    await page.keyboard.press('Enter');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect.poll(() => textOf(page)).toContain('[[Thread: B, A, C]]');
+  });
+
+  test('the thread menu is off while changes are unsaved, and works after Save', async ({
+    page,
+  }) => {
+    await openWith(page);
+    const dialog = await openThreads(page, yard(page), 'EXT. YARD - NIGHT');
+    await dialog.getByRole('checkbox', { name: /^B/ }).uncheck();
+    await dialog.getByRole('button', { name: 'Actions for thread A' }).click();
+    const rename = page.getByRole('menuitem', { name: 'Rename thread…' });
+    await expect(rename).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByRole('menu')).toContainText('Save or cancel your changes first.');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('checkbox', { name: /^B/ })).not.toBeChecked();
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toBeHidden();
+    const again = await openThreads(page, yard(page), 'EXT. YARD - NIGHT');
+    await again.getByRole('button', { name: 'Actions for thread A' }).click();
+    await expect(page.getByRole('menuitem', { name: 'Rename thread…' })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+});
+
 test.describe('a thread’s own menu', () => {
   async function openMenu(page: Page, item: string) {
     const dialog = await openThreads(page, yard(page), 'EXT. YARD - NIGHT');
@@ -186,6 +220,7 @@ test.describe('a thread’s own menu', () => {
     await edit.getByRole('textbox', { name: 'New label' }).fill('b');
     await edit.getByRole('button', { name: 'Rename' }).click();
     await expect(edit).toContainText('B is already a thread. Merge A into it?');
+    await expect(edit.getByRole('button', { name: 'Merge' })).toBeFocused();
     await edit.getByRole('button', { name: 'Merge' }).click();
     await expect(edit).toBeHidden();
     await expect.poll(() => textOf(page)).toContain('[[Thread: B]]');
@@ -281,6 +316,7 @@ for (const theme of ['dark', 'light'] as const) {
     await dialog.getByRole('textbox', { name: 'New thread' }).fill('a]]');
     await page.keyboard.press('Enter');
     await check('Threads… with a refusal');
+    await dialog.getByRole('textbox', { name: 'New thread' }).fill('');
     await dialog.getByRole('button', { name: 'Actions for thread A' }).click();
     await page.getByRole('menuitem', { name: 'Color…' }).click();
     const edit = dialogOf(page, 'Color thread A');

@@ -56,6 +56,17 @@ const readOnly = computed(() => why.value !== null);
 const heading = ref('');
 /** The labels as the scene had them when the dialog opened, to tell a change from none. */
 let began: string[] = [];
+/** Keys of the threads checked since opening that the scene didn't have, in the order checked. */
+let added: string[] = [];
+/** Whether there is anything unsaved: a different checklist, or text in the New thread field. */
+const dirty = computed(() => {
+  const was = new Set(began.map(keyOf));
+  return (
+    fresh.value.trim() !== '' ||
+    checked.value.size !== was.size ||
+    [...checked.value].some((k) => !was.has(k))
+  );
+});
 /** Every label shown, in order: the threads there are, then ones typed here. */
 const rows = ref<string[]>([]);
 /** Which of them (by `normalizeLabel`) are checked. */
@@ -71,6 +82,7 @@ const full = computed(() => checked.value.size >= THREAD_LIMITS.perUnit);
 
 function begin(labels: string[]) {
   began = labels.slice();
+  added = [];
   const shown = threads.info.value.map((t) => t.label);
   for (const label of labels) if (!shown.some((s) => keyOf(s) === keyOf(label))) shown.push(label);
   rows.value = shown;
@@ -104,8 +116,12 @@ watch(threadsFor, async (id) => {
 
 function toggle(label: string, on: boolean) {
   const next = new Set(checked.value);
-  if (on) next.add(keyOf(label));
-  else next.delete(keyOf(label));
+  const key = keyOf(label);
+  const known = began.some((b) => keyOf(b) === key);
+  if (on) next.add(key);
+  else next.delete(key);
+  added = added.filter((a) => a !== key);
+  if (on && !known) added.push(key);
   checked.value = next;
   error.value = '';
 }
@@ -151,7 +167,11 @@ function save() {
     add();
     if (error.value) return;
   }
-  const labels = rows.value.filter((r) => checked.value.has(keyOf(r)));
+  // The scene's own order: what it had stays in place, what is new follows as it was checked.
+  const labels = [
+    ...began.filter((b) => checked.value.has(keyOf(b))),
+    ...added.flatMap((key) => rows.value.filter((r) => keyOf(r) === key)),
+  ];
   const same = labels.length === began.length && labels.every((label, i) => began[i] === label);
   const sameSet =
     labels.length === began.length && labels.every((l) => began.some((b) => keyOf(b) === keyOf(l)));
@@ -170,10 +190,20 @@ function onSubmit(event: Event) {
 }
 
 function onFieldKey(event: KeyboardEvent) {
-  if (event.key !== 'Enter') return;
+  if (event.key !== 'Enter' || event.isComposing) return;
   event.preventDefault();
   event.stopPropagation();
   add();
+}
+
+/** Escape closes an open thread menu first, and leaves the dialog (and its unsaved work) be. */
+let menuClosedAt = Number.NEGATIVE_INFINITY;
+function onMenuOpen(open: boolean) {
+  if (!open) menuClosedAt = performance.now();
+}
+function onCancel(event: Event) {
+  const menuOpen = !!dialog.value?.el?.querySelector('[role="menu"]');
+  if (menuOpen || performance.now() - menuClosedAt < 200) event.preventDefault();
 }
 
 function onClose() {
@@ -189,7 +219,7 @@ function onClose() {
 
 /** A thread's own menu: this closes, and the edit opens in its place. */
 function menuOf(label: string): DropdownMenuItem[][] {
-  const off = readOnly.value;
+  const off = readOnly.value || dirty.value;
   const edit = (mode: 'rename' | 'name' | 'color' | 'remove') => () => {
     const back = takeThreadsFocusBack();
     dialog.value?.close();
@@ -198,6 +228,9 @@ function menuOf(label: string): DropdownMenuItem[][] {
     );
   };
   return [
+    ...(dirty.value && !readOnly.value
+      ? [[{ type: 'label' as const, label: 'Save or cancel your changes first.' }]]
+      : []),
     [
       { label: 'Rename thread…', icon: 'i-lucide-pencil', disabled: off, onSelect: edit('rename') },
       { label: 'Name…', icon: 'i-lucide-text-cursor', disabled: off, onSelect: edit('name') },
@@ -227,6 +260,7 @@ const swatch = (label: string) => {
     size="md"
     class="threads-dialog"
     aria-labelledby="threads-title"
+    @cancel="onCancel"
     @close="onClose"
   >
     <form v-if="threadsFor" @submit="onSubmit">
@@ -241,6 +275,7 @@ const swatch = (label: string) => {
               type="checkbox"
               :checked="checked.has(keyOf(label))"
               :disabled="readOnly || (full && !checked.has(keyOf(label)))"
+              :aria-describedby="full && !checked.has(keyOf(label)) ? 'threads-full' : undefined"
               @change="toggle(label, ($event.target as HTMLInputElement).checked)"
             />
             <span
@@ -252,7 +287,7 @@ const swatch = (label: string) => {
             <span class="label">{{ label }}</span>
             <span v-if="info(label)?.name" class="name">{{ info(label)?.name }}</span>
           </label>
-          <MenuButton v-if="info(label)" :items="menuOf(label)" :content="{ align: 'end' }" :portal="`#${DIALOG_ID}`">
+          <MenuButton v-if="info(label)" @update:open="onMenuOpen" :items="menuOf(label)" :content="{ align: 'end' }" :portal="`#${DIALOG_ID}`">
             <button
               type="button"
               class="more"
@@ -336,9 +371,9 @@ h2 {
 }
 .swatch {
   flex: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+  width: 4px;
+  height: 16px;
+  border-radius: 1px;
 }
 .swatch.none {
   border: 1px solid var(--muted);
