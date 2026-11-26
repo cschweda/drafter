@@ -15,8 +15,12 @@ export interface LaneRow {
 
 export interface LanePlace {
   row: number;
+  /** An index into `lanes.units`, or `HEADER` for a thread row's header (its menu's button). */
   unit: number;
 }
+
+/** The place of a thread row's header. No thread's header has no menu, so is no place. */
+export const HEADER = -1;
 
 /** The rows of `lanes`: one per thread in order of first appearance, then No thread if needed. */
 export function laneRows(lanes: Lanes): LaneRow[] {
@@ -65,7 +69,30 @@ function nearest(all: readonly LaneUnit[], units: readonly number[], at: number)
 }
 
 /**
- * Where `key` moves focus from `at`: Left and Right along the row's blocks (stopping at its ends),
+ * From a thread row's header: Right and End to the row's first and last block, Up and Down to the
+ * header of the row above or below when that is a thread's; null otherwise.
+ */
+function fromHeader(rows: readonly LaneRow[], r: number, key: string): LanePlace | null {
+  const row = rows[r] as LaneRow;
+  if (row.key === null) return null;
+  switch (key) {
+    case 'ArrowRight':
+      return row.units.length > 0 ? { row: r, unit: row.units[0] as number } : null;
+    case 'End':
+      return row.units.length > 0 ? { row: r, unit: row.units.at(-1) as number } : null;
+    case 'ArrowUp':
+    case 'ArrowDown': {
+      const next = r + (key === 'ArrowUp' ? -1 : 1);
+      return rows[next] && rows[next]?.key !== null ? { row: next, unit: HEADER } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Where `key` moves focus from `at`: Left and Right along the row's blocks (Left from a thread
+ * row's first block to its header, `HEADER`; Right stopping at the end), headers as `fromHeader`,
  * Home and End to its first and last, Up and Down to the next row with blocks, on the block
  * covering the middle of this one, else the nearest by position. Null for any other key, no move,
  * or a place that isn't one.
@@ -73,6 +100,7 @@ function nearest(all: readonly LaneUnit[], units: readonly number[], at: number)
 export function nextCell(lanes: Lanes, at: LanePlace, key: string): LanePlace | null {
   const rows = laneRows(lanes);
   const row = rows[at.row];
+  if (row && at.unit === HEADER) return fromHeader(rows, at.row, key);
   const index = row ? row.units.indexOf(at.unit) : -1;
   if (!row || index < 0) return null;
   const last = row.units.length - 1;
@@ -80,6 +108,8 @@ export function nextCell(lanes: Lanes, at: LanePlace, key: string): LanePlace | 
     i >= 0 && i <= last && i !== index ? { row: at.row, unit: row.units[i] as number } : null;
   switch (key) {
     case 'ArrowLeft':
+      // From a thread row's first block, to its header.
+      if (index === 0) return row.key === null ? null : { row: at.row, unit: HEADER };
       return along(index - 1);
     case 'ArrowRight':
       return along(index + 1);

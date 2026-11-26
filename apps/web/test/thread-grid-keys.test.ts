@@ -1,6 +1,6 @@
 import { type LaneUnit, lanesOf } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
-import { laneRows, nextCell } from '../app/threads/grid-keys';
+import { HEADER, laneRows, nextCell } from '../app/threads/grid-keys';
 
 // The Lanes' keys (threads design §7.5), as a pure function of the lanes: Left and Right along a
 // row's blocks, Up and Down to the next row's block nearest in position, Home and End to a row's
@@ -68,11 +68,29 @@ describe('nextCell', () => {
     expect(nextCell(LANES, at(1, 1), 'ArrowRight')).toEqual(at(1, 8));
   });
 
-  test('Left at a row’s start and Right at its end go nowhere', () => {
-    expect(nextCell(LANES, at(0, 0), 'ArrowLeft')).toBeNull();
+  test('Left at a thread row’s first block goes to its header; Right at its end goes nowhere', () => {
+    expect(nextCell(LANES, at(0, 0), 'ArrowLeft')).toEqual(at(0, HEADER));
+    expect(nextCell(LANES, at(2, 3), 'ArrowLeft')).toEqual(at(2, HEADER));
     expect(nextCell(LANES, at(0, 7), 'ArrowRight')).toBeNull();
-    expect(nextCell(LANES, at(2, 3), 'ArrowLeft')).toBeNull();
     expect(nextCell(LANES, at(2, 3), 'ArrowRight')).toBeNull();
+  });
+
+  test('No thread’s header has no menu, so is no place: Left at its start goes nowhere', () => {
+    expect(nextCell(LANES, at(3, 4), 'ArrowLeft')).toBeNull();
+    expect(nextCell(LANES, at(3, HEADER), 'ArrowRight')).toBeNull();
+  });
+
+  test('from a header: Right and End to the row’s blocks, Up and Down to the next header', () => {
+    expect(nextCell(LANES, at(0, HEADER), 'ArrowRight')).toEqual(at(0, 0));
+    expect(nextCell(LANES, at(0, HEADER), 'End')).toEqual(at(0, 7));
+    expect(nextCell(LANES, at(1, HEADER), 'ArrowLeft')).toBeNull();
+    expect(nextCell(LANES, at(1, HEADER), 'Home')).toBeNull();
+    expect(nextCell(LANES, at(0, HEADER), 'ArrowDown')).toEqual(at(1, HEADER));
+    expect(nextCell(LANES, at(1, HEADER), 'ArrowUp')).toEqual(at(0, HEADER));
+    expect(nextCell(LANES, at(0, HEADER), 'ArrowUp')).toBeNull();
+    // No thread's header is no place: Down from the last thread's goes nowhere.
+    expect(nextCell(LANES, at(2, HEADER), 'ArrowDown')).toBeNull();
+    expect(nextCell(LANES, at(1, HEADER), 'Enter')).toBeNull();
   });
 
   test('Home and End go to a row’s ends, nowhere when already there', () => {
@@ -115,7 +133,7 @@ describe('nextCell', () => {
     expect(nextCell(LANES, at(3, 5), 'ArrowDown')).toBeNull();
   });
 
-  test('a single row: only Left, Right, Home, and End move', () => {
+  test('a single row: only Left, Right, Home, and End move, Left to the header', () => {
     const lanes = lanesOf(
       [unit(0, 0, 3, ['A']), unit(1, 3, 3, ['A']), unit(2, 6, 3, ['A'])],
       'words',
@@ -125,6 +143,7 @@ describe('nextCell', () => {
     expect(nextCell(lanes, at(0, 1), 'ArrowRight')).toEqual(at(0, 2));
     expect(nextCell(lanes, at(0, 1), 'Home')).toEqual(at(0, 0));
     expect(nextCell(lanes, at(0, 0), 'End')).toEqual(at(0, 2));
+    expect(nextCell(lanes, at(0, 0), 'ArrowLeft')).toEqual(at(0, HEADER));
   });
 
   test('a zero-length unit is a place: covered at its own point, and moved through', () => {
@@ -133,6 +152,7 @@ describe('nextCell', () => {
       'words',
     );
     expect(nextCell(lanes, at(0, 0), 'ArrowRight')).toEqual(at(0, 1));
+    expect(nextCell(lanes, at(0, 1), 'ArrowLeft')).toEqual(at(0, 0));
     // From A's empty u1 (at 10) down: B's u1 is at 10 too.
     expect(nextCell(lanes, at(0, 1), 'ArrowDown')).toEqual(at(1, 1));
     // From B's u2 (10–20, middle 15) up: A's u0 ends 5 away, u1 is 5 away; the earlier.

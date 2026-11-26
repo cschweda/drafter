@@ -139,6 +139,17 @@ describe('laneMarks', () => {
     expect(marks).toHaveLength(9);
   });
 
+  test('no number within 20 px of the right end, where it would be cut off', () => {
+    // 40 pages over 400 px: page 40's top is at 390 px.
+    const lanes = lanesOf([scene(1, 0, 320, ['A'])], 'pages');
+    const numbered = laneMarks(lanes, 400).filter((m) => m.text);
+    expect(numbered.at(-1)?.text).not.toBe('40');
+    for (const m of numbered) expect((1 - m.at) * 400).toBeGreaterThanOrEqual(20);
+    const words = lanesOf([scene(1, 0, 10_100, ['A'])], 'words');
+    for (const m of laneMarks(words, 560).filter((m) => m.text))
+      expect((1 - m.at) * 560).toBeGreaterThanOrEqual(20);
+  });
+
   test('nothing to measure: no marks', () => {
     expect(laneMarks(lanesOf([], 'words'), 500)).toEqual([]);
     expect(laneMarks(lanesOf([scene(1, 0, 8, [])], 'pages'), 0)).toEqual([]);

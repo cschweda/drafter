@@ -1,8 +1,13 @@
 <script lang="ts">
 import { shallowRef } from 'vue';
 
-/** The block last focused this visit, by row key and unit id: the grid's tab stop while it is drawn. */
+/**
+ * The place last focused this visit, by row key and unit id (`HEAD` for the row's header): the
+ * grid's tab stop while it is drawn.
+ */
 const lastFocused = shallowRef<{ key: string | null; id: string } | null>(null);
+/** A header's id in `lastFocused`: no unit's id starts with `@`. */
+const HEAD = '@header';
 </script>
 
 <script setup lang="ts">
@@ -14,8 +19,15 @@ import { opensMenu } from '~/strip/keys';
 import { LABEL_MIN_PX } from '~/strip/labels';
 import { blockMenuItems } from '~/threads/block-menu';
 import { openThreadEdit } from '~/threads/dialogs';
-import { nextCell } from '~/threads/grid-keys';
-import { blockName, cardLines, laneMarks, noThreadsYet, nothingYet } from '~/threads/lane-labels';
+import { HEADER, nextCell } from '~/threads/grid-keys';
+import {
+  blockName,
+  cardLines,
+  laneMarks,
+  noThreadsYet,
+  nothingYet,
+  unitTitle,
+} from '~/threads/lane-labels';
 import { threadMenuItems } from '~/threads/thread-menu';
 import { useLaneView } from '~/threads/use-lane-view';
 import { useThreads } from '~/threads/use-threads';
@@ -23,9 +35,10 @@ import { useThreads } from '~/threads/use-threads';
 // The Lanes (threads design §7.3, §7.5): a row per thread along the work, then No thread, each
 // block a scene or passage at its place and length (4 px at least), tinted with its thread's color
 // and labeled where it fits; the cursor's unit is outlined in every row. One ARIA grid, one Tab
-// stop: the arrows, Home, and End move (`nextCell`), Enter or a click goes there, and the
-// context-menu key, Shift+F10, or a right-click opens the block's menu. A row header's menu has
-// the thread's own edits. Placed by percentages, so a resize redraws nothing but the labels.
+// stop: the arrows, Home, and End move (`nextCell`, Left from a row's first block to its header),
+// Enter or a click goes there (a first tap on a touch screen only focuses), and the context-menu
+// key, Shift+F10, a right-click, or the ⋯ the focused block shows opens the block's menu. A row
+// header's menu (Enter, Shift+F10, a click) has the thread's own edits. Escape hides the card. Placed by percentages, so a resize redraws nothing but the labels.
 
 const threads = useThreads();
 const outline = useOutline();
@@ -70,6 +83,9 @@ const drawn = computed(() => {
         index: i,
         id: u.id,
         name: blockName(u, now, noun.value),
+        title: unitTitle(u, noun.value),
+        /** Near the right end, the ⋯ goes on the block's left, inside the view. */
+        moreLeft: u.from / now.total > 0.85,
         label: share * width.value >= LABEL_MIN_PX ? u.label : '',
         inherited: !!u.inherited,
         style: {
@@ -92,6 +108,7 @@ const tabStop = computed(() => {
   const last = lastFocused.value;
   if (last) {
     const r = all.findIndex((row) => row.key === last.key);
+    if (r >= 0 && last.id === HEAD && last.key !== null) return { row: r, id: HEAD };
     if (r >= 0 && all[r]?.blocks.some((b) => b.id === last.id)) return { row: r, id: last.id };
   }
   const here = current.value;
@@ -108,6 +125,12 @@ const cellEl = (r: number, i: number) => document.getElementById(cellId(r, i));
 
 async function focusCell(r: number, i: number) {
   const row = drawn.value[r];
+  if (row && i === HEADER) {
+    lastFocused.value = { key: row.key, id: HEAD };
+    await nextTick();
+    headEl(r)?.focus();
+    return;
+  }
   const u = lanes.value?.units[i];
   if (!row || !u) return;
   lastFocused.value = { key: row.key, id: u.id };
@@ -121,6 +144,18 @@ async function focusStop() {
   const stop = tabStop.value;
   const i = stop ? (lanes.value?.units.findIndex((u) => u.id === stop.id) ?? -1) : -1;
   if (stop && i >= 0 && focusIsFree()) cellEl(stop.row, i)?.focus();
+}
+
+const MOVES = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+
+/** Moves focus as `nextCell` says; at an edge the key is still the grid's (the pane doesn't scroll). */
+function move(event: KeyboardEvent, r: number, unit: number): boolean {
+  const now = lanes.value;
+  if (!now || !MOVES.includes(event.key)) return false;
+  event.preventDefault();
+  const to = nextCell(now, { row: r, unit }, event.key);
+  if (to) void focusCell(to.row, to.unit);
+  return true;
 }
 
 function onKeydown(event: KeyboardEvent, r: number, i: number) {
@@ -138,15 +173,55 @@ function onKeydown(event: KeyboardEvent, r: number, i: number) {
     threads.go(u.id);
     return;
   }
-  const to = nextCell(now, { row: r, unit: i }, event.key);
-  if (to) {
+  // Escape hides the card (WCAG 1.4.13), and does nothing else while there is one.
+  if (event.key === 'Escape' && cardFor.value) {
     event.preventDefault();
-    void focusCell(to.row, to.unit);
-  } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) {
-    // At an edge the key is still the grid's: the pane doesn't scroll.
-    event.preventDefault();
+    event.stopPropagation();
+    cardFor.value = null;
+    return;
   }
+  move(event, r, i);
 }
+
+/**
+ * A header's keys, caught before its menu's button sees them (it would open on ArrowDown): the
+ * arrows, Home, and End move as the blocks' do, and Shift+F10 or the context-menu key opens its
+ * menu, as Enter does.
+ */
+function onHeadKeydown(event: KeyboardEvent, r: number) {
+  if (!(event.target instanceof HTMLElement) || event.target !== headEl(r)) return;
+  if (opensMenu(event)) {
+    event.preventDefault();
+    event.stopPropagation();
+    setHead(r, true);
+    return;
+  }
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (move(event, r, HEADER)) event.stopPropagation();
+}
+
+/** A touch's first tap on a block focuses it (its card and ⋯ show); the next one goes there. */
+let tapOnly = false;
+function onPointerdown(event: PointerEvent, r: number, i: number) {
+  tapOnly = event.pointerType === 'touch' && !same(focused.value, r, i);
+}
+function onClick(r: number, i: number, id: string) {
+  if (tapOnly) {
+    tapOnly = false;
+    void focusCell(r, i);
+    return;
+  }
+  threads.go(id);
+}
+
+/**
+ * The ⋯ shows on the focused block, and on the block whose menu is open. Pressing it keeps focus
+ * on the block (its mousedown; a prevented pointerdown would cancel a touch's click in WebKit), and
+ * where a browser focuses it anyway it stays while it has focus.
+ */
+const moreAt = shallowRef<{ row: number; unit: number } | null>(null);
+const showsMore = (r: number, i: number) =>
+  same(focused.value, r, i) || same(menuFor.value, r, i) || same(moreAt.value, r, i);
 
 // ---- The block's menu ----------------------------------------------------------------------
 
@@ -253,6 +328,10 @@ function headItems(r: number): DropdownMenuItem[][] {
     afterHead = () => openThreadEdit(label, mode, () => headEl(r)?.focus());
   });
 }
+function onHeadFocus(r: number) {
+  const row = drawn.value[r];
+  if (row?.key) lastFocused.value = { key: row.key, id: HEAD };
+}
 function setHead(r: number, open: boolean) {
   if (open) headMenu.value = r;
   else if (headMenu.value === r) headMenu.value = null;
@@ -280,6 +359,13 @@ const card = computed(() => {
 });
 const same = (a: { row: number; unit: number } | null, r: number, i: number) =>
   a?.row === r && a.unit === i;
+
+// Escape hides a card the pointer shows, wherever focus is (WCAG 1.4.13).
+function onWindowKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && cardFor.value && !focused.value) cardFor.value = null;
+}
+onMounted(() => window.addEventListener('keydown', onWindowKeydown));
+onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
 
 function onFocus(r: number, i: number) {
   const row = drawn.value[r];
@@ -333,7 +419,7 @@ watch(
       </div>
       <div role="grid" aria-label="Lanes" class="grid">
         <div v-for="(row, r) in drawn" :key="row.key ?? '-none'" role="row" class="row">
-          <div role="rowheader" class="head">
+          <div role="rowheader" class="head" @keydown.capture="onHeadKeydown($event, r)">
             <MenuButton
               v-if="row.key !== null"
               :open="headMenu === r"
@@ -345,8 +431,10 @@ watch(
                 :id="`lane-head-${r}`"
                 type="button"
                 class="head-button"
-                tabindex="-1"
+                :tabindex="isStop(r, HEAD) ? 0 : -1"
                 :aria-label="row.header"
+                aria-keyshortcuts="Enter Shift+F10"
+                @focus="onHeadFocus(r)"
                 @contextmenu.prevent="setHead(r, true)"
               >
                 <span class="swatch" :style="row.swatch ? { background: row.swatch } : undefined" aria-hidden="true" />
@@ -371,7 +459,9 @@ watch(
               :aria-label="block.name"
               :aria-current="block.id === current ? 'location' : undefined"
               :tabindex="isStop(r, block.id) ? 0 : -1"
-              @click="threads.go(block.id)"
+              aria-keyshortcuts="Enter Shift+F10"
+              @pointerdown="onPointerdown($event, r, block.index)"
+              @click="onClick(r, block.index, block.id)"
               @contextmenu="onContextmenu($event, r, block.index)"
               @keydown="onKeydown($event, r, block.index)"
               @focus="onFocus(r, block.index)"
@@ -379,7 +469,23 @@ watch(
               @pointerenter="cardFor = { row: r, unit: block.index }"
               @pointerleave="onPointerleave(r, block.index)"
             >
-              {{ block.label }}
+              <span class="block-label">{{ block.label }}</span>
+              <!-- The menu for a touch and a pointer, on the focused block: never a tab stop (the
+                   grid is one); its menu gives focus back to the block. -->
+              <button
+                v-if="showsMore(r, block.index)"
+                type="button"
+                class="more"
+                :class="{ left: block.moreLeft }"
+                tabindex="-1"
+                :aria-label="`Actions for ${block.title}`"
+                @mousedown.prevent
+                @focus="moreAt = { row: r, unit: block.index }"
+                @blur="moreAt = null"
+                @click.stop="openMenuFor(r, block.index)"
+              >
+                <UIcon name="i-lucide-ellipsis" aria-hidden="true" />
+              </button>
             </div>
           </div>
         </div>
@@ -521,7 +627,6 @@ watch(
   box-sizing: border-box;
   min-width: 4px;
   padding: 0 3px;
-  overflow: hidden;
   border-left: 2px solid var(--muted);
   border-radius: 2px;
   background: var(--raised);
@@ -530,6 +635,33 @@ watch(
   line-height: 24px;
   white-space: nowrap;
   cursor: pointer;
+}
+/* The label is cut to the block; the ⋯ beside the block is not. */
+.block-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.more {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 4px);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--page);
+  color: var(--text);
+  cursor: pointer;
+}
+.more.left {
+  right: calc(100% + 4px);
+  left: auto;
 }
 /* A section's threads from its chapter: lighter, with a dashed edge, and said in its name. */
 .block.inherited {
@@ -584,8 +716,16 @@ watch(
   .block {
     border: 1px solid ButtonText;
   }
+  /* Box shadows are dropped here, and the focus outline would hide an outline: the cursor's unit
+     keeps a border of its own, focused or not. */
   .block.current {
-    outline: 2px solid Highlight;
+    border: 3px solid Highlight;
+  }
+  .block:focus-visible {
+    outline-color: CanvasText;
+  }
+  .more {
+    border-color: ButtonText;
   }
   .card {
     border-color: CanvasText;

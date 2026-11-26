@@ -11,7 +11,8 @@ import { type OutlineView, useSettings } from '~/settings/settings';
 // The Outline tab's slim bar: how many scenes, and how long they run once the pages are made; in a
 // novel, its chapters, sections, and words, and the book's target when it has one. On the Outline
 // tab (not the Cards', which shows the counts alone), the Tree | Lanes switch (threads design
-// §7.3), remembered on this device, and with Lanes a menu with Show as table. A plain Markdown
+// §7.3), remembered on this device, and with Lanes a menu with Show as table (not on a phone,
+// whose Lanes are a list). A plain Markdown
 // document has no scenes, so no switch.
 const props = defineProps<{ countsOnly?: boolean }>();
 const editor = useEditor();
@@ -36,6 +37,8 @@ const switchable = computed(
   () => !props.countsOnly && (editor.kind.value !== 'markdown' || isNovel.value),
 );
 const view = computed(() => settings.value.outlineView);
+/** Below the Lanes' width a phone shows their list, which has no table: no menu then. */
+const roomy = useMatchMedia(LANES_QUERY);
 const choose = (next: OutlineView) => void set('outlineView', next);
 const items = computed<DropdownMenuItem[][]>(() => [
   [
@@ -69,7 +72,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
         @click="choose('lanes')"
       />
     </div>
-    <MenuButton v-if="view === 'lanes'" :items="items" :content="{ align: 'end' }">
+    <MenuButton v-if="view === 'lanes' && roomy" :items="items" :content="{ align: 'end' }">
       <button type="button" class="zoom-button lanes-menu" aria-label="Lanes options">
         <UIcon name="i-lucide-ellipsis" class="icon" aria-hidden="true" />
       </button>

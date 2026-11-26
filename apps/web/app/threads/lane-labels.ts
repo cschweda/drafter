@@ -174,9 +174,20 @@ const WORD_GAP_PX = 56;
 
 /**
  * The ruler's marks: page numbers (by the Structure strip's steps) for lanes in pages, thousands of
- * words ("12k") for lanes in words, numbered at the step whose numbers fall nearest 56 px apart.
+ * words ("12k") for lanes in words, numbered at the step whose numbers fall nearest 56 px apart;
+ * none numbered within 20 px of the right end.
  */
 export function laneMarks(lanes: Lanes, widthPx: number): LaneMark[] {
+  return marksOf(lanes, widthPx).map((m) =>
+    // A number this near the right end would be cut off there: it stays a tick.
+    m.text && (1 - m.at) * widthPx < EDGE_PX ? { at: m.at, text: '' } : m,
+  );
+}
+
+/** How near the right end, in pixels, a number may start. */
+const EDGE_PX = 20;
+
+function marksOf(lanes: Lanes, widthPx: number): LaneMark[] {
   if (!(lanes.total > 0) || !(widthPx > 0)) return [];
   if (lanes.unit === 'pages') {
     const strip = { unit: 'pages' as const, start: 0, length: lanes.total / 8, rows: [] };

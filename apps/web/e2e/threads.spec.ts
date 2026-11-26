@@ -419,7 +419,12 @@ test.describe('the Lanes', () => {
   }) => {
     await openLanes(page);
     await cell(page, /^Thread A/, 1).focus();
+    // Left from a row's first block is its header; Right comes back.
     await page.keyboard.press('ArrowLeft');
+    await expect(
+      laneRow(page, /^Thread A/).getByRole('button', { name: /^Thread A/ }),
+    ).toBeFocused();
+    await page.keyboard.press('ArrowRight');
     await expect(cell(page, /^Thread A/, 1)).toBeFocused();
     await page.keyboard.press('ArrowRight');
     await expect(cell(page, /^Thread A/, 4)).toBeFocused();
@@ -462,6 +467,59 @@ test.describe('the Lanes', () => {
     // No unit is left without a thread: the No thread row goes.
     await expect(lanesGrid(page).getByRole('rowheader')).toHaveText(['A', 'B', 'C']);
     await expect(laneRow(page, /^Thread B/).getByRole('gridcell')).toHaveCount(3);
+  });
+
+  test('the focused block shows a ⋯ that opens its menu', async ({ page }) => {
+    await openLanes(page);
+    const block = cell(page, /^Thread C/, 4);
+    await expect(block).toHaveAttribute('aria-keyshortcuts', 'Enter Shift+F10');
+    const more = page.getByRole('button', { name: 'Actions for Scene 4, INT. KITCHEN - DAY' });
+    await expect(more).toHaveCount(0);
+    await block.focus();
+    await expect(more).toBeVisible();
+    await expect(more).toHaveAttribute('tabindex', '-1');
+    await more.click();
+    const menu = page.getByRole('menu').and(page.locator('[data-state="open"]'));
+    await expect(menu.getByRole('menuitem', { name: 'Threads…' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(block).toBeFocused();
+  });
+
+  test('Left from a row’s first block is its header, whose keys open its menu', async ({
+    page,
+  }) => {
+    await openLanes(page);
+    await cell(page, /^Thread B/, 2).focus();
+    await page.keyboard.press('ArrowLeft');
+    const head = laneRow(page, /^Thread B/).getByRole('button', { name: 'Thread B, 2 scenes' });
+    await expect(head).toBeFocused();
+    await expect(head).toHaveAttribute('tabindex', '0');
+    // Down is the next header, not the menu's button opening.
+    await page.keyboard.press('ArrowDown');
+    const c = laneRow(page, /^Thread C/).getByRole('button', { name: 'Thread C, 2 scenes' });
+    await expect(c).toBeFocused();
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    await page.keyboard.press('ArrowRight');
+    await expect(cell(page, /^Thread C/, 4)).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('Shift+F10');
+    await expect(page.getByRole('menuitem', { name: 'Rename thread…' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(c).toBeFocused();
+    // One Tab stop still: the header is it now.
+    await expect(lanesGrid(page).locator('[tabindex="0"]')).toHaveCount(1);
+  });
+
+  test('Escape hides the card and keeps focus on the block', async ({ page }) => {
+    await openLanes(page);
+    const block = cell(page, /^Thread A/, 4);
+    await block.focus();
+    const card = page.locator('.lanes .card');
+    await expect(card).toContainText('Scene 4, INT. KITCHEN - DAY');
+    await page.keyboard.press('Escape');
+    await expect(card).toHaveCount(0);
+    await expect(block).toBeFocused();
   });
 
   test('a row header’s menu renames the thread', async ({ page }) => {
@@ -542,6 +600,27 @@ test.describe('the Lanes', () => {
   });
 });
 
+// A tablet (Threads review, fix round 1): the grid, by touch. iPadOS Safari fires no contextmenu
+// on a long press, so the focused block's ⋯ is a touch's way to its menu.
+test.describe('the Lanes on a tablet', () => {
+  test.use({ viewport: { width: 820, height: 1180 }, hasTouch: true });
+
+  test('a first tap focuses a block and shows its ⋯; the ⋯ opens the scene menu', async ({
+    page,
+  }) => {
+    await openLanes(page);
+    const block = cell(page, /^Thread C/, 4);
+    await block.tap();
+    await expect(block).toBeFocused();
+    // The first tap only focused: the cursor is still in the hall.
+    await expect(cell(page, /^Thread A/, 1)).toHaveAttribute('aria-current', 'location');
+    const more = page.getByRole('button', { name: 'Actions for Scene 4, INT. KITCHEN - DAY' });
+    await more.tap();
+    const menu = page.getByRole('menu').and(page.locator('[data-state="open"]'));
+    await expect(menu.getByRole('menuitem', { name: 'Threads…' })).toBeVisible();
+  });
+});
+
 test.describe('the Lanes in a Markdown document', () => {
   test('offer no switch, and the palette no Lanes', async ({ page }) => {
     await start(page);
@@ -572,6 +651,8 @@ test.describe('the Lanes on a phone', () => {
       page.getByRole('list', { name: 'Thread A, 2 scenes' }).getByRole('button'),
     ).toHaveText([/^Scene 1, INT\. HALL - DAY/, /^Scene 4, INT\. KITCHEN - DAY/]);
     await expect(lanesGrid(page)).toHaveCount(0);
+    // The list has no table: no Lanes options.
+    await expect(page.getByRole('button', { name: 'Lanes options' })).toHaveCount(0);
   });
 });
 
