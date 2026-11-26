@@ -386,6 +386,7 @@ test.describe('a novel’s threads and its facts', () => {
 
   test('Name…, then Color…, then a tag keep the name and color, and the table shows them', async ({
     page,
+    isMobile,
   }) => {
     await openSample(page);
     await tag(page, saltRoad(page), 'The Salt Road', 'Tide');
@@ -411,6 +412,12 @@ test.describe('a novel’s threads and its facts', () => {
       .toEqual({ tide: { name: 'The sea', color: 'teal' } });
     expect((await factsOf(page)).nodes['section:low-tide:0']?.threads).toEqual(['Tide']);
     await runCommand(page, 'Show Lanes');
+    if (isMobile) {
+      // A phone shows the grouped list, with the thread's name beside its label.
+      const group = page.getByRole('region', { name: /^Thread Tide/ });
+      await expect(group).toContainText('The sea');
+      return;
+    }
     await page.getByRole('button', { name: 'Lanes options' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Show as table' }).click();
     const table = page.getByRole('table', { name: 'Threads' });
