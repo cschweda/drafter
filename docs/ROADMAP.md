@@ -4,7 +4,7 @@ The [README](../README.md#roadmap) has the short list: what's next, and what com
 
 ## Where things stand
 
-Drafter is at **v0.27.4**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
+Drafter is at **v0.28.0**. You can write at [drafter.dev](https://drafter.dev), [install Drafter on Linux](../README.md#linux) or [on Windows](../README.md#windows), or [build it on your Mac](../README.md#mac).
 
 Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. Lately it brought:
 
@@ -29,14 +29,16 @@ Phase 1's web app is done, with its accessibility pass. Phase 2 is under way. La
 - **A page ends where a sentence does** (v0.27.2): a paragraph of action or a speech that doesn't fit on a page stops at the last sentence that fits, with at least two lines on each side, and the rest is wrapped again on the next page. A locked script keeps every page where it is; a new lock keeps the pages you see ([design](plans/2026-11-21-sentence-page-breaks.md)). Also fixed: Reload for a new version stalling, and a menu losing the arrow keys.
 - **The cursor stays where you left it** (v0.27.3): three faults found while hunting a fault in the test browser. The cursor could jump to the top of the script when the palette or a dialog closed on a busy page, so the next thing typed went in there; a dialog asked for again the moment it closed could fail to open; and focus could be left on nothing after the tour on a slow machine.
 - **Save says where it went, and a script comes back from Final Draft** (v0.27.4). Saving: the top bar keeps a place of one size for the unsaved state, so nothing in it moves; the status bar says "Saved to" and the file's name; where a browser saves by downloading, the first Save asks what to call the file. Final Draft: two real round trips through Final Draft 13 showed what it keeps (a paragraph's type and text) and what it drops (every mark of Drafter's), so sections, synopses, and notes are written as its own outline, summary, and note paragraphs, and a title page with no marks is read by what its lines are. Final Draft prints its outline text unless its outline is hidden. Also: the third clean-room audit, and the planned canvas of idea cards named the Wall.
+- **The Story Atlas, a quiet tip jar, and a second red/blue audit** (v0.28.0), the first release after the freeze on features. The story map is the Story Atlas, a name no other writing app uses for its own feature; "Unsaved" sits in the status bar, so nothing in the top bar moves; a help page, Support Drafter, has one button for a tip and nothing in Drafter ever asks ([design](drafter-support-page-design.md)); and the [second red/blue audit](redblue-audit-2026-11-23.md) found no way to run code from a file, reach the network, or read a file you hadn't chosen, and fixed the small files that could freeze the editor or a tool. Three checks the clean-room audits asked for now run with the tests.
 
 Next, in order:
 
-1. **More fixes before features** (v0.27.x). New features still wait: a page that, rarely, stops answering; why a new version sometimes doesn't take over on Reload; page breaks at the end of a sentence, inside a line, with a design of its own; and Final Draft's locked pages, revisions, and omitted scenes, checked against real files that have been to Final Draft and back.
-2. **Threads**, built and coming in v0.29.0: tag the scenes each plot thread is in and see them as lanes along the whole work ([design](drafter-threads-design.md)). The strip's Color by and pacing follow.
-3. The **Workbook**, a story bible with your pasted, synced, and spoken notes (v0.29.0).
-4. An optional one-file `.drafter` project (v0.30.0, open spec).
-5. Plans G and H (v0.31.0 and v0.32.0).
+1. **Threads**, built and coming in v0.29.0: tag the scenes each plot thread is in and see them as lanes along the whole work ([design](drafter-threads-design.md)). The strip's Color by and pacing follow.
+2. The **Workbook**, a story bible with your pasted, synced, and spoken notes (v0.30.0).
+3. An optional one-file `.drafter` project (v0.31.0, open spec).
+4. Plans G and H (v0.32.0 and v0.33.0).
+
+Final Draft's locked pages, revisions, and omitted scenes, checked against real files that have been to Final Draft and back, come as a fix release when those files are in hand.
 
 A signed macOS download follows. The phases below have the detail.
 

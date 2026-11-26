@@ -201,7 +201,7 @@ What v0.19.0 (Highland, Fade In, and Markdown imports, Open as screenplay, and E
 
 - **Images embedded as base64** (design §11, Call 8): a Markdown image is shown as its description in the HTML file and the EPUB, as the Preview does; when Drafter has images of its own, they can go in as `data:` URIs (allowed by the file's CSP already) and as EPUB manifest items.
 - **Search inside the file, a contents sidebar, and per-reader comments** (design §11): the HTML file has the browser's own Find, the band (a script) or the headings (a document) to move by, and no comments; a reader file to comment in is Phase 3's self-contained reader file.
-- **The Workbook's page** (design §5, §11): the Workbook (Plan F, v0.29.0) exports as its own page in its own release.
+- **The Workbook's page** (design §5, §11): the Workbook (Plan F, v0.30.0) exports as its own page in its own release.
 - **The CLI has no EPUB option** (`drafter build --epub`): `--html` is there; an EPUB from the command line would take its identifier from the title and author, as the app does for a script with no project.
 - **A real-device check of the downloads**: on an iPhone, that downloading the `.html` file saves it rather than opening it, and that an `.epub` reaches Books; to do in the release pass.
 
@@ -278,7 +278,7 @@ Threads (v0.29.0) leaves, from `docs/drafter-threads-design.md` §3 and the buil
   - **Revision colors and printed marks per draft**, which come with Production (v0.27.0).
   - **A graphical timeline** beyond Draft by draft's list of steps.
   - **Syncing through a cloud service's API.** The files beside the work, synced by the writer's own Dropbox, Google Drive, or OneDrive, are the sync; nothing is uploaded by Drafter.
-  - **Drafts for the Workbook** (v0.29.0), which can adopt this when it is built.
+  - **Drafts for the Workbook** (v0.30.0), which can adopt this when it is built.
 - **Pages in the Drafts list and in Draft by draft.** Both count words only (`pages: null`): laying out every draft each time the list is read would cost too much. Caching each draft's page count when it is frozen would add them.
 - **A renamed script's files, when it opens as a new script.** When the script keeps its place in Drafter under a new name (a name changed only in case on a Mac, say), Drafter says so once and writes the full set under the new name (v0.24.0). But a script renamed outside Drafter and opened again from its new name is a new script, holding no drafts of its own, so the old name's drafts folder is not read and nothing is said (Drafts and Cuts design §4). The desktop app may read only names tied to the script's own, and the browser only the granted folder's; finding the old folder by the drafts' own IDs would bring them in.
 - **An exclusive create in the browser.** The File System Access API has no create-only-if-new, and `move()` may replace a file of the target's name, so a temp file and a move can't close the gap. Chromium's `create` checks the name is free, writes, and reads the file back: a writer whose text isn't the one left there is told the name is taken and writes `(2)`. One narrow case remains: if the other writer read its file back before this one's write landed over it, its draft is no longer in that file (it is still in its own browser, and is written again after the next Save As). Two tabs of one script can't both write (the tab lock), so this needs two browsers granted the same folder at the same moment.
