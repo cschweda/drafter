@@ -185,7 +185,7 @@ const PARAGRAPH: Partial<Record<string, string>> = {
 
 /**
  * Whether a note is one of Drafter's own keyed notes, by `@drafter/notes`' own reading of a head:
- * a scene field (`Color:`, `Goal:`, `Storyline:`…), a setup or payoff, or a card's text. These
+ * a scene field (`Color:`, `Goal:`, `Thread:`, `Storyline:`…), a setup or payoff, or a card's text. These
  * are the Outline's and the Cards' data, not notes to a reader. A writer's own head (`Note:`,
  * `Sam:`, `TODO:`) is a note like any other.
  */

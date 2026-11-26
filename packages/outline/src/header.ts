@@ -163,8 +163,8 @@ export function setColor(doc: Doc, scene: Scene, color: SceneColor | null): Text
 export interface SceneDetails {
   synopsis?: string;
   color?: SceneColor | null;
-  /** Plain text until Plan E names storylines: `A, B` is written `[[Storyline: A, B]]`. */
-  storyline?: string;
+  /** Comma-separated labels: `A, B` is written `[[Thread: A, B]]`, replacing any Storyline note it rewrites. */
+  thread?: string;
   goal?: string;
   conflict?: string;
   outcome?: string;
@@ -268,6 +268,69 @@ function setField(doc: Doc, scene: Scene, key: FieldKey, value: string): TextCha
   return insertField(doc, scene, key, note);
 }
 
+/** The closed Thread (or Storyline) notes in the scene's header, in order. */
+function headerThreads(doc: Doc, scene: Scene) {
+  const blocks = new Set(headerOf(doc, scene));
+  return noteEntries(doc).filter(
+    (e) =>
+      e.kind === 'note' &&
+      blocks.has(e.block) &&
+      e.span.from >= scene.span.from &&
+      e.span.to <= scene.span.to &&
+      e.note?.head?.kind === 'field' &&
+      e.note.head.key === 'thread',
+  );
+}
+
+/**
+ * The scene's thread field (design §7.1): every Thread and Storyline note in its header becomes
+ * one `Thread` note (the first one's place, or the field's rank), or none when `value` is empty.
+ * Notes outside the header are touched only when the header holds none. One change, so it is one
+ * transaction however many notes there were.
+ */
+function setThreadField(doc: Doc, scene: Scene, value: string): TextChange[] {
+  const body = safeBody(value);
+  const note = body === '' ? '' : fieldNote('thread', value);
+  let cur = doc;
+  let to = scene.span.to;
+  const view = () => rescan(cur, scene, { from: scene.span.from, to });
+  const apply = (changes: TextChange[]) => {
+    const [change] = changes;
+    if (!change || changes.length !== 1) return false;
+    cur = parse(cur.source.slice(0, change.from) + change.insert + cur.source.slice(change.to));
+    to += change.insert.length - (change.to - change.from);
+    return true;
+  };
+  // Every header note but the first goes, last first.
+  for (;;) {
+    const found = headerThreads(cur, view());
+    const keep = note === '' ? 0 : 1;
+    const last = found[found.length - 1];
+    if (!last || found.length <= keep) break;
+    if (!apply(deleteEntry(cur, last))) return [];
+  }
+  const header = headerThreads(cur, view())[0];
+  if (header) {
+    if (note === '') return [];
+    if (cur.source.slice(header.span.from, header.span.to) !== note) {
+      apply([{ ...header.span, insert: note }]);
+    }
+  } else {
+    const scene2 = view();
+    const outside = scene2.fields.thread?.span ?? emptyField(cur, scene2, 'thread');
+    if (!outside) {
+      if (note !== '') apply(insertField(cur, scene2, 'thread', note));
+    } else if (note !== '') {
+      apply([{ ...outside, insert: note }]);
+    } else {
+      const entry = noteEntries(cur).find((e) => e.span.from === outside.from);
+      if (entry) apply(deleteEntry(cur, entry));
+    }
+  }
+  const change = smallest(doc.source, { from: 0, to: doc.source.length, insert: cur.source });
+  return change ? [change] : [];
+}
+
 /** The scene as it reads in `doc`: its synopses, fields, and the rest of its notes, within `span`. */
 function rescan(doc: Doc, scene: Scene, span: Span): Scene {
   const synopses: Scene['synopses'] = [];
@@ -283,10 +346,10 @@ function rescan(doc: Doc, scene: Scene, span: Span): Scene {
 
 /**
  * The whole header written at once (Scene details, design §9): one set of non-overlapping changes
- * that sets the synopsis, Color, Storyline, Goal, Conflict, Outcome, and Shift, in that order
+ * that sets the synopsis, Color, Thread, Goal, Conflict, Outcome, and Shift, in that order
  * (§5.4). Each is changed in place wherever it was typed; a new one goes into the header after the
  * ones before it and before the ones after it; a cleared one goes with its line. A second note of
- * the same key is left alone. [] while a `/*` is stray, or when nothing changes.
+ * the same key is left alone, except Thread: that field's notes in the header become one. [] while a `/*` is stray, or when nothing changes.
  */
 export function setSceneDetails(doc: Doc, scene: Scene, details: SceneDetails): TextChange[] {
   if (hasStrayBoneyard(doc)) return [];
@@ -299,7 +362,10 @@ export function setSceneDetails(doc: Doc, scene: Scene, details: SceneDetails): 
   }
   for (const key of FIELD_ORDER) {
     const value = details[key];
-    if (value !== undefined) steps.push((d, s) => setField(d, s, key, value ?? ''));
+    if (value === undefined) continue;
+    steps.push((d, s) =>
+      key === 'thread' ? setThreadField(d, s, value ?? '') : setField(d, s, key, value ?? ''),
+    );
   }
   // Each field is set on the text as the ones before it left it, and every change is kept in the
   // first text's offsets, so the result is one set of changes for one transaction.

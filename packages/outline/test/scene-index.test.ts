@@ -1,7 +1,7 @@
 import { parse } from '@drafter/fountain';
 import { paginate } from '@drafter/layout';
 import { lint } from '@drafter/lint';
-import { fieldNote, insertNote } from '@drafter/notes';
+import { insertNote, writeNote } from '@drafter/notes';
 import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
 import { type Section, sceneIndex, sectionHeader, setSynopsis, unwritten } from '../src';
@@ -249,7 +249,7 @@ describe('sceneIndex', () => {
       conflict: ['The clock.', '[[conflict :  The clock. ]]'],
       outcome: ['She loses.', '[[Outcome: She loses.]]'],
       shift: ['hope → dread', '[[shift: hope → dread]]'],
-      storyline: ['A', '[[Storyline: A]]'],
+      thread: ['A', '[[Storyline: A]]'],
     });
     // An empty field is no field, as an empty color is no color.
     expect(b?.fields).toEqual({});
@@ -263,12 +263,17 @@ describe('sceneIndex', () => {
     expect(index.scenes.map((s) => s.fields.goal?.body)).toEqual(['First.', 'Third.']);
   });
 
-  test('reads storylines from every Storyline note', () => {
+  test('reads threads from every Thread and Storyline note', () => {
     const { index } = indexOf(
       'INT. A - DAY\n\n[[Storyline: A, B]]\n\nAction. [[storyline :  b , C,, ]]\n\n[[Storyline:]]\n\nINT. B - DAY\n\nNone.\n',
     );
-    expect(index.scenes.map((s) => s.storylines)).toEqual([['A', 'B', 'C'], []]);
-    expect(index.scenes[0]?.fields.storyline?.body).toBe('A, B');
+    expect(index.scenes.map((s) => s.threads)).toEqual([['A', 'B', 'C'], []]);
+    expect(index.scenes[0]?.fields.thread?.body).toBe('A, B');
+  });
+
+  test('a scene with both notes has both labels once, in order', () => {
+    const { index } = indexOf('INT. A - DAY\n\n[[Storyline: A]]\n\n[[Thread: b, a]]\n');
+    expect(index.scenes[0]?.threads).toEqual(['A', 'b']);
   });
 
   test('lists setups and payoffs as marks', () => {
@@ -443,7 +448,7 @@ describe('sceneIndex', () => {
 });
 
 describe('duplicate-field', () => {
-  const KEYS = ['goal', 'conflict', 'outcome', 'shift', 'color', 'storyline'] as const;
+  const KEYS = ['goal', 'conflict', 'outcome', 'shift', 'color', 'thread', 'storyline'] as const;
   const noteArb = fc.tuple(fc.nat(), fc.constantFrom(...KEYS), fc.constantFrom('', 'one', 'two'));
 
   test('agrees with the scene index on which notes are second', () => {
@@ -452,12 +457,12 @@ describe('duplicate-field', () => {
         let source = script;
         for (const [at, key, body] of picks) {
           const text =
-            body === '' ? `[[${key[0]?.toUpperCase()}${key.slice(1)}:]]` : fieldNote(key, body);
+            body === '' ? `[[${key[0]?.toUpperCase()}${key.slice(1)}:]]` : writeNote(key, body);
           source = apply(source, insertNote(parse(source), at % (source.length + 1), text).changes);
         }
         const { doc, index, template } = indexOf(source);
         // The second and later field notes of a scene, by the index: every non-empty field note
-        // inside a scene that isn't the one it reads (Storyline notes all count, so none is second).
+        // inside a scene that isn't the one it reads (Thread and Storyline notes all count, so none is second).
         const expected: number[] = [];
         for (const scene of index.scenes) {
           for (const region of doc.regions) {
@@ -469,7 +474,7 @@ describe('duplicate-field', () => {
               );
               return m !== null;
             });
-            if (!key || key === 'storyline') continue;
+            if (!key || key === 'storyline' || key === 'thread') continue;
             const inner = doc.source.slice(region.span.from + 2, region.span.to - 2);
             if (inner.slice(inner.indexOf(':') + 1).trim() === '') continue;
             if (scene.fields[key]?.span.from !== region.span.from) expected.push(region.span.from);

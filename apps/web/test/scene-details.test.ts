@@ -15,7 +15,7 @@ const scene = (more: Partial<Scene> = {}): Scene => ({
   synopses: [],
   color: null,
   fields: {},
-  storylines: [],
+  threads: [],
   marks: [],
   speakers: [],
   words: 0,
@@ -31,14 +31,14 @@ const full = scene({
   color: { value: 'blue', span: at },
   fields: {
     color: { body: 'blue', span: at },
-    storyline: { body: 'A, B', span: at },
+    thread: { body: 'A, B', span: at },
     goal: { body: 'Ann wants in. / Then out.', span: at },
     conflict: { body: 'The door is locked.', span: at },
     outcome: { body: 'She waits.', span: at },
     shift: { body: 'hope → dread', span: at },
   },
   // Every Storyline note's labels; the form shows only the first note's body.
-  storylines: ['A', 'B', 'C'],
+  threads: ['A', 'B', 'C'],
 });
 
 describe('Scene details', () => {
@@ -46,7 +46,7 @@ describe('Scene details', () => {
     expect(detailsDraft(full)).toEqual({
       synopsis: 'Ann arrives.',
       color: 'blue',
-      storyline: 'A, B',
+      thread: 'A, B',
       goal: 'Ann wants in. / Then out.',
       conflict: 'The door is locked.',
       outcome: 'She waits.',
@@ -55,7 +55,7 @@ describe('Scene details', () => {
     expect(detailsDraft(scene())).toEqual({
       synopsis: '',
       color: null,
-      storyline: '',
+      thread: '',
       goal: '',
       conflict: '',
       outcome: '',
@@ -85,10 +85,10 @@ describe('Scene details', () => {
         ...detailsDraft(full),
         synopsis: '',
         color: null,
-        storyline: ' ',
+        thread: ' ',
         conflict: '',
       }),
-    ).toEqual({ synopsis: '', color: null, storyline: '', conflict: '' });
+    ).toEqual({ synopsis: '', color: null, thread: '', conflict: '' });
   });
 
   test("the goal's first line stops at /", () => {

@@ -539,13 +539,13 @@ test.describe('Scene details', () => {
     await runCommand(page, 'Scene details…');
     const dialog = detailsOf(page, 'EXT. YARD - NIGHT');
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('textbox', { name: 'Storylines' }).fill('B');
+    await dialog.getByRole('textbox', { name: 'Threads' }).fill('B');
     await dialog.getByRole('textbox', { name: 'Goal' }).fill('Bob says hi.');
     await page.keyboard.press('Enter');
     await expect(dialog).toBeHidden();
     await expect
       .poll(() => textOf(page))
-      .toContain('EXT. YARD - NIGHT\n\n[[Storyline: B]]\n[[Goal: Bob says hi.]]\n\nBOB');
+      .toContain('EXT. YARD - NIGHT\n\n[[Thread: B]]\n[[Goal: Bob says hi.]]\n\nBOB');
     await expect(editor(page)).toBeFocused();
   });
 

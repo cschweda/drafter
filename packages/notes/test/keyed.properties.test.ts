@@ -45,7 +45,7 @@ const name = fc
 /** A head as written, and the head it reads as. */
 const heads: fc.Arbitrary<[string, Head]> = fc.oneof(
   fc
-    .constantFrom('color', 'storyline', 'goal', 'conflict', 'outcome', 'shift')
+    .constantFrom('color', 'thread', 'goal', 'conflict', 'outcome', 'shift')
     .map((key): [string, Head] => [key, { kind: 'field', key } as Head]),
   fc
     .constantFrom('setup', 'payoff')

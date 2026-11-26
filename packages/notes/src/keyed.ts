@@ -2,14 +2,14 @@
 // spaces); writing is exact (`[[Key: body]]`, title case, one space, the body on one line).
 
 /** The fields a scene's header holds, in the order Drafter writes them (design §5.4). */
-export type FieldKey = 'color' | 'storyline' | 'goal' | 'conflict' | 'outcome' | 'shift';
+export type FieldKey = 'color' | 'thread' | 'goal' | 'conflict' | 'outcome' | 'shift';
 /** The inline marks that tie a setup to its payoff (design §10). */
 export type MarkKey = 'setup' | 'payoff';
 
 /** A scene header's order (design §5.4). */
 export const FIELD_ORDER: readonly FieldKey[] = [
   'color',
-  'storyline',
+  'thread',
   'goal',
   'conflict',
   'outcome',
@@ -100,6 +100,7 @@ const PARTICLES = new Set([
 /** Whether `lower` is a field key, a mark, or `card`. */
 const isKey = (lower: string) =>
   (FIELD_ORDER as readonly string[]).includes(lower) ||
+  lower === 'storyline' ||
   (MARKS as readonly string[]).includes(lower) ||
   lower === 'card';
 
@@ -128,6 +129,8 @@ function headOf(text: string, open: boolean): Head | null {
   const head = nameOf(text);
   if (head === null) return null;
   const lower = head.toLowerCase();
+  // `Storyline` is the old word for `Thread` and is read as the same field, forever.
+  if (lower === 'storyline') return { kind: 'field', key: 'thread' };
   if ((FIELD_ORDER as readonly string[]).includes(lower))
     return { kind: 'field', key: lower as FieldKey };
   if ((MARKS as readonly string[]).includes(lower)) return { kind: 'mark', key: lower as MarkKey };

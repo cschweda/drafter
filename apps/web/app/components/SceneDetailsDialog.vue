@@ -11,7 +11,7 @@ import {
 } from '~/outline/scene-details';
 import { useOutline } from '~/outline/use-outline';
 
-// Scene details (Phase 2 design §9): a scene's synopsis, color, storylines, and the four goal
+// Scene details (Phase 2 design §9): a scene's synopsis, color, threads, and the four goal
 // fields, written into its header (§5.4). Save writes only what changed, in one undo; Cancel and
 // Escape change nothing. The dialog holds the scene's id and finds the scene again when it saves,
 // so it never writes at offsets from before an edit.
@@ -36,7 +36,7 @@ function emptyDraft(): Required<SceneDetails> {
   return {
     synopsis: '',
     color: null,
-    storyline: '',
+    thread: '',
     goal: '',
     conflict: '',
     outcome: '',
@@ -51,7 +51,7 @@ const otherColor = computed(() => {
 });
 
 const TEXT_FIELDS = [
-  { key: 'storyline', label: 'Storylines', hint: 'Labels, with commas: A, B' },
+  { key: 'thread', label: 'Threads', hint: 'Labels, with commas: A, B' },
   { key: 'goal', label: 'Goal', hint: 'What someone wants' },
   { key: 'conflict', label: 'Conflict', hint: 'What is in the way' },
   { key: 'outcome', label: 'Outcome', hint: 'What happens' },

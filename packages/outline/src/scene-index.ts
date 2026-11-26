@@ -59,13 +59,13 @@ function colorIn(source: string, regions: readonly Region[]): Scene['color'] {
   return null;
 }
 
-/** What a scene's notes say (`regions` are the ones inside it, in order): its fields, storylines, and marks. */
+/** What a scene's notes say (`regions` are the ones inside it, in order): its fields, threads, and marks. */
 export function sceneNotes(
   source: string,
   regions: readonly Region[],
-): Pick<Scene, 'fields' | 'storylines' | 'marks'> {
+): Pick<Scene, 'fields' | 'threads' | 'marks'> {
   const fields: Scene['fields'] = {};
-  const storylines: string[] = [];
+  const threads: string[] = [];
   const seen = new Set<string>();
   const marks: Scene['marks'] = [];
   for (const region of regions) {
@@ -77,15 +77,15 @@ export function sceneNotes(
     }
     if (head?.kind !== 'field' || note.body === '') continue;
     fields[head.key] ??= { body: note.body, span: { ...region.span } };
-    if (head.key !== 'storyline') continue;
+    if (head.key !== 'thread') continue;
     for (const part of note.body.split(',')) {
       const label = part.trim();
       if (label === '' || seen.has(normalizeLabel(label))) continue;
       seen.add(normalizeLabel(label));
-      storylines.push(label);
+      threads.push(label);
     }
   }
-  return { fields, storylines, marks };
+  return { fields, threads, marks };
 }
 
 /** The speakers' names by the cue's name in capitals: as first typed in the unit. */

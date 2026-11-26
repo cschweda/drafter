@@ -27,29 +27,29 @@ export function takeFocusBack(): (() => void) | null {
 type TextKey = Exclude<keyof SceneDetails, 'color'>;
 const TEXT_KEYS: readonly TextKey[] = [
   'synopsis',
-  'storyline',
+  'thread',
   'goal',
   'conflict',
   'outcome',
   'shift',
 ];
 
-/** A text field's value now: the first synopsis, or the field's note (Storyline: the first note's body). */
+/** A text field's value now: the first synopsis, or the field's note (Thread: the first note's body). */
 function textOf(scene: Scene, key: TextKey): string {
   if (key === 'synopsis') return scene.synopses[0]?.text ?? '';
   return scene.fields[key]?.body ?? '';
 }
 
 /**
- * The form's starting values. Storyline is the first Storyline note's body, which is the one
- * `setSceneDetails` edits, not every note's labels (`storylines`). A color word Drafter doesn't
+ * The form's starting values. Thread is the first Thread note's body, which is the one
+ * `setSceneDetails` edits, not every note's labels (`threads`). A color word Drafter doesn't
  * know is kept as it is, so the form shows it and saving leaves it.
  */
 export function detailsDraft(scene: Scene): Required<SceneDetails> {
   return {
     synopsis: textOf(scene, 'synopsis'),
     color: (scene.color?.value ?? null) as SceneColor | null,
-    storyline: textOf(scene, 'storyline'),
+    thread: textOf(scene, 'thread'),
     goal: textOf(scene, 'goal'),
     conflict: textOf(scene, 'conflict'),
     outcome: textOf(scene, 'outcome'),
