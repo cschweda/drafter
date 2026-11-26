@@ -2,6 +2,8 @@
 
 **Status:** designed 2026-10-30, as Phase 2's Plan E, after v0.19.0 (Highland, Fade In, and Markdown imports). The plan is [`docs/plans/2026-10-30-seeing-the-script.md`](plans/2026-10-30-seeing-the-script.md). This design recommends shipping Plan E as **two releases** (Call 1): **v0.21.0, Scaffold and the Stats tab** (§3 to §5), then **v0.27.0, storylines, the map, and pacing** (§6 to §8). Plans F to H then become v0.27.0 to v0.29.0, with their letters unchanged.
 
+**Renumbered again (2026-11-26):** v0.28.0 went to the first release after the freeze on features (the Story Atlas, a tip jar, the second red/blue audit), so Part 2 below is now **v0.29.0**, Plan F v0.30.0, the `.drafter` package v0.31.0, and Plans G and H v0.32.0 and v0.33.0.
+
 **Renumbered (2026-10-31):** Production (revisions, locked pages, breakdowns, sides) became v0.27.0, so Part 2 below is now **v0.28.0**, Plan F v0.29.0, the `.drafter` package v0.30.0, and Plans G and H v0.31.0 and v0.32.0. The numbers below are as first decided.
 
 **Release numbers (decided 2026-10-30, after this design):** v0.20.0 went to the formats release (`drafter convert`, footnotes in Markdown documents), so Part 1 is **v0.21.0**; **Export as HTML** (and EPUB) is v0.22.0; **a fresh look** (the UI refresh) v0.23.0; **Drafts and Cuts** v0.24.0; **Novel** v0.26.0; Part 2 is **v0.27.0**; Plan F, the Workbook, v0.28.0; the `.drafter` package v0.29.0; and Plans G and H v0.30.0 and v0.31.0, their letters unchanged. The numbers below are the current ones; the Calls and the controller's rulings keep the numbers they were made with.

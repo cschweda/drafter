@@ -1,6 +1,6 @@
 # Support Drafter: a tip jar (design)
 
-Status: proposed 2026-11-22, for v0.28.0. Not approved yet.
+Status: proposed 2026-11-22 and approved by the maintainer the same day; shipped in v0.28.0 (2026-11-26).
 
 ## Intent
 

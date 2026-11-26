@@ -35,7 +35,7 @@ Drafter can already hold prose: a **Markdown document** has a Preview, word coun
 ## Non-goals (not in v0.26.0)
 
 - **One file per chapter.** It stays one Markdown file per novel (recommended 2026-10-30). Focusing on a chapter gives the separate-file feel, and Drafts and Cuts already work on one file.
-- **A character and place bible.** That is the Workbook (v0.29.0).
+- **A character and place bible.** That is the Workbook (v0.30.0).
 - **Rich-text formatting beyond Markdown's** (fonts, colours, sizes). Italic, bold, and scene breaks are enough for a manuscript.
 - **Classic Mode for prose.** Classic Mode is for scripts.
 - **AI of any kind.** Drafter still calls none.
