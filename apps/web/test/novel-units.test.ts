@@ -48,9 +48,19 @@ describe('novelUnits', () => {
       at += x.length;
     }
   });
-  test('a chapter with no words of its own before its first section has no opening unit', () => {
-    const units = novelUnits(novelStructure('#\n\n## A\n\nWords.\n'), facts({}));
+  test('a titled chapter with sections and no opening text has no opening unit', () => {
+    const units = novelUnits(novelStructure('# One\n\n## A\n\nWords.\n'), facts({}));
     expect(units.map((x) => x.heading)).toEqual(['A']);
+  });
+  test('an opening paragraph is a unit whose length is its words, not the title', () => {
+    const units = novelUnits(
+      novelStructure('# One Two\n\nThree four five.\n\n## A\n\nWords.\n'),
+      facts({}),
+    );
+    expect(units.map((x) => [x.heading, x.length])).toEqual([
+      ['One Two', 3],
+      ['A', 2],
+    ]);
   });
 });
 

@@ -1,8 +1,8 @@
-import type { NovelFacts, NovelNode, NovelTree } from '@drafter/novel';
+import { bodyWords, type NovelFacts, type NovelNode, type NovelTree } from '@drafter/novel';
 import type { LaneUnit } from '@drafter/outline';
 
 // A novel's passages as lane units, measured in words: the leaves of the structure (a chapter with
-// no sections, a section), plus a chapter's own words before its first section when it has any.
+// no sections, a section), plus a chapter's own words (beyond its title) before its first section when it has any.
 // A part is no unit. A section with no threads of its own takes its chapter's, marked inherited.
 
 /** The units of `tree`, in order, with the threads `facts` gives each passage. */
@@ -23,7 +23,8 @@ export function novelUnits(tree: NovelTree, facts: NovelFacts): LaneUnit[] {
       return;
     }
     if (node.kind === 'chapter' && node.children.length > 0) {
-      if (node.ownWords > 0) push(node, node.ownWords, threadsOf(node), false);
+      const body = bodyWords(node);
+      if (body > 0) push(node, body, threadsOf(node), false);
       for (const child of node.children) walk(child, node);
       return;
     }

@@ -241,3 +241,8 @@ export function findNode(tree: NovelTree, id: string): NovelNode | null {
   }
   return null;
 }
+
+/** A node's own words without its title's: those between its heading and its first child (or its end). */
+export function bodyWords(node: NovelNode): number {
+  return node.ownWords - wordsIn(node.title);
+}
