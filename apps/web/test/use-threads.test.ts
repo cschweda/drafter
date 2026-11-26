@@ -223,6 +223,50 @@ describe('useThreads, for a script', () => {
   });
 });
 
+describe('useThreads, across a kind switch', () => {
+  test('the novel hold follows the document kind, one at a time, and goes on release', async () => {
+    const { threads, release } = await session(SCRIPT);
+    const { useNovel } = await import('../app/novel/use-novel');
+    const novel = useNovel();
+    let open = 0;
+    const real = novel.hold.bind(novel);
+    vi.spyOn(novel, 'hold').mockImplementation(() => {
+      open++;
+      const drop = real();
+      return () => {
+        open--;
+        drop();
+      };
+    });
+    expect(open).toBe(0);
+    // The same session becomes a novel.
+    env.view.state = EditorState.create({ doc: BOOK });
+    env.refs.kind.value = 'markdown';
+    env.refs.novel.value = true;
+    await Promise.resolve();
+    expect(open).toBe(1);
+    expect(threads.noun.value).toBe('passage');
+    expect(threads.lanes.value?.threads.map((t) => t.label)).toEqual(['Tide', 'Bottle']);
+    env.refs.novel.value = false;
+    await Promise.resolve();
+    expect(open).toBe(0);
+    env.refs.novel.value = true;
+    await Promise.resolve();
+    expect(open).toBe(1);
+    release();
+    expect(open).toBe(0);
+  });
+
+  test('plain Markdown: setMeta is false, and remove of a bad label is null', async () => {
+    const { threads } = await session('# Notes\n\nText.\n', 'markdown');
+    env.refs.novel.value = false;
+    await Promise.resolve();
+    expect(threads.lanes.value).toBeNull();
+    expect(threads.setMeta('Heist', { name: 'x' })).toBe(false);
+    expect(threads.remove('a\nb')).toBeNull();
+  });
+});
+
 describe('useThreads, for a novel', () => {
   test('lanes in words, with the novel’s noun and thread colors', async () => {
     const { threads } = await session(BOOK, 'markdown');

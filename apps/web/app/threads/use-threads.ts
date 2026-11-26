@@ -124,18 +124,31 @@ function create(): ThreadsSession {
       if (changes === null && holds > 0) now();
       else schedule();
     });
-    watch([layout, editor.kind, editor.novel], () => now());
+    // Exactly one hold on the novel while this is held and the document is a novel.
+    let novelHold: (() => void) | null = null;
+    const keepNovelHold = () => {
+      const want = holds > 0 && isNovel();
+      if (want && !novelHold) novelHold = novel.hold();
+      else if (!want && novelHold) {
+        novelHold();
+        novelHold = null;
+      }
+    };
+    watch([layout, editor.kind, editor.novel], () => {
+      keepNovelHold();
+      now();
+    });
 
     function hold() {
       holds++;
-      const releaseNovel = isNovel() ? novel.hold() : () => {};
+      keepNovelHold();
       if (holds === 1) compute();
       let held = true;
       return () => {
         if (!held) return;
         held = false;
-        releaseNovel();
         holds--;
+        keepNovelHold();
         if (holds === 0) cancel();
       };
     }
@@ -186,20 +199,22 @@ function create(): ThreadsSession {
 
     function remove(label: string): number | null {
       if (readOnly() !== null) return null;
-      if (isNovel()) {
-        const done = removeNovelThread(novel.facts.value, label);
-        if (!novel.setAllFacts(done.facts)) return null;
+      return tried(() => {
+        if (isNovel()) {
+          const done = removeNovelThread(novel.facts.value, label);
+          if (!novel.setAllFacts(done.facts)) return null;
+          now();
+          return done.passages;
+        }
+        const done = removeThread(editor.doc.value, outline.index.value, label);
+        if (done.changes.length === 0 || !outline.apply(done.changes)) return null;
         now();
-        return done.passages;
-      }
-      const done = removeThread(editor.doc.value, outline.index.value, label);
-      if (done.changes.length === 0 || !outline.apply(done.changes)) return null;
-      now();
-      return done.scenes;
+        return done.scenes;
+      }, null);
     }
 
     function setMeta(label: string, meta: ThreadMeta | null): boolean {
-      if (readOnly() !== null) return false;
+      if (readOnly() !== null || (!isNovel() && !isScript())) return false;
       return tried(() => {
         const done = isNovel()
           ? novel.setAllFacts(setNovelThreadMeta(novel.facts.value, label, meta))
