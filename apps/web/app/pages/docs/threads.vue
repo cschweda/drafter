@@ -1,18 +1,17 @@
 <script setup lang="ts">
-import { HELP_PAGES } from "~/commands/data";
+import { HELP_PAGES } from '~/commands/data';
 
 // The Threads help page (threads design): what a thread is, tagging a scene, the Lanes view and its
 // keys, the [[Thread: …]] note, and novels. Written for a writer, in plain words.
 
-definePageMeta({ layout: "docs" });
+definePageMeta({ layout: 'docs' });
 
-const page = HELP_PAGES.find((p) => p.id === "help-threads");
-if (!page)
-  throw new Error("The Threads page is not in the list of help pages.");
+const page = HELP_PAGES.find((p) => p.id === 'help-threads');
+if (!page) throw new Error('The Threads page is not in the list of help pages.');
 useDocsHead({
   ...page,
   description:
-    "Threads show which scenes each plot thread is in: tagging a scene, naming and coloring a thread, the Lanes view of the whole script, its keys, the [[Thread: …]] note, and novels.",
+    'Threads show which scenes each plot thread is in: tagging a scene, naming and coloring a thread, the Lanes view of the whole script, its keys, the [[Thread: …]] note, and novels.',
 });
 </script>
 
