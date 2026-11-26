@@ -17,6 +17,7 @@ export {
   setSceneThreadNotes,
   setSynopsis,
 } from './header';
+export { type Lanes, type LaneUnit, lanesOf, scriptUnits } from './lanes';
 export { type ScriptMarkdownOptions, scriptMarkdown } from './markdown';
 export {
   downTarget,
