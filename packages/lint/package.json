@@ -1,6 +1,6 @@
 {
   "name": "@drafter/lint",
-  "version": "0.27.4",
+  "version": "0.28.0",
   "private": true,
   "description": "The linter for Drafter: finds problems in a parsed Fountain script and offers fixes as text changes.",
   "license": "MIT",

@@ -18,7 +18,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.27.4.** The web app and the desktop apps for Windows and Linux are ready to use. v0.27.4 makes **Save say where it went, and brings a script back from Final Draft**: saving moves nothing in the top bar, the status bar names the file, and a script that has been through Final Draft keeps its sections, synopses, notes, and title page. v0.27.3 **kept the cursor where you left it**, v0.27.2 made **a page end where a sentence does**, v0.27.1 was **fixes before features**, and v0.27.0 brought **Production**, free. See the [roadmap](#roadmap).
+> **Status: v0.28.0.** The web app and the desktop apps for Windows and Linux are ready to use. v0.28.0, the first release after a freeze on features, renames the story map the **Story Atlas**, moves "Unsaved" to the status bar so nothing in the top bar moves, adds a quiet **Support Drafter** page, and brings the fixes from a **second red/blue audit**. v0.27.4 made **Save say where it went, and brought a script back from Final Draft**, v0.27.3 **kept the cursor where you left it**, v0.27.2 made **a page end where a sentence does**, and v0.27.0 brought **Production**, free. See the [roadmap](#roadmap).
 
 ## Contents
 
@@ -181,7 +181,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.27.4, there are **8,889 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,483 browser tests**, each run in five browser setups (7,415 runs), 140 end-to-end tests of the desktop app, and **296 trap documents** with 1,386 checks:
+**What runs.** As of v0.28.0, there are **9,129 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,495 browser tests**, each run in five browser setups (7,475 runs), 141 end-to-end tests of the desktop app, and **296 trap documents** with 1,386 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
@@ -329,17 +329,17 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 - **A page ends where a sentence does** (v0.27.2): action and speeches break at the last sentence that fits, locked scripts keep every page, and Reload for a new version no longer stalls.
 - **The cursor stays where you left it** (v0.27.3): it no longer jumps to the top of the script when the palette or a dialog closes on a busy page; a dialog reopened at once opens, and focus comes back after the tour.
 - **Save says where it went, and a script comes back from Final Draft** (v0.27.4): saving moves nothing in the top bar, the status bar names the file, Safari and Firefox ask for a name on the first Save, and sections, synopses, notes, and the title page survive a trip through Final Draft.
+- **The Story Atlas, a quiet tip jar, and a second red/blue audit** (v0.28.0): the story map renamed the Story Atlas, "Unsaved" in the status bar, a Support Drafter page that never asks, and the fixes from an audit by five attackers and a second team that checked their fixes.
 
 **Next:**
 
-- **More fixes before features** (v0.27.x): a page that, rarely, stops answering; page breaks at the end of a sentence; and Final Draft files checked on a real round trip, with locked pages and revisions. New features wait until then.
-- Storylines, the strip's Color by, and pacing (v0.28.0).
+- Storylines, the strip's Color by, and pacing (v0.29.0).
 
 **Later:**
 
-- The **Workbook** (v0.29.0): a story bible and scene cards, with your pasted, synced, and spoken notes.
-- An optional one-file `.drafter` project (v0.30.0, open spec).
-- Reader notes with no account, and the Reference tab (v0.31.0 and v0.32.0).
+- The **Workbook** (v0.30.0): a story bible and scene cards, with your pasted, synced, and spoken notes.
+- An optional one-file `.drafter` project (v0.31.0, open spec).
+- Reader notes with no account, and the Reference tab (v0.32.0 and v0.33.0).
 - A signed Mac download, **PDF import**, **real-time co-writing** (free, end-to-end encrypted, no account), and testing with NVDA and VoiceOver, last of all.
 
 **Not planned:** accounts, a paid version, or a Drafter server that keeps your scripts. The [full roadmap](docs/ROADMAP.md) has every phase.

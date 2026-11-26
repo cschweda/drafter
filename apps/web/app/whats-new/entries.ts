@@ -45,13 +45,31 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.28.0-redblue-audit',
+    date: '2026-11-26',
+    version: '0.28.0',
+    kind: 'Security',
+    title: 'A second red/blue audit, and its fixes',
+    text: 'Five attackers found no way to run code from a file, reach the network from a page, or read a file you hadn’t chosen. They did find small files that could freeze the editor, the Preview, or an export for seconds; each is quick now, or refused past a size no real document reaches.',
+    link: release('0.28.0'),
+    banner: true,
+  },
+  {
     id: 'v0.28.0-story-atlas',
-    date: '2026-11-23',
+    date: '2026-11-26',
     version: '0.28.0',
     kind: 'Improved',
     title: 'The story map is now the Story Atlas',
     text: 'The page that shows a script at a glance to someone who doesn’t read scripts has a name of its own: Export → Story Atlas. Nothing else about it changes, and your scripts keep their planned length and character lines.',
     link: { href: '/docs/story-atlas/', label: 'Story Atlas' },
+  },
+  {
+    id: 'v0.28.0-unsaved-in-status-bar',
+    date: '2026-11-26',
+    version: '0.28.0',
+    kind: 'Improved',
+    title: '“Unsaved” is in the status bar',
+    text: 'The red dot and “Unsaved”, which saves when clicked, now sit at the foot of the window beside “Saved to …”, so nothing in the top bar ever moves. On a phone, which has no status bar, the dot stays at the top.',
   },
   {
     id: 'v0.27.4-save-says-where',

@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-26
+
+**The Story Atlas, a quiet tip jar, and a second red/blue audit.** The first release after the freeze on features. The story map is now the **Story Atlas**, a name no other writing app uses for its own feature; nothing about it changes but the name. "Unsaved" moves to the status bar, so nothing in the top bar ever moves. A help page, **Support Drafter**, has one button for anyone who'd like to leave a tip; Drafter never asks, and nothing changes whether you do. And a second red/blue audit, with five attackers and a second team auditing the fixes, found no way to run code from a file, reach the network from a page, or read a file you hadn't chosen; it found small files that could freeze the editor or a tool for seconds, and those are fixed.
+
 ### Changed
 
 - **"Unsaved" is in the status bar.** The red dot and "Unsaved", which saves when clicked, now sit at the foot of the window beside "Saved to …", and the top bar shows no save state at all, so nothing in it ever moves. A phone-width screen has no status bar, and keeps the dot in the top bar.
@@ -1563,7 +1567,8 @@ It also includes Phase 0's engine and command line, and the editor packages behi
 - `drafter` (the CLI) prints control characters from scripts, templates, and file names as visible `\u001b`-style escapes, so a hostile file can't send escape sequences to the terminal through a warning or diagnostic, and it won't write a PDF's bytes to a terminal. Fixed-width text output turns C1 control characters into spaces, as it already did C0.
 - `@drafter/templates` now validates a template with any number of roles in linear time, and always reports its problems as a `TemplateError`. A template with 200,000 roles took 15 seconds to reject, and one with enough problems overflowed the call stack with a `RangeError` instead.
 
-[Unreleased]: https://github.com/cschweda/drafter/compare/v0.27.4...HEAD
+[Unreleased]: https://github.com/cschweda/drafter/compare/v0.28.0...HEAD
+[0.28.0]: https://github.com/cschweda/drafter/compare/v0.27.4...v0.28.0
 [0.27.4]: https://github.com/cschweda/drafter/compare/v0.27.3...v0.27.4
 [0.27.3]: https://github.com/cschweda/drafter/compare/v0.27.2...v0.27.3
 [0.27.2]: https://github.com/cschweda/drafter/compare/v0.27.1...v0.27.2
