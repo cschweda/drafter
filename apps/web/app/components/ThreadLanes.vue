@@ -19,7 +19,7 @@ import { opensMenu } from '~/strip/keys';
 import { LABEL_MIN_PX } from '~/strip/labels';
 import { blockMenuItems } from '~/threads/block-menu';
 import { openThreadEdit } from '~/threads/dialogs';
-import { HEADER, nextCell } from '~/threads/grid-keys';
+import { HEADER, nextCell, stopIndex } from '~/threads/grid-keys';
 import {
   blockName,
   cardLines,
@@ -142,8 +142,9 @@ async function focusCell(r: number, i: number) {
 async function focusStop() {
   await nextTick();
   const stop = tabStop.value;
-  const i = stop ? (lanes.value?.units.findIndex((u) => u.id === stop.id) ?? -1) : -1;
-  if (stop && i >= 0 && focusIsFree()) cellEl(stop.row, i)?.focus();
+  const i = stop && lanes.value ? stopIndex(lanes.value, stop.id, HEAD) : null;
+  if (!stop || i === null || !focusIsFree()) return;
+  (i === HEADER ? headEl(stop.row) : cellEl(stop.row, i))?.focus();
 }
 
 const MOVES = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];

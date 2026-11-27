@@ -210,6 +210,22 @@ test.describe('Threads… keeps unsaved work and the scene’s order', () => {
     await expect.poll(() => textOf(page)).toContain('[[Thread: B, A, C]]');
   });
 
+  test('Escape closes only the open thread menu; the next one closes the dialog', async ({
+    page,
+  }) => {
+    await openWith(page);
+    const dialog = await openThreads(page, yard(page), 'EXT. YARD - NIGHT');
+    await dialog.getByRole('button', { name: 'Actions for thread A' }).click();
+    const menu = page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(dialog).toBeVisible();
+    // Straight away, with no wait: a deliberate second Escape leaves the dialog.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+  });
+
   test('the thread menu is off while changes are unsaved, and works after Save', async ({
     page,
   }) => {

@@ -1,6 +1,8 @@
 import { normalizeLabel, readThreadMetaMap, setThreadMeta, type ThreadMeta } from '@drafter/notes';
 import {
   type NovelNode,
+  novelStructure,
+  readFacts,
   removeNovelThread,
   renameNovelThread,
   setNovelThreadMeta,
@@ -183,7 +185,7 @@ function create(): ThreadsSession {
     }
 
     /** Whether passage `id`'s heading is still in the book: facts left behind are left alone. */
-    function inBook(): (id: string) => boolean {
+    function inBook(text: string): (id: string) => boolean {
       const ids = new Set<string>();
       const walk = (list: readonly NovelNode[]) => {
         for (const node of list) {
@@ -191,7 +193,7 @@ function create(): ThreadsSession {
           walk(node.children);
         }
       };
-      walk(novel.tree.value?.nodes ?? []);
+      walk(novelStructure(text).nodes);
       return (id) => ids.has(id);
     }
 
@@ -199,7 +201,8 @@ function create(): ThreadsSession {
       if (readOnly() !== null) return null;
       return tried(() => {
         if (isNovel()) {
-          const done = renameNovelThread(novel.current(), from, to, inBook());
+          const text = editor.view.state.doc.toString();
+          const done = renameNovelThread(readFacts(text), from, to, inBook(text));
           if (!novel.setAllFacts(done.facts)) return null;
           now();
           return { units: done.passages, merged: done.merged };
@@ -215,7 +218,8 @@ function create(): ThreadsSession {
       if (readOnly() !== null) return null;
       return tried(() => {
         if (isNovel()) {
-          const done = removeNovelThread(novel.current(), label, inBook());
+          const text = editor.view.state.doc.toString();
+          const done = removeNovelThread(readFacts(text), label, inBook(text));
           if (!novel.setAllFacts(done.facts)) return null;
           now();
           return done.passages;

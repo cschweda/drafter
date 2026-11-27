@@ -172,6 +172,19 @@ describe('editing a novel’s threads', () => {
     expect(removeNovelThread(facts, 'Maya').passages).toBe(2);
   });
 
+  it('remove keeps the name and color while an orphaned passage still lists the label', () => {
+    const facts = withNodes(
+      { 'chapter:one:0': { threads: ['Maya'] }, 'chapter:gone:0': { threads: ['Maya'] } },
+      { maya: { name: 'Maya', color: 'red' } },
+    );
+    const inBook = (id: string) => id !== 'chapter:gone:0';
+    expect(removeNovelThread(facts, 'Maya', inBook).facts.threads).toEqual({
+      maya: { name: 'Maya', color: 'red' },
+    });
+    const clean = withNodes({ 'chapter:one:0': { threads: ['Maya'] } }, facts.threads);
+    expect(removeNovelThread(clean, 'Maya', inBook).facts.threads).toBeUndefined();
+  });
+
   it('setNovelThreadMeta sets, clears, validates', () => {
     const f = setNovelThreadMeta(empty(), 'Zed', { name: 'Zed!', color: 'blue' });
     expect(f.threads).toEqual({ zed: { name: 'Zed!', color: 'blue' } });
