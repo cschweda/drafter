@@ -155,10 +155,10 @@ function onClose() {
           autocomplete="off"
           :placeholder="field.hint"
           :readonly="readOnly"
-          :list="field.key === 'thread' ? 'scene-details-threads' : undefined"
+          :list="field.key === 'thread' && !readOnly ? 'scene-details-threads' : undefined"
         />
       </label>
-      <datalist id="scene-details-threads">
+      <datalist v-if="!readOnly" id="scene-details-threads">
         <option v-for="value in suggestions" :key="value" :value="value" />
       </datalist>
       <div class="d-dialog-footer">

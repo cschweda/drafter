@@ -132,3 +132,13 @@ export function nextCell(lanes: Lanes, at: LanePlace, key: string): LanePlace | 
       return null;
   }
 }
+
+/**
+ * Where the tab stop `id` is in `lanes`: a unit's index, `HEADER` when `id` is `headId` (a row's
+ * header is the stop), or null when it's gone.
+ */
+export function stopIndex(lanes: Lanes, id: string, headId: string): number | null {
+  if (id === headId) return HEADER;
+  const i = lanes.units.findIndex((u) => u.id === id);
+  return i >= 0 ? i : null;
+}
