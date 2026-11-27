@@ -1,6 +1,6 @@
 # Drafter's brand
 
-![Drafter: Fountain or Classic. The same scene typed both ways, on two script pages: Fountain, a plain-text script format, with its marks showing, and Classic Mode, with no marks and each element where a page puts it. For screenplays and stage plays; novels and notes in Markdown. Same file, your choice of keys.](og-image.svg)
+![Drafter: Fountain or Classic. Fountain: plain-text screenplays, like Markdown, but for scripts. Classic: types like Final Draft, and opens and saves .fdx files. Two script pages show the same scene both ways: the Fountain page with its marks showing (an @ before the name, a > before the transition), the Classic page with none, each element where a script page puts it.](og-image.svg)
 
 ## The mark
 

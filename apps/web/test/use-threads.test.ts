@@ -362,6 +362,20 @@ describe('useThreads, for a novel', () => {
     expect(readFacts(text()).nodes['section:gone:0']?.threads).toEqual(['Tide']);
   });
 
+  test('a rename right after a heading changes uses the document as it is now', async () => {
+    const { threads } = await session(BOOK, 'markdown');
+    // A heading is renamed without the session hearing of it yet: its tree is still the old one.
+    expect(threads.info.value.length).toBe(2);
+    const at = text().indexOf('Low Tide');
+    env.view.state = env.view.state.update({
+      changes: { from: at, to: at + 'Low Tide'.length, insert: 'Ebb Tide' },
+    }).state;
+    expect(threads.rename('Tide', 'Sea')).not.toBeNull();
+    const facts = readFacts(text());
+    expect(facts.nodes['section:ebb-tide:0']?.threads).toEqual(['Sea']);
+    expect(facts.nodes['section:what-the-sand-kept:0']?.threads).toEqual(['Sea', 'Bottle']);
+  });
+
   test('locked: the novel’s reason, and no edit', async () => {
     const { threads } = await session(BOOK, 'markdown');
     env.refs.locked.value = true;

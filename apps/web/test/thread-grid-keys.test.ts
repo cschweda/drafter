@@ -1,6 +1,6 @@
 import { type LaneUnit, lanesOf } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
-import { HEADER, laneRows, nextCell } from '../app/threads/grid-keys';
+import { HEADER, laneRows, nextCell, stopIndex } from '../app/threads/grid-keys';
 
 // The Lanes' keys (threads design §7.5), as a pure function of the lanes: Left and Right along a
 // row's blocks, Up and Down to the next row's block nearest in position, Home and End to a row's
@@ -164,5 +164,14 @@ describe('nextCell', () => {
     expect(nextCell(LANES, at(9, 0), 'ArrowRight')).toBeNull();
     expect(nextCell(LANES, at(0, 0), 'Enter')).toBeNull();
     expect(nextCell(LANES, at(0, 0), 'PageDown')).toBeNull();
+  });
+});
+
+describe('stopIndex', () => {
+  const lanes = lanesOf([unit(0, 0, 10, ['A']), unit(1, 10, 10, [])], 'words');
+  test('a unit, a row header, or gone', () => {
+    expect(stopIndex(lanes, 'u1', '@header')).toBe(1);
+    expect(stopIndex(lanes, '@header', '@header')).toBe(HEADER);
+    expect(stopIndex(lanes, 'nope', '@header')).toBeNull();
   });
 });

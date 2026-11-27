@@ -171,6 +171,11 @@ export function removeNovelThread(
   );
   const meta = readThreadMetaMap(done.facts.threads);
   if (!(key in meta)) return done;
+  // An orphaned passage (not in the book) may still list the label: keep its name and color.
+  const orphaned = Object.keys(done.facts.nodes).some(
+    (id) => !inBook(id) && done.facts.nodes[id]?.threads?.some((l) => normalizeLabel(l) === key),
+  );
+  if (orphaned) return done;
   return {
     facts: withMeta(
       done.facts,

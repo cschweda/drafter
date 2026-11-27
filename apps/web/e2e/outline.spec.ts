@@ -483,6 +483,7 @@ test.describe('Scene details', () => {
     await openWith(page);
     const dialog = await openDetails(page, hall(page), 'INT. HALL - DAY');
     await expect(dialog.getByRole('textbox', { name: 'Synopsis' })).toHaveValue('Ann arrives.');
+    await expect(dialog.getByRole('combobox', { name: 'Threads' })).toHaveAttribute('list', /.+/);
     // Filled out of order; written in the header's.
     await dialog.getByRole('textbox', { name: 'Shift' }).fill('doubt → relief');
     await dialog.getByRole('textbox', { name: 'Goal' }).fill('Ann wants in. / Then out.');
@@ -610,6 +611,12 @@ test.describe('Scene details', () => {
     const dialog = detailsOf(second, 'INT. KITCHEN - NIGHT');
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText(why);
+    // No label suggestions while nothing can be typed.
+    await expect(dialog.getByRole('textbox', { name: 'Threads' })).not.toHaveAttribute(
+      'list',
+      /.*/,
+    );
+    await expect(dialog.locator('datalist')).toHaveCount(0);
     const save = dialog.getByRole('button', { name: 'Save' });
     await expect(save).toHaveAttribute('aria-disabled', 'true');
     await expect(save).toHaveAccessibleDescription(why);

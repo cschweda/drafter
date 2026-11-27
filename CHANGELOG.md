@@ -10,8 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **Threads: see which scenes each plot thread is in.** A thread is one line of the story, the heist or the marriage or who sent the letter. Choose **Threads…** from any scene's menu (in the Outline, on a card, in the Lanes, or from the command palette for the scene you're in), check the threads the scene is in, or type a new label, and Save. The Outline tab has a new **Tree | Lanes** switch: Lanes draws a row for each thread along the whole script, each scene a block as wide as it is long, with a card on hover or focus, a ruler, and **Show as table** for a screen reader or anyone who prefers numbers. It works with the arrow keys, Home and End, Shift+F10 or the ⋯ on a focused block for its menu, and Escape to hide the card; a phone gets a list. A thread can have a name and a color (one of the nine color words), and can be renamed, merged with another, or removed from every scene in one step, one Undo. Rows in the Outline and Cards show a small chip for each thread. Scene details' Threads field suggests the labels already in use as you type. In a script a thread is the note `[[Thread: Heist, Mara]]`; the older `[[Storyline: …]]` is still read, forever. In a novel the threads of each chapter and section sit in the novel's comment beside its status, and a chapter's threads carry to the sections that have none, drawn lighter. Drafter for Claude shows each scene's threads in `script_overview` and `read_scene`. Help has a new [Threads](https://drafter.dev/docs/threads/) page. Not yet: threads in exports, the strip's Color by, margin marks, and pacing (listed in `docs/DEFERRED.md`).
 
+### Fixed
+
+- **Removing a thread no longer drops its name and color while a passage no longer in the book still lists it.** The name and color stay until nothing lists the label.
+- **In Threads…, a second Escape closes the dialog.** Escape closes an open thread menu and leaves the dialog be; the next Escape, however soon, closes it, instead of being swallowed within a fifth of a second.
+
 ### Changed
 
+- **The share image says what Fountain and Classic are.** Fountain: plain-text screenplays, like Markdown, but for scripts. Classic: types like Final Draft, and opens and saves .fdx files. The two pages are labeled "Fountain · plain text" and "Classic · like Final Draft", and the README's alt text matches.
 - **The Story Atlas's "Threads" section is now "Setups and payoffs"**, in the Atlas, the Make a Story Atlas box, and its help, so "thread" means a plot thread everywhere in Drafter. Nothing about what it draws changes, and a saved choice of whether to include it still works. Its table's first column is now headed "Setup".
 
 ## [0.28.0] - 2026-11-26

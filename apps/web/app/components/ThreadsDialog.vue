@@ -216,14 +216,20 @@ function onFieldKey(event: KeyboardEvent) {
   add();
 }
 
-/** Escape closes an open thread menu first, and leaves the dialog (and its unsaved work) be. */
-let menuClosedAt = Number.NEGATIVE_INFINITY;
-function onMenuOpen(open: boolean) {
-  if (!open) menuClosedAt = performance.now();
+/**
+ * Escape closes an open thread menu first, and leaves the dialog (and its unsaved work) be. The
+ * menu is gone by the time the dialog hears `cancel`, so a capturing keydown notes whether one was
+ * open when the key went down; only that Escape is swallowed.
+ */
+let escapeClosesMenu = false;
+function onKeydownCapture(event: KeyboardEvent) {
+  if (event.key !== 'Escape') return;
+  escapeClosesMenu = !!dialog.value?.el?.querySelector('[role="menu"]');
 }
 function onCancel(event: Event) {
   const menuOpen = !!dialog.value?.el?.querySelector('[role="menu"]');
-  if (menuOpen || performance.now() - menuClosedAt < 200) event.preventDefault();
+  if (menuOpen || escapeClosesMenu) event.preventDefault();
+  escapeClosesMenu = false;
 }
 
 function onClose() {
@@ -280,6 +286,7 @@ const swatch = (label: string) => {
     size="md"
     class="threads-dialog"
     aria-labelledby="threads-title"
+    @keydown.capture="onKeydownCapture"
     @cancel="onCancel"
     @close="onClose"
   >
@@ -315,7 +322,7 @@ const swatch = (label: string) => {
             <span class="label">{{ label }}</span>
             <span v-if="info(label)?.name" class="name">{{ info(label)?.name }}</span>
           </label>
-          <MenuButton v-if="info(label)" @update:open="onMenuOpen" :items="menuOf(label)" :content="{ align: 'end' }" :portal="`#${DIALOG_ID}`">
+          <MenuButton v-if="info(label)" :items="menuOf(label)" :content="{ align: 'end' }" :portal="`#${DIALOG_ID}`">
             <button
               type="button"
               class="more"
