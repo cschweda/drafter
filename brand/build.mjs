@@ -204,7 +204,7 @@ for (const [name, color] of [
       '</g>'
     );
   };
-  const fountainCard = card(578, 118, -4, 'Fountain', [
+  const fountainCard = card(578, 118, -4, 'Fountain · plain text', [
     [0, 0, 'INT. RADIO ROOM - NIGHT'],
     [2, 0, 'June works the dial.'],
     [4, 0, 'McGRAW', { mark: '@' }],
@@ -212,7 +212,7 @@ for (const [name, color] of [
     [6, 0, 'Say again?'],
     [8, 0, 'FADE OUT.', { mark: '>' }],
   ]);
-  const classicCard = card(872, 142, 2, 'Classic', [
+  const classicCard = card(872, 142, 2, 'Classic · like Final Draft', [
     [0, 0, 'INT. RADIO ROOM - NIGHT', { bold: true }],
     [2, 0, 'June works the dial.'],
     [4, 10, 'McGRAW'],
@@ -249,6 +249,15 @@ for (const [name, color] of [
       )
       .join('') +
     '@media (prefers-reduced-motion:reduce){.p{animation:none}}</style>';
+  // A line that starts with a term in white, then says what it is in grey.
+  const term = (word, rest, y) => {
+    const size = 24;
+    const lead = measure(FONTS.extraBold, word, size) + size * 0.3;
+    return (
+      text(FONTS.extraBold, word, { x: 76, y, size, fill: '#FFFFFF' }) +
+      text(FONTS.semiBold, rest, { x: 76 + lead, y, size, fill: '#AEB4C0' })
+    );
+  };
   const dots = [
     REVISION.blue,
     REVISION.pink,
@@ -278,41 +287,32 @@ for (const [name, color] of [
           fill: '#FFFFFF',
           tracking: -5,
         }) +
-        // Fountain or Classic, in the mark's colors: two ways of typing over one file (v0.25.0). Then
-        // Fountain said plainly for anyone who hasn't met it, who it's for, and what the choice means.
+        // Fountain or Classic, in the mark's colors: two ways of typing a script (v0.25.0). Then each
+        // said plainly for someone who has met neither: Fountain by the format they likely know
+        // (Markdown), Classic by the app it types like (Final Draft) and the file it trades (.fdx).
         text(FONTS.extraBold, 'Fountain or Classic.', {
           x: 76,
           y: 356,
           size: 36,
           fill: 'url(#g)',
         }) +
-        text(FONTS.semiBold, 'Fountain: a plain-text script format', {
-          x: 76,
-          y: 396,
-          size: 25,
-          fill: '#AEB4C0',
-        }) +
-        text(FONTS.semiBold, 'for screenplays and stage plays.', {
+        term('Fountain:', 'plain-text screenplays,', 398) +
+        text(FONTS.semiBold, 'like Markdown, but for scripts.', {
           x: 76,
           y: 430,
-          size: 25,
+          size: 24,
           fill: '#AEB4C0',
         }) +
-        text(FONTS.semiBold, 'Novels and notes in Markdown.', {
+        term('Classic:', 'types like Final Draft,', 474) +
+        text(FONTS.semiBold, 'and opens and saves .fdx files.', {
           x: 76,
-          y: 464,
-          size: 25,
+          y: 506,
+          size: 24,
           fill: '#AEB4C0',
-        }) +
-        text(FONTS.semiBold, 'Same file. Your choice of keys.', {
-          x: 76,
-          y: 513,
-          size: 23,
-          fill: '#E8EAEE',
         }) +
         dots +
         text(FONTS.semiBold, 'drafter.dev', { x: 198, y: 571, size: 24, fill: '#E8EAEE' }),
-      'Drafter: Fountain or Classic. The same scene typed both ways, on two script pages: Fountain, a plain-text script format, with its marks showing, and Classic Mode, with no marks and each element where a page puts it. For screenplays and stage plays; novels and notes in Markdown. Same file, your choice of keys.',
+      'Drafter: Fountain or Classic. Fountain: plain-text screenplays, like Markdown, but for scripts. Classic: types like Final Draft, and opens and saves .fdx files. Two script pages show the same scene both ways: the Fountain page with its marks showing (an @ before the name, a > before the transition), the Classic page with none, each element where a script page puts it.',
     );
   files['og-image.svg'] = share(fan);
   files['og-image-animated.svg'] = share(fanAnimated, fanStyle);

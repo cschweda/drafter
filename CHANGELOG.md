@@ -17,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- **The share image says what Fountain and Classic are.** Fountain: plain-text screenplays, like Markdown, but for scripts. Classic: types like Final Draft, and opens and saves .fdx files. The two pages are labeled "Fountain · plain text" and "Classic · like Final Draft", and the README's alt text matches.
 - **The Story Atlas's "Threads" section is now "Setups and payoffs"**, in the Atlas, the Make a Story Atlas box, and its help, so "thread" means a plot thread everywhere in Drafter. Nothing about what it draws changes, and a saved choice of whether to include it still works. Its table's first column is now headed "Setup".
 
 ## [0.28.0] - 2026-11-26
