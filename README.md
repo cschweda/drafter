@@ -1,6 +1,6 @@
 # Drafter
 
-![Drafter: the same scene on two script pages. On the Fountain page the marks show (an @ before the name, a > before the transition); on the Classic page there are none, and everything sits where a script page puts it. Same file, your choice of keys.](brand/og-image-animated.svg)
+![Drafter: Fountain or Classic. Fountain: plain-text screenplays, like Markdown, but for scripts. Classic: types like Final Draft, and opens and saves .fdx files. Two script pages show the same scene both ways: the Fountain page with its marks showing (an @ before the name, a > before the transition), the Classic page with none, each element where a script page puts it.](brand/og-image-animated.svg)
 
 **Drafter™ is a free, open-source writing app for screenplays and stage plays in plain-text [Fountain](https://fountain.io), and for novels and treatments in Markdown: you write on the left, and the formatted pages build on the right as you type.** Rather not learn Fountain's marks? **Classic Mode** types a script with Enter and Tab, the way many screenwriters expect, over a file that stays Fountain.
 
