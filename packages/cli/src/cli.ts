@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
+import { readFile, realpath, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { MAX_SCRIPT_BYTES } from '@drafter/archive';
@@ -13,16 +13,16 @@ import { type FontStyle, kindLine, renderScriptHtml, stylesUsed } from '@drafter
 import { FONT_FILES, type FontSet, renderPdf } from '@drafter/render-pdf';
 import { renderText } from '@drafter/render-text';
 import {
-  buildStoryMap,
+  buildStoryAtlas,
   type MapStatus,
-  renderStoryMap,
-  STORY_MAP_FONT_FILES,
-  type StoryMapFace,
-  type StoryMapFonts,
-  storyMapMeta,
-} from '@drafter/story-map';
+  renderStoryAtlas,
+  STORY_ATLAS_FONT_FILES,
+  type StoryAtlasFace,
+  type StoryAtlasFonts,
+  storyAtlasMeta,
+} from '@drafter/story-atlas';
 import { builtins, loadTemplate, type Template, TemplateError } from '@drafter/templates';
-import { Command, CommanderError } from 'commander';
+import { Command, CommanderError, Option } from 'commander';
 import pkg from '../package.json' with { type: 'json' };
 import { ConvertError, type ConvertOptions, convert } from './convert';
 
@@ -51,13 +51,32 @@ const nodeIO = (): IO => ({
  * scripts, and templates can come from anyone, and a raw escape sequence in
  * one could restyle, retitle, or rewrite the user's terminal.
  */
-function inert(text: string): string {
+export function inert(text: string): string {
   let out = '';
   for (const char of text) {
-    const c = char.charCodeAt(0);
+    const c = char.codePointAt(0) as number;
+    // And what can reorder or split the line a message is on, or sit in it unseen: the direction
+    // marks, overrides, and isolates, the line and paragraph separators, the zero-width space and
+    // its kin, the tag characters, and half of a pair (red/blue audit of 23 November 2026, C5).
+    // The two joiners stay: emoji and some scripts are written with them.
     const control =
-      (c < 0x20 && c !== 0x09 && c !== 0x0a && c !== 0x0c) || (c >= 0x7f && c <= 0x9f);
-    out += control ? `\\u${c.toString(16).padStart(4, '0')}` : char;
+      (c < 0x20 && c !== 0x09 && c !== 0x0a && c !== 0x0c) ||
+      (c >= 0x7f && c <= 0x9f) ||
+      c === 0x061c ||
+      c === 0x200b ||
+      c === 0x200e ||
+      c === 0x200f ||
+      (c >= 0x2028 && c <= 0x202e) ||
+      (c >= 0x2060 && c <= 0x2064) ||
+      (c >= 0x2066 && c <= 0x2069) ||
+      c === 0xfeff ||
+      (c >= 0xd800 && c <= 0xdfff) ||
+      (c >= 0xe0000 && c <= 0xe007f);
+    out += !control
+      ? char
+      : c > 0xffff
+        ? `\\u{${c.toString(16)}}`
+        : `\\u${c.toString(16).padStart(4, '0')}`;
   }
   return out;
 }
@@ -72,6 +91,8 @@ interface BuildOptions {
   txt?: string;
   json?: string;
   html?: string;
+  storyAtlas?: string;
+  /** The old name of `storyAtlas` (before v0.28.0), still taken. */
   storyMap?: string;
   status?: string;
   template?: string;
@@ -112,7 +133,7 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 
   const program = new Command('drafter')
     .description(
-      'Lays out Fountain screenplays and stage plays, and writes them as PDF, HTML, a story map, text, or JSON; converts Final Draft, Highland, and Fade In files to Fountain.',
+      'Lays out Fountain screenplays and stage plays, and writes them as PDF, HTML, a Story Atlas, text, or JSON; converts Final Draft, Highland, and Fade In files to Fountain.',
     )
     .version(pkg.version)
     .exitOverride()
@@ -122,7 +143,7 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
   program
     .command('build')
     .description(
-      'Lay out a script and write it as PDF, HTML, a story map (a picture of the script for anyone), fixed-width text, or JSON.',
+      'Lay out a script and write it as PDF, HTML, a Story Atlas (a picture of the script for anyone), fixed-width text, or JSON.',
     )
     .argument('<input>', 'the .fountain file')
     .option('--pdf <file>', "write a PDF (with no output named, the input's name ending in .pdf)")
@@ -136,13 +157,15 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
       '--reopenable',
       'let Drafter reopen the HTML page: it carries the full script, notes and all',
     )
+    // The Story Atlas was the story map until v0.28.0: the old flag still works, and isn't listed.
+    .addOption(new Option('--story-map <file>').hideHelp())
     .option(
-      '--story-map <file>',
-      'write a story map: one picture-first HTML page of the script so far, to send to anyone (your notes left out; synopses and setups and payoffs shown)',
+      '--story-atlas <file>',
+      'write a Story Atlas: one picture-first HTML page of the script so far, to send to anyone (your notes left out; synopses and setups and payoffs shown)',
     )
     .option(
       '--status <in-progress|finished>',
-      "the story map's status (without it, finished when nothing is left to write)",
+      "the Story Atlas's status (without it, finished when nothing is left to write)",
     )
     .option('--template <id|file>', templateHelp)
     .option('--scene-numbers', 'print scene numbers')
@@ -185,16 +208,22 @@ export async function run(argv: readonly string[], streams: IO = nodeIO()): Prom
 }
 
 async function build(input: string, options: BuildOptions, io: IO): Promise<number> {
-  const outputs: Array<['pdf' | 'txt' | 'json' | 'html' | 'storyMap', string]> = [];
-  for (const kind of ['pdf', 'html', 'storyMap', 'txt', 'json'] as const) {
+  if (options.storyAtlas !== undefined && options.storyMap !== undefined) {
+    throw new CliError('--story-map is the old name of --story-atlas: give one of them');
+  }
+  if (options.storyAtlas === undefined && options.storyMap !== undefined) {
+    options.storyAtlas = options.storyMap;
+  }
+  const outputs: Array<['pdf' | 'txt' | 'json' | 'html' | 'storyAtlas', string]> = [];
+  for (const kind of ['pdf', 'html', 'storyAtlas', 'txt', 'json'] as const) {
     const target = options[kind];
     if (target !== undefined) outputs.push([kind, target]);
   }
   if (options.reopenable && options.html === undefined) {
     throw new CliError('--reopenable needs --html: only the HTML page can carry the script');
   }
-  if (options.status !== undefined && options.storyMap === undefined) {
-    throw new CliError('--status needs --story-map: only a story map has a status');
+  if (options.status !== undefined && options.storyAtlas === undefined) {
+    throw new CliError('--status needs --story-atlas: only a Story Atlas has a status');
   }
   const status = statusOf(options.status);
   if (outputs.length === 0) outputs.push(['pdf', defaultPdf(input)]);
@@ -207,10 +236,41 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
     );
   }
   const source = resolve(io.cwd, input);
+  // The same file, however it is named: by another case on a disk that folds case, or by a link.
+  // Comparing the two paths as written let `--txt SCRIPT.FOUNTAIN` write over `script.fountain`
+  // (red/blue audit of 23 November 2026, C1).
+  const sameFile = async (a: string, b: string) => {
+    if (a === b) return true;
+    const [one, two] = await Promise.all(
+      [a, b].map((path) => stat(path, { bigint: true }).catch(() => null)),
+    );
+    return one !== null && two !== null && one.dev === two.dev && one.ino === two.ino;
+  };
+  // Where a file will really be: its folder with every link followed, and its own name. Two
+  // outputs named through a link and without one are one file (the audit of that audit, C4).
+  const placeOf = async (path: string) =>
+    join(await realpath(dirname(path)).catch(() => dirname(path)), basename(path));
+  const given = typeof options.template === 'string' ? resolve(io.cwd, options.template) : null;
+  const targets: string[] = [];
+  const places = new Set<string>();
   for (const [, target] of outputs) {
-    if (target !== '-' && resolve(io.cwd, target) === source) {
-      throw new CliError(`won't write over the input, ${input}`);
+    if (target === '-') continue;
+    const path = resolve(io.cwd, target);
+    if (await sameFile(path, source)) throw new CliError(`won't write over the input, ${input}`);
+    // A template named as a file, that is: a built-in's name is no file.
+    if (
+      given !== null &&
+      (await stat(given).catch(() => null))?.isFile() &&
+      (await sameFile(path, given))
+    ) {
+      throw new CliError(`won't write over the template, ${options.template}`);
     }
+    const place = await placeOf(path);
+    let twice = places.has(place);
+    for (const other of targets) twice ||= await sameFile(path, other);
+    if (twice) throw new CliError(`won't write two outputs to one file, ${target}`);
+    places.add(place);
+    targets.push(path);
   }
 
   const { doc, template, layout, header, text, bytes } = await load(input, options, io);
@@ -222,6 +282,7 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
   for (const problem of problemsOf(doc, layout)) {
     if (problem.severity !== 'info') io.err(`${describe(input, at, problem)}\n`);
   }
+  const done: string[] = [];
   for (const [kind, target] of outputs) {
     const data =
       kind === 'pdf'
@@ -238,11 +299,22 @@ async function build(input: string, options: BuildOptions, io: IO): Promise<numb
               options.reopenable ? text : undefined,
               header,
             )
-          : kind === 'storyMap'
-            ? await storyMapHtml(input, doc, template, layout, text, status, io)
+          : kind === 'storyAtlas'
+            ? await storyAtlasHtml(input, doc, template, layout, text, status, io)
             : kind === 'txt'
               ? renderText(layout, template)
               : `${JSON.stringify(toJSON(doc), null, 2)}\n`;
+    // One more look, now that the earlier outputs are there: on a disk that folds case, `a.out`
+    // and `A.OUT` are one file, and nothing says so until the first is written.
+    if (target !== '-') {
+      const path = resolve(io.cwd, target);
+      for (const other of done) {
+        if (await sameFile(path, other)) {
+          throw new CliError(`won't write two outputs to one file, ${target}`);
+        }
+      }
+      done.push(path);
+    }
     await emit(target, data, io);
   }
   const written = outputs.map(([, target]) => (target === '-' ? 'standard output' : target));
@@ -296,7 +368,7 @@ function titleField(doc: Doc, key: string): string {
   );
 }
 
-/** `--status`: in progress or finished, else none (the story map's own default). */
+/** `--status`: in progress or finished, else none (the Story Atlas's own default). */
 function statusOf(status: string | undefined): MapStatus | null {
   if (status === undefined) return null;
   if (status === 'in-progress' || status === 'finished') return status;
@@ -325,11 +397,11 @@ function draftOf(doc: Doc, text: string): { number: number; id: string } {
 }
 
 /**
- * The story map (story-map design §10.1): the dialog's defaults (summaries, lines, and threads in;
+ * The Story Atlas (story-atlas design §10.1): the dialog's defaults (summaries, lines, and threads in;
  * contact off), the planned length and edited hooks from the metadata block, the logline from the
  * title page, a page a minute, and "updated" the file's last change. It never carries the script.
  */
-async function storyMapHtml(
+async function storyAtlasHtml(
   input: string,
   doc: Doc,
   template: Template,
@@ -338,7 +410,7 @@ async function storyMapHtml(
   status: MapStatus | null,
   io: IO,
 ): Promise<string> {
-  const { plannedPages, hooks } = storyMapMeta(doc.meta);
+  const { plannedPages, hooks } = storyAtlasMeta(doc.meta);
   let updated: number | null = null;
   try {
     updated = (await stat(resolve(io.cwd, input))).mtimeMs;
@@ -346,7 +418,7 @@ async function storyMapHtml(
     // Gone since it was read: no date.
   }
   const logline = titleField(doc, 'logline');
-  const map = buildStoryMap({
+  const map = buildStoryAtlas({
     doc,
     template,
     layout,
@@ -366,9 +438,9 @@ async function storyMapHtml(
       title: titleField(doc, 'title') || basename(input, extname(input)),
     },
   });
-  return renderStoryMap({
+  return renderStoryAtlas({
     map,
-    fonts: await loadStoryMapFonts(),
+    fonts: await loadStoryAtlasFonts(),
     lang: 'en',
     generator: `Drafter ${pkg.version}`,
   });
@@ -489,17 +561,17 @@ async function loadFonts(): Promise<FontSet> {
   ) as unknown as FontSet;
 }
 
-/** Anton, Archivo, and Courier Prime, from `@drafter/story-map`'s `fonts/` folder. */
-async function loadStoryMapFonts(): Promise<StoryMapFonts> {
-  const faces = Object.keys(STORY_MAP_FONT_FILES) as StoryMapFace[];
+/** Anton, Archivo, and Courier Prime, from `@drafter/story-atlas`'s `fonts/` folder. */
+async function loadStoryAtlasFonts(): Promise<StoryAtlasFonts> {
+  const faces = Object.keys(STORY_ATLAS_FONT_FILES) as StoryAtlasFace[];
   const files = await Promise.all(
     faces.map((face) =>
-      readFile(require.resolve(`@drafter/story-map/fonts/${STORY_MAP_FONT_FILES[face]}`)),
+      readFile(require.resolve(`@drafter/story-atlas/fonts/${STORY_ATLAS_FONT_FILES[face]}`)),
     ),
   );
   return Object.fromEntries(
     faces.map((face, k) => [face, new Uint8Array(files[k] as Buffer)]),
-  ) as StoryMapFonts;
+  ) as StoryAtlasFonts;
 }
 
 async function emit(target: string, data: string | Uint8Array, io: IO) {

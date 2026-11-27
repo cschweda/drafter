@@ -6,7 +6,7 @@ import { describe, expect, test } from 'vitest';
 // Every text field in Drafter says `autocomplete="off"`: a browser saves what is typed in a field
 // to its form history, which outlasts Remove from this browser and can sync to the browser's
 // maker, and a logline, a synopsis, or a scene's name is the script's own words (red/blue audit,
-// 2026-11-03: the Story map's logline was found in Chrome's form history).
+// 2026-11-03: the Story Atlas's logline was found in Chrome's form history).
 
 const COMPONENTS = fileURLToPath(new URL('../app/components', import.meta.url));
 const NOT_TEXT = /\btype="(checkbox|radio|range|file|button|submit|color|number)"/;

@@ -373,20 +373,39 @@ function breakStrays(lines: Tok[][]): Tok[][] {
   );
 }
 
+/**
+ * A note's line breaks, and the spaces around each, made one space. Not with one pattern over
+ * them: on a note of spaces with no break in it, the pattern started again from every space, and
+ * a file of 160 KB took ten seconds to open (red/blue audit of 23 November 2026, W5).
+ */
+function noteOnOneLine(note: string): string {
+  if (!note.includes('\n')) return note;
+  const lines = note.split('\n');
+  return lines
+    .map((line, i) =>
+      i === 0 ? line.trimEnd() : i === lines.length - 1 ? line.trimStart() : line.trim(),
+    )
+    .filter((line, i) => line !== '' || i === 0 || i === lines.length - 1)
+    .join(' ');
+}
+
 /** The lines with each note's line breaks made spaces, so no note runs over a line. */
 const flatNotes = (lines: Tok[][]): Tok[][] =>
-  lines.map((line) =>
-    line.map((tok) => (isNote(tok) ? { note: tok.note.replace(/\s*\n\s*/g, ' ') } : tok)),
-  );
+  lines.map((line) => line.map((tok) => (isNote(tok) ? { note: noteOnOneLine(tok.note) } : tok)));
 
 const plainStyle: Style = { bold: false, italic: false, underline: false };
-const fromPlain = (text: string): Tok[][] =>
-  trimBlank(
+const fromPlain = (given: string): Tok[][] => {
+  // A style for each character of the text as it will be: a tab becomes four spaces, and sized
+  // by the text as given, the last of them had no style, and a paragraph with a tab in loose text
+  // threw (red/blue audit of 23 November 2026, W10).
+  const text = normalize(given);
+  return trimBlank(
     splitLines(
-      normalize(text),
+      text,
       Array.from({ length: text.length }, () => plainStyle),
     ),
   );
+};
 
 /** The visible text of some lines, notes left out. */
 const visible = (lines: readonly Tok[][]) =>
@@ -400,7 +419,7 @@ const visible = (lines: readonly Tok[][]) =>
 function plainLine(line: readonly Tok[]): string {
   let out = '';
   for (const tok of line) {
-    if (isNote(tok)) out += tok.note.replace(/\s*\n\s*/g, ' ');
+    if (isNote(tok)) out += noteOnOneLine(tok.note);
     else if (tok.raw !== undefined) out += tok.raw;
     else out += tok.ch === '*' && out.endsWith('/') ? '\\*' : tok.ch;
   }

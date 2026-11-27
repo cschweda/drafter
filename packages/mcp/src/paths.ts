@@ -110,8 +110,29 @@ export async function resolvePath(
     real = await realpath(join(root.real, ...rest));
   } catch (error) {
     const code = (error as { code?: string }).code;
-    if (code === 'ENOENT') throw new Missing(`There’s no ${want} at ${shown}.`);
     if (code === 'ELOOP') throw new Refusal(`${shown} is a loop of links.`);
+    // Where the part of it that is there really leads, whatever went wrong below it: past a link
+    // out of the folder, a file that isn't there, one that is with a part added after it, and one
+    // that can't be read all get the answer a file that is there would, or the answers would say
+    // which files exist outside (red/blue audit of 23 November 2026, M4, and the audit of it).
+    // A link that leads nowhere is outside too: nothing says where it would have led.
+    for (let kept = rest.length; kept >= 0; kept--) {
+      const part = join(root.real, ...rest.slice(0, kept));
+      let above: string;
+      try {
+        above = await realpath(part);
+      } catch {
+        const link = await lstat(part).then(
+          (info) => info.isSymbolicLink(),
+          () => false,
+        );
+        if (link) throw new Refusal(OUTSIDE);
+        continue;
+      }
+      if (!isInside(above, root.real, platform)) throw new Refusal(OUTSIDE);
+      break;
+    }
+    if (code === 'ENOENT') throw new Missing(`There’s no ${want} at ${shown}.`);
     throw new Refusal(`Can’t read ${shown}: ${reason(error)}.`);
   }
   if (!isInside(real, root.real, platform)) throw new Refusal(OUTSIDE);

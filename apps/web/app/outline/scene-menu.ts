@@ -29,6 +29,8 @@ export interface SceneMenuHooks {
   history(id: string): void;
   /** Scaffold for this scene, once the menu has closed: the Scaffold tab, on this scene, pinned. */
   scaffold(id: string): void;
+  /** Threads…, once the menu has closed (the row or card is the dialog's opener). */
+  threads(id: string): void;
 }
 
 /**
@@ -99,6 +101,12 @@ export function sceneMenuItems(
         label: 'Scene details…',
         icon: 'i-lucide-notebook-pen',
         onSelect: () => openSceneDetails(id, () => hooks.focus(id)),
+      },
+      {
+        // Read-only too: it opens with the reason shown and Save off, as Scene details does.
+        label: 'Threads…',
+        icon: 'i-lucide-git-branch',
+        onSelect: () => hooks.threads(id),
       },
       {
         // Read-only too: versions are listed and compared, and Use this version says why it is off.

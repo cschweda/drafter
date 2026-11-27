@@ -105,7 +105,7 @@ export const CHEAT_SHEET: readonly CheatSheetEntry[] = [
     id: 'keyed-notes',
     name: 'Keyed note',
     mark: '[[Key: text]]',
-    rule: 'A word and a colon at the start of a note gives it a meaning. Goal, Conflict, Outcome, Shift, and Storyline describe a scene and show on its card; a category in capitals, such as TODO, sorts a note in the Notes tab; a name, such as Sam, marks a note from a reader. Ending a note with #resolved closes it, and other #tags are yours to use.',
+    rule: 'A word and a colon at the start of a note gives it a meaning. Goal, Conflict, Outcome, Shift, and Thread describe a scene and show on its card; a category in capitals, such as TODO, sorts a note in the Notes tab; a name, such as Sam, marks a note from a reader. Ending a note with #resolved closes it, and other #tags are yours to use.',
     example:
       'INT. KITCHEN - NIGHT\n\n[[Goal: Margaret wants the call to end.]]\n[[TODO: Cut the second line. #resolved]]\n[[Sam: Does she know yet?]]',
     reads: ['scene_heading', 'note'],

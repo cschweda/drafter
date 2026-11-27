@@ -24,6 +24,33 @@ const STAGE =
   'Title: The Crossing\n\nINT. HALL - DAY\n\nHi.\n\n/* drafter\n{"v":1,"template":"stage-play-standard"}\n*/\n';
 
 describe('projects', () => {
+  test('removing a script leaves no row that names it, in any table', async () => {
+    // Red/blue audit, 2026-11-23 (P2): drafts kept beside the file left the file's name and its
+    // folder's handle behind. Every row keyed by the script's id goes with it.
+    const { declinedKey, namesKey } = await import('../app/beside/use-beside');
+    const { folderKey, grantKey } = await import('../app/beside/web');
+    const project = await createProject({ source: 'Title: The Lamp\n\nINT. A - DAY\n' });
+    const other = await createProject({ source: 'Title: Kept\n\nINT. B - DAY\n' });
+    for (const id of [project.id, other.id]) {
+      await db.settings.put({ key: namesKey(id), value: 'The Lamp.fountain' });
+      await db.settings.put({ key: declinedKey(id), value: true });
+      await db.settings.put({ key: grantKey(id), value: 'a-grant' });
+      await db.handles.put({
+        id: folderKey(id),
+        ref: { kind: 'directory', name: 'Pilot' } as never,
+      });
+    }
+    await removeProject(project.id);
+    for (const table of db.tables) {
+      const rows = await table.toArray();
+      const naming = rows.filter((row) => JSON.stringify(row).includes(project.id));
+      expect(naming, `rows left in ${table.name}`).toEqual([]);
+    }
+    // Another script's rows are not touched.
+    expect(await db.settings.get(namesKey(other.id))).toBeDefined();
+    expect(await db.handles.get(folderKey(other.id))).toBeDefined();
+  });
+
   test('creates, reads, updates, lists newest first, and removes a project', async () => {
     const a = await createProject({ source: 'Title: One\n\nINT. A - DAY\n' });
     expect(a.id).toMatch(/^[0-9a-f-]{36}$/);

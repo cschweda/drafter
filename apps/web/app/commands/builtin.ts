@@ -66,8 +66,9 @@ import { screenplayFromOutline } from '~/storage/new-script';
 import { pickAndOpen, pickAndOpenAs } from '~/storage/open';
 import { canRevert, revertToSaved, revertWhy, save, saveAs } from '~/storage/save';
 import { useScript } from '~/storage/script';
-import { markSpeech, speechAt } from '~/story-map/quote-marks';
+import { markSpeech, speechAt } from '~/story-atlas/quote-marks';
 import { NOT_FOR_MARKDOWN } from '~/strip/labels';
+import { openThreads } from '~/threads/dialogs';
 import { showInInspector, type TabId, WIDE_QUERY } from '~/utils/panes';
 import { type Behavior, quietly, type When } from './behavior';
 import { COMMAND_DATA, commandsFor, MARKDOWN_ACTIONS, modeSwitchApplies } from './data';
@@ -254,7 +255,7 @@ export function registerBuiltinCommands(): void {
   });
 
   /**
-   * Use in story map and Never use in story map (story-map design §3.1, Call 6): a `[[Quote]]` or
+   * Use in Story Atlas and Never use in Story Atlas (story-atlas design §3.1, Call 6): a `[[Quote]]` or
    * `[[No quote]]` mark on the speech holding the cursor, as one undo. Off where the cursor isn't
    * in a speech (or is in dual dialogue, which is never a line on its own).
    */
@@ -268,8 +269,8 @@ export function registerBuiltinCommands(): void {
       if (changes.length > 0 && !applyTextChanges(view, changes)) return;
       void sayElement(
         mark === 'quote'
-          ? 'This line will be in the story map.'
-          : 'This line won’t be in the story map.',
+          ? 'This line will be in the Story Atlas.'
+          : 'This line won’t be in the Story Atlas.',
       );
     },
   });
@@ -278,6 +279,15 @@ export function registerBuiltinCommands(): void {
   const sceneAtCursor = () => {
     const head = view.state.selection.main.head;
     return useOutline().index.value.scenes.find((s) => head >= s.span.from && head <= s.span.to);
+  };
+  /** The id Threads… takes for the cursor: its scene's outline id, or its novel passage's node id. */
+  const threadsUnit = (): string | null => {
+    if (isFountain()) {
+      const scene = sceneAtCursor();
+      return scene ? useOutline().idOf(scene) : null;
+    }
+    if (isNovel()) return (passageHere('section') ?? passageHere('chapter'))?.id ?? null;
+    return null;
   };
   /** Move scene up or down (Phase 2 design §6.2): the cursor goes with the scene. */
   const moveScene = (direction: 'up' | 'down'): Behavior => ({
@@ -507,6 +517,15 @@ export function registerBuiltinCommands(): void {
     'show-outline': {
       enabled: () => isFountain() || editor.novel.value,
       run: () => showTab('outline'),
+    },
+    // The Outline as its Lanes (threads design §7.3), remembered as the switch on its bar is.
+    'show-lanes': {
+      enabled: () => isFountain() || editor.novel.value,
+      why: () => (isMarkdown() && !editor.novel.value ? NOT_FOR_MARKDOWN : undefined),
+      run: () => {
+        void set('outlineView', 'lanes');
+        showTab('outline');
+      },
     },
     // Not core tabs (design §5.8): showing one puts it in its pane's slot. Cards and the Outline are a script's or a novel's.
     'show-cards': {
@@ -763,6 +782,16 @@ export function registerBuiltinCommands(): void {
       },
     },
 
+    'scene-threads': {
+      // On in a read-only tab too: the dialog opens read-only (Save says why).
+      enabled: () => !!threadsUnit(),
+      why: () => 'The cursor isn’t in a scene or passage.',
+      run: () => {
+        const id = threadsUnit();
+        if (id) openThreads(id);
+      },
+    },
+
     // Edit, the element bar's commands
     // On a stage play Scene writes a `##` section and Action is a stage direction (the template's
     // roles), so their titles say so; Act is there only, and Transition only where the template has one.
@@ -817,8 +846,8 @@ export function registerBuiltinCommands(): void {
     'make-lyric': fountain(forceKind('lyric')),
     'mark-setup': mark('Setup'),
     'mark-payoff': mark('Payoff'),
-    'story-map-use-line': markLine('quote'),
-    'story-map-never-line': markLine('no-quote'),
+    'story-atlas-use-line': markLine('quote'),
+    'story-atlas-never-line': markLine('no-quote'),
     'dual-dialogue': fountain(toggleDual),
     'wrap-in-note': fountain(wrapInNote),
     'cut-to-boneyard': fountain(wrapInBoneyard),

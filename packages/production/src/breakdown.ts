@@ -44,6 +44,20 @@ export function breakdownRows(
   const cast = castOf(index, doc, template, linesPerPage(layout), () => undefined);
   const nameOf = new Map(cast.characters.map((c) => [c.key, c.name]));
   const labels = new Map(layout.pages.map((page) => [page.number, page.label]));
+  // Who is in each scene, gathered once, in the cast's order. Asking each character's whole list of
+  // scenes for every scene took the scenes times every appearance: a script of 0.4 MB, 25 seconds
+  // (red/blue audit of 23 November 2026, W9).
+  const inScene: Array<Array<{ key: string; name: string; firstMention: number | null }>> =
+    index.scenes.map(() => []);
+  cast.characters.forEach((character, row) => {
+    for (const presence of cast.byScene[row] ?? []) {
+      inScene[presence.scene]?.push({
+        key: character.key,
+        name: character.name,
+        firstMention: presence.firstMention,
+      });
+    }
+  });
   return index.scenes.map((scene: Scene, i) => {
     const number = numbers?.get(scene.block) ?? scene.number ?? String(scene.ordinal);
     if (scene.heading.trim().toUpperCase() === 'OMITTED' && scene.number !== null) {
@@ -59,11 +73,10 @@ export function breakdownRows(
       named.push(nameOf.get(key) ?? speech.name);
     }
     const mentioned: Array<{ at: number; name: string }> = [];
-    cast.characters.forEach((character, row) => {
-      const here = cast.byScene[row]?.find((p) => p.scene === i);
-      if (!here || seen.has(character.key) || here.firstMention === null) return;
-      mentioned.push({ at: here.firstMention, name: character.name });
-    });
+    for (const here of inScene[i] ?? []) {
+      if (seen.has(here.key) || here.firstMention === null) continue;
+      mentioned.push({ at: here.firstMention, name: here.name });
+    }
     mentioned.sort((a, b) => a.at - b.at);
     named.push(...mentioned.map((m) => m.name));
     return [
@@ -79,19 +92,32 @@ export function breakdownRows(
   });
 }
 
-const needsQuotes = /[",\r\n]/;
-/** A field a spreadsheet would run as a formula (OWASP): it starts with = + - @ tab or CR. */
-const formulaStart = /^[=+\-@\t\r]/;
+/** A semicolon and a tab too: where either is the list separator, an unquoted one splits the field. */
+const needsQuotes = /[",;\t\r\n]/;
+/**
+ * A field a spreadsheet would run as a formula (OWASP): it starts with = + - @ tab or CR, or has
+ * one of the first four after a semicolon or a tab, where a spreadsheet that splits on those
+ * would start a cell with it (red/blue audit of 23 November 2026, W15).
+ */
+const formulaStart = /^[=+\-@\uff1d\uff0b\uff0d\uff20\t\r]/;
+/**
+ * The same signs after a semicolon or a tab inside a field. The `'` goes in front of the sign
+ * itself: a reader that splits on `;` or a tab starts a cell there, where the field's own quote
+ * is far behind and holds nothing together (the audit of that audit).
+ */
+const formulaInside = /([;\t] *)(?=[=+\-@\uff1d\uff0b\uff0d\uff20])/g;
 
 /**
- * Rows as CSV (RFC 4180): a field with a comma, a quote (doubled), or a line break is quoted;
+ * Rows as CSV (RFC 4180): a field with a comma, a semicolon, a tab, a quote (doubled), or a line
+ * break is quoted;
  * lines end `\r\n`, the last too. Text, UTF-8 without a byte order mark. A field that starts with
- * `=`, `+`, `-`, `@`, a tab, or a carriage return gets a `'` in front first, so a spreadsheet shows
+ * `=`, `+`, `-`, `@` (or the full-width form of one), a tab, or a carriage return gets a `'` in front first, so a spreadsheet shows
  * it as text and never runs a formula a script planted in a heading, a cue, or a synopsis.
  */
 export function toCsv(rows: readonly (readonly string[])[]): string {
   const field = (raw: string) => {
-    const f = formulaStart.test(raw) ? `'${raw}` : raw;
+    const inside = raw.replace(formulaInside, "$1'");
+    const f = formulaStart.test(raw) ? `'${inside}` : inside;
     return needsQuotes.test(f) ? `"${f.replaceAll('"', '""')}"` : f;
   };
   return rows.map((row) => `${row.map(field).join(',')}\r\n`).join('');

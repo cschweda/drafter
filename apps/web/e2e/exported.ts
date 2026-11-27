@@ -1,6 +1,6 @@
 import type { BrowserContext } from '@playwright/test';
 
-// Opening an exported file as a reader would (HTML export, Story map): in a page of its own, with
+// Opening an exported file as a reader would (HTML export, Story Atlas): in a page of its own, with
 // every request but the file refused, and what its own policy refused collected.
 
 /** Where an exported HTML file is opened: an address no server answers, which the test answers. */

@@ -115,7 +115,7 @@ type Summary =
   | { content: 'not a script' | 'not read'; refused: string };
 
 /** Summaries by file, as they were: small, so as many as a listing holds are kept. */
-const summaries = new LoadCache<Summary>(WALK_LIMITS.files);
+const summaries = new LoadCache<Summary>(WALK_LIMITS.files, Number.POSITIVE_INFINITY);
 
 const STAGE_PLAY = 'stage-play-standard';
 const SCREENPLAY = builtins['us-screenplay'] as Template;

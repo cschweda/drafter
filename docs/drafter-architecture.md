@@ -120,7 +120,7 @@ drafter/
 └── docs/
 ```
 
-Build with pnpm workspaces; publish the packages under `@drafter/*` on npm so the engine has a life outside the app.
+Build with pnpm workspaces; the packages are named `@drafter/*` in the workspace, so the engine has a life outside the app. (They are not published under those names: the `@drafter` scope on npm is not this project's.)
 
 ---
 
@@ -408,8 +408,8 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 - Plan E, part 1 (v0.21.0, the [seeing-the-script design](drafter-seeing-the-script-design.md)): who is in each scene, speaking or silent (a name in the action counts, a name that is also a word only in capitals), worked out by `@drafter/cast` from the scene index's speeches; the **Stats tab** in place of the Stats window, with each character's screen time, dialogue share, and who they share the most scenes with, and a **character-by-scene grid** that shows long absences, with a List view; and **Scaffold**, a tab beside the script that follows the cursor's scene, with a page for each character (their scenes, screen time, dialogue, absences, and every line) and each location, and the Cast and Places.
 
 - **Drafts and Cuts** (v0.24.0, [its design](drafter-drafts-and-cuts-design.md)): **Start new draft…** keeps the text as a numbered draft (Draft 01, Draft 02, …) with an ID that is the SHA-256 of its text; the Drafts list reads, compares, and restores drafts; **Draft by draft** walks them in Compare; and **Cuts**, replacing Deleted scenes, keeps every cut for good (whole scenes, chapters, and sections, whole speeches and paragraphs, and runs of 12 or more words), found by `@drafter/history`'s `findCuts` in the history worker at each kept snapshot. Drafts and cuts live in two new IndexedDB tables, and as plain files beside the work (`Boca drafts/` and `Boca.fountain.cuts.md`) wherever a folder can be written; see §6.
-- **Story map** (v0.24.1; [its design](drafter-story-map-design.md)): **Export → Story map…** opens a short dialog, then the export worker runs `@drafter/story-map`: `buildStoryMap` turns the scene index, pages, cast, and Setup and Payoff notes into a plain model (acts only as the writer marks them, gaps, lines of dialogue steered by `[[Quote]]` and `[[No quote]]`, a play's interval and who's on stage), and `renderStoryMap` draws it as one HTML string with hand-built SVG, three embedded WOFF2 faces, and a content security policy with no `script-src`. The page has no JavaScript and fetches nothing. The logline goes on the title page (`Logline:`), the planned length and edited hooks in the metadata block, and the rest on the project. `drafter build --story-map` writes the same page.
-- **Drafter for Claude** (v0.24.2; [its design](drafter-for-claude-design.md)): `drafter-mcp` (`packages/mcp`), a separate program the writer's AI app (Claude Desktop, Claude Code, or any app that speaks MCP) starts over stdio, which reads only the folders named with `--folder`. Ten read-only tools (`list_scripts`, `script_overview`, `read_scene`, `character_lines`, `list_drafts`, `compare_drafts`, `list_cuts`, `search_scripts`, `story_map`, `series_overview`) built on the engine packages, so every number is the app's; seven prompts; no resources and no write tools. Notes and the boneyard left out unless asked for; every file judged by its content as Open does; each call in a worker stopped at 10 seconds; answers of at most 40,000 characters with signed cursors; the writer's text only inside JSON strings. One bundled file, on npm as `drafter-mcp` and on the GitHub Release with its SHA-256. Drafter itself still never calls an AI.
+- **Story Atlas** (v0.24.1; [its design](drafter-story-atlas-design.md)): **Export → Story Atlas…** opens a short dialog, then the export worker runs `@drafter/story-atlas`: `buildStoryAtlas` turns the scene index, pages, cast, and Setup and Payoff notes into a plain model (acts only as the writer marks them, gaps, lines of dialogue steered by `[[Quote]]` and `[[No quote]]`, a play's interval and who's on stage), and `renderStoryAtlas` draws it as one HTML string with hand-built SVG, three embedded WOFF2 faces, and a content security policy with no `script-src`. The page has no JavaScript and fetches nothing. The logline goes on the title page (`Logline:`), the planned length and edited hooks in the metadata block, and the rest on the project. `drafter build --story-atlas` writes the same page.
+- **Drafter for Claude** (v0.24.2; [its design](drafter-for-claude-design.md)): `drafter-mcp` (`packages/mcp`), a separate program the writer's AI app (Claude Desktop, Claude Code, or any app that speaks MCP) starts over stdio, which reads only the folders named with `--folder`. Ten read-only tools (`list_scripts`, `script_overview`, `read_scene`, `character_lines`, `list_drafts`, `compare_drafts`, `list_cuts`, `search_scripts`, `story_atlas`, `series_overview`) built on the engine packages, so every number is the app's; seven prompts; no resources and no write tools. Notes and the boneyard left out unless asked for; every file judged by its content as Open does; each call in a worker stopped at 10 seconds; answers of at most 40,000 characters with signed cursors; the writer's text only inside JSON strings. One bundled file, on npm as `drafter-mcp` and on the GitHub Release with its SHA-256. Drafter itself still never calls an AI.
 
 **Next:**
 
@@ -417,10 +417,10 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 - **A fresh look** (v0.23.0, [its design](drafter-fresh-look-design.md)): calm and paper-first, two bars, the editor always on the left with an Inspector on the right, paper pages, one button and dialog system, and a tab bar on a phone.
 - **Novel** (v0.26.0): a choice beside Screenplay and Stage play for drafting a novel in Markdown, with chapters, sections, focus, and counts, and a manuscript PDF or `.docx` later in that release. To be designed.
 - **Production** (v0.27.0), free for everyone: colored revision sets with marks in the margin, locked pages (12A) and scene numbers (A-scenes), scenes marked OMITTED, scene numbers that start anywhere, a revised-pages PDF, a breakdown report, and sides (one character's scenes for an actor). Moved up from Phase 4 at the maintainer's word (2026-10-31: "Let's make it for pros"). To be designed.
-- Plan E, part 2 (v0.28.0): storylines, the script map as the Structure strip's Color by, and pacing.
-- **The Workbook** (v0.29.0, Plan F): a story bible and scene cards beside the script, a landing spot for pasted notes, a Dropbox, Google Drive, or OneDrive folder watched for notes, and voice notes recorded and transcribed on the device. To be designed.
-- **The `.drafter` project package** (v0.30.0), optional: a documented, open zip holding the `.fountain` file, its drafts, its Cuts file, its workbook, and its voice notes, for sharing or archiving a whole project as one file; never the default.
-- Plans G and H (v0.31.0 and v0.32.0; Phase 2 design §22): reader notes and the Reference tab.
+- Plan E, part 2 (v0.29.0): storylines, the script map as the Structure strip's Color by, and pacing.
+- **The Workbook** (v0.30.0, Plan F): a story bible and scene cards beside the script, a landing spot for pasted notes, a Dropbox, Google Drive, or OneDrive folder watched for notes, and voice notes recorded and transcribed on the device. To be designed.
+- **The `.drafter` project package** (v0.31.0), optional: a documented, open zip holding the `.fountain` file, its drafts, its Cuts file, its workbook, and its voice notes, for sharing or archiving a whole project as one file; never the default.
+- Plans G and H (v0.32.0 and v0.33.0; Phase 2 design §22): reader notes and the Reference tab.
 
 **To come**
 
@@ -459,7 +459,7 @@ Every change in the Outline, Cards, and Notes tabs is an edit to the source.
 ### Phase 5 — Community
 
 - A template gallery and a docs site.
-- The `@drafter/*` packages and `@drafter/cli` published on npm, so `npx @drafter/cli build script.fountain` works without the app.
+- The command line published on npm, so one `npx` command builds a script without the app. Its name is still to be chosen: the `@drafter` scope on npm is not this project's, so the workspace's `@drafter/*` packages are marked private and are never published under those names.
 - A VS Code extension.
 - A plugin API, only if there's demand, sandboxed in a Web Worker per the technical design.
 

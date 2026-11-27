@@ -108,10 +108,20 @@ const structureCache = StateField.define<null>({
   },
 });
 
-/** The facts as one comparable string: the same facts, in any key order, are the same. */
+/**
+ * The facts as one comparable string, every field of them (the nodes, the book's target, the
+ * manuscript details, the threads' names and colors, and whatever is kept next): the same facts,
+ * in any key order, are the same.
+ */
 function factsKey(facts: NovelFacts): string {
-  const ids = Object.keys(facts.nodes).sort();
-  return JSON.stringify([facts.bookTarget ?? null, ids.map((id) => [id, facts.nodes[id]])]);
+  return JSON.stringify(facts, (_key, value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(value).sort()) {
+      sorted[key] = (value as Record<string, unknown>)[key];
+    }
+    return sorted;
+  });
 }
 
 export function sameFacts(a: NovelFacts, b: NovelFacts): boolean {

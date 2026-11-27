@@ -1,9 +1,9 @@
 import { parse, type TextChange } from '@drafter/fountain';
 import { sceneIndex } from '@drafter/outline';
-import { quoteCandidates } from '@drafter/story-map';
+import { quoteCandidates } from '@drafter/story-atlas';
 import { builtins } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
-import { markSpeech, speechAt } from '../app/story-map/quote-marks';
+import { markSpeech, speechAt } from '../app/story-atlas/quote-marks';
 
 /** The changes applied from last to first, so each keeps its old-document offsets. */
 function apply(source: string, changes: readonly TextChange[]): string {
@@ -77,7 +77,7 @@ describe('markSpeech', () => {
     expect(changes).toHaveLength(1);
     const out = apply(SCRIPT, changes);
     expect(out).toContain('Not on my slipway. [[Quote]]\n\nTEO');
-    // The story map reads it as marked.
+    // The Story Atlas reads it as marked.
     const index = sceneIndex(parse(out), builtins['us-screenplay']);
     const marked = quoteCandidates(parse(out), index).find((c) => c.character === 'ODILE');
     expect(marked?.marked).toBe('quote');

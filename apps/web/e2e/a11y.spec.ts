@@ -407,7 +407,9 @@ for (const theme of THEMES) {
       await expect(options).toBeVisible();
       await expect(options.getByRole('group', { name: 'Title page' })).toBeVisible();
       await expect(
-        options.getByRole('group', { name: 'Include notes (Markdown, HTML, and EPUB)' }),
+        options.getByRole('group', {
+          name: 'Include notes (Markdown, HTML, EPUB, and Final Draft)',
+        }),
       ).toBeVisible();
       await clean(page, 'the Export options dialog');
     });
@@ -740,8 +742,9 @@ for (const theme of THEMES) {
       '/docs/fountain/',
       '/docs/classic-mode/',
       '/docs/novel/',
+      '/docs/threads/',
       '/docs/saving/',
-      '/docs/story-map/',
+      '/docs/story-atlas/',
       '/docs/drafter-for-claude/',
       '/docs/privacy/',
       '/docs/shortcuts/',

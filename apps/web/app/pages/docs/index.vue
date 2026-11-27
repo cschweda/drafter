@@ -7,7 +7,7 @@ definePageMeta({ layout: 'docs' });
 useDocsHead({
   title: 'Help',
   description:
-    'Help for Drafter: what it is, why Drafter, a Fountain cheat sheet, Classic Mode, writing a novel, saving and your browser, drafts and cuts, the story map, Drafter for Claude, self-hosting, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
+    'Help for Drafter: what it is, why Drafter, a Fountain cheat sheet, Classic Mode, writing a novel, saving and your browser, drafts and cuts, the Story Atlas, Drafter for Claude, self-hosting, the keyboard shortcuts, privacy, open formats, licences, technical details, and what the Stats tab and Scaffold count. Plain pages that read without JavaScript.',
   path: '/docs',
 });
 
@@ -24,11 +24,13 @@ const about: Record<string, string> = {
     'Writing a novel in plain Markdown: chapters, sections, and parts, the Outline and Cards, focus on one chapter, and word targets.',
   'help-production':
     'Locking pages and scene numbers, revisions in colors with marks in the margin, A-pages and A-scenes, and OMITTED scenes.',
+  'help-threads':
+    'Plot threads: tag the scenes each one is in, then see them as lanes along the whole script, in a screenplay, a stage play, or a novel.',
   'help-saving':
     'What Save does in each browser, keeping scripts in a synced folder, autosave, and installing Drafter as an app.',
   'help-drafts-and-cuts':
     'Numbered drafts you can read, compare, and restore, and everything you cut, kept for ideas.',
-  'help-story-map':
+  'help-story-atlas':
     'A picture of your script or play to send to anyone who asks what you are writing: making one, what goes in, and what never does.',
   'help-drafter-for-claude':
     'Let Claude, or another AI app you use, read the scripts, drafts, and cuts in folders you choose: setting it up, and what goes to the AI service.',
@@ -43,6 +45,8 @@ const about: Record<string, string> = {
   'help-technical':
     'How Drafter is put together, for the curious: its packages, workers, storage, offline use, the desktop app, releases, and dependencies, with diagrams.',
   'help-whats-new': 'What has changed in Drafter, newest first, in plain words.',
+  'help-support':
+    'Drafter is free and stays free. If it has been useful, you can leave a tip, with no account needed.',
 };
 </script>
 
@@ -78,8 +82,9 @@ const about: Record<string, string> = {
       <strong>Suggest an idea…</strong> (in the search too, and in About). Write a title and a few
       lines, and the dialog shows exactly what will be sent, with your version info if you leave it
       on. <strong>Open on GitHub</strong> opens GitHub’s new-issue page with it all filled in, and you
-      submit it there. That needs a free GitHub account. Drafter sends nothing itself, and never
-      includes your script.
+      submit it there. That needs a free GitHub account. On drafter.dev, <strong>Send email</strong>
+      sends the same report to the maintainer for you. Nothing is sent until you choose one of them,
+      and a report never includes your script.
     </p>
     <p>
       Your report is never lost. <strong>Copy report</strong>, <strong>Write an email</strong>, and
@@ -88,8 +93,8 @@ const about: Record<string, string> = {
       on this device until you choose <strong>Clear</strong>.
     </p>
     <p>
-      No GitHub account, or offline? Copy it, or email cschweda@gmail.com. An email goes from your
-      own email app; Drafter itself sends nothing. For a security problem, please
+      No GitHub account, or offline? Copy it, or email cschweda@gmail.com. With <strong>Write an email</strong>, it goes
+      from your own email app. For a security problem, please
       don’t open a public issue:
       <a
         href="https://github.com/cschweda/drafter/blob/main/SECURITY.md#reporting-a-problem"

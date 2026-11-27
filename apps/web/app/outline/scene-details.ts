@@ -1,3 +1,4 @@
+import { normalizeLabel } from '@drafter/notes';
 import type { Scene, SceneColor, SceneDetails } from '@drafter/outline';
 import { ref } from 'vue';
 
@@ -27,29 +28,30 @@ export function takeFocusBack(): (() => void) | null {
 type TextKey = Exclude<keyof SceneDetails, 'color'>;
 const TEXT_KEYS: readonly TextKey[] = [
   'synopsis',
-  'storyline',
+  'thread',
   'goal',
   'conflict',
   'outcome',
   'shift',
 ];
 
-/** A text field's value now: the first synopsis, or the field's note (Storyline: the first note's body). */
+/** A text field's value now: the first synopsis, or the field's note (Thread: every note's labels). */
 function textOf(scene: Scene, key: TextKey): string {
   if (key === 'synopsis') return scene.synopses[0]?.text ?? '';
+  if (key === 'thread') return scene.threads.join(', ');
   return scene.fields[key]?.body ?? '';
 }
 
 /**
- * The form's starting values. Storyline is the first Storyline note's body, which is the one
- * `setSceneDetails` edits, not every note's labels (`storylines`). A color word Drafter doesn't
+ * The form's starting values. Thread is every Thread or Storyline note's labels (`threads`), so
+ * what the writer edits is what the scene has, not only the first note's body. A color word Drafter doesn't
  * know is kept as it is, so the form shows it and saving leaves it.
  */
 export function detailsDraft(scene: Scene): Required<SceneDetails> {
   return {
     synopsis: textOf(scene, 'synopsis'),
     color: (scene.color?.value ?? null) as SceneColor | null,
-    storyline: textOf(scene, 'storyline'),
+    thread: textOf(scene, 'thread'),
     goal: textOf(scene, 'goal'),
     conflict: textOf(scene, 'conflict'),
     outcome: textOf(scene, 'outcome'),
@@ -73,4 +75,30 @@ export function goalLine(scene: Scene): string | null {
   const body = scene.fields.goal?.body;
   if (!body) return null;
   return body.split(' / ')[0]?.trim() || null;
+}
+
+/**
+ * What the Threads field suggests as the writer types (Threads design §7.4): the labels in use in
+ * `scenes`, once each as first typed, each after the labels already typed before the last comma,
+ * and none already in the field. A browser's suggestion list matches the whole field, so each
+ * suggestion is the whole field with one label more.
+ */
+export function threadSuggestions(scenes: readonly Scene[], typed: string): string[] {
+  const parts = typed.split(',');
+  const done = parts
+    .slice(0, -1)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const taken = new Set(done.map(normalizeLabel));
+  const prefix = done.length > 0 ? `${done.join(', ')}, ` : '';
+  const out: string[] = [];
+  for (const scene of scenes) {
+    for (const label of scene.threads) {
+      const key = normalizeLabel(label);
+      if (taken.has(key)) continue;
+      taken.add(key);
+      out.push(prefix + label);
+    }
+  }
+  return out;
 }

@@ -63,25 +63,25 @@ test('the File menu has Open as Screenplay…', async ({ desktop }) => {
   expect(items[at + 1]).toMatchObject({ id: 'open-as-screenplay', label: 'Open as Screenplay…' });
 });
 
-test('File › Export lists Story map…, and Edit the story map’s two line commands', async ({
+test('File › Export lists Story Atlas…, and Edit the Story Atlas’s two line commands', async ({
   desktop,
 }) => {
   const { app } = await desktop();
   const label = async (id: string) => (await menuItems(app)).find((i) => i.id === id)?.label;
-  await expect.poll(() => label('export-story-map'), { timeout: 15_000 }).toBe('Story map…');
+  await expect.poll(() => label('export-story-atlas'), { timeout: 15_000 }).toBe('Story Atlas…');
   const ids = (await menuItems(app)).map((i) => i.id);
   // After EPUB, in File → Export.
-  expect(ids.indexOf('export-story-map')).toBe(ids.indexOf('export-epub') + 1);
-  expect(await label('story-map-use-line')).toBe('Use in story map');
-  expect(await label('story-map-never-line')).toBe('Never use in story map');
+  expect(ids.indexOf('export-story-atlas')).toBe(ids.indexOf('export-epub') + 1);
+  expect(await label('story-atlas-use-line')).toBe('Use in Story Atlas');
+  expect(await label('story-atlas-never-line')).toBe('Never use in Story Atlas');
   // In Edit, one after the other.
-  expect(ids.indexOf('story-map-never-line')).toBe(ids.indexOf('story-map-use-line') + 1);
+  expect(ids.indexOf('story-atlas-never-line')).toBe(ids.indexOf('story-atlas-use-line') + 1);
   const edit = await app.evaluate(({ Menu }) =>
     (Menu.getApplicationMenu()?.items ?? [])
       .find((item) => item.label.replace(/&/g, '') === 'Edit')
       ?.submenu?.items.map((item) => item.id),
   );
-  expect(edit).toEqual(expect.arrayContaining(['story-map-use-line', 'story-map-never-line']));
+  expect(edit).toEqual(expect.arrayContaining(['story-atlas-use-line', 'story-atlas-never-line']));
 });
 
 test('File › Export lists the four Production exports, after the manuscript and before Export options', async ({
@@ -323,7 +323,7 @@ test('opens a help page in its own window', async ({ desktop }) => {
   for (const [label, path] of [
     ['Saving', '/docs/saving/'],
     ['Drafts and Cuts', '/docs/drafts-and-cuts/'],
-    ['Story Map', '/docs/story-map/'],
+    ['Story Atlas', '/docs/story-atlas/'],
     ['Drafter for Claude', '/docs/drafter-for-claude/'],
     ['Privacy', '/docs/privacy/'],
   ] as const) {

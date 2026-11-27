@@ -45,6 +45,43 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.29.0-threads',
+    date: '2026-11-26',
+    version: '0.29.0',
+    kind: 'New',
+    title: 'Threads: see which scenes each plot thread is in',
+    text: 'Tag a scene or chapter with the threads it belongs to, from its menu, and the Outline’s new Lanes view draws every thread along the whole work. The Story Atlas’s old Threads section is now called Setups and payoffs.',
+    link: { href: '/docs/threads/', label: 'Threads' },
+    banner: true,
+  },
+  {
+    id: 'v0.28.0-redblue-audit',
+    date: '2026-11-26',
+    version: '0.28.0',
+    kind: 'Security',
+    title: 'A second red/blue audit, and its fixes',
+    text: 'Five attackers found no way to run code from a file, reach the network from a page, or read a file you hadn’t chosen. They did find small files that could freeze the editor, the Preview, or an export for seconds; each is quick now, or refused past a size no real document reaches.',
+    link: release('0.28.0'),
+    banner: true,
+  },
+  {
+    id: 'v0.28.0-story-atlas',
+    date: '2026-11-26',
+    version: '0.28.0',
+    kind: 'Improved',
+    title: 'The story map is now the Story Atlas',
+    text: 'The page that shows a script at a glance to someone who doesn’t read scripts has a name of its own: Export → Story Atlas. Nothing else about it changes, and your scripts keep their planned length and character lines.',
+    link: { href: '/docs/story-atlas/', label: 'Story Atlas' },
+  },
+  {
+    id: 'v0.28.0-unsaved-in-status-bar',
+    date: '2026-11-26',
+    version: '0.28.0',
+    kind: 'Improved',
+    title: '“Unsaved” is in the status bar',
+    text: 'The red dot and “Unsaved”, which saves when clicked, now sit at the foot of the window beside “Saved to …”, so nothing in the top bar ever moves. On a phone, which has no status bar, the dot stays at the top.',
+  },
+  {
     id: 'v0.27.4-save-says-where',
     date: '2026-11-23',
     version: '0.27.4',
@@ -298,7 +335,7 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
     kind: 'New',
     title: 'Story map: a picture of your script to send to anyone',
     text: 'Export → Story map… makes one page that shows a non-writer your story’s shape, its people, and every scene so far, with a few lines of dialogue. It works on a phone and holds no notes.',
-    link: { href: '/docs/story-map/', label: 'Story map' },
+    link: { href: '/docs/story-atlas/', label: 'Story Atlas' },
     banner: true,
   },
 

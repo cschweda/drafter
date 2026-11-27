@@ -1,5 +1,17 @@
+export { CLOSING_BUDGET, closesTooOften, closingCost } from './closings';
 export { containerDepth, MAX_NESTING } from './depth';
-export { denseMarks, isEmphasisMark, MAX_BRACKETS, MAX_MARKS } from './marks';
+export {
+  DEEP_BRACKETS,
+  denseMarks,
+  isEmphasisMark,
+  isOpener,
+  MAX_BRACKETS,
+  MAX_MARKS,
+  MAX_OPENERS,
+  MAX_OPENERS_IN_ALL,
+  MAX_UNDERLINED,
+  OPENER_BUDGET,
+} from './marks';
 export {
   appendMarkdownMeta,
   commentJson,

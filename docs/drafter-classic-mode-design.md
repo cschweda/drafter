@@ -459,7 +459,7 @@ This is the riskiest part of the design and is tested on a real Android phone (ย
 - **Undo and redo:** Classic Mode's filters step back for `undo` and `redo`, and for `appChange` and transactions with no user event. So the Outline moving a scene, a module, Revert to Saved, and a cut put back are never settled, marked, or tidied.
 - **Spelling:** unchanged. Marks are ranges in the text, and they don't care about hidden characters. A hidden mark is never a word.
 - **Problems and lint:** unchanged, and on the same text. A problem may name a mark the writer can't see. **Call:** left for this release; Classic-written text doesn't raise them, and ยง15 tests that.
-- **Outline, Cards, Scaffold, Stats, Structure strip, Notes, Story map:** unchanged, since they read `parsedDoc`. A click that goes to a line (`goto`, `reveal`) goes through `classicCaret`, so it never lands inside a hidden mark.
+- **Outline, Cards, Scaffold, Stats, Structure strip, Notes, Story Atlas:** unchanged, since they read `parsedDoc`. A click that goes to a line (`goto`, `reveal`) goes through `classicCaret`, so it never lands inside a hidden mark.
 - **Scroll sync, folding, typewriter:** unchanged. Scroll sync speaks in offsets and line blocks. Classic's cursor moves that write nothing carry the `select` user event and a `navigated` check, so `centersOn` needs to know about them, or Tab across a line won't centre in typewriter scrolling.
 - **Compare, History, Drafts and Cuts, recovery:** unchanged. They see the text.
 - **Read-only** and frozen drafts: marks stay hidden and the look stays, since these are decorations. Keys are given back, so Tab moves focus.

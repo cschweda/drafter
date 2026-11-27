@@ -10,7 +10,9 @@ import {
   exportOptionsOpen,
   FDX_NOTE,
   NOTES_LEGEND,
+  NOTES_LEGEND_MARKDOWN,
   NOTES_ONLY_MARKDOWN,
+  NOTES_ONLY_MARKDOWN_DOCUMENT,
   OPTIONS_INTRO_MARKDOWN,
   OPTIONS_NOT_FOR_MARKDOWN,
   OPTIONS_READ_ONLY,
@@ -159,8 +161,10 @@ async function choose<K extends keyof ExportOptions>(
       </div>
     </fieldset>
     <fieldset :key="`notes-${drawn}`" :disabled="why.length > 0" aria-describedby="export-notes-what">
-      <legend>{{ NOTES_LEGEND }}</legend>
-      <p id="export-notes-what" class="fieldset-note">{{ NOTES_ONLY_MARKDOWN }}</p>
+      <legend>{{ markdown ? NOTES_LEGEND_MARKDOWN : NOTES_LEGEND }}</legend>
+      <p id="export-notes-what" class="fieldset-note">
+        {{ markdown ? NOTES_ONLY_MARKDOWN_DOCUMENT : NOTES_ONLY_MARKDOWN }}
+      </p>
       <div v-for="choice in NOTES_CHOICES" :key="choice" class="choice">
         <input
           :id="`export-notes-${choice}`"

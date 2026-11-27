@@ -18,7 +18,7 @@
 **[Write now at drafter.dev](https://drafter.dev)** · **[Download](https://drafter.dev/docs/download/)** · **[What is Drafter?](https://drafter.dev/docs/what-is-drafter/)** · **[What's new](https://drafter.dev/docs/whats-new/)**
 
 > [!NOTE]
-> **Status: v0.27.4.** The web app and the desktop apps for Windows and Linux are ready to use. v0.27.4 makes **Save say where it went, and brings a script back from Final Draft**: saving moves nothing in the top bar, the status bar names the file, and a script that has been through Final Draft keeps its sections, synopses, notes, and title page. v0.27.3 **kept the cursor where you left it**, v0.27.2 made **a page end where a sentence does**, v0.27.1 was **fixes before features**, and v0.27.0 brought **Production**, free. See the [roadmap](#roadmap).
+> **Status: v0.28.0.** The web app and the desktop apps for Windows and Linux are ready to use. v0.28.0, the first release after a freeze on features, renames the story map the **Story Atlas**, moves "Unsaved" to the status bar so nothing in the top bar moves, adds a quiet **Support Drafter** page, and brings the fixes from a **second red/blue audit**. v0.27.4 made **Save say where it went, and brought a script back from Final Draft**, v0.27.3 **kept the cursor where you left it**, v0.27.2 made **a page end where a sentence does**, and v0.27.0 brought **Production**, free. See the [roadmap](#roadmap).
 
 ## Contents
 
@@ -42,7 +42,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 - **Free, with no catch.** No price, no trial, no subscription, no locked "free tier", and no ads. Drafter isn't a business: one writer makes it, for writers, and gives it away. There is no paid version, and there won't be one.
 - **No login, ever.** No sign-up, no sign-in, no licence key, no activation. Close it, open it tomorrow, and you're back in your script.
-- **Private.** No cookies, no tracking of you, no telemetry. Drafter has no server that could receive your script, so it never leaves your device. The website counts page visits with cookie-free [Plausible](https://plausible.io/privacy-focused-web-analytics); **the desktop app has no analytics at all.** [Privacy](#privacy-your-script-stays-with-you), below, has the details.
+- **Private.** No cookies, no tracking of you, no telemetry. No server is ever sent your script, so it never leaves your device. The website counts page visits with cookie-free [Plausible](https://plausible.io/privacy-focused-web-analytics); **the desktop app has no analytics at all.** [Privacy](#privacy-your-script-stays-with-you), below, has the details.
 - **Open.** The code is MIT-licensed. Your script is a plain `.fountain` text file you own, which any app can open and which will still open in fifty years. A lapsed licence can never lock you out of your own work.
 - **Instant, and offline.** No installer or setup is needed to begin. Once it has loaded, Drafter runs with no connection, on a plane or a train.
 - **No forced updates.** The web app updates when you reload, or the next time you open it after closing every Drafter tab. The desktop app asks GitHub once at start-up whether there's a new version, never installs or restarts by itself, and can be told not to check at all.
@@ -53,7 +53,7 @@ Open it and write. Drafter is ready the moment the page loads or the app starts.
 
 Writers worry, rightly, about a script getting out before it's ready. Drafter is built so it can't, and an [audit](docs/privacy-audit-2026-11-03.md) checks it.
 
-- **Nothing in the cloud.** No server stores anything about your script, at drafter.dev or anywhere else: not its text, its title, its length, or its name. drafter.dev is a set of static files that sends the app to your browser. It has no database, no accounts, and nowhere to upload to. The desktop app has no server at all.
+- **Nothing in the cloud.** No server stores anything about your script, at drafter.dev or anywhere else: not its text, its title, its length, or its name. drafter.dev is a set of static files that sends the app to your browser, and one small function that passes on a report you choose to send by email. It has no database, no accounts, and nowhere to upload a script to. The desktop app has no server at all.
 - **Kept on your device only.** Your script lives in the files you save, plus Drafter's autosave, its history, drafts, and cuts. In the web app those are in your browser's own storage (IndexedDB) on this device, and in the desktop app in its folder on your computer. Drafts and cuts are also plain files beside your script.
 - **No AI.** Drafter has no AI in it: no AI service, no model, and nothing that reads your script to suggest, summarize, or learn from it. Your words never train anything. If you want your own AI app to read your scripts, [Drafter for Claude](https://drafter.dev/docs/drafter-for-claude/) is a separate program you set up yourself. It reads only the folders you name, and Drafter never starts it.
 - **It leaves only when you send it.** A file you share, a report you open on GitHub, an email you write: those go because you chose them, and only what you see goes.
@@ -64,8 +64,10 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 |---|---|---|---|
 | The app, its fonts, and its dictionaries | drafter.dev itself (or your own server, if you [host it](#self-hosted)) | When the page loads, and when it checks for a new version | No |
 | A count of page visits ([Plausible](https://drafter.dev/docs/privacy/#analytics): privacy-first, no cookies, no ads; only to see the basic traffic, for future improvements) | plausible.io | drafter.dev only: each page view and the time on it, each address cut before any `?` or `#`; no clicks, downloads, or forms | No. The desktop app and self-hosted copies don't have it |
-| A check for a new version | GitHub | The desktop app, when it starts; you can turn it off in Settings | No. GitHub sees your IP address, version, and system |
+| A check for a new version, and the update | GitHub | The desktop app, when it starts; you can turn it off in Settings. The AppImage and the Windows app then download the update in the background | No. GitHub sees your IP address, version, and system |
 | A report or an idea | GitHub, or your email app | Only when you click **Open on GitHub** or **Write an email** | Only what you typed and saw |
+| A report or an idea, sent by email for you | drafter.dev's own function, which hands it to [Resend](https://resend.com) to deliver to the maintainer | drafter.dev only: when you click **Send email**. Opening the report dialog asks that function once whether email is set up, and sends nothing else | Only what you typed and saw, and your reply address if you gave one. The function sees your internet address, as any server does, and counts reports from it for a minute |
+| A tip, if you choose to leave one | Ko-fi | Only when you follow the link on the [Support page](https://drafter.dev/docs/support/) | No |
 | A module you add yourself | The addresses it names | Desktop app only, and only once you agree to them | It can, so add only modules you trust ([more](https://drafter.dev/docs/privacy/#modules)) |
 
 **Checked, not just promised.** The [privacy audit of 3 November 2026](docs/privacy-audit-2026-11-03.md) went through every line of code that could reach the network, every place Drafter stores anything, and every dependency. It also ran a writing session on drafter.dev in Chrome, Firefox, and Safari's engine with every request recorded. A made-up phrase typed into the script appeared in none of them. It found one leak and it was fixed the same day: on drafter.dev, what a report said could reach the analytics when it was opened on GitHub. The [Privacy](https://drafter.dev/docs/privacy/) help page, in the app and on drafter.dev, says the same in more detail.
@@ -77,12 +79,13 @@ Writers worry, rightly, about a script getting out before it's ready. Drafter is
 - **Fountain or Classic.** Type Fountain's marks, or switch to **Classic Mode**: Enter and Tab move from element to element, names and places fill themselves in, headings and names capitalise themselves, and the left side looks like a script with the marks hidden. The file is plain Fountain either way, and one click in the top bar switches. [How it works](https://drafter.dev/docs/classic-mode/).
 - **Novel.** Draft a book in plain Markdown: `#` for a chapter, `##` or `***` for a section, `# Part One` for a part. The Outline and Cards show every chapter and section with its words, a status (To do, Draft, Revised, Done), a synopsis, and a word target; Alt+arrow keys or a drag reorders them. **Focus** shows one chapter or section at a time, and the file stays Markdown any app opens. **Export → Manuscript (PDF)…** or **(Word)…** makes the standard manuscript an agent or editor expects, after a short box for the title page's details. [How it works](https://drafter.dev/docs/novel/).
 - **Shape the story.** **Outline** (scenes and sections as a tree, with synopses, colors, running times, and a treatment export) and **Cards**, both rearranged by drag or keys. **Notes**, with categories, readers' names, and open or resolved status. Scene goals, setups and payoffs, and the **Structure strip**, a band of blocks above the panes to click and go.
+- **Threads.** Tag the scenes (or a novel's chapters) each plot thread is in, give a thread a name and a color, and see every thread as a lane along the whole work, with a table and a phone list. In the file it is a `[[Thread: Heist, Mara]]` note. Built, and coming in v0.29.0. [Help](https://drafter.dev/docs/threads/).
 - **Look back.** **History**, with every version restorable in one undo. **Compare**, with a GitHub-style view of what changed. **Show changes**, marked on the pages, and the history of one scene.
 - **Drafts and Cuts.** Start a new draft when you choose: Draft 01, Draft 02, each kept for good with an ID of its own, to read, compare, or restore, and **Draft by draft** to see how the work changed. **Cuts** keeps everything you cut, a scene, a speech, or a paragraph, to browse for ideas, copy, or put back. Both sit as plain files beside your script.
-- **Story map.** One dark page that answers "What are you writing?" in pictures, to send to anyone: the story's shape, its people, and every scene so far, with a few lines of dialogue and what is still to write. It opens on a phone, runs no code, and never includes your notes.
+- **Story Atlas.** One dark page that answers "What are you writing?" in pictures, to send to anyone: the story's shape, its people, and every scene so far, with a few lines of dialogue and what is still to write. It opens on a phone, runs no code, and never includes your notes.
 - **Drafter for Claude.** Let Claude (or another AI app you use) read the scripts, drafts, and cuts in folders you choose, for storyboards, notes, and insights across a series. Drafter itself never calls an AI. [Setting it up](https://drafter.dev/docs/drafter-for-claude/).
 - **See the script.** **Scaffold** follows your cursor and shows who is in the scene, where, and for how long, with a page for each character and place. The **Stats tab** has each character's screen time and dialogue share, and a character-by-scene grid that shows who vanishes for 20 pages. Running times by scene and act, at your own minutes a page or from the dialogue.
-- **Files and formats.** Real `.fountain` files, saved straight back in Chrome and Edge, autosaved in the browser as you type. Final Draft, Highland, Fade In, and Markdown in; PDF, Final Draft, Markdown, plain text, HTML, EPUB, and a story map out, and for a production, revised pages, a breakdown (CSV or PDF), and sides. See [Formats](#formats).
+- **Files and formats.** Real `.fountain` files, saved straight back in Chrome and Edge, autosaved in the browser as you type. Final Draft, Highland, Fade In, and Markdown in; PDF, Final Draft, Markdown, plain text, HTML, EPUB, and a Story Atlas out, and for a production, revised pages, a breakdown (CSV or PDF), and sides. See [Formats](#formats).
 - **Make it yours.** A calm dark theme by default, or light, or one that follows your system. Paper pages or a dark page for night, five text sizes, and optional script modules. Below 1024 pixels, one pane at a time, made for a phone.
 - **Get started.** A guided tour on a first visit, a **guided first screenplay** and **stage play** that teach each element as you read, sample scripts under **Help**, and help pages.
 - **Desktop.** Apps for Windows and Linux, and a Mac build, that always save in place and open a `.fountain` file with a double-click.
@@ -138,7 +141,7 @@ Drafter is built to open files from anyone without putting you at risk.
 - **The desktop app** never loads an opened file into a window. It reads the bytes of only the files you chose, and hands them to the editor.
 - **Reopening an HTML or EPUB file** reads only the script Drafter embedded in it, as text. A browser opening an HTML file outside Drafter is outside Drafter's control, so treat one someone sent you like any downloaded page (see [Open formats](https://drafter.dev/docs/open-formats/)).
 - **Drafter for Claude only reads, and only the folders you name.** It has no code that writes, moves, or deletes a file, starts a program, or opens a connection. A path leading outside your folders, through `..` or a link, is refused, hidden files are never read, and each file is judged by what's inside it, with the app's own size limits. Your notes are left out unless you ask.
-- **The trap documents.** Drafter is tested against [294 deliberately broken and hostile files](fixtures/trap/README.md) in every format it opens, plus the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs code, or fetches anything, and that each file finishes within its time limit ([what is enforced](fixtures/trap/README.md#running-it)). It runs on every pull request.
+- **The trap documents.** Drafter is tested against [298 deliberately broken and hostile files](fixtures/trap/README.md) in every format it opens, plus the special files a desktop meets, such as pipes and links. Each has the one outcome it must have: opened with its text, or refused with a plain message. The suite checks that nothing crashes, runs code, or fetches anything, and that each file finishes within its time limit ([what is enforced](fixtures/trap/README.md#running-it)). It runs on every pull request.
 - **Found a security problem?** Please report it privately: choose **Report a vulnerability** on the repository's [Security tab](https://github.com/cschweda/drafter/security) ([SECURITY.md](SECURITY.md) says what to include), or email cschweda@gmail.com with the details. Never in a public issue.
 
 The [Technical details](docs/technical-details.md#security) give the specifics.
@@ -147,30 +150,29 @@ The [Technical details](docs/technical-details.md#security) give the specifics.
 
 Every audit of Drafter, newest first. The newest is in full; each earlier one is kept here in a line, with its full report in [`docs/`](docs/AUDITS.md).
 
-**Newest: [red/blue team audit, 3 November 2026](docs/redblue-audit-2026-11-03.md).** Four red-team attackers each took one area (the web app and its file formats, the desktop app, the supply chain and release, and privacy) and tried to break it. A blue team then checked each finding, fixed what was real with a test that fails without the fix, and left only GitHub and npm settings for the maintainer. **No attack ran code from a script, a file, or an export, got past the security policy, or reached the network from a page.**
+**Newest: [red/blue team audit, 23 November 2026](docs/redblue-audit-2026-11-23.md).** Five red-team attackers each took one area (the web app and its file formats, the desktop app, the supply chain and release, privacy, and, for the first time, Drafter for Claude with the command line and Classic Mode) and tried to break it, proving each weakness by running it where they could. A blue team checked every finding and fixed what was real, with a test that fails without the fix wherever the fix is in code, and a second team then audited the findings and the fixes, which sent two dozen of them back to be done properly. **No attack ran code from a script, a file, or an export, reached the network from a page, or read a file the writer hadn't chosen.** What broke was mostly small hostile files that froze the editor or a tool.
 
 | | Severity | Finding | Mitigation | Status |
 |---|---|---|---|---|
-| P1 | High | Final Draft exports carried notes and synopses as printed text, even with notes left out | Leave out now leaves them all out; Include says they print | Fixed |
-| D1 | High | A compromised desktop page could hand the browser an address holding the script, past every network block | Only Drafter's own links open at once; any other site asks you first | Fixed |
-| S1 | High | One stolen credential could push a release, with no tag or branch protection | 7-day waits on new dependencies; tag and branch rulesets and a release environment are for the maintainer | Maintainer |
-| W1 | Medium | 160 KB of `*_` in a Markdown file froze the tab, again on every reload | Past 4,000 marks in a paragraph, they're plain text | Fixed |
-| W2 | Medium | The same file stalled the Preview and every export after it | That paragraph is refused before parsing, with a trap document to hold it | Fixed |
-| P2 | Medium | The script's title goes into the browser's history and tab sync | Settings → Hide the script's title in the tab | Mitigated |
-| P3 | Medium | The Story map's logline and synopses went into the browser's form history | `autocomplete="off"` on every text field, with a test | Fixed |
-| P4 | Medium | Plausible's script could read the page, and the policy allowed all of plausible.io | The policy allows one script and one address; the help says what can't be checked | Mitigated |
-| S2 | Medium | `drafter build` wrote through a planted link, overwriting a file outside the folder | Written beside and renamed, so a link is replaced | Fixed |
-| D2 | Low–Medium | A page could open a hidden window with the app's bridge | New windows always get the app's own chrome | Fixed |
-| S3–S5, W3–W4, P5–P7, D3 | Low | One huge file broke Drafter for Claude's listing; PR checks unenforced; Docker cached 404s; a template named `constructor` broke Cuts; a slow spellcheck on hyphen chains; cuts in shared folders; EPUB ids linking blind copies; a help line | Each fixed with a test, or warned about in the help; a download handler deferred | Fixed (D3 deferred) |
-| W5–W6, S6–S8, D4, P8 | Info | Extra addresses in a contact link, prototype lookups, a loose release check, ignore rules, and smaller notes | Fixed or recorded in [DEFERRED](docs/DEFERRED.md) | Fixed / recorded |
+| S1 | High | A pull request could run code on the maintainer's machine when checked out, through the tracked Git hooks folder | The hook is copied into Git's own folder; Git no longer reads the tracked one | Fixed |
+| S2 | High | One stolen credential could still push a release (open since 3 November) | Branch and tag rulesets, a release environment, and immutable releases are for the maintainer | Maintainer |
+| P1 | Medium | A locked script's file carries its text as it stood before the revision, scenes since cut included | The Production help page and the reopenable export's hint say so, and how to send a script without it | Documented |
+| P2 | Medium | Remove from this browser left the script's file name and its folder's handle | Removed with the script; a test fails on any row left | Fixed |
+| P3 | Medium | Privacy statements had become untrue since reports by email | The README and five help pages say what is sent, to whom, and when | Fixed |
+| S3 | Medium | A release build restored caches that other code can write | A release is built with no cache | Fixed |
+| W1–W6, M1–M3 | Medium | Nine small files froze the editor, an export, or Drafter for Claude: a note of spaces, a crowded scene, nested brackets, and others, each costing the square or the cube of its size | Each is linear now, or refused past a limit no real document reaches | Fixed |
+| D1, D3, C1–C3, K1, K2, M4, M5, W7–W16, P4–P7, S5–S8 | Low | A trusted site took any address; a module could pose as Drafter; the command line could write over its input; Classic Mode's settings block could be deleted; a Final Draft export showed title-page lines that never print; and smaller ones | Each fixed; those in code, with a test | Fixed |
+| D2, D5, S4 | Low | Two desktop findings that need a running app to prove, and a diagram script outside the lockfile | Recorded in [DEFERRED](docs/DEFERRED.md) | Deferred |
+| D4 | Low | Two scripts whose names clean to the same thing share drafts beside the file | Accepted, and the comment that overstated the guarantee corrected | Accepted |
 
 **Earlier audits:**
 
+- **[Red/blue team audit, 3 November 2026](docs/redblue-audit-2026-11-03.md):** four attackers, one area each. No attack ran code or reached the network from a page. Fixed: Final Draft exports that carried notes as printed text, a desktop page that could hand the browser an address holding the script, a file that froze the Markdown editor, and smaller ones.
 - **[Privacy audit, 3 November 2026](docs/privacy-audit-2026-11-03.md):** nothing about a script is stored in the cloud, and there's no AI. A writing session in three browsers on live drafter.dev sent the script in no request. One leak was fixed the same day: on drafter.dev, a report's text could reach the analytics.
 - **[Security audit, 1 November 2026](docs/security-audit-2026-11-01.md):** the first formal audit. No exploitable hole and nothing leaves the device. Fixed: private vulnerability reporting, the desktop's drop grant, Nuxt 4.6.3, and Dependabot.
 - **[Clean-room audit, 22 November 2026](docs/clean-room-audit-2026-11-22.md):** no copied code, no screenwriting package or converter, no file from another app. Fixed: a film reference back in a test, three small values that had come from a real Final Draft sample, and records that had fallen behind.
 - **[Clean-room audit, 1 November 2026](docs/clean-room-audit-2026-11-01.md):** no copied code, no screenwriting package, no GPL code shipped. A film catchphrase and an unrecorded source were fixed.
-- **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 294, each with the one outcome it must have, run on every pull request.
+- **[The trap documents](fixtures/trap/README.md), 1 November 2026 (v0.23.2):** 258 hostile files, now 296, each with the one outcome it must have, run on every pull request.
 - **Reopenable exports review, 1 November 2026 (v0.23.1):** only the embedded source is read, as text, with caps before unpacking.
 - **Accessibility pass, 28 October 2026 (v0.9.0):** automated axe checks in every browser and both themes. Screen-reader passes are still to come.
 - **[Clean-room audit, 27 October 2026](docs/clean-room-audit-2026-10-27.md):** passed, with two fixes.
@@ -180,7 +182,7 @@ Every audit of Drafter, newest first. The newest is in full; each earlier one is
 
 Drafter holds your script, so its tests guard two promises above all: **a change to the app never loses or alters a word you wrote, and a file you open can only be read, never do anything.** They check this by using Drafter the way you would, thousands of times over, before any change is kept.
 
-**What runs.** As of v0.27.4, there are **8,889 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,483 browser tests**, each run in five browser setups (7,415 runs), 140 end-to-end tests of the desktop app, and **294 trap documents** with 1,376 checks:
+**What runs.** As of v0.28.0, there are **9,129 unit and property tests** (in 24 packages, the web app, and the desktop app), **1,495 browser tests**, each run in five browser setups (7,475 runs), 141 end-to-end tests of the desktop app, and **296 trap documents** with 1,386 checks:
 
 - **Unit tests** check each piece on its own: the Fountain parser, the page layout, the PDF, every import and export, saving, drafts, and the editor's keys.
 - **Property tests** generate thousands of random scripts and check rules that must hold for every one of them, not just for the examples someone thought of. For instance, a script read and written back comes out the same, and Classic Mode never writes anything you couldn't have typed by hand.
@@ -234,7 +236,7 @@ Sources: each maker's own pricing, features, and help pages (Final Draft, Writer
 
 **On the web:** open [drafter.dev](https://drafter.dev) and write, on a computer or a phone, offline once it has loaded. Chrome and Edge save straight back to your file; other browsers download a copy ([Storage and browsers](docs/DEVELOPMENT.md#storage-and-browsers)). Install it as an app from the address bar to keep it in your Dock or Start menu.
 
-**On the desktop:** the same editor in a window of its own, built with Electron. It always saves in place, keeps its autosave in its own folder where no browser can delete it (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`), opens a `.fountain` file with a double-click, and asks **Save**, **Don't Save**, or **Cancel** before closing. It works offline. Its only network request is one update check at start, which you can turn off in Settings, and it never installs an update by itself. [Drafter on the web and on the desktop](docs/web-and-desktop.md) compares the two.
+**On the desktop:** the same editor in a window of its own, built with Electron. It always saves in place, keeps its autosave in its own folder where no browser can delete it (`~/.config/Drafter`; on Windows `%APPDATA%\Drafter`), opens a `.fountain` file with a double-click, and asks **Save**, **Don't Save**, or **Cancel** before closing. It works offline. Its only network requests are to GitHub, for updates: a check at start, which you can turn off in Settings, and, for the AppImage and the Windows app, the update itself, downloaded in the background. It never installs an update by itself. [Drafter on the web and on the desktop](docs/web-and-desktop.md) compares the two.
 
 ### Windows
 
@@ -296,7 +298,7 @@ The first run builds the app, which takes a few minutes. Then open `http://local
 Fountain is where you write. Everything else is a door in or a door out.
 
 - **In:** Fountain (`.fountain`, `.txt`) opens as it is. Final Draft (`.fdx`), Highland (`.highland`), and Fade In (`.fadein`) open as a new script. Markdown (`.md`) opens as a document, or as a screenplay; a **Novel** is a Markdown file that names its template in a trailing comment, so it opens in any Markdown app too. Drafter's own HTML and EPUB exports open again when saved with **Let Drafter reopen this file**. Anything else (Word, RTF, PDF, other web pages and e-books, an image) is refused, with a sentence saying what to do instead.
-- **Out:** PDF, Final Draft (`.fdx`), Markdown, plain text, Fountain, a typeset PDF of a Markdown document, a novel's standard **manuscript** as a PDF or a Word file, a self-contained web page (HTML), an e-book (EPUB), and a **story map**, one picture-first HTML page of the script or play for someone who doesn't read scripts, with no code and no notes in it. For a locked script, the **revised pages** (PDF), a **breakdown** of every scene (CSV or PDF), and **sides** for an actor (PDF). Export options per script set the scene numbers, the title page, whether your notes go along, and which revision marks print.
+- **Out:** PDF, Final Draft (`.fdx`), Markdown, plain text, Fountain, a typeset PDF of a Markdown document, a novel's standard **manuscript** as a PDF or a Word file, a self-contained web page (HTML), an e-book (EPUB), and a **Story Atlas**, one picture-first HTML page of the script or play for someone who doesn't read scripts, with no code and no notes in it. For a locked script, the **revised pages** (PDF), a **breakdown** of every scene (CSV or PDF), and **sides** for an actor (PDF). Export options per script set the scene numbers, the title page, whether your notes go along, and which revision marks print.
 - **Beside your script:** a drafts folder (`Boca drafts/Boca – Draft 01.fountain`, each draft a complete Fountain or Markdown file) and a cuts file (`Boca.fountain.cuts.md`, plain Markdown), written by the desktop app and by Chrome and Edge once you allow the folder; elsewhere, a zip to download.
 
 The file you open is never changed, and no words go missing silently: text Fountain has no element for comes in as a note, listed in Problems.
@@ -305,7 +307,7 @@ The same code runs in a terminal:
 
 ```sh
 drafter build script.fountain --pdf script.pdf     # a PDF; --txt for plain text, --html for a web page
-drafter build script.fountain --story-map map.html # a story map, to send to anyone
+drafter build script.fountain --story-atlas map.html # a Story Atlas, to send to anyone
 drafter convert ~/Scripts                          # every .fdx, .highland, and .fadein in the folder, to Fountain
 ```
 
@@ -318,7 +320,7 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 - The engine, the web app with its accessibility pass, and desktop apps for Linux and Windows, plus a Mac build.
 - Outline, Cards, Notes, History and Compare, spellcheck, the Structure strip, Scaffold and Stats, every main import, and HTML and EPUB export.
 - **Drafts and Cuts** (v0.24.0): numbered drafts, and a permanent file of everything you cut.
-- **Story map** (v0.24.1): a visual page of your script to send to anyone.
+- **Story Atlas** (v0.24.1): a visual page of your script to send to anyone.
 - **Drafter for Claude** (v0.24.2): let Claude or another AI app read the scripts, drafts, and cuts in folders you choose.
 - **Self-hosting** with Docker (v0.24.3).
 - **Classic Mode** (v0.25.0): type a script with Enter and Tab, over a file that stays Fountain.
@@ -328,17 +330,17 @@ drafter convert ~/Scripts                          # every .fdx, .highland, and 
 - **A page ends where a sentence does** (v0.27.2): action and speeches break at the last sentence that fits, locked scripts keep every page, and Reload for a new version no longer stalls.
 - **The cursor stays where you left it** (v0.27.3): it no longer jumps to the top of the script when the palette or a dialog closes on a busy page; a dialog reopened at once opens, and focus comes back after the tour.
 - **Save says where it went, and a script comes back from Final Draft** (v0.27.4): saving moves nothing in the top bar, the status bar names the file, Safari and Firefox ask for a name on the first Save, and sections, synopses, notes, and the title page survive a trip through Final Draft.
+- **The Story Atlas, a quiet tip jar, and a second red/blue audit** (v0.28.0): the story map renamed the Story Atlas, "Unsaved" in the status bar, a Support Drafter page that never asks, and the fixes from an audit by five attackers and a second team that checked their fixes.
 
 **Next:**
 
-- **More fixes before features** (v0.27.x): a page that, rarely, stops answering; page breaks at the end of a sentence; and Final Draft files checked on a real round trip, with locked pages and revisions. New features wait until then.
-- Storylines, the strip's Color by, and pacing (v0.28.0).
+- **Threads**, built and coming in v0.29.0: tag the scenes each plot thread is in, and see them as lanes along the whole script or novel. After it, the strip's Color by and pacing.
 
 **Later:**
 
-- The **Workbook** (v0.29.0): a story bible and scene cards, with your pasted, synced, and spoken notes.
-- An optional one-file `.drafter` project (v0.30.0, open spec).
-- Reader notes with no account, and the Reference tab (v0.31.0 and v0.32.0).
+- The **Workbook** (v0.30.0): a story bible and scene cards, with your pasted, synced, and spoken notes.
+- An optional one-file `.drafter` project (v0.31.0, open spec).
+- Reader notes with no account, and the Reference tab (v0.32.0 and v0.33.0).
 - A signed Mac download, **PDF import**, **real-time co-writing** (free, end-to-end encrypted, no account), and testing with NVDA and VoiceOver, last of all.
 
 **Not planned:** accounts, a paid version, or a Drafter server that keeps your scripts. The [full roadmap](docs/ROADMAP.md) has every phase.
@@ -379,5 +381,7 @@ Made by Christopher Schweda ([cschweda](https://github.com/cschweda)), who also 
 ## License
 
 [MIT](LICENSE) © 2026 Christopher Schweda. Courier Prime and Inter Tight are distributed under the SIL Open Font License, each with its license file alongside the fonts. The logo, icons, and share image are in [`brand/`](brand/). See the [Changelog](CHANGELOG.md) for every release.
+
+Drafter is free, and stays free. If you'd like to say thanks, you can leave a tip on [Ko-fi](https://ko-fi.com/chrisschweda) or [Buy Me a Coffee](https://buymeacoffee.com/cschweda); neither needs an account. More on the [Support Drafter](https://drafter.dev/docs/support/) page.
 
 **Trademark.** Drafter™ and the Drafter logo are trademarks of Christopher Schweda. The MIT License covers the code, so you are free to use, change, and share it; it doesn't grant use of the Drafter name or logo. A changed copy you share needs a name of its own. Final Draft is a trademark of its owner. Drafter reads and writes its file format so a script can move between the two apps, and isn't connected with or endorsed by Final Draft.

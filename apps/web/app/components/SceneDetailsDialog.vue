@@ -8,10 +8,11 @@ import {
   detailsDraft,
   sceneDetailsFor,
   takeFocusBack,
+  threadSuggestions,
 } from '~/outline/scene-details';
 import { useOutline } from '~/outline/use-outline';
 
-// Scene details (Phase 2 design §9): a scene's synopsis, color, storylines, and the four goal
+// Scene details (Phase 2 design §9): a scene's synopsis, color, threads, and the four goal
 // fields, written into its header (§5.4). Save writes only what changed, in one undo; Cancel and
 // Escape change nothing. The dialog holds the scene's id and finds the scene again when it saves,
 // so it never writes at offsets from before an edit.
@@ -36,7 +37,7 @@ function emptyDraft(): Required<SceneDetails> {
   return {
     synopsis: '',
     color: null,
-    storyline: '',
+    thread: '',
     goal: '',
     conflict: '',
     outcome: '',
@@ -50,8 +51,13 @@ const otherColor = computed(() => {
   return value && !(SCENE_COLORS as readonly string[]).includes(value) ? value : null;
 });
 
+/** The labels in use, offered as the Threads field is typed in (Threads design §7.4). */
+const suggestions = computed(() =>
+  sceneDetailsFor.value ? threadSuggestions(outline.index.value.scenes, draft.value.thread) : [],
+);
+
 const TEXT_FIELDS = [
-  { key: 'storyline', label: 'Storylines', hint: 'Labels, with commas: A, B' },
+  { key: 'thread', label: 'Threads', hint: 'Labels, with commas: A, B' },
   { key: 'goal', label: 'Goal', hint: 'What someone wants' },
   { key: 'conflict', label: 'Conflict', hint: 'What is in the way' },
   { key: 'outcome', label: 'Outcome', hint: 'What happens' },
@@ -149,8 +155,12 @@ function onClose() {
           autocomplete="off"
           :placeholder="field.hint"
           :readonly="readOnly"
+          :list="field.key === 'thread' ? 'scene-details-threads' : undefined"
         />
       </label>
+      <datalist id="scene-details-threads">
+        <option v-for="value in suggestions" :key="value" :value="value" />
+      </datalist>
       <div class="d-dialog-footer">
         <DButton @click="dialog?.close()">Cancel</DButton>
         <DButton

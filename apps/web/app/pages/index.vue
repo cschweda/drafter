@@ -22,7 +22,7 @@ import { installFileCheck } from '~/storage/check';
 import { installSystemOpen } from '~/storage/open';
 import { watchSaveError } from '~/storage/save';
 import { useScript } from '~/storage/script';
-import { installSpeechMenu } from '~/story-map/desktop-speech';
+import { installSpeechMenu } from '~/story-atlas/desktop-speech';
 import { installDesktopUpdates } from '~/update/desktop-source';
 import { guardEditorSelection, leavesOnEscape } from '~/utils/focus';
 
@@ -228,12 +228,14 @@ onBeforeUnmount(() => {
     <OutlineAnnouncer />
     <SpellMenu />
     <TreatmentDialog />
-    <StoryMapDialog />
+    <StoryAtlasDialog />
     <ManuscriptDialog />
     <RevisedPagesDialog />
     <SidesDialog />
     <ExportOptionsDialog />
     <SceneDetailsDialog />
+    <ThreadsDialog />
+    <ThreadEditDialog />
     <NewNoteDialog />
     <SettingsDialog />
     <HistoryDialog />

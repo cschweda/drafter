@@ -3,7 +3,13 @@ import { noteEntries } from '@drafter/notes';
 import { sceneIndex } from '@drafter/outline';
 import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, test } from 'vitest';
-import { categoriesInUse, type NoteFilter, notesShown, openCount } from '../app/notes/filter';
+import {
+  categoriesInUse,
+  type NoteFilter,
+  notesShown,
+  openCount,
+  swatchOf,
+} from '../app/notes/filter';
 
 // The Notes tab's groups and filters (Phase 2 design §8): every note and boneyard but the scene
 // fields and Wall cards, grouped, then filtered by category, person, status, scene, and text.
@@ -130,4 +136,12 @@ describe('categoriesInUse', () => {
       'question',
     ]);
   });
+});
+
+test('a category named for something every object has gets no swatch of its own (W20)', () => {
+  const swatches = { plot: '#abc' };
+  expect(swatchOf(swatches, 'plot')).toBe('#abc');
+  for (const name of ['constructor', 'toString', '__proto__', 'hasOwnProperty', 'missing']) {
+    expect(swatchOf(swatches, name), name).toBe('transparent');
+  }
 });

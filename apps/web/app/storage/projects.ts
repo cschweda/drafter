@@ -9,7 +9,7 @@ import type { DocumentKind } from '../markdown/kind';
 import { markdownTitle } from '../markdown/title';
 import { daysOf, goalKey, statsDaysOf } from '../stats/keys';
 import type { Rates } from '../stats/time-format';
-import type { StoryMapProjectOptions } from '../story-map/options';
+import type { StoryAtlasProjectOptions } from '../story-atlas/options';
 import type { ExportOptions } from '../workers/export-compute';
 import { db } from './db';
 import type { FileRef } from './files';
@@ -85,11 +85,13 @@ export interface Project {
    */
   timing?: Partial<Rates>;
   /**
-   * The story map's choices for this script (story-map design §7, Call 19): its status, the line
+   * The Story Atlas's choices for this script (story-atlas design §7, Call 19): its status, the line
    * under the name, the explaining line, what goes in, and the contact. A missing or unknown value
-   * is its default (`storyMapOptionsOf`). Unindexed, so it needed no new version.
+   * is its default (`storyAtlasOptionsOf`). Unindexed, so it needed no new version.
    */
-  storyMap?: Partial<StoryMapProjectOptions>;
+  /** The Story Atlas's choices for this script. The field keeps its name from before v0.28.0, when
+   * it was the story map: it is in every stored project. */
+  storyMap?: Partial<StoryAtlasProjectOptions>;
 }
 
 /** The kind a project is: Fountain unless it says it is Markdown. */
@@ -208,8 +210,9 @@ export async function writeSource(
 }
 
 /**
- * Also deletes its snapshots, its drafts and cuts, its file handle, its goal, its days’ counts, its
- * writing time, and its rows in the prints cache; never touches the file (nor any draft or cuts
+ * Also deletes its snapshots, its drafts and cuts, its file handle, its folder's handle and what
+ * else drafts beside the file kept, its goal, its days’ counts, its writing time, and its rows in
+ * the prints cache; never touches the file (nor any draft or cuts
  * file beside it).
  */
 export async function removeProject(id: string): Promise<void> {
@@ -231,6 +234,15 @@ export async function removeProject(id: string): Promise<void> {
     await db.cuts.where('projectId').equals(id).delete();
     await db.settings.delete(draftFromKey(id));
     await db.settings.bulkDelete([cutsPointKey(id), cutsFirstPointKey(id), cutsBackfillKey(id)]);
+    // What drafts and cuts kept beside the file left here (app/beside): the file's name, the
+    // folder's handle, its grant, and "don't ask again". The keys are spelled out because that
+    // code imports this file; a test holds them to its own (red/blue audit, 2026-11-23, P2).
+    await db.settings.bulkDelete([
+      `beside-names:${id}`,
+      `beside-declined:${id}`,
+      `folder-grant:${id}`,
+    ]);
+    await db.handles.delete(`folder:${id}`);
     await db.projects.delete(id);
   });
   // The prints cache is another database, so it's cleared after (version-history design §3.6): it

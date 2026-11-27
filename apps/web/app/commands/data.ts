@@ -4,6 +4,7 @@
 // menus, and that page can't disagree. Script modules' commands are added at run time and are not
 // here. This file imports only plain data, by relative paths, so a test outside the app can read it.
 
+import { SUPPORT_ON, SUPPORT_PAGE } from '../about/support';
 import { SAMPLES } from '../editor/sample-kinds';
 import { STARTER_KINDS } from '../editor/starter-kinds';
 import { DOCUMENT_TYPES } from '../editor/template';
@@ -30,6 +31,9 @@ export interface CommandData {
 
 /** What a writer looking for Production might search the palette for. */
 const PRODUCTION_WORDS = ['production', 'lock', 'revisions', 'scene numbers', 'shooting script'];
+
+/** What someone who wants to leave a tip might search the palette for (the page never says "donate"). */
+const SUPPORT_WORDS = ['tip', 'tip jar', 'donate', 'sponsor', 'thanks', 'ko-fi', 'support'];
 
 /** What a writer who wants Classic Mode might search the palette for. */
 const MODE_WORDS = ['final draft', 'mode', 'typing'];
@@ -70,6 +74,8 @@ export const HELP_PAGES: readonly HelpPage[] = [
     section: 'about',
   },
   { id: 'help-why', path: '/docs/why', title: 'Why Drafter', section: 'about' },
+  // Only in a build that has the maintainer's Ko-fi page (about/support.ts).
+  ...(SUPPORT_ON ? [SUPPORT_PAGE] : []),
   {
     id: 'help-fountain',
     path: '/docs/fountain',
@@ -84,6 +90,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
   },
   { id: 'help-novel', path: '/docs/novel', title: 'Novel', section: 'writing' },
   { id: 'help-production', path: '/docs/production', title: 'Production', section: 'writing' },
+  { id: 'help-threads', path: '/docs/threads', title: 'Threads', section: 'writing' },
   { id: 'help-saving', path: '/docs/saving', title: 'Saving and your browser', section: 'files' },
   {
     id: 'help-drafts-and-cuts',
@@ -91,7 +98,7 @@ export const HELP_PAGES: readonly HelpPage[] = [
     title: 'Drafts and cuts',
     section: 'writing',
   },
-  { id: 'help-story-map', path: '/docs/story-map', title: 'Story map', section: 'writing' },
+  { id: 'help-story-atlas', path: '/docs/story-atlas', title: 'Story Atlas', section: 'writing' },
   {
     id: 'help-drafter-for-claude',
     path: '/docs/drafter-for-claude',
@@ -247,7 +254,12 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'start-blank', title: 'Start blank', group: 'File' },
   { id: 'take-the-tour', title: 'Take the tour', group: 'Help' },
   ...HELP_PAGES.map(
-    (page): CommandData => ({ id: page.id, title: helpCommandTitle(page), group: 'Help' }),
+    (page): CommandData => ({
+      id: page.id,
+      title: helpCommandTitle(page),
+      group: 'Help',
+      ...(page.id === SUPPORT_PAGE.id && { keywords: SUPPORT_WORDS }),
+    }),
   ),
   { id: DOWNLOAD_PAGE.id, title: 'Download the desktop app', group: 'Help', webOnly: true },
   // Help → Sample scripts: a tiny sample of each kind, opened as a new script of the writer's own.
@@ -302,10 +314,10 @@ export const COMMAND_DATA: readonly CommandData[] = [
     group: 'File',
     keywords: ['e-book', 'ebook', 'e-reader', 'tablet'],
   },
-  // A picture of the script for a non-writer (story-map design §1.1): its dialog, then one page.
+  // A picture of the script for a non-writer (story-atlas design §1.1): its dialog, then one page.
   {
-    id: 'export-story-map',
-    title: 'Export as Story map…',
+    id: 'export-story-atlas',
+    title: 'Export as Story Atlas…',
     group: 'File',
     icon: 'i-lucide-map',
     keywords: ['visual', 'teaser', 'share', "what I'm writing"],
@@ -392,6 +404,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'show-preview', title: 'Show Preview', group: 'View' },
   { id: 'show-problems', title: 'Show Problems', group: 'View' },
   { id: 'show-outline', title: 'Show Outline', group: 'View' },
+  // The Outline's Lanes (threads design §7.3): a row per plot thread along the work.
+  { id: 'show-lanes', title: 'Show Lanes', group: 'View', keywords: ['threads', 'storylines'] },
   { id: 'show-cards', title: 'Show Cards', group: 'View' },
   { id: 'show-notes', title: 'Show Notes', group: 'View' },
   // Compare's (Phase 2 design §11.2, Call 21): N and Shift+N in the Compare tab, which is not a
@@ -561,6 +575,8 @@ export const COMMAND_DATA: readonly CommandData[] = [
   { id: 'move-scene-down', title: 'Move scene down', group: 'Edit' },
   // Scene details (Phase 2 design §9), for the scene holding the cursor.
   { id: 'scene-details', title: 'Scene details…', group: 'Edit' },
+  // Threads… (Threads design §7.4), for the scene or passage holding the cursor.
+  { id: 'scene-threads', title: 'Threads…', group: 'Edit' },
   // New note (Phase 2 design §8): at the end of the cursor's line, with an optional category.
   { id: 'new-note', title: 'New note…', group: 'Edit' },
   { id: 'expand-outline', title: 'Expand outline', group: 'Edit' },
@@ -651,9 +667,9 @@ export const COMMAND_DATA: readonly CommandData[] = [
   fountain('wrap-in-note', 'Wrap in a note', 'Mod-/'),
   fountain('mark-setup', 'Mark a setup'),
   fountain('mark-payoff', 'Mark a payoff'),
-  // The story map's lines of dialogue (story-map design §3.1, Call 6): the speech at the cursor.
-  fountain('story-map-use-line', 'Use in story map'),
-  fountain('story-map-never-line', 'Never use in story map'),
+  // The Story Atlas's lines of dialogue (story-atlas design §3.1, Call 6): the speech at the cursor.
+  fountain('story-atlas-use-line', 'Use in Story Atlas'),
+  fountain('story-atlas-never-line', 'Never use in Story Atlas'),
   fountain('cut-to-boneyard', 'Cut to the boneyard', 'Mod-Shift-/'),
 
   // Edit, the element bar's buttons for a Markdown document (the design, §5)

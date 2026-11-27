@@ -1,6 +1,11 @@
 import type { Scene } from '@drafter/outline';
 import { describe, expect, test } from 'vitest';
-import { changedDetails, detailsDraft, goalLine } from '../app/outline/scene-details';
+import {
+  changedDetails,
+  detailsDraft,
+  goalLine,
+  threadSuggestions,
+} from '../app/outline/scene-details';
 
 const at = { from: 0, to: 1 };
 
@@ -15,7 +20,7 @@ const scene = (more: Partial<Scene> = {}): Scene => ({
   synopses: [],
   color: null,
   fields: {},
-  storylines: [],
+  threads: [],
   marks: [],
   speakers: [],
   words: 0,
@@ -31,14 +36,14 @@ const full = scene({
   color: { value: 'blue', span: at },
   fields: {
     color: { body: 'blue', span: at },
-    storyline: { body: 'A, B', span: at },
+    thread: { body: 'A, B', span: at },
     goal: { body: 'Ann wants in. / Then out.', span: at },
     conflict: { body: 'The door is locked.', span: at },
     outcome: { body: 'She waits.', span: at },
     shift: { body: 'hope → dread', span: at },
   },
   // Every Storyline note's labels; the form shows only the first note's body.
-  storylines: ['A', 'B', 'C'],
+  threads: ['A', 'B', 'C'],
 });
 
 describe('Scene details', () => {
@@ -46,7 +51,7 @@ describe('Scene details', () => {
     expect(detailsDraft(full)).toEqual({
       synopsis: 'Ann arrives.',
       color: 'blue',
-      storyline: 'A, B',
+      thread: 'A, B, C',
       goal: 'Ann wants in. / Then out.',
       conflict: 'The door is locked.',
       outcome: 'She waits.',
@@ -55,12 +60,18 @@ describe('Scene details', () => {
     expect(detailsDraft(scene())).toEqual({
       synopsis: '',
       color: null,
-      storyline: '',
+      thread: '',
       goal: '',
       conflict: '',
       outcome: '',
       shift: '',
     });
+  });
+
+  test('shows every Storyline note label in the Thread field, not only the first note', () => {
+    expect(detailsDraft(full).thread).toBe('A, B, C');
+    expect(detailsDraft(scene({ threads: ['X'] })).thread).toBe('X');
+    expect(detailsDraft(scene()).thread).toBe('');
   });
 
   test('reports only the changed fields', () => {
@@ -85,10 +96,10 @@ describe('Scene details', () => {
         ...detailsDraft(full),
         synopsis: '',
         color: null,
-        storyline: ' ',
+        thread: ' ',
         conflict: '',
       }),
-    ).toEqual({ synopsis: '', color: null, storyline: '', conflict: '' });
+    ).toEqual({ synopsis: '', color: null, thread: '', conflict: '' });
   });
 
   test("the goal's first line stops at /", () => {
@@ -99,5 +110,22 @@ describe('Scene details', () => {
       'Win and/or lose',
     );
     expect(goalLine(scene())).toBeNull();
+  });
+});
+
+describe('the Threads field’s suggestions', () => {
+  const scenes = [
+    scene({ threads: ['Heist', 'Rain'] }),
+    scene({ threads: ['heist', 'Bottle'] }),
+    scene({ threads: [] }),
+  ];
+
+  test('every label in use, once each as first typed, for an empty field', () => {
+    expect(threadSuggestions(scenes, '')).toEqual(['Heist', 'Rain', 'Bottle']);
+  });
+
+  test('after a comma: the field so far and each label not yet in it', () => {
+    expect(threadSuggestions(scenes, 'Rain, ')).toEqual(['Rain, Heist', 'Rain, Bottle']);
+    expect(threadSuggestions(scenes, 'rain,Bo')).toEqual(['rain, Heist', 'rain, Bottle']);
   });
 });

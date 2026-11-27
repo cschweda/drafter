@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { HELP_PAGES } from '~/commands/data';
+import { SUPPORT_ON, SUPPORT_PAGE, SUPPORT_ROUTES } from '~/about/support';
+import { HELP_PAGES, helpHref } from '~/commands/data';
 
 definePageMeta({ layout: 'docs' });
 
@@ -10,6 +11,9 @@ useDocsHead({
   description:
     'Your script stays with you: nothing about it is stored in the cloud, no AI reads it, and it never leaves your device unless you send it. Audited 3 November 2026.',
 });
+
+/** Where the Support page's links go: the sites named in what uses the network. */
+const SUPPORT_PROVIDERS = SUPPORT_ROUTES.sponsor ? 'Ko-fi and GitHub' : 'Ko-fi';
 </script>
 
 <template>
@@ -31,7 +35,8 @@ useDocsHead({
       <li>
         <strong>Nothing in the cloud.</strong> No server stores anything about your script: not its
         text, its title, its length, or its name. drafter.dev is a set of files that sends the app to
-        your browser, with no database, no accounts, and nowhere to upload to. The desktop app has no
+        your browser, and one small function that passes on a report you choose to send by email,
+        with no database, no accounts, and nowhere to upload a script to. The desktop app has no
         server at all.
       </li>
       <li>
@@ -55,8 +60,14 @@ useDocsHead({
       <strong>What does use the network, all of it:</strong> loading Drafter from drafter.dev (the
       app, its fonts, and its dictionaries all come from drafter.dev itself); on drafter.dev only,
       Plausible’s count of page visits (<a href="#analytics">below</a>); in the desktop app, a check
-      with GitHub for a new version when it starts, which you can turn off in Settings; and the links
-      and reports you click. None of it carries your script.
+      with GitHub for a new version when it starts, which you can turn off in Settings, and for
+      the AppImage and the Windows app the update itself, downloaded in the background; the links
+      you click; and a report, if you choose to send one (on drafter.dev, Send email passes it
+      through drafter.dev to Resend, a mail service). None of it carries your script.
+    </p>
+    <p v-if="SUPPORT_ON">
+      The <a :href="helpHref(SUPPORT_PAGE)">Support page</a> links to {{ SUPPORT_PROVIDERS }}.
+      Nothing is sent there unless you follow a link.
     </p>
     <p>
       <strong>The audit.</strong> On 3 November 2026 Drafter was audited for exactly this: every line
@@ -75,8 +86,8 @@ useDocsHead({
       <li><strong>No account.</strong> There is nothing to sign up for or sign in to.</li>
       <li><strong>No cookies, and no tracking of you.</strong> Drafter never follows you from site to site and never records your keystrokes. drafter.dev measures visitor traffic with Plausible, privacy-focused analytics with no cookies (<a href="#analytics">below</a>); the desktop app has no analytics.</li>
       <li><strong>No telemetry.</strong> Drafter sends no error reports, and nothing about what you do in it or the state of your browser. On drafter.dev only, Plausible counts page visits (<a href="#analytics">below</a>).</li>
-      <li><strong>No uploads.</strong> A script, its title, its word count, and your settings never leave the device. Drafter has no server that could receive them.</li>
-      <li><strong>No outside services but one.</strong> The fonts, icons, and dictionaries are part of Drafter and come from drafter.dev itself, not from Google or a content network. On drafter.dev, the one outside service is Plausible.</li>
+      <li><strong>No uploads.</strong> A script, its title, its word count, and your settings never leave the device. No server is ever sent them.</li>
+      <li><strong>No outside services but two.</strong> The fonts, icons, and dictionaries are part of Drafter and come from drafter.dev itself, not from Google or a content network. On drafter.dev, the outside services are Plausible, which counts page visits, and Resend, which delivers a report only when you choose Send email (<a href="#reporting">below</a>).</li>
       <li><strong>No browser spellcheck service.</strong> Chrome’s Enhanced spell check and Edge’s Microsoft Editor send what you type to Google or Microsoft, so Drafter turns the browser’s spellcheck off in every field. Its own spellcheck runs on your device. The one exception is Report a problem, whose text you are about to send anyway.</li>
     </ul>
     <p>
@@ -195,10 +206,12 @@ useDocsHead({
       you. <strong>Send email</strong>, offered on drafter.dev only, sends that same report, and the
       reply address if you typed one, to drafter.dev’s own small server function, which emails it
       to Drafter’s maker through Resend, an email service. It is the one time Drafter itself sends
-      something you wrote, and it happens only when you press the button. The function keeps
-      nothing; your address is used only to reply. The desktop app and a self-hosted copy don’t
+      something you wrote, and it happens only when you press the button. The function stores
+      nothing: to keep a flood of reports out, it counts for a minute how many came from each
+      internet address, in memory, and your reply address is used only to reply. Resend, which
+      delivers the email, keeps a record of it as any mail service does. The desktop app and a self-hosted copy don’t
       offer it. While the dialog is open on drafter.dev, it asks that function once whether email
-      is set up, a request that carries nothing about you. Your script is never included: not its text, its title, its
+      is set up, a request that carries nothing you typed. Your script is never included: not its text, its title, its
       file name, or your notes. <strong>Include technical details</strong> adds only what
       <strong>About → Copy technical details</strong> copies, and you can turn it off: Drafter’s
       version, which app this is, the system and browser, the language, the screen and window
@@ -335,9 +348,9 @@ useDocsHead({
             <td></td>
           </tr>
           <tr>
-            <th scope="row">Story map</th>
-            <td>What a story map shows: short summaries, a few lines, hooks, and thread names</td>
-            <td>Your Setup and Payoff names only, as the story map shows them</td>
+            <th scope="row">Story Atlas</th>
+            <td>What a Story Atlas shows: short summaries, a few lines, hooks, and thread names</td>
+            <td>Your Setup and Payoff names only, as the Story Atlas shows them</td>
             <td>Numbers</td>
           </tr>
           <tr>

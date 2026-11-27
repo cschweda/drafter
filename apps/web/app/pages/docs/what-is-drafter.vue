@@ -185,7 +185,7 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
         <li>
           <strong>The features that matter.</strong> Industry-standard pages, stage plays, an
           outline and index cards, notes, version history and Compare, numbered drafts, character
-          and scene stats, a story map to send to anyone, offline spellcheck, focus mode, goals and
+          and scene stats, a Story Atlas to send to anyone, offline spellcheck, focus mode, goals and
           sprints, and a dark theme.
         </li>
       </ul>
@@ -238,11 +238,16 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
           <a :href="help('help-drafts-and-cuts')">Drafts and cuts</a>
         </li>
         <li>
-          <strong>A story map to send to anyone.</strong> One page that shows someone who doesn’t
+          <strong>Threads.</strong> Tag the scenes (or chapters) each plot thread is in, give a thread
+          a name and a color, and see every thread as a lane along the whole work.
+          <a :href="help('help-threads')">Threads</a>
+        </li>
+        <li>
+          <strong>A Story Atlas to send to anyone.</strong> One page that shows someone who doesn’t
           read scripts the whole story so far: its shape, its people, and every scene in order, with
           a few lines of dialogue and what is still to write. It opens on a phone, has no code,
           fetches nothing, and never includes your notes.
-          <a :href="help('help-story-map')">Story map</a>
+          <a :href="help('help-story-atlas')">Story Atlas</a>
         </li>
       </ul>
       <h3 id="production">For a script going into production</h3>
@@ -262,8 +267,8 @@ const diagrams = HOW_IT_WORKS.map((diagram) => {
       <ul>
         <li><strong>No account.</strong> Nothing to sign up for, and nothing to sign in to.</li>
         <li>
-          <strong>No server keeping your scripts.</strong> drafter.dev is a static site: it has no
-          server that could receive your script. Your work stays on your device, in the files you
+          <strong>No server keeping your scripts.</strong> drafter.dev sends the app to your browser and keeps nothing: no
+          server is ever sent your script. Your work stays on your device, in the files you
           save and in Drafter’s autosave in your browser.
         </li>
         <li>

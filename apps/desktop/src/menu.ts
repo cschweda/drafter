@@ -151,8 +151,8 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: prefix('emphasis-'), submenu: 'Emphasis', strip: /^Emphasis: / },
     { pick: prefix('make-'), submenu: 'Force', strip: /^Force / },
     { pick: ['dual-dialogue', 'wrap-in-note', 'cut-to-boneyard'] },
-    // The story map's lines (story-map design §3.1): the speech at the cursor.
-    { pick: ['story-map-use-line', 'story-map-never-line'] },
+    // The Story Atlas's lines (story-atlas design §3.1): the speech at the cursor.
+    { pick: ['story-atlas-use-line', 'story-atlas-never-line'] },
     { pick: prefix('markdown-'), submenu: 'Markdown', strip: /^Markdown: / },
   ],
   View: [
@@ -195,7 +195,7 @@ const LAYOUT: Record<Group, Section[]> = {
         'help-shortcuts',
         'help-saving',
         'help-drafts-and-cuts',
-        'help-story-map',
+        'help-story-atlas',
         'help-drafter-for-claude',
         'help-privacy',
         'help-licences',
@@ -230,7 +230,7 @@ const LABELS: Record<string, string> = {
   'help-shortcuts': 'Keyboard Shortcuts',
   'help-saving': 'Saving',
   'help-drafts-and-cuts': 'Drafts and Cuts',
-  'help-story-map': 'Story Map',
+  'help-story-atlas': 'Story Atlas',
   'help-drafter-for-claude': 'Drafter for Claude',
   'help-privacy': 'Privacy',
   'help-licences': 'Third-party Licences',

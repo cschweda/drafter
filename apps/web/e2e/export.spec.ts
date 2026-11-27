@@ -624,7 +624,7 @@ async function openOptions(page: Page) {
 /** Opens the dialog, chooses `label` in the `group`, and closes it with Done. */
 async function choose(
   page: Page,
-  group: 'Scene numbers' | 'Title page' | 'Include notes (Markdown, HTML, and EPUB)',
+  group: 'Scene numbers' | 'Title page' | 'Include notes (Markdown, HTML, EPUB, and Final Draft)',
   label: string,
 ) {
   await openOptions(page);
@@ -672,7 +672,7 @@ test.describe('export options', () => {
       'PDF',
       'HTML (.html)',
       'EPUB (.epub)',
-      'Story map (.html)…',
+      'Story Atlas (.html)…',
       'Fountain (.fountain)',
       'Plain text (.txt)',
       'Final Draft (.fdx)',
@@ -1052,12 +1052,12 @@ test.describe('a script as Markdown', () => {
     page,
   }) => {
     await start(page);
-    await choose(page, 'Include notes (Markdown, HTML, and EPUB)', 'Include');
+    await choose(page, 'Include notes (Markdown, HTML, EPUB, and Final Draft)', 'Include');
     await page.reload();
     await expectScript(page, 'The Call');
     await openOptions(page);
     const notes = optionsDialog(page).getByRole('group', {
-      name: 'Include notes (Markdown, HTML, and EPUB)',
+      name: 'Include notes (Markdown, HTML, EPUB, and Final Draft)',
     });
     await expect(notes.getByRole('radio', { name: 'Include', exact: true })).toBeChecked();
     await optionsDialog(page).getByRole('button', { name: 'Done' }).click();
@@ -1083,10 +1083,10 @@ test.describe('a script as Markdown', () => {
       await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
       await openOptions(page);
       const notes = optionsDialog(page).getByRole('group', {
-        name: 'Include notes (Markdown, HTML, and EPUB)',
+        name: 'Include notes (Markdown, HTML, EPUB, and Final Draft)',
       });
       await expect(notes).toContainText(
-        'Only the Markdown, HTML, and EPUB exports carry notes; a PDF never prints them.',
+        'Only the Markdown, HTML, EPUB, and Final Draft exports carry notes; a PDF never prints them.',
       );
       const leaveOut = notes.getByRole('radio', { name: 'Leave out', exact: true });
       const include = notes.getByRole('radio', { name: 'Include', exact: true });
@@ -1127,7 +1127,7 @@ test.describe('a script as Markdown', () => {
 
   test('the script is unchanged by exporting Markdown', async ({ page }) => {
     await start(page);
-    await choose(page, 'Include notes (Markdown, HTML, and EPUB)', 'Include');
+    await choose(page, 'Include notes (Markdown, HTML, EPUB, and Final Draft)', 'Include');
     const before = await editor(page).evaluate((el) => el.textContent);
     await downloadMarkdown(page);
     await expect(ready(page)).toHaveText('Exported The Call.md, with notes.');

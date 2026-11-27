@@ -27,6 +27,8 @@ import { classicTidied } from './marks';
 // is the backstop, and what's typed where no line stands above it gets one.
 
 /** Where text can start: a byte-order mark stays first. */
+const OPENER = '/* drafter';
+
 const firstColumn = (doc: Text) => (doc.line(1).text.startsWith(BOM) ? 1 : 0);
 
 /** The block's line, and the line breaks just before it that keep it a block of its own: up to two. */
@@ -38,12 +40,59 @@ function blockStart(doc: Text, span: Span): { line: Line; from: number } {
   return { line, from: before.number === 1 ? 0 : before.from - 1 };
 }
 
+/** The settings block is small; its opening line is looked for no further from the end than this. */
+const BLOCK_REACH = 16_384;
+
 /**
- * From the line breaks before the block to its end, for the block `parse` reads as `doc.meta`, or
- * null with none. Blank lines above those two are the writer's: Enter on the last element makes one.
+ * The block by its text alone, at the foot of the file, found as the parser finds it: the last
+ * `/* drafter` that starts a line (after any indent) and ends it, then settings that read as
+ * JSON, then the first `*/ ` after them, with nothing but space after that. For when the parser
+ * doesn't read it as the settings: a comment opened above it (`; /*` typed anywhere, or the Wall's
+ * close deleted) makes everything below one boneyard, and the block was then the writer's to
+ * delete with the rest (red/blue audit of 23 November 2026, K1; laid out any other way than
+ * Drafter writes it, it still was, until the audit of that audit). It is the same block, and
+ * comes back as the settings when the comment is closed.
+ */
+function writtenBlock(doc: Text): Span | null {
+  // First the cheap look, made on every change: the last line with anything on it ends the block.
+  let last = doc.lines;
+  while (last >= 1 && isBlank(doc.line(last).text)) last--;
+  if (last < 1 || !doc.line(last).text.trimEnd().endsWith('*/')) return null;
+  const base = Math.max(0, doc.length - BLOCK_REACH);
+  const tail = doc.sliceString(base);
+  const body = tail.trimEnd();
+  if (!body.endsWith('*/')) return null;
+  const open = body.lastIndexOf(OPENER);
+  if (open < 0) return null;
+  // Alone on its line but for an indent, and the line ends with it.
+  const lineStart = body.lastIndexOf('\n', open) + 1;
+  if (lineStart === 0 && base > 0) return null;
+  if (body.slice(lineStart, open).trim() !== '') return null;
+  const after = body.slice(open + OPENER.length).match(/^[ \t]*\r?\n/);
+  if (!after) return null;
+  const inside = body.slice(open + OPENER.length + after[0].length, body.length - 2);
+  if (inside.includes('*/')) return null;
+  // Only one whose settings still read: a damaged block is the writer's to mend or delete.
+  try {
+    const settings: unknown = JSON.parse(inside);
+    if (typeof settings !== 'object' || settings === null || Array.isArray(settings)) return null;
+  } catch {
+    return null;
+  }
+  return { from: base + open, to: base + body.length };
+}
+
+/** The block to protect: the one `parse` reads as `doc.meta`, or the one written at the foot. */
+const blockSpan = (state: EditorState): Span | null =>
+  metadataSpan(state.field(parsedDoc)) ?? writtenBlock(state.doc);
+
+/**
+ * From the line breaks before the block to its end, for the block `parse` reads as `doc.meta` (or
+ * the one written at the foot, `writtenBlock`), or null with none. Blank lines above those two are
+ * the writer's: Enter on the last element makes one.
  */
 export function protectedRange(state: EditorState): Span | null {
-  const span = metadataSpan(state.field(parsedDoc));
+  const span = blockSpan(state);
   return span && { from: blockStart(state.doc, span).from, to: span.to };
 }
 
@@ -185,9 +234,19 @@ function roomFor(tr: Transaction, changes: ChangeSet): TransactionSpec | null {
 export const keepMetadata: Extension = EditorState.transactionFilter.of((tr) => {
   if (!tr.docChanged || standsBack(tr)) return tr;
   const { doc, lineBreak } = tr.startState;
-  const span = metadataSpan(tr.startState.field(parsedDoc));
+  const span = blockSpan(tr.startState);
   if (!span) return tr;
   const { line, from } = blockStart(doc, span);
+  // A line moved or copied down onto the block is one change that takes text out above it and
+  // puts a copy of the block's first line in: cut back, the copy stayed, as a stray `/* drafter`
+  // above the writer's line (red/blue audit of 23 November 2026, K2). It doesn't happen at all.
+  if (tr.isUserEvent('move.line') || tr.isUserEvent('input.copyline')) {
+    let reaches = false;
+    tr.changes.iterChangedRanges((_fromA, toA) => {
+      if (toA > from) reaches = true;
+    });
+    if (reaches) return [];
+  }
   const cut = cutBack(tr, from);
   const final = cut?.changes ?? tr.changes;
   const at = final.mapPos(from, 1);

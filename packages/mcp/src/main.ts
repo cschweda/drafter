@@ -7,7 +7,7 @@ import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import pkg from '../package.json' with { type: 'json' };
 import { parseOptions, USAGE } from './options';
 import { callLimitMs, ReaderPool, type WorkerSpec } from './pool';
-import { resolveRoots, StartError } from './roots';
+import { mountPoint, resolveRoots, StartError } from './roots';
 import { createServer } from './server';
 
 export const VERSION: string = pkg.version;
@@ -49,6 +49,13 @@ export async function main(
       return 1;
     }
     throw error;
+  }
+  for (const root of roots) {
+    if (await mountPoint(root.real, platform)) {
+      io.err(
+        `drafter-mcp: ${root.real} is a whole drive or share. Every script on it can be read; name a folder on it to read less.`,
+      );
+    }
   }
   const pool = new ReaderPool(
     worker,

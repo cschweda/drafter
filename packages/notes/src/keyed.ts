@@ -2,14 +2,14 @@
 // spaces); writing is exact (`[[Key: body]]`, title case, one space, the body on one line).
 
 /** The fields a scene's header holds, in the order Drafter writes them (design §5.4). */
-export type FieldKey = 'color' | 'storyline' | 'goal' | 'conflict' | 'outcome' | 'shift';
+export type FieldKey = 'color' | 'thread' | 'goal' | 'conflict' | 'outcome' | 'shift';
 /** The inline marks that tie a setup to its payoff (design §10). */
 export type MarkKey = 'setup' | 'payoff';
 
 /** A scene header's order (design §5.4). */
 export const FIELD_ORDER: readonly FieldKey[] = [
   'color',
-  'storyline',
+  'thread',
   'goal',
   'conflict',
   'outcome',
@@ -57,8 +57,13 @@ const MAX_HEAD = 40;
 /** A head's characters: a letter, then letters, spaces, and `' ’ . - ? !`. */
 const HEAD = /^\p{L}[\p{L}\p{M} '’.\-?!]*$/u;
 
-/** `Name on “quote”:` (straight or curly quotes), up to and including the colon. */
-const ON = /^[ \t]*([^\r\n:]*?)[ \t]+on[ \t]+["“]([^"”\r\n]*)["”][ \t]*:/u;
+/**
+ * `Name on “quote”:` (straight or curly quotes), up to and including the colon. The name starts
+ * and ends on something that isn't a space, so the spaces around it are matched one way only: with
+ * a name that could be spaces, a note of three thousand of them was tried every way they split in
+ * three, and held the editor for fifteen seconds (red/blue audit of 23 November 2026, W1).
+ */
+const ON = /^[ \t]*([^\s:](?:[^\r\n:]*?[^\s:])?)[ \t]+on[ \t]+["“]([^"“”\r\n]*)["”][ \t]*:/u;
 
 /** `#word` at a word's start: a letter, then letters, digits, or hyphens. */
 const TAG = /(?<![\p{L}\p{M}\p{N}_#])#(\p{L}[\p{L}\p{M}\p{N}-]*)/gu;
@@ -95,6 +100,7 @@ const PARTICLES = new Set([
 /** Whether `lower` is a field key, a mark, or `card`. */
 const isKey = (lower: string) =>
   (FIELD_ORDER as readonly string[]).includes(lower) ||
+  lower === 'storyline' ||
   (MARKS as readonly string[]).includes(lower) ||
   lower === 'card';
 
@@ -123,6 +129,8 @@ function headOf(text: string, open: boolean): Head | null {
   const head = nameOf(text);
   if (head === null) return null;
   const lower = head.toLowerCase();
+  // `Storyline` is the old word for `Thread` and is read as the same field, forever.
+  if (lower === 'storyline') return { kind: 'field', key: 'thread' };
   if ((FIELD_ORDER as readonly string[]).includes(lower))
     return { kind: 'field', key: lower as FieldKey };
   if ((MARKS as readonly string[]).includes(lower)) return { kind: 'mark', key: lower as MarkKey };
@@ -239,7 +247,7 @@ export function normalizeLabel(label: string): string {
   return label.toLowerCase().replace(/\s+/gu, ' ').trim();
 }
 
-/** A note that is one of Drafter's whole-body marks (story-map design §3.1, §5.1). */
+/** A note that is one of Drafter's whole-body marks (story-atlas design §3.1, §5.1). */
 export type WholeMark = 'quote' | 'no-quote' | 'interval' | 'no-interval';
 
 const WHOLE_MARKS: ReadonlyMap<string, WholeMark> = new Map([
@@ -282,8 +290,12 @@ export function safeBody(text: string): string {
 
 /** One line of the writer's words, safe to put anywhere in Fountain: no line break, no note or boneyard opener. */
 export function safeLine(text: string): string {
-  return text
-    .replace(/\s*\r?\n\s*/g, ' / ')
+  // Line by line, and not with one pattern over the spaces around each break: on a long run of
+  // spaces with no break in it, that pattern started again from every space (the same audit, W8).
+  const lines = text.split(/\r?\n/).map((line) => line.trim());
+  // Blank lines between two lines make one break, as the pattern's run of spaces did.
+  const kept = lines.filter((line, i) => line !== '' || i === 0 || i === lines.length - 1);
+  return (lines.length > 1 ? kept.join(' / ') : text)
     .replace(/\[(?=\[)/g, '[ ')
     .replace(/\/(?=\*)/g, '/ ')
     .replace(/\*(?=\/)/g, '* ')

@@ -93,22 +93,89 @@ export function fileBaseName(name: string | undefined): string {
   return base.trim() || 'Untitled';
 }
 
-// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this removes.
-const UNSAFE = /[/\\:*?"<>|\u0000-\u001f\u007f]/g;
+// What a file name can't hold, and what can't be seen in one: every control character, the
+// format characters (zero-width ones, and the direction overrides, which made a name read
+// backward or end in a false extension; red/blue audit of 23 November 2026, W13), and the
+// letters and marks that draw nothing (the Hangul fillers, the blank Braille cell, the combining
+// grapheme joiner, the Mongolian selectors). Two kinds of format character stay, where a real
+// title needs them: the joiners (U+200C, U+200D: Persian, a family emoji), and the tag characters
+// that follow a black flag and make it Scotland's or Wales's.
+const UNSAFE = /[/\\:*?"<>|\p{Cc}\p{Cf}\u2028\u2029]/u;
+/** Letters and marks that draw nothing, by code point (a pattern's class can't hold a combining one). */
+const BLANK = new Set([
+  0x034f, 0x115f, 0x1160, 0x180b, 0x180c, 0x180d, 0x180e, 0x180f, 0x2800, 0x3164, 0xffa0,
+]);
+const isJoiner = (code: number) => code === 0x200c || code === 0x200d;
+const isTag = (code: number) => code >= 0xe0020 && code <= 0xe007f;
+const FLAG = '\u{1f3f4}';
+/** What draws nothing alone (a space, a joiner, a variation selector, a tag): a name of only these is no name. */
+const drawsNothing = (char: string) => {
+  const code = char.codePointAt(0) as number;
+  return /\s/.test(char) || isJoiner(code) || isTag(code) || (code >= 0xfe00 && code <= 0xfe0f);
+};
 const MAX_NAME = 120;
+/**
+ * Under the 255 bytes most disks allow a name, with room for the extension and a " (2)": 120
+ * letters of two bytes each, 80 of three.
+ */
+const MAX_NAME_BYTES = 240;
+/**
+ * The names Windows keeps for devices, whatever follows the first dot (`NUL.tar.gz` is `NUL`), with
+ * the superscript digits it takes for 1 to 3, and the two console names.
+ */
+const DEVICE =
+  /^(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3]|conin\$|conout\$)$/iu;
+
+/** `title` without what a name can't hold or show, one character at a time. */
+function seen(title: string): string {
+  let out = '';
+  let flag = false;
+  for (const char of title) {
+    const code = char.codePointAt(0) as number;
+    if (isTag(code)) {
+      if (flag) out += char;
+      continue;
+    }
+    flag = char === FLAG;
+    if (isJoiner(code) || (!UNSAFE.test(char) && !BLANK.has(code))) out += char;
+  }
+  return out;
+}
 
 /**
- * A file name: the title without `/ \ : * ? " < > |` and control characters,
+ * A file name: the title without `/ \ : * ? " < > |`, control characters, and characters that
+ * can't be seen, never a name Windows keeps for a device,
  * without leading or trailing dots and spaces, at most 120 characters, plus the
  * extension. A title with nothing left is "Untitled".
  */
 export function fileNameFor(
   title: string,
-  extension: '.fountain' | '.md' | '.pdf' | '.html' | '.epub' | '.txt' | '.fdx' | '.docx' | '.csv',
+  extension:
+    | '.fountain'
+    | '.md'
+    | '.pdf'
+    | '.html'
+    | '.epub'
+    | '.txt'
+    | '.fdx'
+    | '.docx'
+    | '.csv'
+    | '.zip',
 ): string {
-  const cleaned = title.replace(UNSAFE, '').replace(/\s+/g, ' ').trim();
-  // Cut by code point, so an emoji is never split.
-  const cut = Array.from(cleaned).slice(0, MAX_NAME).join('');
-  const name = cut.replace(/^[.\s]+|[.\s]+$/g, '');
-  return (name || 'Untitled') + extension;
+  const cleaned = seen(title).replace(/\s+/g, ' ').trim();
+  // Cut by code point, so an emoji is never split, and to a length in bytes a disk allows: 120
+  // emoji are 480 bytes (the same audit, W14).
+  const encoder = new TextEncoder();
+  let cut = '';
+  let bytes = 0;
+  for (const char of Array.from(cleaned).slice(0, MAX_NAME)) {
+    bytes += encoder.encode(char).length;
+    if (bytes > MAX_NAME_BYTES) break;
+    cut += char;
+  }
+  let name = cut.replace(/^[.\s]+|[.\s]+$/g, '');
+  if (Array.from(name).every(drawsNothing)) name = '';
+  // The part before the first dot is what Windows goes by, spaces after it or not.
+  const stem = name.split('.')[0]?.trim() ?? '';
+  return (DEVICE.test(stem) ? `_${name}` : name || 'Untitled') + extension;
 }

@@ -51,6 +51,10 @@ export interface Settings {
   personalDictionary: readonly string[];
   /** The Structure strip above the panes; off by default, to keep the writing screen calm (structure strip design §5). */
   structureStrip: boolean;
+  /** The Outline as its tree or as thread lanes (threads design §7.3); the tree by default. */
+  outlineView: OutlineView;
+  /** The lanes as a table, for a screen reader or by choice (threads design §7.3). */
+  threadsAsTable: boolean;
   /** The paper of a Markdown document's PDF: US Letter by default (Markdown PDF design §6, Call 20). A script's PDF uses its template's. */
   markdownPaper: Paper;
   /** Colors for changes in Compare's Changes view: red and green, or blue and orange (version-history design §7). */
@@ -75,6 +79,8 @@ export interface Settings {
 
 export type CompareView = 'changes' | 'pages';
 export type DiffLayout = 'unified' | 'split';
+export type OutlineView = 'tree' | 'lanes';
+export const OUTLINE_VIEWS: readonly OutlineView[] = ['tree', 'lanes'];
 export const COMPARE_VIEWS: readonly CompareView[] = ['changes', 'pages'];
 export const DIFF_LAYOUTS: readonly DiffLayout[] = ['unified', 'split'];
 
@@ -108,6 +114,8 @@ export const DEFAULT_SETTINGS: Settings = {
   spellNotes: false,
   personalDictionary: [],
   structureStrip: false,
+  outlineView: 'tree',
+  threadsAsTable: false,
   markdownPaper: 'letter',
   diffColors: 'red-green',
   compareView: 'changes',
@@ -130,6 +138,7 @@ function isValid(key: keyof Settings, value: unknown): boolean {
   if (key === 'textSize') return typeof value === 'number' && TEXT_SIZES.includes(value);
   if (key === 'sourceContrast' || key === 'scriptContrast') return isContrast(value);
   if (key === 'cardSize') return (CARD_SIZES as readonly unknown[]).includes(value);
+  if (key === 'outlineView') return (OUTLINE_VIEWS as readonly unknown[]).includes(value);
   if (key === 'markdownPaper') return (PAPERS as readonly unknown[]).includes(value);
   if (key === 'diffColors') return (DIFF_COLORS as readonly unknown[]).includes(value);
   if (key === 'compareView') return (COMPARE_VIEWS as readonly unknown[]).includes(value);

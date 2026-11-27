@@ -4,11 +4,11 @@ import { revisedPagesOpen } from '~/production/revised';
 import { sidesOpen } from '~/production/sides';
 import { exportScript } from '~/storage/export';
 import { exportOptionsOpen } from '~/storage/export-options';
-import { storyMapOpen } from '~/story-map/options';
+import { storyAtlasOpen } from '~/story-atlas/options';
 import type { Behavior, When } from './behavior';
 
 /**
- * The Export group's commands (out of `builtin.ts`, 2026-11-04): each export, the story map, the
+ * The Export group's commands (out of `builtin.ts`, 2026-11-04): each export, the Story Atlas, the
  * treatment, a locked script's revised pages, and a novel's manuscript (after their dialogs), and
  * Export options.
  */
@@ -36,11 +36,11 @@ export function exportBehaviors({
       run: () => void exportScript('fountain'),
     },
     'export-txt': { run: () => void exportScript('txt') },
-    // The story map (story-map design §1.1): a script's, after its dialog.
-    'export-story-map': {
+    // The Story Atlas (story-atlas design §1.1): a script's, after its dialog.
+    'export-story-atlas': {
       enabled: () => hasScript() && isFountain(),
       run: () => {
-        storyMapOpen.value = true;
+        storyAtlasOpen.value = true;
       },
     },
     // A locked script's revised pages (production design §8): its dialog first, for which pages,

@@ -233,11 +233,11 @@ function expectInert(trap: Trap, html: string) {
 }
 
 /**
- * Reads a story map of a hostile text back (worker/run.ts, and `drafter build --story-map`): it
+ * Reads a Story Atlas of a hostile text back (worker/run.ts, and `drafter build --story-atlas`): it
  * has no script at all, nothing that loads or embeds, no event handler or style attribute, no
  * link but to its own parts or a `mailto:`, and one `h1`.
  */
-function expectInertStoryMap(trap: Trap, html: string) {
+function expectInertStoryAtlas(trap: Trap, html: string) {
   const { document } = new JSDOM(html).window;
   for (const tag of [
     'script',
@@ -250,30 +250,30 @@ function expectInertStoryMap(trap: Trap, html: string) {
     'link',
     'foreignObject',
   ]) {
-    expect(document.getElementsByTagName(tag).length, `${trap.id}: story map <${tag}>`).toBe(0);
+    expect(document.getElementsByTagName(tag).length, `${trap.id}: Story Atlas <${tag}>`).toBe(0);
   }
   expect(document.querySelectorAll('meta[http-equiv="refresh" i]').length, trap.id).toBe(0);
   for (const el of document.querySelectorAll('*')) {
     for (const attr of el.getAttributeNames()) {
-      expect(/^on/i.test(attr), `${trap.id}: story map ${el.tagName} ${attr}`).toBe(false);
-      expect(attr.toLowerCase(), `${trap.id}: story map ${el.tagName}`).not.toBe('style');
+      expect(/^on/i.test(attr), `${trap.id}: Story Atlas ${el.tagName} ${attr}`).toBe(false);
+      expect(attr.toLowerCase(), `${trap.id}: Story Atlas ${el.tagName}`).not.toBe('style');
       if (attr === 'href' || attr === 'xlink:href') {
         const value = el.getAttribute(attr) ?? '';
-        expect(/^(?:#|mailto:)/.test(value), `${trap.id}: story map ${attr}=${value}`).toBe(true);
+        expect(/^(?:#|mailto:)/.test(value), `${trap.id}: Story Atlas ${attr}=${value}`).toBe(true);
       }
     }
   }
-  expect(document.querySelectorAll('h1').length, `${trap.id}: story map h1`).toBe(1);
+  expect(document.querySelectorAll('h1').length, `${trap.id}: Story Atlas h1`).toBe(1);
 }
 
 /**
- * What the story-map traps say they test, checked in the page's text: the hostile file's logline,
+ * What the story-atlas traps say they test, checked in the page's text: the hostile file's logline,
  * contact, and edited hook are there as words, and the huge name is drawn whole.
  */
-function expectStoryMapWords(trap: Trap, html: string) {
+function expectStoryAtlasWords(trap: Trap, html: string) {
   // The page keeps a line's last words together with no-break spaces.
   const text = (new JSDOM(html).window.document.body.textContent ?? '').replace(/\u00a0/g, ' ');
-  if (trap.id === 'fountain-story-map-hostile') {
+  if (trap.id === 'fountain-story-atlas-hostile') {
     // Its U+2028 stays in it, as the writer's.
     expect(text, 'logline').toContain(
       'A keeper writes </style> on the lamp\u2028and nobody minds.',
@@ -281,7 +281,7 @@ function expectStoryMapWords(trap: Trap, html: string) {
     expect(text, 'contact').toContain('wren@example.com </title><script>alert(1)</script>');
     expect(text, 'edited hook').toContain('a ringer who writes </text><script>alert(1)</script>');
   }
-  if (trap.id === 'fountain-story-map-huge-name') {
+  if (trap.id === 'fountain-story-atlas-huge-name') {
     expect(/QUILL(?:LONGNAME){12500}/i.test(text), 'the whole name').toBe(true);
   }
 }
@@ -300,9 +300,9 @@ describe('package: each format’s reader on its own', () => {
     checkOutcome(trap, outcome, answer.happened, 'package');
     if (answer.html) expectInert(trap, answer.html);
     if (trap.inert && answer.happened.kind === 'opened') {
-      expect(answer.storyMap, `${trap.id}: a story map`).toBeTypeOf('string');
-      expectInertStoryMap(trap, answer.storyMap as string);
-      expectStoryMapWords(trap, answer.storyMap as string);
+      expect(answer.storyAtlas, `${trap.id}: a Story Atlas`).toBeTypeOf('string');
+      expectInertStoryAtlas(trap, answer.storyAtlas as string);
+      expectStoryAtlasWords(trap, answer.storyAtlas as string);
     }
   });
 });
@@ -436,15 +436,15 @@ describe('cli-build: drafter build', () => {
       const path = onDisk(trap, 'build');
       const dir = join(path, '..');
       const name = path.slice(dir.length + 1);
-      // A hostile text's story map is written too, and read back for anything live.
+      // A hostile text's Story Atlas is written too, and read back for anything live.
       const map = trap.inert ? join(tmp, `${trap.id}.map.html`) : null;
       const args = ['build', '--txt', join(tmp, `${trap.id}.txt`)];
-      if (map) args.push('--story-map', map);
+      if (map) args.push('--story-atlas', map);
       args.push('--', name);
       const { code, err } = await drafter(trap, dir, args, 'cli-build');
       const outcome = trap.expect['cli-build'];
       if (!outcome) throw new Error('no outcome');
-      if (map && code === 0) expectInertStoryMap(trap, readFileSync(map, 'utf8'));
+      if (map && code === 0) expectInertStoryAtlas(trap, readFileSync(map, 'utf8'));
       // `build` lays the script out rather than showing its text: whether it was built is compared.
       if (outcome.kind === 'refused') {
         expect(code, `${trap.id} at cli-build: should be refused`).not.toBe(0);

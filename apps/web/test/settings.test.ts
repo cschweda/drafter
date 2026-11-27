@@ -39,6 +39,8 @@ describe('settings', () => {
       spellNotes: false,
       personalDictionary: [],
       structureStrip: false,
+      outlineView: 'tree',
+      threadsAsTable: false,
       markdownPaper: 'letter',
       diffColors: 'red-green',
       compareView: 'changes',
@@ -51,6 +53,7 @@ describe('settings', () => {
   });
 
   test.each([
+    ['outlineView', 'tree', 'lanes', ['list', 'Lanes', true, null]],
     ['diffColors', 'red-green', 'blue-orange', ['blue', 'red', true, null]],
     ['compareView', 'changes', 'pages', ['lines', 'Pages', 1, null]],
     ['diffLayout', 'unified', 'split', ['side-by-side', 'Split', false, null]],

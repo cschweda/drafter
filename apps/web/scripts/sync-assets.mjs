@@ -2,7 +2,7 @@
 // same TTF files the PDF embeds, so the screen and the printed page share
 // their metrics; Inter Tight's four static styles, which a Markdown document's
 // PDF embeds (the export worker fetches them); Liberation Serif's four styles, the Times-style face
-// of a novel's manuscript PDF (the same); the story map's four WOFF2 faces (the same); the brand's icons, logos, and share image; and the
+// of a novel's manuscript PDF (the same); the Story Atlas's four WOFF2 faces (the same); the brand's icons, logos, and share image; and the
 // spellchecker's dictionaries with the licence of each package it uses, served
 // verbatim (the dictionaries' UKACD notice asks for its text "verbatim"), and the licences of the
 // two packages inside Drafter for Claude. The
@@ -19,8 +19,8 @@ const STYLES = ['Regular', 'Bold', 'Italic', 'BoldItalic'];
 const DOCUMENT_STYLES = ['Regular', 'Italic', 'SemiBold', 'SemiBoldItalic'];
 /** Liberation Serif's styles in `packages/render-pdf/fonts/liberation-serif/` (render-pdf's MANUSCRIPT_FONT_FILES.times). */
 const MANUSCRIPT_STYLES = ['Regular', 'Italic', 'Bold', 'BoldItalic'];
-/** The story map's faces in `packages/story-map/fonts/` (story-map's STORY_MAP_FONT_FILES). */
-const STORY_MAP_FONTS = [
+/** The Story Atlas's faces in `packages/story-atlas/fonts/` (story-atlas's STORY_ATLAS_FONT_FILES). */
+const STORY_ATLAS_FONTS = [
   'Anton-Regular.woff2',
   'Archivo-Regular.woff2',
   'Archivo-SemiBold.woff2',
@@ -62,13 +62,13 @@ export const ASSETS = [
     from: 'packages/render-pdf/fonts/liberation-serif/OFL.txt',
     to: 'fonts/liberation-serif/OFL.txt',
   },
-  // The story map's two other typefaces' licences (its fonts are inside each story map it makes).
-  { from: 'packages/story-map/fonts/OFL-Anton.txt', to: 'fonts/anton/OFL.txt' },
-  { from: 'packages/story-map/fonts/OFL-Archivo.txt', to: 'fonts/archivo/OFL.txt' },
-  // The story map's four faces, which the export worker fetches and embeds in each page.
-  ...STORY_MAP_FONTS.map((name) => ({
-    from: `packages/story-map/fonts/${name}`,
-    to: `fonts/story-map/${name}`,
+  // The Story Atlas's two other typefaces' licences (its fonts are inside each Story Atlas it makes).
+  { from: 'packages/story-atlas/fonts/OFL-Anton.txt', to: 'fonts/anton/OFL.txt' },
+  { from: 'packages/story-atlas/fonts/OFL-Archivo.txt', to: 'fonts/archivo/OFL.txt' },
+  // The Story Atlas's four faces, which the export worker fetches and embeds in each page.
+  ...STORY_ATLAS_FONTS.map((name) => ({
+    from: `packages/story-atlas/fonts/${name}`,
+    to: `fonts/story-atlas/${name}`,
   })),
   ...BRAND.map((name) => ({ from: `brand/${name}`, to: name })),
 ];

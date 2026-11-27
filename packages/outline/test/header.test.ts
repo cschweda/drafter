@@ -41,6 +41,50 @@ function apart<T extends { from: number; to: number }>(changes: T[]): T[] {
 const details = (source: string, value: SceneDetails, n = 1) =>
   edited(source, n, (doc, scene) => apart(setSceneDetails(doc, scene, value)));
 
+describe('setSceneDetails thread', () => {
+  test('writes Thread and replaces a Storyline note it rewrites', () => {
+    const out = details('INT. A - DAY\n\n[[Storyline: A]]\n', { thread: 'A, C' });
+    expect(out).toContain('[[Thread: A, C]]');
+    expect(out).not.toContain('Storyline');
+  });
+  test('every Thread and Storyline note in the header becomes one', () => {
+    const out = details(
+      'INT. A - DAY\n\n= Syn.\n[[Storyline: A]]\n[[Thread: B]]\n[[Goal: Win.]]\n\nAction.\n',
+      { thread: 'C' },
+    );
+    expect(out).toBe('INT. A - DAY\n\n= Syn.\n[[Thread: C]]\n[[Goal: Win.]]\n\nAction.\n');
+  });
+  test('an empty thread takes every one away', () => {
+    expect(
+      details('INT. A - DAY\n\n[[Storyline: A]]\n[[Thread: B]]\n\nAction.\n', { thread: '' }),
+    ).toBe('INT. A - DAY\n\nAction.\n');
+  });
+  test('another scene keeps its Storyline note', () => {
+    const out = details('INT. A - DAY\n\n[[Storyline: A]]\n\nINT. B - DAY\n\n[[Storyline: B]]\n', {
+      thread: 'Z',
+    });
+    expect(out).toBe('INT. A - DAY\n\n[[Thread: Z]]\n\nINT. B - DAY\n\n[[Storyline: B]]\n');
+  });
+  test('a label in a note below the header goes too: the field shows every note in the scene', () => {
+    const out = details('INT. HOUSE - DAY\n[[Storyline: A]]\n\nBob walks in. [[Storyline: B]]\n', {
+      thread: 'A',
+    });
+    expect(out).not.toContain('Storyline: B');
+    expect(indexOf(out).index.scenes[0]?.threads).toEqual(['A']);
+  });
+  test('an empty thread takes the notes below the header away too', () => {
+    const out = details('INT. A - DAY\n\n[[Thread: A]]\n\nBob walks in. [[Storyline: B]]\n', {
+      thread: '',
+    });
+    expect(indexOf(out).index.scenes[0]?.threads).toEqual([]);
+    expect(out).not.toContain('[[');
+  });
+  test('an unchanged thread changes nothing', () => {
+    const src = 'INT. A - DAY\n\n[[Thread: A]]\n';
+    expect(details(src, { thread: 'A' })).toBe(src);
+  });
+});
+
 describe('setSynopsis', () => {
   test('edits the first synopsis in place', () => {
     expect(synopsis('INT. A - DAY\n\n=Old.\n\nAction.\n\n= Later.\n', 'New.')).toBe(
@@ -171,7 +215,7 @@ describe('setSceneDetails', () => {
     expect(
       details('INT. KITCHEN - NIGHT\n\nMARGARET sits at the table, not eating.\n', {
         shift: 'hope → dread',
-        storyline: 'A',
+        thread: 'A',
         outcome: "He won't. He leaves.",
         color: 'blue',
         conflict: 'Tom keeps making jokes.',
@@ -179,7 +223,7 @@ describe('setSceneDetails', () => {
         goal: 'Margaret wants Tom to admit he lied.',
       }),
     ).toBe(
-      "INT. KITCHEN - NIGHT\n\n= Margaret waits for a call that won't come.\n[[Color: blue]]\n[[Storyline: A]]\n[[Goal: Margaret wants Tom to admit he lied.]]\n[[Conflict: Tom keeps making jokes.]]\n[[Outcome: He won't. He leaves.]]\n[[Shift: hope → dread]]\n\nMARGARET sits at the table, not eating.\n",
+      "INT. KITCHEN - NIGHT\n\n= Margaret waits for a call that won't come.\n[[Color: blue]]\n[[Thread: A]]\n[[Goal: Margaret wants Tom to admit he lied.]]\n[[Conflict: Tom keeps making jokes.]]\n[[Outcome: He won't. He leaves.]]\n[[Shift: hope → dread]]\n\nMARGARET sits at the table, not eating.\n",
     );
   });
 
@@ -192,8 +236,8 @@ describe('setSceneDetails', () => {
       'INT. A - DAY\n\n= Syn.\n[[Color: blue]]\n[[Goal: Win.]]\n[[Outcome: Lost.]]\n\nAction.\n',
     );
     // Before the first field after it, with no field before it.
-    expect(details('INT. A - DAY\n\n[[Shift: + → −]]\n\nAction.\n', { storyline: 'B' })).toBe(
-      'INT. A - DAY\n\n[[Storyline: B]]\n[[Shift: + → −]]\n\nAction.\n',
+    expect(details('INT. A - DAY\n\n[[Shift: + → −]]\n\nAction.\n', { thread: 'B' })).toBe(
+      'INT. A - DAY\n\n[[Thread: B]]\n[[Shift: + → −]]\n\nAction.\n',
     );
     // After the fields before it, and before the writer's other notes.
     expect(
@@ -218,8 +262,8 @@ describe('setSceneDetails', () => {
       'INT. A - DAY\n\nAction.\n',
     );
     // A field cleared and another added in its place.
-    expect(details(header, { color: null, storyline: 'A' })).toBe(
-      'INT. A - DAY\n\n[[Storyline: A]]\n[[Goal: Win.]]\n[[Conflict: Rain.]]\n\nAction.\n',
+    expect(details(header, { color: null, thread: 'A' })).toBe(
+      'INT. A - DAY\n\n[[Thread: A]]\n[[Goal: Win.]]\n[[Conflict: Rain.]]\n\nAction.\n',
     );
     expect(details(header, { conflict: '', outcome: 'Wet.' })).toBe(
       'INT. A - DAY\n\n[[Color: blue]]\n[[Goal: Win.]]\n[[Outcome: Wet.]]\n\nAction.\n',
@@ -312,8 +356,8 @@ describe('setSceneDetails', () => {
     expect(details('INT. A - DAY\n', { goal: 'G.', color: 'red', synopsis: 'S.' })).toBe(
       'INT. A - DAY\n\n= S.\n[[Color: red]]\n[[Goal: G.]]\n',
     );
-    expect(details('INT. A - DAY\n\nINT. B - DAY\n', { synopsis: 'S.', storyline: 'A, B' })).toBe(
-      'INT. A - DAY\n\n= S.\n[[Storyline: A, B]]\n\nINT. B - DAY\n',
+    expect(details('INT. A - DAY\n\nINT. B - DAY\n', { synopsis: 'S.', thread: 'A, B' })).toBe(
+      'INT. A - DAY\n\n= S.\n[[Thread: A, B]]\n\nINT. B - DAY\n',
     );
     // A synopsis replaced while a field goes in under it.
     expect(

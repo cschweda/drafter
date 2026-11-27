@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { checkListing } from '../scripts/check-asar.mjs';
+import { FIXTURE_MARKERS as WEB_MARKERS } from '../../web/scripts/check-build.mjs';
+import { checkListing, FIXTURE_MARKERS, fixtureLeaks } from '../scripts/check-asar.mjs';
 
 const GOOD = [
   '/dist',
@@ -89,5 +90,26 @@ describe('checkListing', () => {
     expect(checkListing([...GOOD, ...missing], { runtime }).join('\n')).toMatch(
       /missing from the package: node_modules\/lazy-val/,
     );
+  });
+});
+
+describe('a package made from a test build', () => {
+  test('is found by the test module’s text in the web app’s scripts', () => {
+    const files: Record<string, string> = {
+      'web/index.html': '<html></html>',
+      'web/_nuxt/a.js': 'const x = 1;',
+      'web/_nuxt/b.js': 'label:"Count scenes"',
+      'web/_nuxt/c.js': 'window.drafterCastProbe=()=>{}',
+      'dist/main.cjs': 'Count scenes',
+      'web/fonts/x.woff2': 'Count scenes',
+    };
+    expect(fixtureLeaks(Object.keys(files), (path) => files[path] as string)).toEqual([
+      'web/_nuxt/b.js',
+      'web/_nuxt/c.js',
+    ]);
+  });
+
+  test('looks for the same text the web build’s own check does', () => {
+    expect(FIXTURE_MARKERS).toEqual(WEB_MARKERS);
   });
 });

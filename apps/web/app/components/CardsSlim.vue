@@ -13,7 +13,7 @@ const size = computed({
 </script>
 
 <template>
-  <OutlineSlim />
+  <OutlineSlim counts-only />
   <span class="spacer" />
   <DSegmented v-model="size" label="Card size" :options="OPTIONS" />
 </template>

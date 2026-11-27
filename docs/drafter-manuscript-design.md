@@ -30,7 +30,7 @@ A novelist drafting in Drafter has to send the book out: to an agent, an editor,
    - **Each chapter starts on a new page, a third of the way down,** with its title centered (a chapter that is only a number, "Chapter 3" or "3", is printed as written).
    - **A scene break is a centered `#`,** on its own double-spaced line.
    - **`END`,** centered, after the last line (**my call**: an old convention that many guides still give, and harmless).
-3. **The details come from the writer once and stay with the book.** A **Manuscript details** dialog opens before either export, the way the Story map's does: title, byline (the name on the cover), legal name, contact lines, short title, surname for the header, and the font. They're kept in the book's metadata comment, so the next export asks nothing new and opens on the same answers.
+3. **The details come from the writer once and stay with the book.** A **Manuscript details** dialog opens before either export, the way the Story Atlas's does: title, byline (the name on the cover), legal name, contact lines, short title, surname for the header, and the font. They're kept in the book's metadata comment, so the next export asks nothing new and opens on the same answers.
 4. **The same book, two files, the same manuscript.** The PDF and the Word file come from one description, so they hold the same blocks in the same order, with the same chapter openings, scene breaks, and `END`. Their page breaks fall where each format's spacing puts them: the Word file uses Word's own Double spacing (about 26.6 pt a line in Times New Roman, against the PDF's 24 pt), so it runs to about a tenth more pages.
 5. **Private, like everything else.** Nothing is fetched; the fonts are in the app, and both files are made in the export worker, in the browser or the desktop app.
 
@@ -66,7 +66,7 @@ Opened by either export, with **Export PDF** or **Export Word file** as its main
 
 - **Kept in the book.** The answers are stored in the trailing metadata comment, under `novel.manuscript`, with the other facts; `readFacts` and `writeFacts` gain the key, as hostile-input-safe as the rest (each string capped, the contact at 10 lines of 200 characters). One undo step, like a status change. The dialog says plainly that the details are saved in the book's file, so anyone the writer gives the Markdown file to can read them.
 - **Word count** is the book's prose: the words of every paragraph, heading, and quote, the same count the Outline totals, not counting the metadata comment. Rounded to the nearest thousand from 1,000 up ("about 87,000 words") and to the nearest hundred below (**my call**: the common guidance).
-- It passes axe in both themes, is reached and left by keyboard, and says what it is to a screen reader, like the Story map's dialog.
+- It passes axe in both themes, is reached and left by keyboard, and says what it is to a screen reader, like the Story Atlas's dialog.
 
 ## Layout
 
@@ -105,7 +105,7 @@ One description of the manuscript, built from the novel's structure (`@drafter/n
 ## Where it sits in the app
 
 - **Export menu:** after the Markdown items, a novel shows **Manuscript (PDF)…** and **Manuscript (Word)…**; a plain Markdown document and a script don't. Both commands are in the palette (with keywords "submission", "agent", "standard manuscript format", "docx") and in the desktop File → Export menu.
-- **File names:** `The Salt Road – manuscript.pdf` and `.docx` (**my call**, like the Story map's "– story map.html").
+- **File names:** `The Salt Road – manuscript.pdf` and `.docx` (**my call**, like the Story Atlas's "– Story Atlas.html").
 - **Export options** don't apply: the manuscript has its own dialog. A book's notes never go into a manuscript.
 - **Help:** the Novel help page gains "Sending it out", with what the format is, what each detail is for, and the page-number answer for Word. What's new gets an entry, and the README's formats list a row.
 

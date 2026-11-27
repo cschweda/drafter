@@ -10,6 +10,7 @@ import {
   LICENCE_FILES,
   MARKDOWN_MARKERS,
   REQUIRED_FILES,
+  testBuildProblem,
 } from '../scripts/check-build.mjs';
 
 async function site(files: Record<string, string>) {
@@ -256,8 +257,8 @@ describe('checking the files the build must have', () => {
     }
     expect(REQUIRED_FILES).toContain('licenses/nspell.txt');
     expect(REQUIRED_FILES).toContain('licenses/is-buffer.txt');
-    // Every typeface's licence, which the OFL asks to travel with the fonts: the story map's
-    // Anton and Archivo too, since every story map carries them.
+    // Every typeface's licence, which the OFL asks to travel with the fonts: the Story Atlas's
+    // Anton and Archivo too, since every Story Atlas carries them.
     expect(REQUIRED_FILES).toContain('fonts/courier-prime/OFL.txt');
     expect(REQUIRED_FILES).toContain('fonts/inter-tight/OFL.txt');
     expect(REQUIRED_FILES).toContain('fonts/anton/OFL.txt');
@@ -271,14 +272,14 @@ describe('checking the files the build must have', () => {
     for (const style of ['Regular', 'Italic', 'Bold', 'BoldItalic']) {
       expect(REQUIRED_FILES).toContain(`fonts/liberation-serif/LiberationSerif-${style}.ttf`);
     }
-    // The story map's four faces, which its export fetches and embeds.
+    // The Story Atlas's four faces, which its export fetches and embeds.
     for (const face of [
       'Anton-Regular',
       'Archivo-Regular',
       'Archivo-SemiBold',
       'CourierPrime-Regular',
     ]) {
-      expect(REQUIRED_FILES).toContain(`fonts/story-map/${face}.woff2`);
+      expect(REQUIRED_FILES).toContain(`fonts/story-atlas/${face}.woff2`);
     }
     // The licences of the two packages inside Drafter for Claude, which the Licences page links.
     expect(REQUIRED_FILES).toContain('licenses/modelcontextprotocol-server.txt');
@@ -367,5 +368,27 @@ describe('checking what the app’s shell fetches early', () => {
     expect(problems).toMatch(/markdown\.worker-AbC1\.js/);
     expect(problems).toMatch(/c\.js/);
     expect(problems).toMatch(/d\.js/);
+  });
+});
+
+describe('a test build', () => {
+  test('is refused with anything that marks a build the public gets', () => {
+    expect(testBuildProblem({})).toBeNull();
+    expect(
+      testBuildProblem({ DRAFTER_ANALYTICS: 'plausible', DRAFTER_REPORTS: 'email' }),
+    ).toBeNull();
+    // The browser tests' own build: the test module, and Netlify's headers, and nothing else.
+    expect(testBuildProblem({ DRAFTER_TEST_MODULES: '1', NETLIFY: 'true' })).toBeNull();
+    for (const mark of [
+      { DRAFTER_ANALYTICS: 'plausible' },
+      { DRAFTER_REPORTS: 'email' },
+      { CONTEXT: 'production' },
+      { GITHUB_REF: 'refs/tags/v0.28.0' },
+    ]) {
+      expect(
+        testBuildProblem({ DRAFTER_TEST_MODULES: '1', ...mark }),
+        JSON.stringify(mark),
+      ).toMatch(/test build/);
+    }
   });
 });

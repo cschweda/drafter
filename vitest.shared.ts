@@ -20,7 +20,7 @@ const packages = [
   'spell',
   'outline',
   'novel',
-  'story-map',
+  'story-atlas',
   'production',
   'fdx',
   'cm-fountain',

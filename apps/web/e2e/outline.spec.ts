@@ -539,14 +539,42 @@ test.describe('Scene details', () => {
     await runCommand(page, 'Scene details…');
     const dialog = detailsOf(page, 'EXT. YARD - NIGHT');
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('textbox', { name: 'Storylines' }).fill('B');
+    // With its suggestions, the Threads field is a combobox.
+    await dialog.getByRole('combobox', { name: 'Threads' }).fill('B');
     await dialog.getByRole('textbox', { name: 'Goal' }).fill('Bob says hi.');
     await page.keyboard.press('Enter');
     await expect(dialog).toBeHidden();
     await expect
       .poll(() => textOf(page))
-      .toContain('EXT. YARD - NIGHT\n\n[[Storyline: B]]\n[[Goal: Bob says hi.]]\n\nBOB');
+      .toContain('EXT. YARD - NIGHT\n\n[[Thread: B]]\n[[Goal: Bob says hi.]]\n\nBOB');
     await expect(editor(page)).toBeFocused();
+  });
+
+  test('the Threads field suggests the labels in use, and its Save rewrites every note', async ({
+    page,
+  }) => {
+    const notes =
+      'INT. HOUSE - DAY\n[[Storyline: A]]\n\nBob walks in. [[Storyline: B]]\n\nEXT. YARD - NIGHT\n\n[[Thread: Heist]]\n\nRain.\n';
+    await openWith(page, notes);
+    const house = row(page, /^Scene \d+, INT\. HOUSE - DAY/);
+    const dialog = await openDetails(page, house, 'INT. HOUSE - DAY');
+    const field = dialog.getByRole('combobox', { name: 'Threads' });
+    await expect(field).toHaveValue('A, B');
+    const list = await field.getAttribute('list');
+    expect(list).toBeTruthy();
+    const suggested = () =>
+      dialog
+        .locator(`datalist#${list} option`)
+        .evaluateAll((options) => options.map((o) => (o as HTMLOptionElement).value));
+    await field.fill('');
+    await expect.poll(suggested).toEqual(['A', 'B', 'Heist']);
+    await field.fill('A, H');
+    await expect.poll(suggested).toEqual(['A, B', 'A, Heist']);
+    await field.fill('A');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toBeHidden();
+    await expect.poll(() => textOf(page)).toContain('INT. HOUSE - DAY\n[[Thread: A]]\n');
+    expect(await textOf(page)).not.toContain('Storyline: B');
   });
 
   test("shows a scene's goal in its row", async ({ page }) => {

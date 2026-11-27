@@ -26,7 +26,9 @@ import { sceneMenuItems } from '~/outline/scene-menu';
 import { type TreeRow, treeKey, typeAhead } from '~/outline/tree';
 import { useOutline } from '~/outline/use-outline';
 import { showScaffold } from '~/scaffold/show';
+import { useSettings } from '~/settings/settings';
 import { useRates } from '~/stats/timing';
+import { openThreads } from '~/threads/dialogs';
 
 // The Outline tab (Phase 2 design §6.1–6.2): the script's sections holding its scenes, as an
 // ARIA tree. One row is a tab stop; the arrow keys, Home, End, and typing move between rows;
@@ -43,6 +45,10 @@ const novel = computed(() => markdown.value && editor.novel.value);
 const isPlay = computed(() => editor.template.value.id === 'stage-play-standard');
 /** The open script's rates: each row's time is its pages at the script's minutes a page. */
 const rates = useRates();
+// The Lanes in the tree's place (threads design §7.3): the grid, its table, or on a phone the list.
+const { settings } = useSettings();
+const lanes = computed(() => settings.value.outlineView === 'lanes');
+const roomy = useMatchMedia(LANES_QUERY);
 
 const filter = ref('');
 const closed = ref(new Set<string>());
@@ -102,6 +108,7 @@ const rows = computed<Row[]>(() => {
               goalLine(item),
               item.speakers,
               item.pages,
+              item.threads,
             ]
           : [
               sectionName(item, rates.value),
@@ -326,6 +333,7 @@ function menuItems(row: Row): DropdownMenuItem[][] {
     focus: (id) => void focusRow(id),
     history: (id) => afterClosing(() => openHistoryOf(id)),
     scaffold: (id) => afterClosing(() => showScaffold({ kind: 'scene', pinned: id })),
+    threads: (id) => afterClosing(() => openThreads(id, () => void focusRow(id))),
   });
 }
 
@@ -485,6 +493,11 @@ const nameOfRow = (row: Row) =>
   <div class="outline">
     <NovelOutline v-if="novel" />
     <DEmpty v-else-if="markdown" icon="i-lucide-list-tree">Not available for Markdown documents.</DEmpty>
+    <template v-else-if="lanes">
+      <ThreadLanes v-if="roomy && !settings.threadsAsTable" />
+      <ThreadTable v-else-if="roomy" />
+      <ThreadList v-else />
+    </template>
     <template v-else>
       <div class="tools" data-pane-bar>
         <label class="filter">
@@ -545,7 +558,11 @@ const nameOfRow = (row: Row) =>
           <!-- The row's name is this one line of words; what's drawn is the same, laid out, and
                hidden from screen readers so they read it once. Its synopsis and speakers are its
                description. -->
-          <span class="sr-only">{{ nameOfRow(row) }}</span>
+          <span class="sr-only">{{ nameOfRow(row) }}<ThreadChips
+              v-if="row.item.kind === 'scene'"
+              :labels="row.item.threads"
+              speak
+          /></span>
           <div class="line" aria-hidden="true">
             <span
               v-if="row.expandable"
@@ -566,6 +583,7 @@ const nameOfRow = (row: Row) =>
                   aria-hidden="true"
                 />{{ colorName(row.item.color.value) }}
               </span>
+              <ThreadChips :labels="row.item.threads" />
               <span v-if="sceneLength(row)" class="length">{{ sceneLength(row) }}</span>
             </template>
             <template v-else>

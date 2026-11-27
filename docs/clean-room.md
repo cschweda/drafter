@@ -69,7 +69,7 @@ The rule doesn't end with Phase 0. It covers every contributor, every package, a
 
 Drafter has been audited against these rules three times. [Audits](AUDITS.md) lists every audit, newest first.
 
-**1 November 2026** ([the full audit](clean-room-audit-2026-11-01.md)): everything added since the first audit, v0.3.1 to v0.24.0, on `main` at commit `aa6a817`, and the Story map plan about to merge. It found:
+**1 November 2026** ([the full audit](clean-room-audit-2026-11-01.md)): everything added since the first audit, v0.3.1 to v0.24.0, on `main` at commit `aa6a817`, and the Story Atlas plan about to merge. It found:
 
 - **Still no code from screenwriting software, and no Fountain or screenwriting package** among the 1,223 in the lockfile. The new packages (the Final Draft, Highland, and Fade In importers, the zip reader, version history, drafts and cuts) follow Drafter's own designs, and each file format's names come from public descriptions or files the maintainer owns, recorded in [`DECISIONS.md`](DECISIONS.md).
 - **No copied code from anywhere, and no GPL code in the app.** The new libraries (the spellchecker and its dictionaries, Markdown footnotes, Electron's updater) are general-purpose and permissive, and each is in [`docs/DEPENDENCIES.md`](DEPENDENCIES.md).

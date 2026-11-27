@@ -39,3 +39,12 @@ export {
   lineBreakOf,
   removeLine,
 } from './text';
+export {
+  isThreadLabel,
+  readThreadMetaMap,
+  replaceThreadMeta,
+  setThreadMeta,
+  THREAD_LIMITS,
+  type ThreadMeta,
+  threadMeta,
+} from './threads';

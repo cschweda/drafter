@@ -1,5 +1,5 @@
 // A file to what the tools read (§3): a script parsed, laid out, indexed, with its cast and its
-// story map; or a Markdown document and its sections. Read only through a checked path, opened
+// Story Atlas; or a Markdown document and its sections. Read only through a checked path, opened
 // without following a link and only if it is still the file that was checked, and judged by what
 // is inside it as the app's Open judges it (inside.ts); kept in the reader's memory by real path,
 // size, and modified time.
@@ -17,7 +17,7 @@ import {
   type Status,
 } from '@drafter/novel';
 import { linesPerPage, type SceneIndex, sceneIndex } from '@drafter/outline';
-import { buildStoryMap, type StoryMap, storyMapMeta } from '@drafter/story-map';
+import { buildStoryAtlas, type StoryAtlas, storyAtlasMeta } from '@drafter/story-atlas';
 import { builtins, type Template } from '@drafter/templates';
 import { type Format, formatOf } from './formats';
 import { type Content, readInside } from './inside';
@@ -37,7 +37,7 @@ export type Loaded =
       layout: Layout;
       index: SceneIndex;
       cast: Cast;
-      map: StoryMap;
+      map: StoryAtlas;
       /** What an import from another app brought in as notes. */
       importNotes: number;
     }
@@ -184,18 +184,18 @@ const stemOf = (shown: string) => {
 };
 
 /**
- * The story map of a script as Story map builds it, with no contact: `status` null for the one
+ * The Story Atlas of a script as Story Atlas builds it, with no contact: `status` null for the one
  * its gaps give, else the writer's choice (Finished leaves the planned scenes out).
  */
 export function mapOf(
   script: { doc: Doc; template: Template; layout: Layout; file: Checked; text: string },
-  status: StoryMap['status'] | null,
+  status: StoryAtlas['status'] | null,
   wordsPerMinute: number,
-): StoryMap {
+): StoryAtlas {
   const { doc, template, layout, file, text } = script;
-  const { plannedPages, hooks } = storyMapMeta(doc.meta);
+  const { plannedPages, hooks } = storyAtlasMeta(doc.meta);
   const logline = titleField(doc, 'logline');
-  return buildStoryMap({
+  return buildStoryAtlas({
     doc,
     template,
     layout,
@@ -228,7 +228,7 @@ function loadScript(
   const template = templateFor(doc);
   const layout = paginate(doc, template);
   const index = sceneIndex(doc, template, layout);
-  // As the story map: only capitals count, as with no dictionary.
+  // As the Story Atlas: only capitals count, as with no dictionary.
   const cast = castOf(index, doc, template, linesPerPage(layout), () => undefined);
   const map = mapOf({ doc, template, layout, file, text }, null, wordsPerMinute);
   return {
@@ -314,12 +314,20 @@ export async function load(path: string, ctx: ToolContext): Promise<Loaded> {
   if (cached) return { ...cached, file };
 
   afterCheck?.();
+  ctx.cache.makeRoom(file.size);
   // Judged by what is inside, in Open's order, whatever the name says.
   const inside = await readInside(file, name);
   parses++;
   const loaded = inside.markdown
     ? loadMarkdown(file, format, inside.content, inside.text)
     : loadScript(file, format, inside.content, inside.text, inside.notes, options.wordsPerMinute);
-  ctx.cache.set(file.real, file.size, file.mtimeMs, loaded);
+  // Charged by the text that was parsed, not the file's size: a packed file holds far more.
+  ctx.cache.set(
+    file.real,
+    file.size,
+    file.mtimeMs,
+    loaded,
+    Math.max(file.size, inside.text.length),
+  );
   return loaded;
 }

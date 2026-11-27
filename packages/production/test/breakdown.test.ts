@@ -5,6 +5,7 @@ import { builtins, type Template } from '@drafter/templates';
 import { describe, expect, it } from 'vitest';
 import { BREAKDOWN_COLUMNS, breakdownRows, toCsv } from '../src/breakdown';
 import { productionLayout } from '../src/layout';
+import { MAX_GROWTH, SCALING_TIMEOUT, scaling } from './scaling';
 
 const screenplay = builtins['us-screenplay'] as Template;
 const play = builtins['stage-play-standard'] as Template;
@@ -151,6 +152,21 @@ describe('breakdownRows', () => {
 });
 
 describe('toCsv', () => {
+  it('quotes a semicolon and a tab, and guards a formula after one (red/blue audit, W15)', () => {
+    expect(toCsv([['a;b', 'a\tb']])).toBe('"a;b","a\tb"\r\n');
+    // The guard goes where a reader that splits on `;` or a tab would start the cell, not at the
+    // field's start: there the field's own quote is mid-cell and holds nothing together (the
+    // audit of that audit).
+    expect(toCsv([['KITCHEN;=HYPERLINK("x")', 'a\t=1', 'a; +1', 'a;b=1']])).toBe(
+      '"KITCHEN;\'=HYPERLINK(""x"")","a\t\'=1","a; \'+1","a;b=1"\r\n',
+    );
+    expect(toCsv([['=1;=2\t-3']])).toBe("\"'=1;'=2\t'-3\"\r\n");
+    // The full-width signs some spreadsheets read as their plain ones (W19).
+    expect(toCsv([['\uff1d1', 'a;\uff0b1', '\uff0d1', '\uff20a']])).toBe(
+      "'\uff1d1,\"a;'\uff0b1\",'\uff0d1,'\uff20a\r\n",
+    );
+  });
+
   it('quotes commas, quotes, and line breaks', () => {
     const csv = toCsv([['a', 'b,c', 'say "hi"', 'two\nlines', 'cr\rhere', '']]);
     expect(csv).toBe('a,"b,c","say ""hi""","two\nlines","cr\rhere",\r\n');
@@ -166,7 +182,8 @@ describe('toCsv', () => {
     const csv = toCsv([
       ['=SUM(A1)', '+1', '-2', '@WREN', '\tx', '\rx', '=a,b', 'plain', '', 'a=b', '-'],
     ]);
-    expect(csv).toBe(`'=SUM(A1),'+1,'-2,'@WREN,'\tx,"'\rx","'=a,b",plain,,a=b,'-\r\n`);
+    // A tab is quoted too: where it is the list separator, an unquoted one would split the field.
+    expect(csv).toBe(`'=SUM(A1),'+1,'-2,'@WREN,"'\tx","'\rx","'=a,b",plain,,a=b,'-\r\n`);
   });
 
   it('neutralises a planted location, synopsis, and cue in the breakdown', () => {
@@ -176,4 +193,31 @@ describe('toCsv', () => {
     expect(csv).toContain(`"'=HYPERLINK(""https://x/?""&B2,""Open"")"`);
     expect(csv).not.toMatch(/(^|,)=/m);
   });
+});
+
+describe('a breakdown of a long script', () => {
+  it(
+    'is made in time that grows with its scenes, not with the scenes times the cast (W9)',
+    () => {
+      // `n` scenes with the same twenty speakers in each: every scene used to look through every
+      // character's whole list of scenes. (Grown by empty scenes alone, as this test first was,
+      // the old code was linear too, and the test passed without the fix.)
+      const make = (n: number) => {
+        const lines: string[] = [];
+        for (let scene = 0; scene < n; scene++) {
+          lines.push(`INT. HALL ${scene} - DAY`, '');
+          for (let k = 0; k < 20; k++) lines.push(`@P${k}`, 'Hi.', '');
+        }
+        const doc = parse(lines.join('\n'));
+        return { doc, layout: paginate(doc, screenplay, { sceneNumbers: 'none' }) };
+      };
+      const { growth } = scaling(
+        make,
+        ({ doc, layout }) => breakdownRows(doc, screenplay, layout),
+        500,
+      );
+      expect(growth).toBeLessThan(MAX_GROWTH);
+    },
+    SCALING_TIMEOUT,
+  );
 });

@@ -1,7 +1,10 @@
+import { readdirSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { SUPPORT_LINKS } from '../../web/app/about/support';
 import {
   appHandler,
   cspFromHeaders,
@@ -279,6 +282,147 @@ describe('trustedExternal', () => {
       'mailto:cschweda@gmail.com?subject=Hi&body=There',
     ])
       expect(trustedExternal(url), url).toBe(true);
+  });
+
+  test('lets the Support page’s tip link through: that page exactly, and nothing else on its site', () => {
+    expect(trustedExternal('https://ko-fi.com/chrisschweda')).toBe(true);
+    for (const url of [
+      'https://ko-fi.com/chrisschweda?d=INT.%20SECRET',
+      'https://ko-fi.com/chrisschweda#INT.%20SECRET',
+      'https://ko-fi.com/chrisschweda/INT.%20SECRET',
+      'https://ko-fi.com/someoneelse',
+      'https://ko-fi.com/',
+      'https://KO-FI.com/chrisschweda/../x',
+      'https://a@ko-fi.com/chrisschweda',
+      'https://ko-fi.com:8443/chrisschweda',
+      'http://ko-fi.com/chrisschweda',
+      'https://ko-fi.com.evil.example/chrisschweda',
+    ])
+      expect(trustedExternal(url), url).toBe(false);
+  });
+
+  test('trusts the same tip link the web app’s Support page has', () => {
+    for (const address of Object.values(SUPPORT_LINKS)) {
+      expect(trustedExternal(address), address).toBe(true);
+    }
+  });
+
+  test('trusts a site of Drafter’s own links only for an address shaped like one of them', () => {
+    // Red/blue audit, 2026-11-23 (D1): a whole trusted host was a place a page could put the
+    // script, in the path or the query, and hand it to the browser with no question.
+    const script = encodeURIComponent(
+      'INT. SECRET LAB - NIGHT. The unreleased third act. '.repeat(8),
+    );
+    for (const url of [
+      `https://drafter.dev/${script}`,
+      `https://plausible.io/x?d=${script}`,
+      'https://nodejs.org/x?d=short',
+      'https://fountain.io/?s=a',
+      `https://metaincognita.com/#${script}`,
+      'https://docs.docker.com/INT.%20SECRET',
+      `https://github.com/cschweda/drafter/search?q=${script}`,
+      'https://github.com/cschweda/drafter/search?q=a',
+      `https://github.com/cschweda/drafter/${'a/'.repeat(120)}`,
+    ]) {
+      expect(trustedExternal(url), url.slice(0, 60)).toBe(false);
+    }
+    // Its own links, as the pages have them, and the report it builds for GitHub.
+    for (const url of [
+      'https://drafter.dev/',
+      'https://drafter.dev/docs/technical/',
+      'https://fountain.io/syntax',
+      'https://scripts.sil.org/OFL',
+      'https://plausible.io/privacy-focused-web-analytics',
+      'https://docs.docker.com/get-started/get-docker/',
+      'https://metaincognita.com',
+      'https://github.com/cschweda/drafter',
+      'https://github.com/cschweda/drafter/releases/tag/v0.28.0',
+      'https://github.com/cschweda/drafter/blob/main/SECURITY.md#reporting-a-problem',
+      'https://github.com/cschweda/drafter/blob/main/CHANGELOG.md#0274---2026-11-23',
+      `https://github.com/cschweda/drafter/issues/new?template=bug.yml&title=x&what-happened=${script}`,
+    ]) {
+      expect(trustedExternal(url), url.slice(0, 60)).toBe(true);
+    }
+  });
+
+  test('trusts the report links only as the app builds them (the audit of the audit, D1)', () => {
+    const text = 'A'.repeat(100_000);
+    const base = 'https://github.com/cschweda/drafter/issues/new';
+    for (const url of [
+      `${base}?anything=${text}`,
+      `${base}?template=bug.yml&title=x&secret=${'A'.repeat(50)}`,
+      `${base}?template=bug.yml&title=${text}`,
+      `${base}?template=bug.yml#${'A'.repeat(50)}`,
+      `${base}#frag`,
+      `mailto:cschweda@gmail.com?subject=x&body=${text}`,
+      'mailto:cschweda@gmail.com?subject=a%0D%0ABcc%3A%20evil%40example.com',
+      'mailto:cschweda@gmail.com?subject=a%0Ab',
+    ]) {
+      expect(trustedExternal(url), url.slice(0, 70)).toBe(false);
+    }
+    for (const url of [
+      base,
+      `${base}?template=bug.yml&title=Export+skips&labels=bug&what-happened=It+did%0Athis&expected=That&version=0.28.0`,
+      `${base}?template=idea.yml&title=An+idea&idea=${'A'.repeat(5000)}&version=x`,
+      'mailto:cschweda@gmail.com',
+      'mailto:cschweda@gmail.com?subject=Drafter&body=Line%20one%0ALine%20two',
+    ]) {
+      expect(trustedExternal(url), url.slice(0, 70)).toBe(true);
+    }
+  });
+
+  test('keeps to the lengths and the fields the web app’s report uses', async () => {
+    const web = await import('../../web/app/report/issue');
+    const mine = await import('../src/protocol');
+    expect(mine.MAX_ISSUE_URL).toBe(web.MAX_ISSUE_URL);
+    expect(mine.MAX_MAIL_URL).toBe(web.MAX_MAIL_URL);
+    // A report with every field filled is trusted, problem and idea.
+    for (const kind of ['problem', 'idea'] as const) {
+      const { url } = web.issueLink(
+        { kind, title: 'T', happened: 'h', expected: 'e', idea: 'i', includeVersion: true },
+        'Drafter 0.28.0',
+      );
+      expect(trustedExternal(url), url).toBe(true);
+    }
+  });
+
+  test('trusts an address only as it is written, with one slash at a time', () => {
+    for (const url of [
+      'https://drafter.dev//evil.example/SECRET',
+      'https://drafter.dev/docs//x',
+      ' https://drafter.dev/docs/',
+      'https://drafter.dev/a\tb',
+      'https://drafter.dev/\\evil.example/',
+      'HTTPS://DRAFTER.DEV/docs/',
+    ]) {
+      expect(trustedExternal(url), JSON.stringify(url)).toBe(false);
+    }
+    expect(trustedExternal('https://metaincognita.com')).toBe(true);
+    expect(trustedExternal('https://drafter.dev/docs/technical/')).toBe(true);
+  });
+
+  test('every link the web app has to a trusted site is still trusted', () => {
+    // Read from the app's own source, so a new link that the rule would ask about fails here.
+    const found = new Set<string>();
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) walk(path);
+        else if (/\.(?:vue|ts)$/.test(entry.name)) {
+          const text = readFileSync(path, 'utf8');
+          const links = text.match(
+            /https:\/\/(?:drafter\.dev|fountain\.io|plausible\.io|nodejs\.org|docs\.docker\.com|scripts\.sil\.org|metaincognita\.com|github\.com\/cschweda\/drafter)[^"'`<> )\\]*/g,
+          );
+          for (const link of links ?? [])
+            if (!link.includes('${')) found.add(link.replace(/[.,;:]+$/, ''));
+        }
+      }
+    };
+    walk(fileURLToPath(new URL('../../web/app', import.meta.url)));
+    // The address to clone from is shown as a command, not a link.
+    found.delete('https://github.com/cschweda/drafter.git');
+    expect(found.size).toBeGreaterThan(15);
+    for (const link of found) expect(trustedExternal(link), link).toBe(true);
   });
 
   test('asks about anything else, however it is dressed up', () => {

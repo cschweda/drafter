@@ -77,7 +77,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/render-pdf',
       '@drafter/render-text',
       '@drafter/spell',
-      '@drafter/story-map',
+      '@drafter/story-atlas',
       '@drafter/templates',
     ],
   },
@@ -100,7 +100,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/render-html-file',
       '@drafter/render-pdf',
       '@drafter/render-text',
-      '@drafter/story-map',
+      '@drafter/story-atlas',
       '@drafter/templates',
     ],
   },
@@ -120,7 +120,7 @@ export const PACKAGES: readonly PackageNote[] = [
       '@drafter/notes',
       '@drafter/novel',
       '@drafter/outline',
-      '@drafter/story-map',
+      '@drafter/story-atlas',
       '@drafter/templates',
     ],
   },
@@ -168,8 +168,8 @@ export const PACKAGES: readonly PackageNote[] = [
     uses: ['@drafter/fountain', '@drafter/outline', '@drafter/templates'],
   },
   {
-    name: '@drafter/story-map',
-    does: 'The Story map: one dark page, with no script, that shows someone who doesn’t read scripts the whole story so far: its shape, its acts and scenes, its places and people, a few lines of dialogue, and the gaps still to write.',
+    name: '@drafter/story-atlas',
+    does: 'The Story Atlas: one dark page, with no script, that shows someone who doesn’t read scripts the whole story so far: its shape, its acts and scenes, its places and people, a few lines of dialogue, and the gaps still to write.',
     uses: [
       '@drafter/cast',
       '@drafter/fountain',
@@ -256,7 +256,7 @@ export const PACKAGES: readonly PackageNote[] = [
   {
     name: '@drafter/novel',
     does: 'A novel in Markdown: its parts, chapters, and sections with their words, moving one byte for byte, and the status, synopsis, and word target kept for each in the metadata comment.',
-    uses: ['@drafter/markdown'],
+    uses: ['@drafter/markdown', '@drafter/notes'],
   },
   {
     name: '@drafter/fountain',
@@ -270,7 +270,7 @@ export const PACKAGES: readonly PackageNote[] = [
  * with one plain line on what it does for Drafter. docs/DEPENDENCIES.md has why each is allowed.
  */
 export const DEPENDENCY_NOTES: Readonly<Record<string, string>> = {
-  nuxt: 'Builds drafter.dev as a set of static files, with nothing running on a server.',
+  nuxt: 'Builds drafter.dev as a set of static files; the one thing that runs on a server is the small function that passes on a report sent by email.',
   vue: 'Draws the app’s screens and keeps them up to date as you write.',
   'vue-router': 'Gives the app and each help page an address of its own.',
   '@nuxt/ui': 'The menus, dialogs, tabs, and command palette.',
@@ -403,13 +403,13 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     plain: [
       {
         kind: 'p',
-        text: 'Drafter is a web app that runs entirely in your browser, or in a window of its own on the desktop. There is no server behind it and no account to make: once the page has loaded, everything happens on your device, and your script never leaves it.',
+        text: 'Drafter is a web app that runs entirely in your browser, or in a window of its own on the desktop. No server works on your script and there is no account to make: once the page has loaded, everything happens on your device, and your script never leaves it.',
       },
     ],
     details: [
       {
         kind: 'p',
-        text: 'drafter.dev is a set of static files: HTML, JavaScript, CSS, fonts, and dictionaries, built with Nuxt and Vue and served by Netlify. Nothing on the site runs code for you or stores anything. It is written in TypeScript, and every part of it, down to the Fountain parser, is Drafter’s own, written from public specifications (the clean-room rule, below).',
+        text: 'drafter.dev is a set of static files: HTML, JavaScript, CSS, fonts, and dictionaries, built with Nuxt and Vue and served by Netlify. Nothing on the site stores anything, and the only code it runs for you is a small function that passes on a report you choose to send by email. It is written in TypeScript, and every part of it, down to the Fountain parser, is Drafter’s own, written from public specifications (the clean-room rule, below).',
       },
     ],
   },
@@ -425,7 +425,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     details: [
       {
         kind: 'p',
-        text: 'One repository holds them all as pnpm workspaces: the engine packages in `packages/` (published as `@drafter/*`), the app in `apps/web`, and the desktop app in `apps/desktop`. Only `@drafter/cm-fountain` knows about CodeMirror, and only it and `@drafter/render-html` touch a web page; the rest run anywhere Node does, which is how the command line uses them.',
+        text: 'One repository holds them all as pnpm workspaces: the engine packages in `packages/` (named `@drafter/*` inside the repository, and not published under those names), the app in `apps/web`, and the desktop app in `apps/desktop`. Only `@drafter/cm-fountain` knows about CodeMirror, and only it and `@drafter/render-html` touch a web page; the rest run anywhere Node does, which is how the command line uses them.',
       },
       { kind: 'diagram', diagram: PACKAGE_DIAGRAM },
       {
@@ -489,7 +489,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
     plain: [
       {
         kind: 'p',
-        text: 'Exporting turns your script into a PDF to print or send, a web page that opens anywhere, an e-book, a story map to send to anyone, plain text, Markdown, or a Final Draft file. It happens to one side, like the page layout, so the editor stays free while a long script is drawn, and a bar shows how far it has got.',
+        text: 'Exporting turns your script into a PDF to print or send, a web page that opens anywhere, an e-book, a Story Atlas to send to anyone, plain text, Markdown, or a Final Draft file. It happens to one side, like the page layout, so the editor stays free while a long script is drawn, and a bar shows how far it has got.',
       },
     ],
     details: [
@@ -500,7 +500,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
           '**The export worker** (`export.worker.ts`) parses the script and, for a PDF or plain text, lays it out again with the same engine as the Script pane, then hands the pages to a renderer. It reports how far it has got, at most ten times a second, for the toast’s progress bar.',
           '**PDF** is `@drafter/render-pdf`, with `pdf-lib`, embedding Courier Prime, the font the Script pane shows. A Markdown document’s PDF is set in Inter Tight, with Courier Prime for code.',
           '**HTML and EPUB** are `@drafter/render-html-file`, which writes the file as text with no browser, so the command line’s `--html` makes the same page. The HTML page holds everything it needs: one stylesheet, one small script, and Courier Prime as base64 in only the styles the script uses, under a content security policy that lets it load nothing at all. It opens on the printed pages, placed from the same layout as the Script pane, with a Reading view beside them, and works with JavaScript off. The EPUB is the Reading view as an e-book (or the document), one chapter per act or `#` heading, zipped by `@drafter/archive`’s own small writer; its identifier is the script’s, so a new export replaces the old book. A 120-page script’s page is about 0.9 MB, written in under 20 ms. With **Let Drafter reopen this file**, either one also carries the script’s exact text: base64 in a `<script type="text/plain">` that no browser runs, or one more file in the e-book. Open finds it with `@drafter/archive` and reads it only as text.',
-          '**The story map** is `@drafter/story-map`, made in the export worker after its dialog, and by the command line’s `--story-map`. `buildStoryMap` turns what Drafter already works out (the scene index, the pages, the cast, and the Setup and Payoff notes) into a plain model of acts, scenes, places, people, lines of dialogue, and gaps; `renderStoryMap` draws it as one HTML string, with hand-built SVG charts, each with a table, and Anton, Archivo, and Courier Prime as base64 (about 89 KB). The page has no JavaScript at all: no `<script>`, no event attribute, and no style attribute, under a content security policy with no `script-src` that lets it load nothing but its own fonts and images. Everything the writer wrote is escaped, and no regular expression that reads their text can backtrack. A 120-page script’s page is about 250 KB. It never carries the script or any note but a Setup or Payoff label.',
+          '**The Story Atlas** is `@drafter/story-atlas`, made in the export worker after its dialog, and by the command line’s `--story-atlas`. `buildStoryAtlas` turns what Drafter already works out (the scene index, the pages, the cast, and the Setup and Payoff notes) into a plain model of acts, scenes, places, people, lines of dialogue, and gaps; `renderStoryAtlas` draws it as one HTML string, with hand-built SVG charts, each with a table, and Anton, Archivo, and Courier Prime as base64 (about 89 KB). The page has no JavaScript at all: no `<script>`, no event attribute, and no style attribute, under a content security policy with no `script-src` that lets it load nothing but its own fonts and images. Everything the writer wrote is escaped, and no regular expression that reads their text can backtrack. A 120-page script’s page is about 250 KB. It never carries the script or any note but a Setup or Payoff label.',
           '**Plain text** is `@drafter/render-text`: the same pages as fixed-width text. **Final Draft** is `@drafter/fdx`, which writes the XML itself, and reads `.fdx` files too.',
           '**Markdown** is `@drafter/outline`’s: the title, sections, and scenes as headings, a speech as the name in bold over its lines, and every line escaped so nothing in it reads as Markdown it wasn’t. A Markdown document’s Markdown file is its own text.',
           '**Export options** are each script’s own: scene numbers (none, as written, or every scene) and the title page (full, title and author only, or none), and, for a Markdown, HTML, or EPUB file, notes (left out or included). They are kept with the script’s record in the browser, never in the script’s text.',
@@ -556,7 +556,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
       },
       {
         kind: 'p',
-        text: 'Drafter is tested against a set of deliberately broken and hostile files, the trap documents: 294 of them, for every format it opens, each with the one outcome it must have. A problem with Drafter’s security is reported privately, through GitHub (SECURITY.md says how).',
+        text: 'Drafter is tested against a set of deliberately broken and hostile files, the trap documents: 298 of them, for every format it opens, each with the one outcome it must have. A problem with Drafter’s security is reported privately, through GitHub (SECURITY.md says how).',
       },
     ],
     details: [
@@ -570,7 +570,7 @@ export const TECH_SECTIONS: readonly TechSection[] = [
           '**The XML reader** (`@drafter/fdx`, for Final Draft (.fdx) and Fade In (.fadein)) is Drafter’s own and narrower than XML: a DOCTYPE, or any other `<!` declaration, is refused, so no entity is ever defined, expanded, read from a file, or fetched. Only the five predefined entities and character references to characters XML allows are decoded; a processing instruction other than the opening XML declaration is refused; the encoding declaration is ignored, since the bytes must be strict UTF-8. It reads in one pass with its own stack, at most 5 MB and 64 elements deep, and keeps an attribute named `__proto__` as a plain key.',
           '**The desktop app** (Electron) runs its page with `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false` (in frames and workers too), `webSecurity: true`, `webviewTag: false`, and `navigateOnDragDrop: false`, so a file dropped on the window never replaces the page. A `will-frame-navigate` guard keeps every frame on `app://drafter/` (an https link goes to your browser; a folder module’s own frame is the one exception), redirects off it are cancelled, `window.open` opens only the app’s own pages, and no webview can attach. A web request from a page is cancelled, except a folder module’s to an origin you agreed to. The page reaches files only through the main process, which answers only the app’s own pages and only for files you chose, judging a dropped or named file by where its links lead; it reads a regular file of at most 64 MB, never a pipe or a device, and hands the bytes to the page. An opened file is never loaded into a window. Where a Linux AppImage’s launcher turns the sandbox off, the app says so and asks before it goes on.',
           '**Drafter for Claude** (`packages/mcp`, the `drafter-mcp` program) reads only the folders named with `--folder` on its command line, never the folders an AI app offers. A tool’s path starts with a folder’s name and is refused if it holds `..`, an empty part, a part starting with a dot, a control character, or (on Windows) a drive, a UNC prefix, a stream, or a trailing dot or space; the joined path’s real path must be inside the folder’s, and the file is opened without following a last link and checked by device and inode against what was checked. Folder walks never follow a link to a folder and stop at 6 levels and 500 files. Every file is judged by what is inside it, as Open judges it, and read with the app’s caps (5 MB a script, the archive caps, 32 MB a draft or cuts file). Each call runs in a worker thread stopped at 10 seconds, an answer is at most 40,000 characters with an HMAC-signed cursor for the rest, and the program has no code that writes a file, starts a process, or opens a socket (a test reads its source for any). The writer’s text only ever appears inside JSON strings, after a fixed line saying it is a story to read, not instructions.',
-          '**The trap documents** (`fixtures/trap/`) are 294 deliberately broken and hostile files: Fountain, Markdown, plain text, Final Draft (.fdx), Highland (.highland), Fade In (.fadein), HTML and EPUB reopening, pipes, links and folders, and module manifests. A manifest gives each its outcome: it opens with given text, opens with a warning, or is refused with a given message. Vitest runs every one through every way in that applies (the web app’s Open, the desktop app’s, `drafter convert` and `build`, each format’s reader, the modules folder, Classic Mode’s editor, and Drafter for Claude’s tools, with its own path and size traps), checking the outcome, that nothing threw, the time (2 seconds unless it says more), and the memory kept: the readers, the command line, and the modules folder run in a worker thread that is terminated at the limit or past 3 GB of heap, so a hang fails; the app’s own Open runs in the test’s thread, timed and measured but not stopped mid-hang; Playwright runs a few of each kind in Chromium, Firefox, and WebKit, at desktop and phone sizes, and in the desktop app, watching that nothing runs or is fetched. The desktop workflow runs the Vitest parts and the Electron part on every push to `main`. To add one, write its file under `fixtures/trap/files/` or a function in `traps.ts`, give it its outcome, and regenerate the manifest with `pnpm vitest run --project trap -u`.',
+          '**The trap documents** (`fixtures/trap/`) are 298 deliberately broken and hostile files: Fountain, Markdown, plain text, Final Draft (.fdx), Highland (.highland), Fade In (.fadein), HTML and EPUB reopening, pipes, links and folders, and module manifests. A manifest gives each its outcome: it opens with given text, opens with a warning, or is refused with a given message. Vitest runs every one through every way in that applies (the web app’s Open, the desktop app’s, `drafter convert` and `build`, each format’s reader, the modules folder, Classic Mode’s editor, and Drafter for Claude’s tools, with its own path and size traps), checking the outcome, that nothing threw, the time (2 seconds unless it says more), and the memory kept: the readers, the command line, and the modules folder run in a worker thread that is terminated at the limit or past 3 GB of heap, so a hang fails; the app’s own Open runs in the test’s thread, timed and measured but not stopped mid-hang; Playwright runs a few of each kind in Chromium, Firefox, and WebKit, at desktop and phone sizes, and in the desktop app, watching that nothing runs or is fetched. The desktop workflow runs the Vitest parts and the Electron part on every push to `main`. To add one, write its file under `fixtures/trap/files/` or a function in `traps.ts`, give it its outcome, and regenerate the manifest with `pnpm vitest run --project trap -u`.',
         ],
       },
       {
@@ -631,10 +631,10 @@ export const TECH_SECTIONS: readonly TechSection[] = [
           '**Unit tests** (Vitest) check each package on its own: the Fountain parser, pagination, the PDF, every import and export. The web app’s own pieces (saving, storage, drafts, the editor’s keys) run in jsdom, a stand-in for a browser.',
           '**Property tests** (fast-check) generate thousands of random scripts and check rules that must hold for every one, not just the examples someone thought of: a script read and written back comes out the same, and Classic Mode never writes anything a writer couldn’t have typed by hand.',
           '**End-to-end tests** (Playwright) drive the built site in five setups: Chromium, Firefox, and WebKit (Safari’s engine) on a desktop screen, and a phone in Chromium and in WebKit. axe checks accessibility in both themes. The desktop app has end-to-end tests of its own, in Electron.',
-          '**The trap documents** are 294 broken and hostile files, each with the one outcome it must have, sent through every way a file comes in: opening and dropping in the browser and the desktop app, `drafter convert` and `drafter build`, the files kept beside a script, Drafter for Claude, and Classic Mode.',
+          '**The trap documents** are 298 broken and hostile files, each with the one outcome it must have, sent through every way a file comes in: opening and dropping in the browser and the desktop app, `drafter convert` and `drafter build`, the files kept beside a script, Drafter for Claude, and Classic Mode.',
           '**Time limits.** A test with a limit in its name (“within a second”) fails if Drafter is too slow, a keystroke has a budget in a real browser, and `pnpm bench` times the parser and the layout on long scripts.',
           '**While a change is made,** its tests are written first where they can be: a test that fails, then the code that makes it pass.',
-          '**On every pull request,** `.github/workflows/checks.yml` runs the linter (Biome), the build, every package’s type check and tests, the trap documents, the web app’s type check and tests, the desktop shell’s tests, a check of the Docker image, and the browser tests in Chromium on macOS and on Linux, split across eight runners. All of it must pass before a change is merged. Tests with a time limit are skipped there, as GitHub’s shared runners are slower.',
+          '**On every pull request,** `.github/workflows/checks.yml` runs the linter (Biome), the build, every package’s type check and tests, the trap documents, the web app’s type check and tests, the desktop shell’s tests, a check of the Docker image, and the browser tests in Chromium on macOS and on Linux, split across eight runners. All of it is meant to pass before a change is merged; nothing on GitHub enforces that yet, so the checks are read before each merge. Tests with a time limit are skipped there, as GitHub’s shared runners are slower.',
           '**Before a release,** the release gates run every test once, with its time limits, in all five browser setups, on a real computer. Then the desktop workflow builds the Linux and Windows apps and tests them on GitHub’s computers, and runs Drafter for Claude the way an AI app starts it.',
           '**What tests can’t do.** Passing tests show that what they check is right, not that nothing is wrong. A test that sometimes fails for no clear reason is rerun and looked into, not switched off. Each big change is also tried by hand before it ships, and the screen-reader checks are done by a person.',
         ],

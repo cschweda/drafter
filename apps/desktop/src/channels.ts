@@ -37,7 +37,7 @@ export const CHANNELS = {
   /** main → preload: the id of the command a menu item stands for, chosen in the menu bar. */
   menuRun: 'drafter:menu:run',
   /**
-   * The right-click menu's story-map items (context-menu.ts). main → preload: `(id, x, y)`, which
+   * The right-click menu's story-atlas items (context-menu.ts). main → preload: `(id, x, y)`, which
    * speech is under the click; preload → main: `(id, at)`, its editor offset or null; main →
    * preload: `(at, 'quote' | 'no-quote')`, the item chosen.
    */

@@ -28,8 +28,13 @@ export const SERIES_MAX = 30;
  */
 export const SHORT_NAME = 3;
 
-/** The bytes of not-yet-parsed files one page of a search parses, at most (one file always). */
-export const PAGE_PARSE_BYTES = 20 * 1024 * 1024;
+/**
+ * The bytes of not-yet-parsed files one page of a search parses, at most (one file always). No
+ * more than the cache holds (`CACHE_MAX_BYTES`): at 20 MB a folder of long scripts could never
+ * finish its first page inside the time limit, and a page that times out hands back no cursor
+ * (the audit of the red/blue audit of 23 November 2026, M3).
+ */
+export const PAGE_PARSE_BYTES = 4 * 1024 * 1024;
 /** The bytes of scripts one series overview reads, at most. */
 export const SERIES_READ_BYTES = 20 * 1024 * 1024;
 

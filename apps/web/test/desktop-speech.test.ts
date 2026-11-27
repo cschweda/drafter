@@ -2,8 +2,8 @@
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-// The desktop app's right-click Use in story map: the page answers which speech is under a click,
-// only when the click lands in the editor itself (`story-map/desktop-speech.ts`).
+// The desktop app's right-click Use in Story Atlas: the page answers which speech is under a click,
+// only when the click lands in the editor itself (`story-atlas/desktop-speech.ts`).
 
 const SCRIPT = 'INT. DOCK - DAY\n\nGulls.\n\nODILE\nNobody sails a boat they never mended.\n';
 
@@ -50,7 +50,7 @@ beforeEach(async () => {
     '<div class="cm-content"><div class="cm-line">line</div></div><input id="logline" />';
   held.content = document.querySelector('.cm-content') as HTMLElement;
   document.elementFromPoint = () => under;
-  const { installSpeechMenu } = await import('../app/story-map/desktop-speech');
+  const { installSpeechMenu } = await import('../app/story-atlas/desktop-speech');
   installSpeechMenu();
 });
 

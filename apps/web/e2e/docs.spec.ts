@@ -76,7 +76,10 @@ const background = (page: Page) =>
 
 test.describe('without JavaScript', () => {
   // No JavaScript, and so no stored state to set up first (the tour's "seen" flag is a script's to set).
-  test.use({ javaScriptEnabled: false, storageState: { cookies: [], origins: [] } });
+  test.use({
+    javaScriptEnabled: false,
+    storageState: { cookies: [], origins: [] },
+  });
 
   test('prerenders each help page with its title and description', async ({ page }) => {
     const descriptions = new Set<string>();
@@ -187,7 +190,11 @@ test.describe('without JavaScript', () => {
     const spell = createRequire(new URL('../../../packages/spell/package.json', import.meta.url));
     const nspellDir = spell.resolve('nspell').replace(/[/\\]lib[/\\]index\.js$/, '');
     const version = (dir: string) =>
-      (JSON.parse(readFileSync(`${dir}/package.json`, 'utf8')) as { version: string }).version;
+      (
+        JSON.parse(readFileSync(`${dir}/package.json`, 'utf8')) as {
+          version: string;
+        }
+      ).version;
     const isBufferDir = createRequire(`${nspellDir}/package.json`)
       .resolve('is-buffer')
       .replace(/[/\\]index\.js$/, '');
@@ -195,7 +202,12 @@ test.describe('without JavaScript', () => {
     const mcpDir = (name: string) =>
       fileURLToPath(new URL(`../../../packages/mcp/node_modules/${name}`, import.meta.url));
     const packages = [
-      { name: 'nspell', version: version(nspellDir), licence: 'MIT', file: '/licenses/nspell.txt' },
+      {
+        name: 'nspell',
+        version: version(nspellDir),
+        licence: 'MIT',
+        file: '/licenses/nspell.txt',
+      },
       {
         name: 'is-buffer',
         version: version(isBufferDir),
@@ -278,7 +290,7 @@ test.describe('without JavaScript', () => {
         'utf8',
       ),
     );
-    // The story map's Anton and Archivo, whose licences travel with every story map's fonts.
+    // The Story Atlas's Anton and Archivo, whose licences travel with every Story Atlas's fonts.
     for (const [name, file, from] of [
       ['Anton', '/fonts/anton/OFL.txt', 'OFL-Anton.txt'],
       ['Archivo', '/fonts/archivo/OFL.txt', 'OFL-Archivo.txt'],
@@ -289,7 +301,10 @@ test.describe('without JavaScript', () => {
       const served = await page.request.get(file);
       expect(served.ok(), file).toBe(true);
       expect(await served.text(), file).toBe(
-        readFileSync(new URL(`../../../packages/story-map/fonts/${from}`, import.meta.url), 'utf8'),
+        readFileSync(
+          new URL(`../../../packages/story-atlas/fonts/${from}`, import.meta.url),
+          'utf8',
+        ),
       );
     }
     const ofl = await page.request.get('/fonts/inter-tight/OFL.txt');
@@ -315,7 +330,11 @@ test.describe('without JavaScript', () => {
   }) => {
     await page.goto('/docs');
     await expect(
-      page.getByRole('heading', { level: 2, name: 'Stats and Scaffold', exact: true }),
+      page.getByRole('heading', {
+        level: 2,
+        name: 'Stats and Scaffold',
+        exact: true,
+      }),
     ).toBeVisible();
     const text = await mainText(page);
     expect(text).toContain('a mention counts as being there');
@@ -421,6 +440,21 @@ test.describe('without JavaScript', () => {
     }
   });
 
+  test('the Threads help page teaches its words', async ({ page }) => {
+    await page.goto('/docs/threads');
+    const text = await mainText(page);
+    for (const phrase of [
+      'Threads…',
+      'Lanes',
+      '[[Thread:',
+      'Storyline',
+      'Show as table',
+      'novel',
+    ]) {
+      expect(text, phrase).toContain(phrase);
+    }
+  });
+
   test('the Production help page teaches its words', async ({ page }) => {
     await page.goto('/docs/production');
     const text = await mainText(page);
@@ -441,7 +475,11 @@ test.describe('without JavaScript', () => {
   }) => {
     await page.goto('/docs/novel');
     await expect(
-      page.getByRole('heading', { level: 2, name: 'Sending it out', exact: true }),
+      page.getByRole('heading', {
+        level: 2,
+        name: 'Sending it out',
+        exact: true,
+      }),
     ).toHaveAttribute('id', 'sending-it-out');
     const text = await mainText(page);
     for (const phrase of [
@@ -636,7 +674,7 @@ test.describe('without JavaScript', () => {
       'RTF',
       'PDF',
       'Markdown (.md)',
-      'Include notes (Markdown, HTML, and EPUB)',
+      'Include notes (Markdown, HTML, EPUB, and Final Draft)',
       'HTML (.html)',
       'EPUB (.epub)',
       'e-book',
@@ -721,7 +759,7 @@ test.describe('without JavaScript', () => {
       'Not in a browser: claude.ai can’t start a program on your computer; Claude Desktop is the same account.',
       'It isn’t made by or connected with Anthropic.',
       'Each npm release is the same file as the one on the GitHub Release; you can check its SHA-256.',
-      'except the setup and payoff names a story map shows',
+      'except the setup and payoff names a Story Atlas shows',
     ]) {
       expect(text, phrase).toContain(phrase);
     }
@@ -748,7 +786,10 @@ test.describe('with JavaScript', () => {
     const chromium = browserName === 'chromium';
     if (chromium) await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.goto('/docs/drafter-for-claude');
-    const copy = page.getByRole('button', { name: 'Copy the Claude Code command', exact: true });
+    const copy = page.getByRole('button', {
+      name: 'Copy the Claude Code command',
+      exact: true,
+    });
     await expect(page.getByRole('button', { name: /^Copy/ })).toHaveCount(6);
     await copy.click();
     await expect(
@@ -928,7 +969,7 @@ test.describe('from the app', () => {
     for (const { title, path } of HELP_PAGES) {
       await page.keyboard.press('ControlOrMeta+k');
       await expect(palette(page)).toBeVisible();
-      // The command's own words: "Story map" alone finds Export as Story map… first.
+      // The command's own words: "Story Atlas" alone finds Export as Story Atlas… first.
       await page.keyboard.insertText(`Open the page: ${title}`);
       // The page is the first match, and the highlighted one.
       await expect(palette(page).getByRole('option').first()).toContainText(

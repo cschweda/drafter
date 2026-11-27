@@ -71,7 +71,10 @@ describe('a long document read in pieces', () => {
     const text = parts(400);
     const cuts = same(text, 256);
     expect(cuts.length).toBeGreaterThan(50);
-    for (const cut of cuts) expect(text[cut]).toBe('#');
+    // Each piece starts a heading, or a paragraph after an empty line (`More words.`).
+    for (const cut of cuts)
+      expect(text[cut] === '#' || text.slice(cut - 2, cut) === '\n\n').toBe(true);
+    expect(cuts.some((cut) => text[cut] === 'M')).toBe(true);
   });
 
   test('reads a flood of headings with no blank lines between them the same', () => {
@@ -91,6 +94,52 @@ describe('a long document read in pieces', () => {
       same(blocks.join(''));
     }
   });
+
+  test('cuts before a paragraph or a quote that follows an empty line, and reads it the same', () => {
+    for (const unit of [
+      '- a\n\nb\n\n',
+      '> a\n\n',
+      '1. a\n\n   more\n\nNext.\n\n',
+      '- a\r\n\r\nb\r\n\r\n',
+      '    code\n\nb\n\n',
+      'Setext\n===\n\n- a\n\n_b_\n\n',
+      '- a\n\n#notaheading\n\n',
+    ]) {
+      expect(same(unit.repeat(300)).length, JSON.stringify(unit)).toBeGreaterThanOrEqual(299);
+    }
+  });
+
+  test('never cuts before a byte-order mark: the parser would drop it from the piece', () => {
+    expect(same('x\n\n\ufeffy\n')).toEqual([]);
+    const text = `${'word '.repeat(1000)}\n\n\ufeffAfter *the* mark.\n\n${'More words.\n\n'.repeat(400)}`;
+    expect(JSON.stringify(parseMarkdown(text))).toBe(JSON.stringify(readWhole(text)));
+  });
+
+  test('never cuts before a line that may go on with a list, or one that is indented', () => {
+    for (const unit of [
+      '- a\n\n- b\n\n',
+      '1. a\n\n2. b\n\n',
+      '* a\n\n+ b\n\n',
+      '- a\n\n  b\n\n',
+      '- a\n\n\tb\n\n',
+      '- a\n\n1\n\n',
+      '- a\n\n***\n\n',
+      '- a\n \nb\n \n',
+    ]) {
+      expect(same(unit.repeat(300)), JSON.stringify(unit)).toEqual([]);
+    }
+  });
+
+  test(
+    'reads lists and quotes that each end at a paragraph in linear time',
+    () => {
+      for (const unit of ['- a\n\nb\n\n', '> a\n\n', '1. a\n\nb\n\n']) {
+        const { growth } = scaling((n) => unit.repeat(n), parseMarkdown, 4000);
+        expect(growth, JSON.stringify(unit)).toBeLessThan(MAX_GROWTH);
+      }
+    },
+    SCALING_TIMEOUT,
+  );
 
   test('never cuts a document with a fence, HTML, or a definition', () => {
     const long = parts(200);

@@ -268,6 +268,57 @@ const TRUSTED_HOSTS = new Set([
   'metaincognita.com',
 ]);
 
+/**
+ * The Support page's links (apps/web/app/about/support.ts), each trusted as that one address and
+ * nothing else on its site: no query, no fragment, no other path. A whole host here would be a
+ * place a page could put the script in an address, which the asking is there to stop. A test
+ * holds this list to the web app's.
+ */
+const TRUSTED_PAGES = new Set(['https://ko-fi.com/chrisschweda']);
+
+/** As long as the longest of Drafter's own links, with room: not long enough to carry a page of script. */
+const MAX_TRUSTED_ADDRESS = 160;
+
+/**
+ * Whether an address on a trusted site is shaped like the links Drafter has to it: short, with no
+ * query, nothing percent-encoded, and at most a short anchor. A trusted host is otherwise a place
+ * a page that had been made to run code could put the script (in the path, the query, the
+ * fragment) and hand it to the browser with no question (red/blue audit of 23 November 2026, D1).
+ * A test holds this to every such link the web app has.
+ */
+function plainAddress(url: string, parsed: URL): boolean {
+  if (url.length > MAX_TRUSTED_ADDRESS || parsed.search !== '' || url.includes('?')) return false;
+  if (parsed.pathname.includes('//')) return false;
+  if (!/^[A-Za-z0-9._~/-]*$/.test(parsed.pathname)) return false;
+  return /^(?:#[A-Za-z0-9._-]{0,64})?$/.test(parsed.hash);
+}
+
+/**
+ * What a new-issue link may carry: GitHub's own three, and the ids of the two forms' fields
+ * (.github/ISSUE_TEMPLATE/bug.yml and idea.yml; apps/web/app/report/issue.ts builds the link). Its
+ * length is that file's `MAX_ISSUE_URL`, and an email's `MAX_MAIL_URL`; a test holds both to it.
+ */
+const ISSUE_FIELDS = new Set([
+  'template',
+  'title',
+  'labels',
+  'what-happened',
+  'expected',
+  'idea',
+  'version',
+]);
+export const MAX_ISSUE_URL = 7500;
+export const MAX_MAIL_URL = 2000;
+
+/** An email as the app writes one: no longer than it makes them, and a subject of one line. */
+function plainMail(url: string, parsed: URL): boolean {
+  if (url.length > MAX_MAIL_URL) return false;
+  for (const [key, value] of parsed.searchParams) {
+    if (key.toLowerCase() === 'subject' && /[\r\n]/.test(value)) return false;
+  }
+  return true;
+}
+
 /** Whether a page may send `url` to the browser without asking: one of Drafter's own links. */
 export function trustedExternal(url: string): boolean {
   let parsed: URL;
@@ -276,16 +327,31 @@ export function trustedExternal(url: string): boolean {
   } catch {
     return false;
   }
-  if (parsed.protocol === 'mailto:') return navigationFor(url) === 'external';
+  if (TRUSTED_PAGES.has(url)) return true;
+  if (parsed.protocol === 'mailto:')
+    return navigationFor(url) === 'external' && plainMail(url, parsed);
+  // As it is written: an address the parser tidied (a tab or a space in it, a backslash, capitals
+  // in the scheme or the host) is not one of Drafter's links.
+  if (url !== parsed.href && `${url}/` !== parsed.href) return false;
   if (parsed.protocol !== 'https:' || parsed.username !== '' || parsed.password !== '')
     return false;
   if (parsed.port !== '') return false;
   const host = parsed.hostname.toLowerCase();
   if (host === 'github.com') {
-    const [, owner, repo] = parsed.pathname.split('/');
-    return owner?.toLowerCase() === 'cschweda' && repo?.toLowerCase() === 'drafter';
+    const [, owner, repo, ...rest] = parsed.pathname.split('/');
+    if (owner?.toLowerCase() !== 'cschweda' || repo?.toLowerCase() !== 'drafter') return false;
+    // The report the app builds for a new issue carries what the writer typed, in its query: the
+    // fields that report has, at the length it keeps to, and nothing after a `#`.
+    if (rest.join('/') === 'issues/new') {
+      return (
+        url.length <= MAX_ISSUE_URL &&
+        parsed.hash === '' &&
+        [...parsed.searchParams.keys()].every((key) => ISSUE_FIELDS.has(key))
+      );
+    }
+    return plainAddress(url, parsed);
   }
-  return TRUSTED_HOSTS.has(host);
+  return TRUSTED_HOSTS.has(host) && plainAddress(url, parsed);
 }
 
 /** The maintainer's address, the one `mailto:` the app hands to the system (apps/web/app/report/issue.ts). */

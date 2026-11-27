@@ -78,10 +78,10 @@ export const REQUIRED_FILES = [
   'fonts/liberation-serif/LiberationSerif-Italic.ttf',
   'fonts/liberation-serif/LiberationSerif-Bold.ttf',
   'fonts/liberation-serif/LiberationSerif-BoldItalic.ttf',
-  'fonts/story-map/Anton-Regular.woff2',
-  'fonts/story-map/Archivo-Regular.woff2',
-  'fonts/story-map/Archivo-SemiBold.woff2',
-  'fonts/story-map/CourierPrime-Regular.woff2',
+  'fonts/story-atlas/Anton-Regular.woff2',
+  'fonts/story-atlas/Archivo-Regular.woff2',
+  'fonts/story-atlas/Archivo-SemiBold.woff2',
+  'fonts/story-atlas/CourierPrime-Regular.woff2',
 ];
 
 /**
@@ -297,6 +297,26 @@ export async function iconsNamedInTs(appDir) {
   return [...names].sort();
 }
 
+/**
+ * Why this build must not be made with the test module in it, or null. A test build
+ * (`DRAFTER_TEST_MODULES=1`) is checked against its own flag, so the flag left set in a release
+ * shell would pass every other check here; it is refused with anything that marks a build the
+ * public gets: the site's analytics or its reports, or a release tag (red/blue audit of 23
+ * November 2026, S7).
+ * @param {Record<string, string | undefined>} env
+ */
+export function testBuildProblem(env) {
+  if (env.DRAFTER_TEST_MODULES !== '1') return null;
+  const marks = [
+    env.DRAFTER_ANALYTICS ? 'DRAFTER_ANALYTICS' : null,
+    env.DRAFTER_REPORTS ? 'DRAFTER_REPORTS' : null,
+    env.CONTEXT === 'production' ? 'Netlify’s production context' : null,
+    (env.GITHUB_REF ?? '').startsWith('refs/tags/') ? 'a release tag' : null,
+  ].filter(Boolean);
+  if (marks.length === 0) return null;
+  return `This is a test build (DRAFTER_TEST_MODULES=1), made with ${marks.join(' and ')}: a build the public gets must not hold the test module.`;
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const siteDir = process.argv[2] ?? '.output/public';
   const appDir = fileURLToPath(new URL('../app', import.meta.url));
@@ -309,6 +329,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     desktop: process.env.DRAFTER_DESKTOP === '1',
     files: REQUIRED_FILES,
   });
+  const test = testBuildProblem(process.env);
+  if (test) problems.push(test);
   for (const problem of problems) console.error(problem);
   if (problems.length > 0) process.exit(1);
   console.log('The build checks out.');

@@ -19,7 +19,7 @@ describe('readNote', () => {
   test('reads each field key in any case and spacing', () => {
     expect(head('Color: blue')).toEqual({ kind: 'field', key: 'color' });
     expect(head('  COLOR :blue  ')).toEqual({ kind: 'field', key: 'color' });
-    expect(head('storyline: A, B')).toEqual({ kind: 'field', key: 'storyline' });
+    expect(head('storyline: A, B')).toEqual({ kind: 'field', key: 'thread' });
     expect(head('GoAl:Win.')).toEqual({ kind: 'field', key: 'goal' });
     expect(head('Conflict: He jokes.')).toEqual({ kind: 'field', key: 'conflict' });
     expect(head('outcome: He leaves.')).toEqual({ kind: 'field', key: 'outcome' });
@@ -31,7 +31,7 @@ describe('readNote', () => {
       tags: [],
       resolved: false,
     });
-    expect(FIELD_ORDER).toEqual(['color', 'storyline', 'goal', 'conflict', 'outcome', 'shift']);
+    expect(FIELD_ORDER).toEqual(['color', 'thread', 'goal', 'conflict', 'outcome', 'shift']);
   });
 
   test('reads Setup and Payoff as marks', () => {
@@ -211,6 +211,20 @@ describe('readNote', () => {
 
   test('does not read #3 as a tag', () => {
     expect(readNote('Take #3 and #-x and # y').tags).toEqual([]);
+  });
+});
+
+describe('Thread', () => {
+  test('reads Thread and Storyline as the same field', () => {
+    expect(readNote('Thread: A, B').head).toEqual({ kind: 'field', key: 'thread' });
+    expect(readNote('storyline: A').head).toEqual({ kind: 'field', key: 'thread' });
+    expect(readNote('STORYLINE: A').head).toEqual({ kind: 'field', key: 'thread' });
+  });
+  test('Storyline on a quote is still no person', () => {
+    expect(readNote('Storyline on "x": hi').head).toBeNull();
+  });
+  test('writes Thread', () => {
+    expect(writeNote('thread', ' A, B ')).toBe('[[Thread: A, B]]');
   });
 });
 

@@ -12,7 +12,11 @@ export const STUB_HEADING = 'INT. LOCATION - DAY';
 /** A play's stub heading: a scene is a `##` section there. */
 export const STAGE_STUB = '## New scene';
 
-const ITEM = /^\s*-\s+(.*\S)\s*$/;
+/**
+ * A list item's words (`- Words`), or undefined. The end is trimmed first: one pattern for the
+ * words and the spaces after them tried a dash and a long run of spaces every way it split.
+ */
+const itemOf = (line: string): string | undefined => /^\s*-\s+(\S.*)$/.exec(line.trimEnd())?.[1];
 
 /** Whether `template` makes a `##` section a scene: a play. */
 function isPlay(template: Template): boolean {
@@ -58,7 +62,7 @@ export function expandOutline(doc: Doc, template: Template, range: Span): TextCh
     if (block.kind === 'synopsis') {
       texts = block.lines.map((line) => line.raw.replace(/^\s*=\s*/, '').trim());
     } else if (block.kind === 'action') {
-      const items = block.lines.map((line) => ITEM.exec(line.raw.replace(/\r$/, ''))?.[1]);
+      const items = block.lines.map((line) => itemOf(line.raw));
       if (items.every((item) => item !== undefined)) texts = items as string[];
     }
     if (!texts) continue;
@@ -77,10 +81,39 @@ export function expandOutline(doc: Doc, template: Template, range: Span): TextCh
 
 /** Markdown inline marks that aren't Fountain's: links and images keep their words, code its text. */
 function plainInline(text: string): string {
-  return text
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/`([^`]*)`/g, '$1');
+  // Links are looked for only where there can be one, and not in a line crowded with brackets:
+  // each `[` with no `](` after it was read to the end of the line, so a line of them took the
+  // square of its length (red/blue audit of 23 November 2026, W8). Such a line keeps its marks.
+  const links = text.includes('](') && brackets(text) <= MAX_BRACKETS;
+  const unlinked = links
+    ? text.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    : text;
+  return unlinked.replace(/`([^`]*)`/g, '$1');
+}
+
+/** More `[` than this in one line or paragraph, and it isn't read for links. */
+const MAX_BRACKETS = 500;
+
+function brackets(text: string): number {
+  let count = 0;
+  for (let at = text.indexOf('['); at >= 0; at = text.indexOf('[', at + 1)) count++;
+  return count;
+}
+
+/**
+ * An ATX heading's marks and words (`## Words ##`), or null. Read by hand: one pattern for the
+ * words, the spaces after them, and the closing marks tried a long run of spaces every way it
+ * split, the cube of its length (the same audit).
+ */
+function headingOf(line: string): { depth: number; words: string } | null {
+  const open = /^\s{0,3}(#{1,6})\s+/.exec(line);
+  if (!open) return null;
+  let end = line.length;
+  const space = (at: number) => /\s/.test(line[at] as string);
+  while (end > open[0].length && space(end - 1)) end--;
+  while (end > open[0].length && line[end - 1] === '#') end--;
+  while (end > open[0].length && space(end - 1)) end--;
+  return { depth: (open[1] as string).length, words: line.slice(open[0].length, end) };
 }
 
 /**
@@ -120,11 +153,11 @@ export function scriptFromMarkdown(markdown: string): { title: string | null; bo
       flush();
       continue;
     }
-    const headingMatch = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
-    if (headingMatch) {
+    const heading = headingOf(line);
+    if (heading) {
       flush();
-      const text = safeLine(plainInline(headingMatch[2] ?? ''));
-      const depth = (headingMatch[1] ?? '#').length;
+      const text = safeLine(plainInline(heading.words));
+      const { depth } = heading;
       if (!seenText && depth === 1 && title === null) title = text;
       else if (text !== '') parts.push(`${'#'.repeat(depth)} ${text}`);
       seenText = true;
