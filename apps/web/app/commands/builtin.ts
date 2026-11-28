@@ -31,6 +31,8 @@ import { useCompare } from '~/compare/use-compare';
 import { useFocusMode } from '~/composables/useFocusMode';
 import { usePanes } from '~/composables/usePanes';
 import { useCuts } from '~/cuts/use-cuts';
+import { useDefinitions } from '~/definitions/use-definitions';
+import { wordToLookUp } from '~/definitions/word';
 import { isDesktopBuild } from '~/desktop';
 import { useDrafts } from '~/drafts/use-drafts';
 import { useDraftSteps } from '~/drafts/use-steps';
@@ -103,6 +105,7 @@ export function registerBuiltinCommands(): void {
   const comparing = () => compare.current.value !== null;
   const showChanges = useShowChanges();
   const cuts = useCuts();
+  const definitions = useDefinitions();
   const drafts = useDrafts();
   const steps = useDraftSteps();
   // Made now, so the focus's start and end are announced from the first one on.
@@ -382,6 +385,21 @@ export function registerBuiltinCommands(): void {
       run: () => {
         if (cuts.shown()) cuts.close(true);
         else cuts.open();
+      },
+    },
+    // Definitions (definitions design §7.5): the word at the cursor (or the selection), in the
+    // Definitions tab; with no word there, the tab opens on its search field.
+    'look-up-word': {
+      run: () => {
+        const word = wordToLookUp(view.state);
+        definitions.open(word ?? undefined);
+      },
+    },
+    definitions: {
+      liveTitle: () => (definitions.showing() ? 'Close Definitions' : 'Definitions…'),
+      run: () => {
+        if (definitions.showing()) definitions.close(true);
+        else definitions.open();
       },
     },
     // Start new draft… (drafts-and-cuts design §2.1): its dialog; for a sample or in a read-only

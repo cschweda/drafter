@@ -232,6 +232,13 @@ test.describe('without JavaScript', () => {
         licence,
         file,
       })),
+      // Definitions' reader (definitions design §7.7), declared by apps/web.
+      {
+        name: 'w1913',
+        version: version(fileURLToPath(new URL('../node_modules/w1913', import.meta.url))),
+        licence: 'MIT',
+        file: '/licenses/w1913.txt',
+      },
     ];
     await page.goto('/docs/licences');
     await expect(heading(page)).toHaveText('Third-party licences');

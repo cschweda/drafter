@@ -90,6 +90,12 @@ export function headersFile(scriptHashes, options = {}) {
     // files, much less over the wire.
     '/dictionaries/*',
     '  Content-Type: text/plain; charset=utf-8',
+    // Definitions' dictionary (definitions design §7.2): already gzipped, and fetched as bytes
+    // whose SHA-256 is checked, so it is named as plain bytes (never re-encoded on the way), and
+    // kept for a year (its name carries the edition).
+    '/definitions/*',
+    '  Content-Type: application/octet-stream',
+    '  Cache-Control: public, max-age=31536000, immutable',
     // The service worker and the manifest are never kept for long: a browser that asks for
     // `sw.js` and is told "no-cache" checks with the server each time, which is how it finds a
     // new version (the worker's own bytes change with the files it precaches).

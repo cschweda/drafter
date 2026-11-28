@@ -147,6 +147,8 @@ const LAYOUT: Record<Group, Section[]> = {
         'ignore-misspelling',
       ],
     },
+    // Definitions (definitions design §7.5): the word at the cursor, after spelling.
+    { pick: ['look-up-word'] },
     { pick: prefix('element-'), submenu: 'Element', strip: /^Element: / },
     { pick: prefix('emphasis-'), submenu: 'Emphasis', strip: /^Emphasis: / },
     { pick: prefix('make-'), submenu: 'Force', strip: /^Force / },
@@ -162,6 +164,7 @@ const LAYOUT: Record<Group, Section[]> = {
     { pick: ['focus-passage', 'focus-chapter', 'focus-section', 'show-whole-book'] },
     { pick: prefix('sprint-'), submenu: 'Sprint' },
     { pick: ['show-stats'] },
+    { pick: ['definitions'] },
     { pick: ['switch-theme'] },
     {
       pick: [

@@ -127,6 +127,7 @@ describe('panes', () => {
           'drafts',
           'draft-steps',
           'draft',
+          'definitions',
         ],
       });
       expect(inspectorTabs('fountain', ['module-a--x', 'module-b--y']).more).toEqual([
@@ -138,6 +139,7 @@ describe('panes', () => {
         'drafts',
         'draft-steps',
         'draft',
+        'definitions',
         'module-a--x',
         'module-b--y',
       ]);
@@ -146,7 +148,7 @@ describe('panes', () => {
     test("a novel's row is Preview, Outline, Cards, and Stats; More as a Markdown document's", () => {
       expect(inspectorTabs('novel')).toEqual({
         row: ['script', 'outline', 'cards', 'stats'],
-        more: ['problems', 'compare', 'cuts', 'drafts', 'draft-steps', 'draft'],
+        more: ['problems', 'compare', 'cuts', 'drafts', 'draft-steps', 'draft', 'definitions'],
       });
     });
 
@@ -154,7 +156,7 @@ describe('panes', () => {
       // The Preview is the Script tab's id in a Markdown document (its panel is #panel-script).
       expect(inspectorTabs('markdown')).toEqual({
         row: ['script', 'stats'],
-        more: ['problems', 'compare', 'cuts', 'drafts', 'draft-steps', 'draft'],
+        more: ['problems', 'compare', 'cuts', 'drafts', 'draft-steps', 'draft', 'definitions'],
       });
       // A module's tab, which a module may draw for any document, goes after them.
       expect(inspectorTabs('markdown', ['module-a--x']).more).toEqual([
@@ -164,6 +166,7 @@ describe('panes', () => {
         'drafts',
         'draft-steps',
         'draft',
+        'definitions',
         'module-a--x',
       ]);
     });

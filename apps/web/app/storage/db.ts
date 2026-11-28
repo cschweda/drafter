@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { CutRow } from '../cuts/store';
+import type { DefinitionsRow } from '../definitions/store';
 import type { DraftRow } from '../drafts/store';
 import type { FileRef } from './files';
 import type { Project } from './projects';
@@ -62,6 +63,7 @@ class DrafterDb extends Dexie {
   settings!: EntityTable<SettingRow, 'key'>;
   drafts!: EntityTable<DraftRow, 'key'>;
   cuts!: EntityTable<CutRow, 'key'>;
+  definitions!: EntityTable<DefinitionsRow, 'key'>;
 
   constructor() {
     super('drafter');
@@ -79,6 +81,11 @@ class DrafterDb extends Dexie {
     this.version(2).stores({
       drafts: 'key, projectId, [projectId+n], id',
       cuts: 'key, projectId, id',
+    });
+    // Version 3 (definitions design §7.2): one new table for the downloaded dictionary, and nothing
+    // else changes, so the upgrade only adds it.
+    this.version(3).stores({
+      definitions: 'key',
     });
   }
 }

@@ -197,6 +197,7 @@ describe('checking the service worker’s precache', () => {
       'licenses/dictionary-en-gb.txt',
       'licenses/modelcontextprotocol-server.txt',
       'licenses/zod.txt',
+      'licenses/w1913.txt',
       'fonts/courier-prime/OFL.txt',
       'fonts/inter-tight/OFL.txt',
       'fonts/anton/OFL.txt',
@@ -284,7 +285,9 @@ describe('checking the files the build must have', () => {
     // The licences of the two packages inside Drafter for Claude, which the Licences page links.
     expect(REQUIRED_FILES).toContain('licenses/modelcontextprotocol-server.txt');
     expect(REQUIRED_FILES).toContain('licenses/zod.txt');
-    expect(REQUIRED_FILES).toHaveLength(27);
+    // Definitions' reader's licence (definitions design §7.7).
+    expect(REQUIRED_FILES).toContain('licenses/w1913.txt');
+    expect(REQUIRED_FILES).toHaveLength(28);
   });
 
   test('passes when every one is there', async () => {

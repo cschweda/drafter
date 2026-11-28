@@ -16,6 +16,7 @@
 import { access, readdir, readFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEFINITIONS_PUBLIC, isTheFile } from './definitions.mjs';
 import { TOUR_ICONS } from './tour-icons.mjs';
 
 /** Text that is in a test build alone: the fixture's toolbar button and its command, and the history and cast probes (`app/history/probe.ts`, `app/cast/probe.ts`). */
@@ -65,6 +66,7 @@ export const REQUIRED_FILES = [
   'licenses/dictionary-en-gb.txt',
   'licenses/modelcontextprotocol-server.txt',
   'licenses/zod.txt',
+  'licenses/w1913.txt',
   'fonts/courier-prime/OFL.txt',
   'fonts/inter-tight/OFL.txt',
   'fonts/anton/OFL.txt',
@@ -89,6 +91,35 @@ export const REQUIRED_FILES = [
  * so the page's links work offline. Any other text file is not the app's.
  */
 export const LICENCE_FILES = REQUIRED_FILES.filter((name) => name.endsWith('.txt'));
+
+/**
+ * Definitions' dictionary (definitions design §7.2): a web build must have it, exactly the pinned
+ * file, and must not precache it (its extension is no precached one); a desktop build must not
+ * have it, since the desktop app downloads it from GitHub.
+ * @param {string} siteDir
+ * @param {boolean} desktop
+ * @returns {Promise<string[]>}
+ */
+async function definitionsProblems(siteDir, desktop) {
+  const path = join(siteDir, DEFINITIONS_PUBLIC);
+  let bytes = null;
+  try {
+    bytes = await readFile(path);
+  } catch {
+    bytes = null;
+  }
+  if (desktop) {
+    return bytes
+      ? [`The desktop build has ${DEFINITIONS_PUBLIC}, which it downloads instead.`]
+      : [];
+  }
+  if (!bytes)
+    return [`The build has no ${DEFINITIONS_PUBLIC}, so Definitions couldn’t be downloaded.`];
+  if (!isTheFile(bytes))
+    return [`${DEFINITIONS_PUBLIC} isn’t the pinned file (app/definitions/source.json).`];
+  if (PRECACHED.test(DEFINITIONS_PUBLIC)) return [`${DEFINITIONS_PUBLIC} would be precached.`];
+  return [];
+}
 
 /**
  * What is wrong with the service worker's precache, if anything.
@@ -228,7 +259,7 @@ async function filesUnder(dir, pattern) {
 
 /**
  * @param {string} siteDir the generated site (`.output/public`)
- * @param {{ fixture: boolean, icons: string[], heroicons?: string[], precache?: boolean, desktop?: boolean, files?: readonly string[] }} expected whether the build is a
+ * @param {{ fixture: boolean, icons: string[], heroicons?: string[], precache?: boolean, desktop?: boolean, definitions?: boolean, files?: readonly string[] }} expected whether the build is a
  *   test build, the icon names (without `i-lucide-`) its bundle must have, and the Heroicons
  *   (without `heroicons:`) the guided tour draws, which the bundle must have in its Heroicons set;
  *   `precache` checks the service worker's precache, `desktop` checks a desktop build has none,
@@ -281,6 +312,9 @@ export async function checkBuild(siteDir, expected) {
   problems.push(...(await shellProblems(siteDir)));
   if (expected.precache) problems.push(...(await precacheProblems(siteDir)));
   if (expected.desktop) problems.push(...(await desktopProblems(siteDir)));
+  if (expected.definitions) {
+    problems.push(...(await definitionsProblems(siteDir, !!expected.desktop)));
+  }
   return { problems };
 }
 
@@ -327,6 +361,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     // The desktop app's build (DRAFTER_DESKTOP=1) has no service worker to check, and must not.
     precache: process.env.DRAFTER_DESKTOP !== '1',
     desktop: process.env.DRAFTER_DESKTOP === '1',
+    // Definitions' dictionary: in a web build, the pinned file; in a desktop build, none.
+    definitions: true,
     files: REQUIRED_FILES,
   });
   const test = testBuildProblem(process.env);

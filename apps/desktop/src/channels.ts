@@ -44,6 +44,22 @@ export const CHANNELS = {
   editorSpeechAt: 'drafter:editor:speech-at',
   editorSpeechReply: 'drafter:editor:speech-reply',
   editorMarkSpeech: 'drafter:editor:mark-speech',
+  /**
+   * The right-click menu's Look up (definitions design §7.5). main → preload: `(id, x, y)`, which
+   * word is under the click; preload → main: `(id, word)`, the word or null; main → preload:
+   * `(word)`, Look up chosen.
+   */
+  editorWordAt: 'drafter:editor:word-at',
+  editorWordReply: 'drafter:editor:word-reply',
+  editorLookUp: 'drafter:editor:look-up',
+  /**
+   * Definitions' download (definitions.ts). Invoked by the preload with no arguments: the bytes of
+   * the pinned file, or a thrown sentence. main → preload: `(received, total)` as it comes;
+   * preload → main: cancel.
+   */
+  definitionsDownload: 'drafter:definitions:download',
+  definitionsProgress: 'drafter:definitions:progress',
+  definitionsCancel: 'drafter:definitions:cancel',
   /** preload → main: whether the page answers close requests (`true` once it listens, `false` when it stops). */
   closeReady: 'drafter:close:ready',
   /** main → preload: `(id, 'state' | 'save' | 'flush')`: a question for the page before the window closes. */

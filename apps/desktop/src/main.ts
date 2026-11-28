@@ -16,7 +16,8 @@ import {
 } from 'electron';
 import { CHANNELS, type RendererReport } from './channels';
 import { type Closing, setUpClosing } from './close';
-import { contextMenuTemplate, speechAsker } from './context-menu';
+import { contextMenuTemplate, speechAsker, wordAsker } from './context-menu';
+import { definitionsHostAllowed, downloadDefinitions } from './definitions';
 import { type FileAccessMain, registerFileIpc } from './files-ipc';
 import { heldLaunches, onSecondInstance, takeInstanceLock } from './instance';
 import { setUpMenu } from './menu-main';
@@ -306,6 +307,44 @@ function start() {
   ipcMain.on(CHANNELS.editorSpeechReply, (event: IpcMainEvent, id: unknown, at: unknown) => {
     if (fromEditor(event, main?.webContents)) speech.reply(id, at);
   });
+  // And which word, for Look up (definitions design §7.5), asked at the same time.
+  const words = wordAsker((id, x, y) => {
+    const contents = main?.webContents;
+    if (contents && !contents.isDestroyed()) contents.send(CHANNELS.editorWordAt, id, x, y);
+  });
+  ipcMain.on(CHANNELS.editorWordReply, (event: IpcMainEvent, id: unknown, word: unknown) => {
+    if (fromEditor(event, main?.webContents)) words.reply(id, word);
+  });
+
+  // Definitions' download (definitions.ts), from the editor's page only, one at a time, on a
+  // session of its own that refuses every request but GitHub's release hosts (redirects included).
+  let downloading: AbortController | null = null;
+  ipcMain.handle(CHANNELS.definitionsDownload, async (event) => {
+    if (!fromEditor(event, main?.webContents)) throw new Error('Not from the editor.');
+    if (downloading) throw new Error('The dictionary is already downloading.');
+    const ses = session.fromPartition('drafter-definitions');
+    ses.webRequest.onBeforeRequest((details, callback) => {
+      callback({ cancel: !definitionsHostAllowed(details.url) });
+    });
+    const controller = new AbortController();
+    downloading = controller;
+    try {
+      const bytes = await downloadDefinitions(
+        (url, init) => ses.fetch(url, { ...init, cache: 'no-store', credentials: 'omit' }),
+        (received, total) => {
+          if (!event.sender.isDestroyed())
+            event.sender.send(CHANNELS.definitionsProgress, received, total);
+        },
+        controller.signal,
+      );
+      return bytes;
+    } finally {
+      downloading = null;
+    }
+  });
+  ipcMain.on(CHANNELS.definitionsCancel, (event: IpcMainEvent) => {
+    if (fromEditor(event, main?.webContents)) downloading?.abort();
+  });
 
   /** Opens the editor's window, and keeps it as the one a second launch brings forward. */
   const openMain = () => {
@@ -314,7 +353,9 @@ function start() {
     // The right-click menu (context-menu.ts), in the editor's window only.
     const contents = window.webContents;
     contents.on('context-menu', async (_event, params) => {
-      const at = params.isEditable ? await speech.ask(params.x, params.y) : null;
+      const [at, word] = params.isEditable
+        ? await Promise.all([speech.ask(params.x, params.y), words.ask(params.x, params.y)])
+        : [null, null];
       if (window.isDestroyed()) return;
       const mark = (kind: 'quote' | 'no-quote') => () => {
         if (!contents.isDestroyed()) contents.send(CHANNELS.editorMarkSpeech, at, kind);
@@ -326,6 +367,14 @@ function start() {
           addWord: (word) => contents.session.addWordToSpellCheckerDictionary(word),
         },
         at === null ? null : { use: mark('quote'), never: mark('no-quote') },
+        word === null
+          ? null
+          : {
+              word,
+              run: () => {
+                if (!contents.isDestroyed()) contents.send(CHANNELS.editorLookUp, word);
+              },
+            },
       );
       if (template.length === 0) return;
       const menu = Menu.buildFromTemplate(template);

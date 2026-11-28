@@ -1,6 +1,6 @@
 # Definitions: look a word up in the 1913 Webster's (design)
 
-Status: drafted 2026-11-27 from the maintainer's choices (below); **awaiting approval**. Nothing is built yet.
+Status: drafted 2026-11-27 from the maintainer's choices (below); approved by the maintainer the same day ("Approved"), with the week-old rule's exception chosen (§9). Built on `feat/w1913-dictionary`; DECISIONS "Definitions" records the builder's calls (§8).
 
 W1913 ([w1913.com](https://w1913.com), [github.com/cschweda/w1913](https://github.com/cschweda/w1913)) is the maintainer's edition of *Webster's Revised Unabridged Dictionary* (1913), made for writers. Its text is in the US public domain and the edition is CC0. It publishes its data to be carried by other programs, not called as an API: a lookup build (one gzipped JSON file, 8.1 MB) and the [`w1913`](https://www.npmjs.com/package/w1913) npm package (MIT, no dependencies) that reads it with the same answers as the site. W1913's own design (its DESIGN.md §4b) was written with Drafter in mind.
 
@@ -84,7 +84,7 @@ So: a writer in the middle of a scene wonders whether *saunter* means what they 
 - **Desktop:** the native menu (`context-menu.ts`) gains **Look up "<word>"** above Cut/Copy/Paste, when the click is on a word: Electron's `selectionText` when one word is selected, else the word at the click, asked of the page the way Story Atlas's speech is asked (`speechAsker`, at most 200 ms). It sends `drafter:editor:look-up` with the word; the preload's `bridge.editor.onLookUp` validates it (a string, at most 64 characters).
 - **drafter.dev:** the browser's menu cannot be added to and is not replaced. Instead:
   - the spelling menu (`SpellMenu.vue`, shown on a misspelled word) gains **Look up "<word>"**;
-  - a command and shortcut, **Look up word** (proposed `Ctrl/Cmd+Shift+L`, checked against the existing keys), looks up the word at the cursor or the selection, on both apps;
+  - a command and shortcut, **Look up word** (**Shift+F7**, Word's Thesaurus key; DECISIONS has why), looks up the word at the cursor or the selection, on both apps;
   - the panel's own search box.
 - **The panel** is an Inspector tab that exists only while open, like Compare (`COMPARE_TAB` in `utils/panes.ts`), labelled **Definitions**, with a close button; on a phone it is a bottom-sheet tab the same way. It shows:
   - a search field (with suggestions from `suggest()`), the headword, "from *walked*" when an inflection led there;
@@ -116,7 +116,7 @@ Before release, each place that lists Drafter's network use gains the download, 
 ## 9. Decided with the maintainer
 
 - Desktop and drafter.dev; an optional download; right-click and a side panel (2026-11-27).
-- **Open — the one-week rule:** `w1913` is newer than `minimumReleaseAge` allows. Either add it to `minimumReleaseAgeExclude` (it is the maintainer's own package, with no dependencies) or build after 2026-12-05. Proposed: the exclusion, with a comment and a DECISIONS line.
+- **The one-week rule:** `w1913` is newer than `minimumReleaseAge` allows; the maintainer chose the exception ("make the exception so i can add it to drafter"): `minimumReleaseAgeExclude`, with a comment and a DECISIONS line.
 
 ## 10. My calls (check while reading)
 

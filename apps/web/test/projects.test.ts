@@ -196,7 +196,7 @@ describe('projects', () => {
     expect((await getProject(withBom.id))?.bom).toBe(true);
     await updateProject(withBom.id, { bom: false });
     expect((await getProject(withBom.id))?.bom).toBe(false);
-    expect(db.verno).toBe(2);
+    expect(db.verno).toBe(3);
     expect(db.table('projects').schema.idxByName.bom).toBeUndefined();
   });
 
@@ -210,13 +210,14 @@ describe('projects', () => {
     expect((await getProject(plain.id))?.baseline).toBeUndefined();
     await updateProject(started.id, { source: 'Title: Untitled\n\nTyped.' });
     expect((await getProject(started.id))?.baseline).toBe('Title: Untitled\n\n');
-    expect(db.verno).toBe(2);
+    expect(db.verno).toBe(3);
     expect(db.table('projects').schema.idxByName.baseline).toBeUndefined();
   });
 
-  test('has the whole version-2 schema: version 1’s, with drafts and cuts', () => {
+  test('has the whole version-3 schema: version 1’s, with drafts and cuts, and definitions', () => {
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'cuts',
+      'definitions',
       'drafts',
       'handles',
       'projects',

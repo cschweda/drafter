@@ -102,7 +102,8 @@ describe('upgrading Drafter’s database from v0.23.1', () => {
 
     const { db } = await import('../app/storage/db');
     await db.open();
-    expect(db.verno).toBe(2);
+    expect(db.verno).toBe(3);
+    expect(await db.definitions.count()).toBe(0);
     expect(await db.projects.toArray()).toEqual(projects);
     const kept = await db.snapshots.orderBy('createdAt').toArray();
     expect(kept.map(({ gz: _gz, ...rest }) => rest)).toEqual(
@@ -155,6 +156,35 @@ describe('upgrading Drafter’s database from v0.23.1', () => {
     await db.open();
     expect(await db.drafts.count()).toBe(1);
     expect(await db.settings.get('from-old')).toEqual({ key: 'from-old', value: 1 });
+  });
+
+  test('a version 2 database (v0.24.0 to v0.29) gains the definitions table and keeps everything', async () => {
+    vi.resetModules();
+    await deleteDrafter();
+    const { default: Dexie } = await import('dexie');
+    const v2 = new Dexie('drafter');
+    v2.version(1).stores({
+      projects: 'id, title, updatedAt',
+      snapshots: 'id, projectId, createdAt',
+      templates: 'id',
+      handles: 'id',
+      settings: 'key',
+    });
+    v2.version(2).stores({
+      drafts: 'key, projectId, [projectId+n], id',
+      cuts: 'key, projectId, id',
+    });
+    await v2.open();
+    await v2.table('projects').put({ id: 'p2', title: 'Two', updatedAt: 1 });
+    await v2.table('drafts').put({ key: 'p2:1', projectId: 'p2', n: 1, id: 'abc' });
+    v2.close();
+    vi.resetModules();
+    const { db } = await import('../app/storage/db');
+    await db.open();
+    expect(db.verno).toBe(3);
+    expect((await db.projects.toArray()).map((p) => p.title)).toEqual(['Two']);
+    expect(await db.drafts.count()).toBe(1);
+    expect(await db.definitions.count()).toBe(0);
   });
 
   test('a database already at version 2 opens as it is', async () => {

@@ -5,7 +5,7 @@
   "description": "drafter.dev: the Drafter app, built with Nuxt as static files.",
   "license": "MIT",
   "scripts": {
-    "dev": "node scripts/sync-assets.mjs && nuxt dev",
+    "dev": "node scripts/sync-assets.mjs --dev && nuxt dev",
     "build": "node scripts/sync-assets.mjs && nuxt generate && node scripts/csp.mjs .output/public && node scripts/check-build.mjs .output/public",
     "preview": "node scripts/serve.mjs .output/public 4173",
     "e2e": "rm -rf .output && DRAFTER_TEST_MODULES=1 NETLIFY=true pnpm build && playwright test",
@@ -55,7 +55,8 @@
     "nuxt-guided-tour": "0.5.1",
     "tailwindcss": "^4.3.3",
     "vue": "^3.5.44",
-    "vue-router": "^5.4.0"
+    "vue-router": "^5.4.0",
+    "w1913": "0.2.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

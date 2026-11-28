@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SpellMark } from '@drafter/cm-fountain';
 import type { DropdownMenuItem } from '@nuxt/ui';
+import { useDefinitions } from '~/definitions/use-definitions';
 import { useEditor } from '~/editor/session';
 import { useOutline } from '~/outline/use-outline';
 import { addToMine, ignoreWordHere, replaceWord, tryAddToScript } from '~/spell/actions';
@@ -72,9 +73,26 @@ const hooks = {
   ignore: () => later((mark) => ignoreWordHere(editor.view, mark)),
 };
 
+// Look up (definitions design §7.5): the marked word, in Definitions, once the menu has closed.
+const definitions = useDefinitions();
+const lookUpHook = computed(() => {
+  const word = current.value?.mark.word;
+  return word
+    ? {
+        word,
+        run: () => {
+          after = () => definitions.open(word);
+        },
+      }
+    : undefined;
+});
+
 const items = computed<DropdownMenuItem[][]>(() =>
   current.value && open.value
-    ? spellMenuItems(editor.view, suggestions.value, editor.kind.value, outline.locked.value, hooks)
+    ? spellMenuItems(editor.view, suggestions.value, editor.kind.value, outline.locked.value, {
+        ...hooks,
+        ...(lookUpHook.value && { lookUp: lookUpHook.value }),
+      })
     : [],
 );
 

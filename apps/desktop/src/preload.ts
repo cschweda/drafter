@@ -188,6 +188,51 @@ const bridge: DesktopBridge = {
         ipcRenderer.removeListener(CHANNELS.editorMarkSpeech, listener);
       };
     },
+    // Look up (definitions design §7.5): main asks which word is under a click, and sends it back
+    // when Look up is chosen. Main checks the word again.
+    onWordAt(answer) {
+      const listener = (_event: unknown, id: unknown, x: unknown, y: unknown) => {
+        if (typeof id !== 'number' || typeof x !== 'number' || typeof y !== 'number') return;
+        let word: string | null = null;
+        try {
+          word = answer(x, y);
+        } catch {
+          word = null;
+        }
+        ipcRenderer.send(CHANNELS.editorWordReply, id, typeof word === 'string' ? word : null);
+      };
+      ipcRenderer.on(CHANNELS.editorWordAt, listener);
+      return () => {
+        ipcRenderer.removeListener(CHANNELS.editorWordAt, listener);
+      };
+    },
+    onLookUp(run) {
+      const listener = (_event: unknown, word: unknown) => {
+        if (typeof word === 'string' && word.length > 0 && word.length <= 64) run(word);
+      };
+      ipcRenderer.on(CHANNELS.editorLookUp, listener);
+      return () => {
+        ipcRenderer.removeListener(CHANNELS.editorLookUp, listener);
+      };
+    },
+  },
+  // Definitions' download (definitions design §7.4): no arguments, so the page can't name the URL.
+  definitions: {
+    async download(onProgress) {
+      const listener = (_event: unknown, received: unknown, total: unknown) => {
+        if (typeof received === 'number' && typeof total === 'number') onProgress(received, total);
+      };
+      ipcRenderer.on(CHANNELS.definitionsProgress, listener);
+      try {
+        const bytes = await invoke<Uint8Array>(CHANNELS.definitionsDownload);
+        return new Uint8Array(bytes);
+      } finally {
+        ipcRenderer.removeListener(CHANNELS.definitionsProgress, listener);
+      }
+    },
+    cancel() {
+      ipcRenderer.send(CHANNELS.definitionsCancel);
+    },
   },
   // Closing: main asks, the page answers (and Saves or flushes when told to). Telling main we
   // answer is what lets it ask rather than close at once.

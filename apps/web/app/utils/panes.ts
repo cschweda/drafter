@@ -39,6 +39,7 @@ export type InspectorTabId =
   | 'drafts'
   | 'draft-steps'
   | 'draft'
+  | 'definitions'
   | `module-${string}`;
 
 /**
@@ -65,11 +66,11 @@ export function inspectorTabs(
   if (kind !== 'fountain') {
     const row: InspectorTabId[] =
       kind === 'novel' ? ['script', 'outline', 'cards', 'stats'] : ['script', 'stats'];
-    return { row, more: ['problems', 'compare', ...DRAFT_TABS, ...own] };
+    return { row, more: ['problems', 'compare', ...DRAFT_TABS, 'definitions', ...own] };
   }
   return {
     row: ['script', 'outline', 'cards', 'stats', 'scaffold'],
-    more: ['notes', 'production', 'problems', 'compare', ...DRAFT_TABS, ...own],
+    more: ['notes', 'production', 'problems', 'compare', ...DRAFT_TABS, 'definitions', ...own],
   };
 }
 
@@ -193,6 +194,7 @@ export function phoneTabs(
     drafts?: boolean;
     steps?: boolean;
     draft?: boolean;
+    definitions?: boolean;
   } = {},
 ): { row: TabId[]; more: TabId[] } {
   const lead = [
@@ -201,6 +203,7 @@ export function phoneTabs(
     ...(open.drafts ? ['drafts'] : []),
     ...(open.steps ? ['draft-steps'] : []),
     ...(open.draft ? ['draft'] : []),
+    ...(open.definitions ? ['definitions'] : []),
   ];
   if (kind !== 'fountain') {
     return {

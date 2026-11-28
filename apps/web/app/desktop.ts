@@ -110,6 +110,24 @@ export interface DesktopEditorBridge {
   onSpeechAt(answer: (x: number, y: number) => number | null): () => void;
   /** Calls `run` with the offset `onSpeechAt` answered, and the mark chosen in the menu. */
   onMarkSpeech(run: (at: number, mark: 'quote' | 'no-quote') => void): () => void;
+  /**
+   * `answer(x, y)` gives the word under a right-click (in the window's CSS pixels) for Look up, or
+   * null (definitions design §7.5). Missing in a desktop app from before Definitions.
+   */
+  onWordAt?(answer: (x: number, y: number) => string | null): () => void;
+  /** Calls `run` with the word when Look up is chosen in the right-click menu. */
+  onLookUp?(run: (word: string) => void): () => void;
+}
+
+/**
+ * Definitions' download (definitions design §7.4): the main process fetches the pinned file from
+ * W1913's GitHub release and checks it; the page can't name the URL.
+ */
+export interface DesktopDefinitionsBridge {
+  /** The file's bytes, once checked; throws a sentence for the writer. `onProgress` gets bytes so far. */
+  download(onProgress: (received: number, total: number) => void): Promise<Uint8Array>;
+  /** Stops a download under way (it then throws "Cancelled."). */
+  cancel(): void;
 }
 
 /** What the page says when the desktop app is about to close its window (docs/drafter-desktop-design.md §5). */
@@ -229,6 +247,8 @@ export interface DesktopBridge {
   updates: DesktopUpdatesBridge;
   /** Script modules from the modules folder. */
   modules: DesktopModulesBridge;
+  /** Definitions' download (a desktop app from before Definitions has none). */
+  definitions?: DesktopDefinitionsBridge;
   /**
    * From a help window's "Back to Drafter": brings the editor's window forward and closes the
    * help window that asked (instead of loading a second editor into it).

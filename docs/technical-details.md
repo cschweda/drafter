@@ -295,6 +295,7 @@ Drafter takes as few of other people’s packages as it can, and none from the s
 - `@vueuse/core`: Small helpers the guided tour needs; Drafter’s own code doesn’t use it.
 - `@vite-pwa/nuxt`: Writes the service worker that lets the app open offline, and the file that lets it install as an app.
 - `dexie`: Keeps your autosave, scripts, and snapshots in the browser’s own database.
+- `w1913`: Looks a word up in the 1913 Webster’s for Definitions, on your device, once you have downloaded the dictionary.
 - `@codemirror/state`: The editor’s text, selection, and undo history, held as data.
 - `@codemirror/view`: Draws the editor and handles typing, the mouse, and touch.
 - `@codemirror/commands`: The editor’s everyday commands: undo, redo, and moving by word or line.
