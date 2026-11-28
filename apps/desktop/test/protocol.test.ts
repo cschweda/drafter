@@ -279,9 +279,16 @@ describe('trustedExternal', () => {
       'https://nodejs.org/',
       'https://docs.docker.com/get-started/',
       'https://metaincognita.com',
+      'https://w1913.com/saunter',
+      'https://w1913.com/bill#n4-p-bill-of-fare',
       'mailto:cschweda@gmail.com?subject=Hi&body=There',
     ])
       expect(trustedExternal(url), url).toBe(true);
+  });
+
+  test('takes w1913.com only as a plain address: no query, nothing but a plain anchor', () => {
+    for (const url of ['https://w1913.com/search?q=INT.%20SECRET', 'https://w1913.com/x#a%20b'])
+      expect(trustedExternal(url), url).toBe(false);
   });
 
   test('lets the Support page’s tip link through: that page exactly, and nothing else on its site', () => {

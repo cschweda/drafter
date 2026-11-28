@@ -266,6 +266,8 @@ const TRUSTED_HOSTS = new Set([
   'docs.docker.com',
   'scripts.sil.org',
   'metaincognita.com',
+  // Definitions' "More on w1913.com" (definitions design §7.5): an entry's page, and a phrase's anchor.
+  'w1913.com',
 ]);
 
 /**

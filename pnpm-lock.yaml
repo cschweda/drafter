@@ -190,6 +190,9 @@ importers:
       vue-router:
         specifier: ^5.4.0
         version: 5.4.0(@vue/compiler-sfc@3.5.45)(esbuild@0.28.2)(rolldown@1.2.19)(rollup@4.68.4)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2))(vue@3.5.44(typescript@5.9.3))
+      w1913:
+        specifier: 0.2.0
+        version: 0.2.0
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.14.0
@@ -7116,6 +7119,10 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  w1913@0.2.0:
+    resolution: {integrity: sha512-eyLm4p3ZzIO1C7XSn8qHGJiS7L2O2pQcWTwh5gQJ14seq1e+OR8NTBSg7V4djusJeydxz+/ej/jvK1453iz+MA==}
+    engines: {node: '>=20'}
 
   w3c-keyname@2.2.8:
     resolution: {integrity: sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==}
@@ -14916,6 +14923,8 @@ snapshots:
       '@vue/shared': 3.5.44
     optionalDependencies:
       typescript: 5.9.3
+
+  w1913@0.2.0: {}
 
   w3c-keyname@2.2.8: {}
 

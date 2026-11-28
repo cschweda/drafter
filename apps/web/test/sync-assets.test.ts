@@ -120,6 +120,7 @@ describe('syncAssets', () => {
       'licenses/is-buffer.txt',
       'licenses/modelcontextprotocol-server.txt',
       'licenses/nspell.txt',
+      'licenses/w1913.txt',
       'licenses/zod.txt',
     ]);
   });

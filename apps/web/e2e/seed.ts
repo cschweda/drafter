@@ -16,7 +16,7 @@ interface StoreIndex {
 }
 
 /** The stores of Drafter's database at IndexedDB version `version` (Dexie's times 10). */
-function database(version: 10 | 20, settings: Array<{ key: string; value: unknown }>) {
+function database(version: 10 | 30, settings: Array<{ key: string; value: unknown }>) {
   // A compound index's key path is Playwright's `keyPathArray`.
   const index = (spec: IndexSpec): StoreIndex =>
     typeof spec === 'string'
@@ -43,7 +43,7 @@ function database(version: 10 | 20, settings: Array<{ key: string; value: unknow
       store('templates', 'id'),
       store('handles', 'id'),
       store('settings', 'key', [], settings),
-      ...(version === 20
+      ...(version === 30
         ? [
             store('drafts', 'key', [
               'projectId',
@@ -51,6 +51,7 @@ function database(version: 10 | 20, settings: Array<{ key: string; value: unknow
               'id',
             ]),
             store('cuts', 'key', ['projectId', 'id']),
+            store('definitions', 'key'),
           ]
         : []),
     ],
@@ -58,12 +59,12 @@ function database(version: 10 | 20, settings: Array<{ key: string; value: unknow
 }
 
 /**
- * Drafter's database (`app/storage/db.ts`: Dexie's version 2, which IndexedDB knows as 20) holding
+ * Drafter's database (`app/storage/db.ts`: Dexie's version 3, which IndexedDB knows as 30) holding
  * these settings rows, as Playwright's storage state restores it. The stores and indexes are the
  * ones Dexie makes, so it opens the database as its own.
  */
 export function drafterDatabase(settings: Array<{ key: string; value: unknown }>) {
-  return database(20, settings);
+  return database(30, settings);
 }
 
 /**

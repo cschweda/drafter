@@ -3,6 +3,7 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import { useCompare } from '~/compare/use-compare';
 import { useScriptTitle } from '~/composables/useScriptTitle';
 import { CUTS_TAB, useCuts } from '~/cuts/use-cuts';
+import { DEFINITIONS_TAB, useDefinitions } from '~/definitions/use-definitions';
 import { draftName } from '~/drafts/labels';
 import { DRAFTS_TAB, READER_TAB, useDrafts } from '~/drafts/use-drafts';
 import { STEPS_TAB, useDraftSteps } from '~/drafts/use-steps';
@@ -74,6 +75,7 @@ const ICONS: Record<string, string> = {
   drafts: 'i-lucide-milestone',
   'draft-steps': 'i-lucide-git-commit-vertical',
   draft: 'i-lucide-book-open',
+  definitions: 'i-lucide-book-a',
   module: 'i-lucide-puzzle',
 };
 const iconOf = (tab: Tab) =>
@@ -91,15 +93,23 @@ const { isOpen: cutsOpen } = useCuts();
 // The Drafts list and the draft being read, while open (drafts-and-cuts design §2.3).
 const { isOpen: draftsOpen, reading } = useDrafts();
 const { isOpen: stepsOpen } = useDraftSteps();
+// Definitions, while open (definitions design §7.5).
+const { isOpen: definitionsOpen } = useDefinitions();
 const moduleTabs = useModuleTabs();
 const moduleTab = computed(() => moduleTabs.value.find((tab) => tab.id === props.selected));
 
 /** Every tab's label, by its id. */
 const LABELS: Record<string, string> = Object.fromEntries(
-  [...TABS, ...VIEW_TABS, COMPARE_TAB, CUTS_TAB, DRAFTS_TAB, STEPS_TAB, READER_TAB].map((tab) => [
-    tab.id,
-    tab.label,
-  ]),
+  [
+    ...TABS,
+    ...VIEW_TABS,
+    COMPARE_TAB,
+    CUTS_TAB,
+    DRAFTS_TAB,
+    STEPS_TAB,
+    READER_TAB,
+    DEFINITIONS_TAB,
+  ].map((tab) => [tab.id, tab.label]),
 );
 function tabOf(id: TabId): Tab {
   // The draft being read is named by its number: "Draft 3".
@@ -130,6 +140,7 @@ const inspectorSet = computed(() => {
     if (id === DRAFTS_TAB.id) return draftsOpen.value;
     if (id === STEPS_TAB.id) return stepsOpen.value;
     if (id === READER_TAB.id) return !!reading.value;
+    if (id === DEFINITIONS_TAB.id) return definitionsOpen.value;
     return true;
   };
   return { row: row.map(tabOf), more: more.filter(open).map(tabOf) };
@@ -855,6 +866,7 @@ function onPanelKeydown(event: KeyboardEvent) {
       <DraftsPane v-else-if="props.selected === 'drafts'" />
       <DraftStepsPane v-else-if="props.selected === 'draft-steps'" />
       <DraftReader v-else-if="props.selected === 'draft'" />
+      <DefinitionsPane v-else-if="props.selected === 'definitions'" />
       <ProblemsPane v-else />
     </div>
     <BottomTabBar

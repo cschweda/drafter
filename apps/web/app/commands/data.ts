@@ -219,6 +219,25 @@ export const COMMAND_DATA: readonly CommandData[] = [
     ],
   },
   { id: 'take-snapshot', title: 'Take snapshot…', group: 'File', icon: 'i-lucide-camera' },
+  // Definitions (definitions design §7.5): the 1913 Webster's, in a tab that exists only while open.
+  // Look up word takes the selection or the word at the cursor; Shift-F7 is Word's Thesaurus key,
+  // and global, so it works from the Definitions tab too (and Firefox's Style Editor gives way).
+  {
+    id: 'look-up-word',
+    title: 'Look up word',
+    group: 'Edit',
+    icon: 'i-lucide-book-a',
+    keys: 'Shift-F7',
+    global: true,
+    keywords: ['define', 'definition', 'dictionary', 'meaning', 'webster', 'w1913'],
+  },
+  {
+    id: 'definitions',
+    title: 'Definitions…',
+    group: 'View',
+    icon: 'i-lucide-book-a',
+    keywords: ['define', 'dictionary', 'webster', 'w1913', 'look up'],
+  },
   // Drafts (drafts-and-cuts design §2, §6): the writer's word is Draft, and the palette finds them
   // by "version" too (§2.5, Call 26). No default key (as v0.18.0).
   {

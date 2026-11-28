@@ -426,8 +426,17 @@ test.describe('a database from v0.23.1', () => {
         }),
     );
     expect(shape).toEqual({
-      version: 20,
-      stores: ['cuts', 'drafts', 'handles', 'projects', 'settings', 'snapshots', 'templates'],
+      version: 30,
+      stores: [
+        'cuts',
+        'definitions',
+        'drafts',
+        'handles',
+        'projects',
+        'settings',
+        'snapshots',
+        'templates',
+      ],
     });
     await command(page, 'History…');
     await expect(history(page).getByRole('option', { name: /Before the flood/ })).toBeVisible();

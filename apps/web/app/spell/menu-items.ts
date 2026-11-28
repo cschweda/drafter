@@ -11,6 +11,8 @@ export interface SpellMenuHooks {
   addToScript(): void;
   addToMine(): void;
   ignore(): void;
+  /** Look up the word in Definitions (definitions design §7.5); without it, no item. */
+  lookUp?: { word: string; run(): void };
 }
 
 /** Suggestions shown at most; the checker gives no more than this either. */
@@ -61,5 +63,12 @@ export function spellMenuItems(
     },
     { label: 'Ignore here', icon: 'i-lucide-eye-off', disabled: false, onSelect: hooks.ignore },
   ]);
+  // The 1913 Webster's spelled many words as no modern dictionary does ("musick", "shew").
+  const lookUp = hooks.lookUp;
+  if (lookUp) {
+    groups.push([
+      { label: `Look up “${lookUp.word}”`, icon: 'i-lucide-book-a', onSelect: () => lookUp.run() },
+    ]);
+  }
   return groups;
 }

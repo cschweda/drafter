@@ -1,6 +1,13 @@
 // context-menu.ts: what the editor's right-click menu holds, without Electron.
 import { describe, expect, test, vi } from 'vitest';
-import { type ContextParams, contextMenuTemplate, speechAsker } from '../src/context-menu';
+import {
+  type ContextParams,
+  contextMenuTemplate,
+  isLookUpWord,
+  lookUpLabel,
+  speechAsker,
+  wordAsker,
+} from '../src/context-menu';
 
 const flags = { canCut: false, canCopy: false, canPaste: true, canSelectAll: true };
 const params = (over: Partial<ContextParams> = {}): ContextParams => ({
@@ -167,5 +174,49 @@ describe('asking the page for the speech under a click', () => {
     const again = asker.ask(1, 1);
     asker.reply(sent[1], -3);
     expect(await again).toBeNull();
+  });
+});
+
+// Look up (definitions design §7.5).
+describe('Look up', () => {
+  test('comes after spelling and before the story-atlas and edit items', () => {
+    const run = vi.fn();
+    const speech = { use: vi.fn(), never: vi.fn() };
+    const items = contextMenuTemplate(params(), actions(), speech, { word: 'saunter', run });
+    expect(labels(items)).toEqual([
+      'Look up “saunter”',
+      '—',
+      'Use in Story Atlas',
+      'Never use in Story Atlas',
+      '—',
+      'cut',
+      'copy',
+      'paste',
+      '—',
+      'selectAll',
+    ]);
+    items[0]?.click?.({} as never, undefined, {} as never);
+    expect(run).toHaveBeenCalledOnce();
+    // No word, no item.
+    expect(labels(contextMenuTemplate(params(), actions()))[0]).toBe('cut');
+  });
+
+  test('names a long word cut short', () => {
+    expect(lookUpLabel('a'.repeat(40))).toBe(`Look up “${'a'.repeat(29)}…”`);
+  });
+
+  test('takes only a word or a short phrase from the page', async () => {
+    expect(isLookUpWord('bill of fare')).toBe(true);
+    expect(isLookUpWord("o'clock")).toBe(true);
+    for (const bad of ['', '42', 'INT. HALL', 'a'.repeat(65), '<b>'])
+      expect(isLookUpWord(bad), bad).toBe(false);
+    const sent: number[] = [];
+    const asker = wordAsker((id) => sent.push(id));
+    const first = asker.ask(1, 1);
+    asker.reply(sent[0], 'saunter');
+    expect(await first).toBe('saunter');
+    const second = asker.ask(1, 1);
+    asker.reply(sent[1], 'javascript:alert(1)');
+    expect(await second).toBeNull();
   });
 });

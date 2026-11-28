@@ -61,7 +61,10 @@ const SUPPORT_PROVIDERS = SUPPORT_ROUTES.sponsor ? 'Ko-fi and GitHub' : 'Ko-fi';
       app, its fonts, and its dictionaries all come from drafter.dev itself); on drafter.dev only,
       Plausible’s count of page visits (<a href="#analytics">below</a>); in the desktop app, a check
       with GitHub for a new version when it starts, which you can turn off in Settings, and for
-      the AppImage and the Windows app the update itself, downloaded in the background; the links
+      the AppImage and the Windows app the update itself, downloaded in the background; the Webster’s
+      1913 dictionary for Definitions, once, only if you click Download (<a href="#definitions"
+        >below</a
+      >); the links
       you click; and a report, if you choose to send one (on drafter.dev, Send email passes it
       through drafter.dev to Resend, a mail service). None of it carries your script.
     </p>
@@ -244,6 +247,19 @@ const SUPPORT_PROVIDERS = SUPPORT_ROUTES.sponsor ? 'Ko-fi and GitHub' : 'Ko-fi';
       <strong>Check for updates</strong> in Settings and it makes no network request at all, unless
       you choose <strong>Help → Check for Updates…</strong>, which makes the same requests once, then
       and there.
+    </p>
+
+    <h2 id="definitions">Definitions: the Webster’s 1913 dictionary</h2>
+    <p>
+      Look up shows a word from <cite>Webster’s Revised Unabridged Dictionary</cite> (1913), from
+      W1913. The dictionary is a single 8.1 MB file that Drafter downloads only when you click
+      <strong>Download</strong> in Settings → Spelling (or in the Definitions tab): on the web from
+      drafter.dev itself (or your own server), in the desktop app from W1913’s release on GitHub,
+      which sees your IP address, as it does for an update. Nothing is downloaded until you ask.
+      Drafter checks the file against the one it expects, keeps it in its own storage on your device,
+      and <strong>looks every word up there</strong>: no word you look up is sent anywhere, ever.
+      <strong>Remove</strong> deletes it. “More on w1913.com” is an ordinary link: it opens that page
+      in your browser only when you click it.
     </p>
 
     <h2 id="modules">Script modules</h2>

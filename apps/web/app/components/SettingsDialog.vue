@@ -6,7 +6,9 @@ import { appLine, currentAbout, versionLine } from '~/about/info';
 import { HELP_PAGES, helpHref } from '~/commands/data';
 import { DIFF_COLOR_NAMES, DIFF_COLORS, type DiffColors } from '~/compare/colors';
 import DDialog from '~/components/ui/DDialog.vue';
-import { desktop } from '~/desktop';
+import { DEFINITIONS_SIZE_LABEL } from '~/definitions/source';
+import { useDefinitions } from '~/definitions/use-definitions';
+import { desktop, isDesktopBuild } from '~/desktop';
 import { useModules } from '~/modules/registry';
 import { settingsOpen } from '~/settings/dialog';
 import {
@@ -294,6 +296,12 @@ function onPaper(event: Event) {
 /** More words than this, and the heading says how many. */
 const LONG_LIST = 10;
 const mine = computed(() => settings.value.personalDictionary);
+// Definitions' row (definitions design §7.1): its state is read when the dialog first shows it.
+const definitions = useDefinitions();
+const fromWhere = isDesktopBuild() ? 'from GitHub' : 'from this site';
+onMounted(() => {
+  if (definitions.state.value === 'unknown') void definitions.refresh();
+});
 
 /**
  * Takes a word out of My dictionary; the spellcheck checks again at once, so it is marked again
@@ -564,6 +572,46 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
             No words yet. A misspelled word’s menu has Add to my dictionary.
           </p>
         </div>
+        <!-- Definitions (definitions design §7.1): the 1913 Webster's, downloaded only when asked. -->
+        <div class="row definitions-row" role="group" aria-labelledby="settings-definitions-name">
+          <div class="text">
+            <h4 id="settings-definitions-name" class="name definitions-name">Definitions</h4>
+            <p id="settings-definitions-why" class="why">
+              Webster’s 1913 dictionary, for Look up (Shift+F7, or a word’s right-click menu).
+              {{ DEFINITIONS_SIZE_LABEL }}, downloaded once
+              {{ fromWhere }}; looking a word up never
+              uses the network.
+              <template v-if="definitions.state.value === 'ready'"> Downloaded.</template>
+            </p>
+            <p v-if="definitions.problem.value" class="why problem" role="alert">
+              {{ definitions.problem.value }}
+            </p>
+          </div>
+          <div class="definitions-actions">
+            <template v-if="definitions.state.value === 'downloading'">
+              <progress
+                :value="Math.round(definitions.progress.value * 100)"
+                max="100"
+                aria-label="Downloading the dictionary"
+              />
+              <DButton variant="borderless" @click="definitions.cancel()">Cancel</DButton>
+            </template>
+            <DButton
+              v-else-if="definitions.state.value === 'ready'"
+              aria-describedby="settings-definitions-why"
+              @click="definitions.remove()"
+            >
+              Remove
+            </DButton>
+            <DButton
+              v-else
+              aria-describedby="settings-definitions-why"
+              @click="definitions.download()"
+            >
+              Download
+            </DButton>
+          </div>
+        </div>
       </section>
       <section :id="sectionId('files')" class="section" aria-labelledby="settings-files-title">
         <h3 id="settings-files-title" class="section-title" tabindex="-1">Files</h3>
@@ -783,6 +831,18 @@ const licences = HELP_PAGES.find((page) => page.id === 'help-licences');
 .count {
   color: var(--muted);
   font-weight: 400;
+}
+.definitions-name {
+  margin: 0;
+}
+.definitions-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+.why.problem {
+  color: var(--danger);
 }
 .why a {
   color: var(--accent-text);

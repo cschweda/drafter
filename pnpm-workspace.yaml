@@ -5,6 +5,11 @@ packages:
 # A version must be a week old before pnpm will pick it (minutes): a package published with malware
 # is usually pulled within days (red/blue audit, 2026-11-03; Dependabot's cooldown matches).
 minimumReleaseAge: 10080
+# Exempt from the week: `w1913`, the maintainer's own package (the 1913 Webster's lookup, no
+# dependencies), published 2026-11-28 for Definitions; the maintainer chose the exception
+# (2026-11-27, DECISIONS "Definitions"). It is pinned exactly in apps/web.
+minimumReleaseAgeExclude:
+  - w1913
 
 # Indirect dependencies held at a patched version (Dependabot's security alerts, 2026-11-04), where
 # no direct dependency's update brings the fix in. All are build-time tools: none ships to a writer.

@@ -91,6 +91,10 @@ describe('headersFile', () => {
         // files, much less over the wire).
         '/dictionaries/*',
         '  Content-Type: text/plain; charset=utf-8',
+        // Definitions' dictionary: gzipped bytes, checked by SHA-256, never re-encoded; a year.
+        '/definitions/*',
+        '  Content-Type: application/octet-stream',
+        '  Cache-Control: public, max-age=31536000, immutable',
         '/sw.js',
         '  Cache-Control: no-cache',
         '/manifest.webmanifest',

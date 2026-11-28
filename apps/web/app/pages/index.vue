@@ -7,6 +7,7 @@ import { installDesktopClose } from '~/commands/desktop-close';
 import { installDesktopMenu } from '~/commands/desktop-menu';
 import { commandById, installGlobalKeys } from '~/commands/registry';
 import { installCuts } from '~/cuts/install';
+import { installDesktopLookUp } from '~/definitions/desktop-look-up';
 import { isDesktopBuild } from '~/desktop';
 import { classicNotice } from '~/editor/element-notice';
 import { restoreSelection } from '~/editor/restore-selection';
@@ -121,6 +122,7 @@ let removeFileCheck: (() => void) | undefined;
 let removeSystemOpen: (() => void) | undefined;
 let removeDesktopMenu: (() => void) | undefined;
 let removeSpeechMenu: (() => void) | undefined;
+let removeLookUp: (() => void) | undefined;
 let removeDesktopClose: (() => void) | undefined;
 let removeDesktopUpdates: (() => void) | undefined;
 let removeSelectionGuard: (() => void) | undefined;
@@ -163,6 +165,7 @@ onMounted(() => {
   removeSystemOpen = installSystemOpen();
   removeDesktopMenu = installDesktopMenu();
   removeSpeechMenu = installSpeechMenu();
+  removeLookUp = installDesktopLookUp();
   removeDesktopClose = installDesktopClose();
   removeDesktopUpdates = installDesktopUpdates(useSettings());
   // Safari would type into the script with focus anywhere else (decided 2026-10-29).
@@ -181,6 +184,7 @@ onBeforeUnmount(() => {
   removeSystemOpen?.();
   removeDesktopMenu?.();
   removeSpeechMenu?.();
+  removeLookUp?.();
   removeDesktopClose?.();
   removeDesktopUpdates?.();
   removeSelectionGuard?.();

@@ -45,6 +45,15 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // An entry made before its release takes the next release's version, and the release sets its
   // date (a test lets an entry newer than the CHANGELOG's newest release wait for its section).
   {
+    id: 'v0.29.0-definitions',
+    date: '2026-11-27',
+    version: '0.29.0',
+    kind: 'New',
+    title: 'Definitions: look a word up in the 1913 Webster’s',
+    text: 'Right-click a word on the desktop, or press Shift+F7, and its entry from Webster’s 1913 dictionary opens beside the script. Download the dictionary once (8.1 MB) in Settings → Spelling; every lookup then stays on your device.',
+    link: { href: '/docs/privacy/#definitions', label: 'Definitions and your privacy' },
+  },
+  {
     id: 'v0.29.0-threads',
     date: '2026-11-26',
     version: '0.29.0',

@@ -13,6 +13,7 @@ import { copyFile, mkdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { syncDefinitions } from './definitions.mjs';
 
 const STYLES = ['Regular', 'Bold', 'Italic', 'BoldItalic'];
 /** Inter Tight's styles in `packages/render-pdf/fonts/inter-tight/` (render-pdf's DOCUMENT_FONT_FILES). */
@@ -100,6 +101,14 @@ export const PACKAGE_ASSETS = [
     to: 'licenses/modelcontextprotocol-server.txt',
   },
   { package: 'zod', from: 'packages/mcp/package.json', file: 'LICENSE', to: 'licenses/zod.txt' },
+  // Definitions' reader (definitions design §7.7), declared by apps/web. Its `exports` has only an
+  // `import` condition, which `require.resolve` can't use, so its folder is named (`dir`).
+  {
+    package: 'w1913',
+    dir: 'apps/web/node_modules/w1913',
+    file: 'LICENSE',
+    to: 'licenses/w1913.txt',
+  },
 ];
 
 /**
@@ -139,7 +148,14 @@ export async function syncAssets(repoRoot, publicDir) {
     written.push(target);
   }
   const spell = join(repoRoot, 'packages/spell/package.json');
-  for (const { package: name, via, from: base, file, to } of PACKAGE_ASSETS) {
+  for (const { package: name, via, from: base, dir, file, to } of PACKAGE_ASSETS) {
+    if (dir) {
+      const target = join(publicDir, to);
+      await mkdir(dirname(target), { recursive: true });
+      await copyFile(join(repoRoot, dir, file), target);
+      written.push(target);
+      continue;
+    }
     const from = base
       ? join(repoRoot, base)
       : via
@@ -157,4 +173,21 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const here = dirname(fileURLToPath(import.meta.url));
   const written = await syncAssets(join(here, '../../..'), join(here, '../public'));
   process.stdout.write(`Copied ${written.length} files into public/.\n`);
+  // Definitions' dictionary (definitions design §7.2): downloaded once into a cache, checked, and
+  // copied; left out of a desktop build. In `nuxt dev` a failed download is a warning, not a stop.
+  const desktopBuild = process.env.DRAFTER_DESKTOP === '1';
+  try {
+    const put = await syncDefinitions(
+      join(here, '../public'),
+      join(here, '../.cache/definitions'),
+      {
+        desktop: desktopBuild,
+      },
+    );
+    if (put) process.stdout.write('Copied the Definitions dictionary into public/definitions/.\n');
+  } catch (error) {
+    const message = `Couldn’t get the Definitions dictionary: ${error instanceof Error ? error.message : error}`;
+    if (process.argv.includes('--dev')) process.stderr.write(`${message}\n`);
+    else throw new Error(message);
+  }
 }

@@ -9,7 +9,7 @@ if (!page) throw new Error('The Third-party licences page is not in the list of 
 useDocsHead({
   ...page,
   description:
-    'The other people’s work inside Drafter: the spellchecker, its dictionaries, the fonts, and Drafter for Claude’s SDK, each with its version, its licence, and its full text.',
+    'Other people’s work inside Drafter: the spellchecker and its dictionaries, Definitions’ reader and dictionary, the fonts, and Drafter for Claude’s SDK, with versions and licences.',
 });
 
 // The versions docs/DEPENDENCIES.md records, pinned in packages/spell/package.json; the
@@ -19,6 +19,8 @@ const IS_BUFFER_VERSION = '2.0.5';
 // Drafter for Claude's, pinned in packages/mcp/package.json (the same check).
 const MCP_SDK_VERSION = '2.4.0';
 const ZOD_VERSION = '4.6.7';
+// Definitions' reader, pinned in apps/web/package.json (definitions design §7.7), and its data.
+const W1913_VERSION = '0.2.0';
 
 const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);
 </script>
@@ -81,6 +83,23 @@ const dictionaries = SPELL_LANGUAGES.map((language) => DICTIONARIES[language]);
         UKACD asks that its copyright be shown and its notice included word for word, which the
         linked file is.
         <a :href="dictionary.licenceFile">{{ dictionary.package }}’s licence (full text)</a>
+      </p>
+    </section>
+
+    <h2 id="definitions">Definitions</h2>
+
+    <section>
+      <h3>w1913</h3>
+      <p>
+        Reads the Webster’s 1913 dictionary for Definitions, on your device. Version
+        {{ W1913_VERSION }}, licensed MIT. Copyright (c) 2026 Christopher Schweda.
+        <a href="/licenses/w1913.txt">w1913’s licence (full text)</a>
+      </p>
+      <p>
+        The dictionary itself, downloaded only if you ask, is W1913’s edition of
+        <cite>Webster’s Revised Unabridged Dictionary</cite> (1913), from Project Gutenberg eBook
+        #29765. The 1913 text is in the public domain in the United States, and W1913’s edition is
+        dedicated to the public domain under CC0 1.0: no conditions.
       </p>
     </section>
 
